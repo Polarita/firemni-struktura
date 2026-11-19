@@ -1,0 +1,37 @@
+{
+  "document": "04b-dohoda-svereni-sluzebniho-vozidla",
+  "title": "Dohoda o svěření služebního vozidla a pravidla jeho užívání",
+  "draft_watermark": true,
+  "generated_utc": "2026-11-18 06:12 UTC",
+  "variables": {
+    "spis_id": "POL-2027-00004",
+    "jmeno_zamestnance": "Jan Vzorový",
+    "osobni_cislo": "1099",
+    "pracovni_pozice": "elektromontér (vzorové zařazení)",
+    "vozidlo_znacka_model": "Vzorová dodávka L2H2 (VZOR)",
+    "vozidlo_spz": "0AA 0000",
+    "vozidlo_vin": "VZOR0000000000000",
+    "stav_tachometru_km": "12 345",
+    "castka_bez_dph": "612 000,00 Kč",
+    "oznaceni_van": "VAN-101-01",
+    "skupina_ridicskeho_opravneni": "B",
+    "pocet_fotografii_min": "8",
+    "nepritomnost_pro_vraceni_dni": "14",
+    "misto_parkovani": "uzamčený dvůr pobočky CZ-101 (vzorový údaj)",
+    "doba_uchovani_gps_zaznamu": "3 let od konce zdaňovacího období, jehož se záznam týká (vzorový údaj)",
+    "soukrome_uziti_vozidla": "povoleno v rozsahu nejvýše 300 km měsíčně (vzorový údaj)",
+    "uhrada_phm_soukrome_jizdy": "srážkou ze mzdy na základě samostatné dohody o srážkách podle ujetých kilometrů a průměrné spotřeby (vzorový údaj)",
+    "cislo_tankovaci_karty": "0000 0000 0000 0000 (fiktivní)",
+    "lhuta_hlaseni_nehody_hodin": "24",
+    "spoluucast_havarijni_pojisteni": "10 000,00 Kč",
+    "datum_ucinnosti": "1. 2. 2027",
+    "misto_podpisu": "Praha",
+    "datum_podpisu": "29. 1. 2027"
+  },
+  "sha256": {
+    "template": "b53cd75b15e8335d70d6aa6719376dc51f4e6b64a98d149a90cd6ef50426740d",
+    "data": "42a27e038fc6f75808e4545c192785991e0bebcb2bd7cfa7683187195af366e5",
+    "pdf": "7eb2c41f197ab5ef585170b67f2086748afc0d9f63186850066195022740e84b"
+  },
+  "pages": 5
+}

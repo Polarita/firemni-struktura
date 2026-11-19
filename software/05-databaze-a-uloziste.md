@@ -1,0 +1,87 @@
+# 05 — Databáze (`6+9` DB na `PostgreSQL`), objektové úložiště (`90d` audio), neměnný archiv (`legal-archive` + `LEGAL_HOLD`) a datový základ paměti `ai` (`0` PII ve `Vaultu`) · Verze 2.7
+
+Tento dokument definuje datovou vrstvu společnosti **Polarita s.r.o.** v uzavřené síťové zóně **`data_vault` (zcela bez přístupu do internetu)** v plném souladu s **Verzí 2.7** firemní struktury — **6 kanonických doménových databází + 9 izolovaných servisních databází 100% sjednocených na jediném databázovém stroji `PostgreSQL` (`0× MySQL / MariaDB`, `0× MongoDB` — včetně `Umami`, `Zulip`, `Stalwart Mail` a `Chatwoot CE`)**, s neprodyšným režimem **`Clean Room`** nad osobními údaji, jasným oddělením nativních migrací cizích služeb od dedikovaných schémat **`metadata-schema-kernel`** v `db_erp_lhutnik`, atomickým databázovým mutexem číselných řad (`SELECT ... FOR UPDATE`), mezipamětí, úložištěm stavební fotodokumentace a **`90denních` šifrovaných provozních nahrávek hovorů v `Garage`**, zákonným neměnným archivem dokumentů (včetně `.zfo` zpráv datové schránky, večerních listů Elektronického stavebního deníku a **`LEGAL_HOLD 3–10 let` důkazních nahrávek hovorů**) a verzovaným datovým podkladem společné paměti `Vault` (**`0` osobních údajů ve `Vaultu`!**) i lokálního Git/CI serveru **`Gitea`**.
+
+---
+
+## 1. Seznam vybraného softwaru
+
+| Oblast | Vybraný software | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 2.7) | Odpovědný `ai` / garant |
+| :--- | :--- | :--- | :--- | :--- |
+| **Hlavní relační databáze firmy (`6` doménových + `9` servisních DB + `Clean Room`, `0× MySQL`, `0× MongoDB`)** | **PostgreSQL** *(s rozšířeními `pgcrypto` a `pgvector`)* | `latest` *(v zóně `data_vault` bez internetu)* | Jediný relační databázový stroj celého serveru nesoucí **6 kanonických doménových databází dle Verze 2.7** (`db_eshop` pro `MedusaJS` s nativními migracemi + `Elektro WMS`, `PHE/EKO-KOM/SCRAP-CU/ISPOP` a `Balíkobot`; `db_akademie` pro `Moodle` s nativními migracemi; `db_erp_lhutnik` s dedikovanými schématy `metadata-schema-kernel` pro 360° spisy `POL-RRRR-NNNNN` s přepisy hovorů `#t=MM:SS` a routerem `comm-gateway`, `cz-sk-registry-kernel` vč. `ADIS` (ručení za DPH) a DB mutexu číselných řad `SELECT ... FOR UPDATE`, 48h převzetí šanonů, plánování tras `Mapy.cz`, zámek `DTM ČR`, Stavební deník, Centrální Lhůtník, Digitální knihu objektu, 3úrovňový `OCPP` Helpdesk, knihu jízd `fleet-gps-bridge`, Partnerský provizní ledger a `ISDOC` / `EET 2.0`; šifrovanou `db_gdpr_zkousky` a šifrovanou `db_hr_lide` s povinným **`Clean Room`** maskováním PII pro `ai`; a `db_paperclip` pro orchestraci, `mutation_confirm` a `Worker / Judge`) i **9 oddělených servisních databází se samostatnými nativními migracemi výrobce** (`keycloak`, `paperless`, `vikunja`, `gitea`, self-hosted **`umami`**, **`zulip`**, **`stalwart`**, **`chatwoot`**, `traccar`). | `17003` `spravce-site` / `17001` `programator` *(kontrola `17004` `klicnik`)* |
+| **Rychlá paměťová mezipaměť a fronty úloh** | **Valkey** | `latest` *(open-source nástupce Redisu pod Linux Foundation)* | Blesková paměťová vrstva (cache relací, košíků e-shopu, front úloh Akademie, `Chatwoot CE`, `Zulip` a interních aplikací) plně kompatibilní s protokolem Redis, ale se 100% svobodnou licencí bez komerčních omezení. | `17003` `spravce-site` |
+| **Objektové úložiště fotografií, výkresů a `90d` provozního audia** | **Garage** | `latest` *(self-hosted open-source v Rustu)* | Lehké objektové úložiště pro velké binární soubory — fotodokumentaci zakrytých prací a Stavebního deníku z mobilů, dodací listy, fotky karoserií vozidel, produktové fotky e-shopu, PDF přílohy, projektové výkresy a **šifrované stereo nahrávky běžných provozních hovorů `Asterisk` s automatickou expirací po `90 dnech` dle metodiky ÚOOÚ**. | `17003` `spravce-site` |
+| **Neměnný zákonný archiv (`legal-archive` — WORM + `LEGAL_HOLD`)** | **OpenZFS neměnný oddíl** *(režim `append-only` + uzamčené snapshoty)* | `latest` *(součást úložiště `/srv/polarita/data/legal-archive`)* | Zákonné úložiště typu *Write-Once-Read-Many* pro podepsané smlouvy, účetní a daňové doklady vč. `ISDOC` (10 let), mzdové listy (30 let podle předpisů o sociálním zabezpečení, doporučeně 45 let), revizní zprávy, pasporty rozváděčů CE, denní zapečetěné PDF listy **Elektronického stavebního deníku**, originály `.zfo` zpráv a doručenek datové schránky `w9bbdva` (10 let) a **důkazní nahrávky hovorů označené příznakem `LEGAL_HOLD` (`3–10 let` po dobu promlčecí a záruční lhůty: objednávky, ústní vícepráce, reklamace RMA a P1 havárie)**. | `15001` `pravni-specialista` / `16002` `tajemnik` / `17004` `klicnik` |
+| **Verzované úložiště paměti `Vault` a lokální Git/CI server** | **Git** + **Gitea** *(za privátní VPN `Headscale`)* | `latest` *(paměť `/srv/polarita/vault/` + repozitáře kódu oddělení `17`)* | Čisté textové úložiště znalostní paměti `Vault` v Markdownu a vlastní lokální Git a CI/CD server **`Gitea (latest)`** pro repozitáře všech vlastních modulů oddělení `17`, automatické běhy testů a kontroly nezávislého verifikátora `Judge`. | `17003` `spravce-site` / `17001` `programator` *(kontrola `17004` `klicnik`)* |
+
+---
+
+## 2. Architektonická pravidla a zdůvodnění výběru
+
+1. **Nulový přístup databází do internetu (`data_vault`):**
+   * Žádný kontejner v zóně `data_vault` (`PostgreSQL`, `Valkey`, `Garage`, `OpenBao`) nemá výchozí bránu do internetu. I v případě chyby v některé webové aplikaci tak databázový stroj nemůže sám navázat spojení ven ze serveru.
+2. **Striktní oddělení databází a migračních domén (`6+9` DB, `0× MySQL`, `0× MongoDB`), DB mutex číselných řad a režim `Clean Room` (`0` PII ve `Vaultu`):**
+   * Celý server je 100% sjednocen na jediném databázovém stroji **`PostgreSQL (latest)`** (`6` doménových + `9` servisních databází včetně `umami`, `zulip`, `stalwart` a `chatwoot`, takže v `data_vault` neběží žádný `MySQL / MariaDB` ani `MongoDB`), přičemž **žádné dvě aplikace nesdílejí stejnou databázi ani stejné přihlašovací jméno**.
+   * **Čistá hranice migračních nástrojů:** Služby třetích stran (`keycloak`, `paperless`, `vikunja`, `gitea`, `umami`, `zulip`, `stalwart`, `chatwoot`, `traccar`, `Moodle` v `db_akademie` a jádro `MedusaJS` v `db_eshop`) spravují svá izolovaná databázová schémata **výhradně vlastními nativními migracemi výrobce** — `metadata-schema-kernel` do cizích tabulek nikdy nezasahuje! Deklarativní **`metadata-schema-kernel` (`N1`)** spravuje verzované migrace s rollbackem, optimistickým zamykáním **`version / ETag`** a konvencí připravenou na `Row-Level Security (RLS)` pro Strategickou Etapu III (`S7 Polarita Elektro Cloud`, `N9`) **výhradně nad dedikovanými PostgreSQL schématy vlastních modulů Polarity v `db_erp_lhutnik`** (příp. vlastními rozšiřujícími schématy oddělení `17`). V databázi `db_erp_lhutnik` běží pro **`cz-sk-registry-kernel` (`N3`)** tabulka číselných řad uzamykaná transakčním mutexem **`SELECT ... FOR UPDATE`** (nulová možnost duplicity či přeskočení čísla spisu, faktury, výdejky nebo výrobního pasu rozváděče).
+   * Personální a mzdová databáze `db_hr_lide` i zkušební databáze `db_gdpr_zkousky` jsou kryptograficky i účtově izolované od veřejných systémů, citlivá pole jsou zašifrována přes `pgcrypto` klíčem z `OpenBao`, ve sdílené paměti `/srv/polarita/vault/` (vč. `09-Lide-a-BOZP/`) platí **absolutní zákaz ukládání osobních údajů (`0` PII)** a pro `ai` agenty je nad DB vynucen neprodyšný režim **`Clean Room`** (striktně `Read-Only` SQL pohledy s automatickým maskováním rodných čísel, jmen, kontaktů a IBANů — do kontextu modelu odcházejí pouze schémata, počty, agregáty a semafor `ZPŮSOBILÝ: ANO/NE`).
+3. **Dvouvrstvá retence hovorů (`90 dnů` vs. `LEGAL_HOLD 3–10 let`) a ochrana úředních listin (`legal-archive`):**
+   * Běžné provozní stereo nahrávky hovorů z ústředny `Asterisk` leží v šifrovaném koši `Garage` s automatickým odmazáním zvuku po **`90 dnech`** dle metodiky ÚOOÚ (v `db_erp_lhutnik` zůstává strukturovaný textový zápis); hovory zakládající právní jednání, vícepráce, reklamaci RMA či P1 havárii přesouvá příznak **`LEGAL_HOLD`** do WORM archivu `legal-archive` na **`3–10 let`** po dobu promlčecí a záruční lhůty.
+   * Do archivu `/srv/polarita/data/legal-archive/` smí zapečetěné dokumenty (`PAdES` PDF s časovým razítkem, `ISDOC` doklady, večerní listy **Elektronického stavebního deníku**, `.zfo` datové zprávy a `LEGAL_HOLD` nahrávky) pouze přibývat (`append-only`). Běžný aplikační účet ani `ai` agent nemá oprávnění existující archivní záznam smazat nebo přepsat.
+   * Každý uložený dokument má vypočtený kryptografický kontrolní součet a pravidelný uzamčený ZFS snapshot chránící archiv i proti ransomwaru.
+4. **Proč je zde `Git` pro paměť `ai` a vlastní lokální server `Gitea` (`wt-worker / wt-judge` + `Draivix/aigiscode`) pro kód:**
+   * Na úrovni datové vrstvy leží společná paměť `Vault` jako čisté soubory Markdown verzované v `Git (latest)` na ZFS oddílu `/srv/polarita/vault/` + pomocný vektorový index `pgvector` v `PostgreSQL`.
+   * Pro verzování zdrojového kódu a schémat `metadata-schema-kernel` všech 10 vlastních modulů oddělení `17`, code-review v oddělených pracovních stromech **`wt-worker / wt-judge`** a spouštění lokální CI/CD brány (`gitleaks` od `Bloku 5`, **`Draivix/aigiscode`** od `Bloku 7`, `pytest` / `Vitest`) běží za privátní VPN `Headscale` vlastní open-source server **`Gitea (latest)`**. Samotné živé prostředí paměti (**SilverBullet**) navazuje v **Bloku `08`**.
+
+---
+
+## 3. Pokyny k instalaci a konfiguraci pro `ai` (Prompty)
+
+### Prompt 1 — Nasazení `PostgreSQL (latest)` s pohledy `Clean Room` a `Valkey (latest)` v zóně `data_vault` (`pro 17003 spravce-site` + `17004 klicnik`)
+
+```text
+Jsi správce serveru (17003 spravce-site). V uzavřené síťové zóně data_vault (bez přístupu do internetu) nasaď přes OpenTofu (latest) databázovou vrstvu PostgreSQL (latest) a Valkey (latest):
+
+1. PostgreSQL (latest) a ochrana Clean Room:
+   - Vytvoř v Incus dedikovaný kontejner napojený na ZFS dataset /srv/polarita/data/postgres (s optimalizovanou velikostí bloku recordsize pro databázi).
+   - Zapni TLS šifrování vnitřních spojení, zakaž vzdálené přihlášení superuživatele postgres ze sítě a vynucuj silnou autentizaci SCRAM.
+   - Aktivuj v příslušných databázích rozšíření pgcrypto (pro šifrování citlivých polí v db_hr_lide a db_gdpr_zkousky) a pgvector (pro sémantické vyhledávání ai nad normami a pamětí firmy).
+   - Založ 6 kanonických doménových databází dle Verze 2.7 (db_eshop, db_akademie, db_erp_lhutnik, db_gdpr_zkousky, db_hr_lide, db_paperclip) i 9 oddělených servisních databází podpůrných a komunikačních platforem na témže stroji PostgreSQL bez MySQL a bez MongoDB (keycloak, paperless, vikunja, gitea, umami, zulip, stalwart, chatwoot, traccar) — vždy se samostatným uživatelem a unikátním heslem v trezoru OpenBao (a exportuj realm Keycloak z Bloku 4, přepoj jej na produkční servisní databázi keycloak, realm importuj a ověř přihlášení YubiKey i OIDC Headscale). Cizí služby ponech na jejich vlastních nativních migracích výrobce; v db_erp_lhutnik připrav dedikovaná PostgreSQL schémata pro verzované migrace s rollbackem a optimistickým zamykáním version / ETag generovanými z metadata-schema-kernel v Gitea (s konvencí připravenou na Row-Level Security pro budoucí S7 Polarita Elektro Cloud).
+   - V db_erp_lhutnik vytvoř pro sdílenou mikroslužbu cz-sk-registry-kernel atomickou tabulku číselných řad (spisy POL-RRRR-NNNNN, faktury, dobropisy, skladové výdejky, Výrobní pasy rozváděčů) uzamykanou transakčním mutexem SELECT ... FOR UPDATE a ověř ji souběžným testem 10 paralelních požadavků (0 duplicit a 0 přeskočených čísel).
+   - Nad db_hr_lide a db_gdpr_zkousky vytvoř pro účty ai agentů striktně Read-Only SQL pohledy režimu Clean Room s automatickým maskováním PII (odeber přímý SELECT nad surovými tabulkami s rodnými čísly, jmény, kontakty a IBANy!).
+2. Valkey (latest):
+   - Vytvoř v zóně data_vault lehký kontejner Valkey (latest), zakaž anonymní přístup, nastav autentizaci (ACL uživatele dle aplikací s hesly v OpenBao) a omez maximální spotřebu paměti RAM.
+3. Ověř síťovým a SQL testem zevnitř kontejnerů, že ze zóny data_vault nelze navázat žádné odchozí spojení do internetu a že Clean Room účet ai nepřečte žádné surové PII, a předej konfiguraci ke kontrole agentovi 17004 klicnik.
+```
+
+### Prompt 2 — Objektové úložiště `Garage (latest)` (`90d` audio) a neměnný zákonný archiv `legal-archive` (`LEGAL_HOLD`) (`pro 17003 spravce-site` + `15001 pravni-specialista`)
+
+```text
+Zprovozni na serveru polarita-hq v zóně data_vault objektové úložiště Garage (latest) pro provozní soubory a neměnný zákonný archiv legal-archive pro úřední listiny a důkazní nahrávky:
+
+1. Objektové úložiště Garage (latest):
+   - Nasaď v zóně data_vault službu Garage (latest) nad úložištěm /srv/polarita/data/garage.
+   - Vytvoř oddělené koše (buckets) s vlastními přístupovými klíči v OpenBao pro: fotodokumentaci staveb, zakrytých prací a Stavebního deníku, fotodokumentaci karoserií flotily, očistěné podklady ze služby 48h převzetí šanonů (prevzeti-sanonu), produktová média e-shopu, přílohy Akademie, pracovní výkresy a šifrované stereo nahrávky běžných provozních hovorů Asterisk s automatickým životním cyklem odmazání zvuku po 90 dnech dle metodiky ÚOOÚ.
+2. Neměnný zákonný archiv (/srv/polarita/data/legal-archive):
+   - Použij ZFS dataset /srv/polarita/data/legal-archive založený v Bloku 1 a člení jej podle agendy a roku (ucetnictvi-a-isdoc-10let, mzdy-30-45let, smlouvy-a-plne-moci, revize-a-pasporty, stavebni-deniky-10let, datova-schranka-zfo-10let, hovory-legal-hold-10let).
+   - Nastav oprávnění a souborové atributy (append-only pro uzavřené složky + automatické neměnné ZFS snapshoty) tak, aby servisní proces Podatelny (16002 tajemnik), comm-gateway (při příznaku LEGAL_HOLD) a archivu směl nový zapečetěný dokument (PDF s PAdES časovým razítkem, večerní list Elektronického stavebního deníku, ověřený originál .zfo + doručenku z datové schránky w9bbdva nebo důkazní stereo nahrávku hovoru LEGAL_HOLD) zapsat a vypočítat jeho kontrolní součet, ale žádný běžný uživatel ani ai agent nemohl uložený dokument přepsat nebo smazat.
+3. Proveď kontrolní test pokusu o přepsání a smazání testovacího archivního záznamu pod aplikačním účtem (musí skončit odmítnutím Permission denied / Operation not permitted) a protokol ulož ke kontrole u 17004 klicnik a 15001 pravni-specialista.
+```
+
+### Prompt 3 — Inicializace verzovaného úložiště paměti `/srv/polarita/vault/` a lokálního Git/CI serveru `Gitea (latest)` (`pro 17003 spravce-site`)
+
+```text
+Připrav na serveru polarita-hq datový základ společné znalostní paměti firmy (/srv/polarita/vault/) a lokální verzovací a CI server Gitea (latest) pro vývojové oddělení 17:
+
+1. Nad ZFS datasetem /srv/polarita/vault založeným v Bloku 1 (zachovej přejímací protokoly z Bloků 2–4 ve složce 07-IT-a-Architektura) zapni kompresi a pravidelné snapshoty a inicializuj v něm lokální Git (latest) repozitář se zákazem přepisování historie (receive.denyNonFastForwards = true) a kostrou složek 00-Meta až 09-Lide-a-BOZP (v 09-Lide-a-BOZP smějí ležet výhradně neosobní metodiky a prázdné šablony — 0 osobních údajů PII ve Vaultu!).
+2. Nasaď v zóně app_internal (výhradně za privátní VPN Headscale s přihlášením přes Keycloak OIDC) lehký open-source server Gitea (latest) s izolovanou databází v data_vault, úložištěm /srv/polarita/data/gitea a Gitea Actions runnerem pro gitleaks (brána Draivix/aigiscode se do CI zapojí až v Bloku 7); zapni chráněné větve (branch protection) a izolované pracovní stromy wt-worker / wt-judge vyžadující před sloučením kódu od Worker (17001/17002) zelený CI běh a schválení nezávislým Judge (17004).
+3. Nastav skupinová oprávnění tak, aby do paměti i repozitářů mohly přistupovat výhradně autorizované služby a schválený zálohovací proces.
+```
+
+---
+
+## 4. Ověřitelné podmínky dokončení Bloku 5
+
+- [ ] V zóně `data_vault` (bez přístupu do internetu, **`0× MySQL / MariaDB`**, **`0× MongoDB`**) běží **`PostgreSQL (latest)`** (`6` doménových + `9` servisních DB vč. `umami`, `zulip`, `stalwart`, `chatwoot`), otestovaný DB mutex číselných řad **`SELECT ... FOR UPDATE`** (`0` duplicit u 10 paralelních dotazů), SQL testem ověřené **`Clean Room`** pohledy nad `db_hr_lide` a `db_gdpr_zkousky` a **`Valkey (latest)`** se striktně oddělenými účty v `OpenBao`.
+- [ ] Běží objektové úložiště **`Garage (latest)`** s oddělenými koši pro fotodokumentaci staveb, flotily, 48h převzetí šanonů, e-shop, přílohy i **`90denní` provozní audio nahrávky hovorů**.
+- [ ] Existuje neměnný archiv **`/srv/polarita/data/legal-archive`** (`append-only` + ZFS snapshoty), kde praktický test potvrdil nemožnost přepsat či smazat uložený dokument (`.pdf`, `.isdoc`, listy Stavebního deníku, `.zfo` i důkazní hovory **`LEGAL_HOLD 3–10 let`**).
+- [ ] Je připraven verzovaný `Git (latest)` oddíl **`/srv/polarita/vault/`** (`00-Meta` až `09-Lide-a-BOZP` s **`0` PII ve `Vaultu`**) a za privátní VPN běží lokální Git/CI server **`Gitea (latest)`** s chráněnými větvemi, izolovanými `wt-worker / wt-judge` a aktivní CI bránou **`gitleaks`** (brána **`Draivix/aigiscode`** se aktivuje až v `Bloku 7`).

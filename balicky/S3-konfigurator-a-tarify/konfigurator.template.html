@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Konfigurátor Elektro Správa — Polarita s.r.o.</title>
+<style>
+  :root { --bg:#f4f7fa; --fg:#102c41; --muted:#465d6d; --card:#ffffff; --line:#cfdce4; --accent:#075d7a; --accent-fg:#ffffff; --warn-bg:#fff3eb; --warn-fg:#8a3608; --warn-line:#f3c4a8; --ok:#0b6b49; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg:#0f1b24; --fg:#e6eef3; --muted:#9db1bf; --card:#172733; --line:#2b4252; --accent:#5cc0de; --accent-fg:#06202b; --warn-bg:#3a2415; --warn-fg:#ffc9a6; --warn-line:#6b3f22; --ok:#4ccf9a; }
+  }
+  :root[data-theme="dark"] { --bg:#0f1b24; --fg:#e6eef3; --muted:#9db1bf; --card:#172733; --line:#2b4252; --accent:#5cc0de; --accent-fg:#06202b; --warn-bg:#3a2415; --warn-fg:#ffc9a6; --warn-line:#6b3f22; --ok:#4ccf9a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family:"Segoe UI", Roboto, Arial, sans-serif; line-height:1.45; }
+  main { max-width:1040px; margin:0 auto; padding:20px 16px 48px; }
+  h1 { font-size:1.6rem; margin:0 0 4px; } h2 { font-size:1.1rem; margin:0 0 10px; }
+  p.lead { color:var(--muted); margin:0 0 16px; }
+  .banner { background:var(--warn-bg); color:var(--warn-fg); border:1px solid var(--warn-line); border-radius:8px; padding:10px 12px; margin:0 0 16px; font-size:.92rem; }
+  .grid { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:16px; align-items:start; }
+  @media (max-width: 780px) { .grid { grid-template-columns:minmax(0,1fr); } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; margin:0 0 16px; }
+  .tariffs { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; }
+  @media (max-width: 780px) { .tariffs { grid-template-columns:minmax(0,1fr); } }
+  .tariff { border:2px solid var(--line); border-radius:10px; padding:10px; cursor:pointer; background:transparent; color:inherit; text-align:left; font:inherit; }
+  .tariff[aria-pressed="true"] { border-color:var(--accent); }
+  .tariff strong { display:block; font-size:1.02rem; } .tariff .price { font-size:1.2rem; font-weight:700; margin:4px 0; }
+  .tariff small { color:var(--muted); }
+  ul.includes { margin:8px 0 0; padding-left:18px; font-size:.9rem; }
+  label { display:block; font-size:.9rem; margin:0 0 4px; }
+  .row { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; margin:0 0 10px; }
+  @media (max-width: 480px) { .row { grid-template-columns:minmax(0,1fr); } }
+  input[type=number], select { width:100%; padding:8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--fg); font:inherit; }
+  .pkg { display:grid; grid-template-columns:auto minmax(0,1fr) 84px; gap:10px; align-items:center; padding:8px 0; border-top:1px solid var(--line); }
+  .pkg:first-of-type { border-top:0; } .pkg small { color:var(--muted); display:block; }
+  .summary dt { color:var(--muted); font-size:.85rem; } .summary dd { margin:0 0 10px; font-size:1.25rem; font-weight:700; font-variant-numeric:tabular-nums; }
+  .summary dd.small { font-size:1rem; font-weight:600; }
+  button.cta { background:var(--accent); color:var(--accent-fg); border:0; border-radius:8px; padding:10px 14px; font:inherit; font-weight:700; cursor:pointer; width:100%; }
+  a { color:var(--accent); } .note { color:var(--muted); font-size:.85rem; margin:10px 0 0; }
+  #copied { color:var(--ok); font-size:.85rem; min-height:1.2em; margin:6px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Konfigurátor paušálu „Elektro Správa SVJ a Firem“</h1>
+  <p class="lead">Sestavte si tarif správy elektro pro svůj dům nebo areál a přidejte balíčky na klíč. Cena se neodvíjí od počtu členů výboru ani uživatelů portálu.</p>
+  <div class="banner" id="banner" hidden></div>
+  <div class="grid">
+    <div>
+      <section class="card">
+        <h2>1. Tarif</h2>
+        <div class="tariffs" id="tariffs"></div>
+      </section>
+      <section class="card">
+        <h2>2. Rozsah</h2>
+        <div class="row">
+          <div><label for="objects">Počet objektů (domů / budov)</label><input id="objects" type="number" min="1" max="200" value="1" inputmode="numeric"></div>
+          <div><label for="entrances">Další vchody nad první vchod každého objektu</label><input id="entrances" type="number" min="0" max="500" value="0" inputmode="numeric"></div>
+        </div>
+      </section>
+      <section class="card">
+        <h2>3. Balíčky na klíč (volitelně)</h2>
+        <div class="row">
+          <div><label for="month">Předpokládaný měsíc realizace</label><select id="month"></select></div>
+          <div></div>
+        </div>
+        <div id="packages"></div>
+      </section>
+    </div>
+    <aside>
+      <section class="card summary" aria-live="polite">
+        <h2>Vaše konfigurace</h2>
+        <dl>
+          <dt>Měsíční paušál bez DPH</dt><dd id="monthly">—</dd>
+          <dt>Ročně bez DPH</dt><dd class="small" id="annual">—</dd>
+          <dt>Balíčky na klíč bez DPH (od–do)</dt><dd class="small" id="pkgRange">—</dd>
+          <dt>Servisní odezva (SLA)</dt><dd class="small" id="sla">—</dd>
+        </dl>
+        <ul class="includes" id="includes"></ul>
+        <p class="note">Kolik může stát zanedbaná revize? Spočítejte si to v <a href="/kalkulacka-svj">Kalkulačce rizik a úspor SVJ</a>.</p>
+        <button class="cta" id="copy" type="button">Zkopírovat shrnutí poptávky</button>
+        <p id="copied" role="status"></p>
+        <p class="note">Konfigurátor nic neodesílá ani neukládá. Závaznou nabídku vždy připraví a potvrdí člověk.</p>
+      </section>
+    </aside>
+  </div>
+</main>
+<script>
+// Price list embedded at build time from cenik.json (python pricing.py --build).
+// Ceník vložený při sestavení z cenik.json (python pricing.py --build).
+const PRICE_LIST = /*__PRICE_LIST_JSON__*/;
+
+const state = { tariff: PRICE_LIST.mrr_tariffs[0].code, packages: {} };
+// Round to hellers first (removes binary float error), then to whole crowns half up - as pricing.py.
+// Nejprve na haléře (odstraní chybu dvojkové aritmetiky), potom na celé koruny nahoru - jako pricing.py.
+const czk = (value) => Math.round(Math.round(value * 100) / 100).toLocaleString("cs-CZ") + " Kč";
+const byId = (id) => document.getElementById(id);
+const clampInt = (input) => {
+  const min = Number(input.min), max = Number(input.max);
+  const value = Math.floor(Number(input.value));
+  return Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : min;
+};
+
+// Same formulas as pricing.py (monthly_fee, package_range, seasonal_coefficient).
+// Stejné vzorce jako v pricing.py (monthly_fee, package_range, seasonal_coefficient).
+function monthlyFee(tariff, objects, extraEntrances) {
+  return tariff.base_monthly_per_object * objects + tariff.extra_entrance_monthly * extraEntrances;
+}
+function seasonalCoefficient(month) {
+  const band = PRICE_LIST.seasonal_coefficients.find((item) => item.months.includes(month));
+  return band ? band.coefficient : 1;
+}
+function packageRange(pkg, quantity, month) {
+  const coefficient = seasonalCoefficient(month);
+  return [pkg.price_from * quantity * coefficient, pkg.price_to * quantity * coefficient];
+}
+
+function renderStatic() {
+  const banner = byId("banner");
+  if (!PRICE_LIST.meta.approved) {
+    banner.hidden = false;
+    banner.textContent = "NÁVRH — orientační, nezávazné ceny bez DPH. Ceník dosud nebyl schválen jednatelem; hodnoty slouží pouze k představě o rozsahu.";
+  }
+  const tariffs = byId("tariffs");
+  PRICE_LIST.mrr_tariffs.forEach((tariff) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "tariff";
+    button.dataset.code = tariff.code;
+    const name = document.createElement("strong"); name.textContent = tariff.label;
+    const price = document.createElement("div"); price.className = "price"; price.textContent = czk(tariff.base_monthly_per_object) + " / měs.";
+    const audience = document.createElement("small"); audience.textContent = tariff.audience + " · za objekt";
+    button.append(name, price, audience);
+    button.addEventListener("click", () => { state.tariff = tariff.code; update(); });
+    tariffs.append(button);
+  });
+  const monthSelect = byId("month");
+  ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září", "říjen", "listopad", "prosinec"].forEach((label, index) => {
+    const option = document.createElement("option"); option.value = String(index + 1); option.textContent = label; monthSelect.append(option);
+  });
+  monthSelect.value = String(new Date().getMonth() + 1);
+  const packages = byId("packages");
+  PRICE_LIST.turnkey_packages.forEach((pkg) => {
+    const row = document.createElement("div"); row.className = "pkg";
+    const check = document.createElement("input"); check.type = "checkbox"; check.id = "pkg-" + pkg.code;
+    const label = document.createElement("label"); label.htmlFor = check.id; label.style.margin = "0";
+    const title = document.createElement("span"); title.textContent = pkg.label;
+    const detail = document.createElement("small"); detail.textContent = czk(pkg.price_from) + " – " + czk(pkg.price_to) + " / " + pkg.unit + " · " + pkg.includes;
+    label.append(title, detail);
+    const quantity = document.createElement("input"); quantity.type = "number"; quantity.min = "1"; quantity.max = "200"; quantity.value = "1";
+    quantity.setAttribute("aria-label", "Počet: " + pkg.label);
+    const sync = () => { state.packages[pkg.code] = check.checked ? clampInt(quantity) : 0; update(); };
+    check.addEventListener("change", sync); quantity.addEventListener("input", sync);
+    row.append(check, label, quantity); packages.append(row);
+  });
+  ["objects", "entrances", "month"].forEach((id) => byId(id).addEventListener("input", update));
+  byId("copy").addEventListener("click", copySummary);
+}
+
+function compute() {
+  const tariff = PRICE_LIST.mrr_tariffs.find((item) => item.code === state.tariff);
+  const objects = clampInt(byId("objects"));
+  const entrances = clampInt(byId("entrances"));
+  const month = Number(byId("month").value);
+  const monthly = monthlyFee(tariff, objects, entrances);
+  let from = 0, to = 0; const chosen = [];
+  PRICE_LIST.turnkey_packages.forEach((pkg) => {
+    const quantity = state.packages[pkg.code] || 0;
+    if (quantity > 0) { const [a, b] = packageRange(pkg, quantity, month); from += a; to += b; chosen.push(quantity + "× " + pkg.label); }
+  });
+  return { tariff, objects, entrances, month, monthly, annual: monthly * 12, from, to, chosen };
+}
+
+function update() {
+  const result = compute();
+  document.querySelectorAll(".tariff").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.code === state.tariff)));
+  byId("monthly").textContent = czk(result.monthly);
+  byId("annual").textContent = czk(result.annual);
+  byId("pkgRange").textContent = result.chosen.length ? czk(result.from) + " – " + czk(result.to) : "nevybráno";
+  byId("sla").textContent = result.tariff.sla_response;
+  const list = byId("includes"); list.replaceChildren();
+  result.tariff.includes.forEach((item) => { const li = document.createElement("li"); li.textContent = item; list.append(li); });
+  return result;
+}
+
+async function copySummary() {
+  const result = compute();
+  const lines = [
+    "Poptávka — Elektro Správa SVJ a Firem (orientační konfigurace, " + (PRICE_LIST.meta.approved ? "ceník " + PRICE_LIST.meta.version : "NÁVRH cen") + ")",
+    "Tarif: " + result.tariff.label,
+    "Objektů: " + result.objects + ", dalších vchodů: " + result.entrances,
+    "Měsíční paušál bez DPH: " + czk(result.monthly) + " (ročně " + czk(result.annual) + ")",
+    "Balíčky na klíč: " + (result.chosen.length ? result.chosen.join(", ") + " — " + czk(result.from) + " až " + czk(result.to) + " bez DPH" : "žádné"),
+  ];
+  const status = byId("copied");
+  try { await navigator.clipboard.writeText(lines.join("\n")); status.textContent = "Shrnutí je ve schránce — vložte je do e-mailu nebo chatu."; }
+  catch (error) { status.textContent = lines.join(" · "); }
+}
+
+renderStatic();
+update();
+</script>
+</body>
+</html>

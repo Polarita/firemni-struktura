@@ -1,0 +1,62 @@
+# Example Gitea Actions workflow for the Polarita blueprint (Blocks 13-15 + consistency check).
+# Vzorový workflow Gitea Actions pro návrh Polarita (Bloky 13–15 + kontrola konzistence).
+#
+# EN: This file is a TEMPLATE. It has not been run: the server polarita-hq and its Gitea do not
+#     exist yet (the same checks were verified once on Linux on 15 Nov 2026, outside Gitea). After Gitea is
+#     deployed in Block 5, copy it to .gitea/workflows/kontrola.yml in the repository.
+# CZ: Tento soubor je VZOR. Nebyl spuštěn: stroj polarita-hq ani jeho Gitea zatím neexistují
+#     (tytéž kontroly byly 15. 11. 2026 jednorázově ověřeny na Linuxu mimo Gitea). Po nasazení Gitea v Bloku 5 jej zkopíruj
+#     do .gitea/workflows/kontrola.yml v repozitáři.
+name: kontrola-navrhu
+on:
+  push:
+  pull_request:
+
+jobs:
+  kontrola:
+    # The runner (act_runner) is registered in HOST mode inside an Incus system container in the zone
+    # app_internal with the label "polarita-incus:host" - jobs run directly in that container, never in Docker.
+    # Runner (act_runner) je registrován v režimu HOST uvnitř systémového kontejneru Incus v zóně
+    # app_internal se štítkem "polarita-incus:host" - úlohy běží přímo v tomto kontejneru, nikdy v Dockeru.
+    runs-on: polarita-incus
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      # EN: The runner container needs the packages git, nodejs (for the checkout action), python3 and
+      #     python3-venv, and Gitea needs a local mirror of the checkout action (no internet in the zone).
+      # CZ: Kontejner runneru potřebuje balíky git, nodejs (kvůli akci checkout), python3 a python3-venv
+      #     a Gitea místní zrcadlo akce checkout (zóna nemá přístup do internetu).
+      - uses: actions/checkout@v4
+
+      # EN: A virtual environment - a system-wide "pip install" is refused on current Ubuntu LTS.
+      # CZ: Virtuální prostředí - systémové "pip install" aktuální Ubuntu LTS odmítá.
+      - name: Python dependencies / Závislosti
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -r balicky/S1-generator-cistopisu/requirements.txt
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: Consistency check against the canon / Kontrola konzistence proti kanonu
+        working-directory: nastroje
+        run: |
+          python3 sync_prompt_core.py --check
+          python3 check_consistency.py
+          python3 -m unittest test_check_consistency
+
+      - name: S2 Eval Suite 100+ (dry-run must be 100 %) / dry-run musí být 100 %
+        working-directory: balicky/S2-eval-suite
+        run: |
+          python3 -m unittest test_eval_suite
+          python3 run_eval_suite.py --no-history
+
+      - name: S3 pricing kernel / Cenové jádro
+        working-directory: balicky/S3-konfigurator-a-tarify
+        run: python3 -m unittest test_pricing
+
+      - name: S1 templates and sample data / Šablony a vzorová data
+        working-directory: balicky/S1-generator-cistopisu
+        # Printing PDF needs a Chromium browser on the runner; --check validates templates without it.
+        # Tisk PDF vyžaduje na runneru prohlížeč Chromium; --check ověří šablony i bez něj.
+        run: |
+          python3 generate_pdfs.py --check
+          python3 -m unittest test_generate_pdfs

@@ -1,0 +1,34 @@
+#!/bin/sh
+# Git pre-commit hook: run the Polarita consistency check when the blueprint folder has staged changes.
+# Git pre-commit hook: spustí kontrolu konzistence Polarita, když jsou připravené změny ve složce návrhu.
+#
+# Install / Instalace:
+#   cp <blueprint folder>/nastroje/pre-commit <repository root>/.git/hooks/pre-commit
+#   cp <složka návrhu>/nastroje/pre-commit <kořen repozitáře>/.git/hooks/pre-commit
+#
+# EN: Works both when the blueprint is the repository root (its own repository) and when it lives in
+#     the subfolder polarita/firemni-struktura of a larger repository. It does nothing for commits
+#     that do not touch the blueprint.
+# CZ: Funguje, když je návrh kořenem repozitáře (vlastní repozitář), i když leží v podsložce
+#     polarita/firemni-struktura většího repozitáře. U commitů, které se návrhu netýkají, nedělá nic.
+
+ROOT="$(git rev-parse --show-toplevel)"
+if [ -f "$ROOT/nastroje/check_consistency.py" ]; then
+    FOLDER="."
+    CHANGED="$(git diff --cached --name-only)"
+else
+    FOLDER="polarita/firemni-struktura"
+    CHANGED="$(git diff --cached --name-only | grep "^$FOLDER/")"
+fi
+PYTHON="$(command -v python || command -v python3)"
+if [ -n "$CHANGED" ]; then
+    if [ -z "$PYTHON" ]; then
+        echo "pre-commit: nenalezen python ani python3 — commit zastaven." >&2
+        exit 1
+    fi
+    if ! (cd "$ROOT/$FOLDER/nastroje" && "$PYTHON" check_consistency.py); then
+        echo "pre-commit: kontrola konzistence selhala — commit zastaven (oprav nálezy nebo uprav nastroje/kanon.json)." >&2
+        exit 1
+    fi
+fi
+exit 0

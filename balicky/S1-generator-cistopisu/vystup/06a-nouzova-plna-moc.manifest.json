@@ -1,0 +1,33 @@
+{
+  "document": "06a-nouzova-plna-moc",
+  "title": "Nouzová omezená provozní plná moc (režim Break-Glass)",
+  "draft_watermark": true,
+  "generated_utc": "2026-11-18 06:12 UTC",
+  "variables": {
+    "spis_id": "POL-2027-00001",
+    "cislo_plne_moci": "PM-BG-2027-001 (VZOR)",
+    "jmeno_zmocnence": "Karel Zástupný (VZOR)",
+    "osobni_cislo": "1007 (SUB-1007)",
+    "role_zmocnence": "zástupný revizní technik (SUB-1007)",
+    "ico_zmocnence": "00000000",
+    "osvedceni_rt": "č. VZOR-0000, rozsah E2A, platnost do 31. 12. 2030 (VZOR)",
+    "smluvni_zaklad": "Rámcová smlouva o zastupování revizního technika ze dne 1. 2. 2027 (VZOR)",
+    "rozsah_platebniho_opravneni": "Neuděluje se. Zmocněnec v roli zástupného revizního technika není oprávněn k žádným platbám. (VZOR — NÁVRH, ke schválení 1001)",
+    "limit_ukonu_bez_dph": "20 000 Kč",
+    "platnost_plne_moci_od": "1. 2. 2027",
+    "platnost_plne_moci_do": "31. 1. 2028",
+    "lhuta_nedostupnosti": "72 hodin",
+    "osoba_potvrzujici_aktivaci": "krizový zástupce určený jednatelem, Jana Vzorová (VZOR),",
+    "nejdelsi_doba_aktivace": "30 dnů",
+    "forma_podpisu": "podpis zmocnitele úředně ověřen; podpis zmocněnce vlastnoruční (VZOR — NÁVRH, ke schválení 1001)",
+    "misto_podpisu": "Praha",
+    "datum_podpisu": "1. 2. 2027",
+    "datum_prijeti_plne_moci": "1. 2. 2027"
+  },
+  "sha256": {
+    "template": "48773c8f8b554cd8a24324206d2acd297ae4d234d96645b43f65dd5fbf8fd735",
+    "data": "ec05464080826f1be5b430c9280e4425812e2359c9f0bb83f611228e66540e68",
+    "pdf": "4d43921b0bb1974575d3bb4d13b0962caab7edffb3acf2b7b52283d8c375ecf7"
+  },
+  "pages": 4
+}

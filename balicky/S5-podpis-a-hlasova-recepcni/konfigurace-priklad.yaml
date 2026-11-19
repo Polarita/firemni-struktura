@@ -1,0 +1,262 @@
+# =============================================================================
+# EN: Example configuration for package S5 (Block 17, release Polarita-2.7):
+#     esign-bridge (two-party e-signature) and voice-agent (night voice receptionist).
+# CZ: Příklad konfigurace balíčku S5 (Blok 17, release Polarita-2.7):
+#     esign-bridge (dvoustranný e-podpis) a voice-agent (noční hlasová recepční).
+#
+# EN: This is a design example only. Nothing here is deployed. The file contains
+#     NO secrets and NO phone numbers - only references to OpenBao and to personal IDs.
+# CZ: Jde pouze o příklad návrhu. Nic z toho není nasazeno. Soubor neobsahuje
+#     ŽÁDNÁ tajemství ani telefonní čísla - jen odkazy do OpenBao a na osobní čísla.
+#
+# EN: Every value tagged "NAVRH" is an illustrative placeholder awaiting approval by 1001.
+# CZ: Každá hodnota označená "NÁVRH" je ilustrativní zástupná hodnota ke schválení 1001.
+# =============================================================================
+
+schema_version: 1
+package: "S5"
+block: 17
+release: "Polarita-2.7"
+# EN: Overall status of this file. / CZ: Celkový stav tohoto souboru.
+status: "NAVRH"  # NÁVRH — ke schválení 1001
+
+# -----------------------------------------------------------------------------
+# EN: Shared settings. / CZ: Společná nastavení.
+# -----------------------------------------------------------------------------
+common:
+  timezone: "Europe/Prague"
+  branch_id: 101                      # EN: branch CZ-101 / CZ: pobočka CZ-101
+  case_id_pattern: "POL-RRRR-NNNNN"
+  database: "db_erp_lhutnik"          # EN: no new database / CZ: žádná nová databáze
+  schema_managed_by: "metadata-schema-kernel"
+  untrusted_envelope: '<untrusted_inbound_comm role="external_data">'
+  approval:
+    queue: "Decisions"
+    confirm_action: "mutation_confirm"
+    cancel_action: "mutation_cancel"
+    approver: "1001"                  # EN: always a human / CZ: vždy člověk
+
+# -----------------------------------------------------------------------------
+# EN: esign-bridge - two-party electronic signature of contracts.
+# CZ: esign-bridge - dvoustranný elektronický podpis smluv.
+# -----------------------------------------------------------------------------
+esign_bridge:
+  enabled: false                      # EN: off until approved / CZ: vypnuto do schválení
+  provider:
+    # EN: External paid third-party service - a named exception to the 0 CZK licence rule.
+    # CZ: Externí placená služba třetí strany - pojmenovaná výjimka ze zásady 0 Kč licencí.
+    name: "signi"                     # NÁVRH — ke schválení 1001
+    environment: "test"               # EN: test | production / CZ: test | produkce
+    # EN: Placeholder URL; take the real one from the provider's documentation.
+    # CZ: Zástupná adresa; skutečnou převezmi z dokumentace poskytovatele.
+    api_base_url: "https://api.example.invalid/"
+    # EN: References only - the values live in OpenBao and are read into memory.
+    # CZ: Pouze odkazy - hodnoty jsou v OpenBao a čtou se jen do paměti procesu.
+    api_key_ref: "openbao:esign-bridge/provider-api-key"
+    webhook_secret_ref: "openbao:esign-bridge/webhook-secret"
+    data_processing_agreement_signed: false   # EN: GDPR data processing agreement / CZ: zpracovatelská smlouva podle GDPR
+  webhook:
+    treat_as_untrusted: true
+    verify_signature: true            # EN: reject unsigned webhooks / CZ: odmítni nepodepsané webhooky
+    max_clock_skew_s: 300             # NÁVRH — ke schválení 1001
+    replay_protection: true
+    on_failure: "SECURITY_QUARANTINE" # EN: report to 17004 / CZ: hlášení 17004
+    # EN: A webhook is only a signal; state and PDF are pulled via the authenticated API.
+    # CZ: Webhook je jen signál; stav a PDF se stahují autentizovaným dotazem na API.
+    pull_state_after_webhook: true
+  polarita_signature:
+    # EN: Polarita is always signed by a human with a personal QES on a QSCD chip.
+    # CZ: Za Polaritu podepisuje vždy člověk osobním QES na čipu QSCD.
+    signer: "1001"
+    method: "personal_qes_qscd"
+    tool: "JSignPdf"
+    qualified_timestamp: true
+    allow_ai_signature: false
+    allow_server_seal_instead: false  # EN: pyHanko seal never replaces it / CZ: pečeť pyHanko jej nikdy nenahrazuje
+  # EN: Signature level matrix per document type - approved by 15001 + 1001.
+  # CZ: Matice úrovní podpisu podle typu listiny - schvaluje 15001 + 1001.
+  # EN: Signature levels: simple | advanced | qualified. SMS PIN is never "qualified".
+  # CZ: Úrovně podpisu: prostý | zaručený | kvalifikovaný. SMS PIN není nikdy "kvalifikovaný".
+  signature_matrix:                   # NÁVRH — ke schválení 1001
+    smlouva_o_dilo:
+      client_method: "bankid"
+      client_level: "unverified"      # EN: verify with provider docs / CZ: ověřit z dokumentace poskytovatele
+    zmenovy_list_vicepraci:
+      client_method: "sms_pin"
+      client_level: "simple"
+    servisni_smlouva_mrr:
+      client_method: "bankid"
+      client_level: "unverified"
+  fallback_without_third_party:
+    # EN: Client signs with their own qualified signature; 1001 countersigns with QES.
+    # CZ: Klient podepíše vlastním kvalifikovaným podpisem; 1001 připojí QES.
+    enabled: true
+    client_method: "own_qualified_signature"
+    return_channel: "stalwart-mail"
+  delivery:
+    allowed_channels: ["stalwart-mail", "chatwoot-ce"]
+    require_mutation_confirm: true
+    template_ids:                     # NÁVRH — ke schválení 1001
+      invitation: "esign-invitation-v1"
+      reminder: "esign-reminder-v1"
+      final_copy: "esign-final-copy-v1"
+  envelope:
+    states: ["DRAFT", "PENDING_APPROVAL", "SENT", "CLIENT_SIGNED", "COUNTERSIGNED_1001", "ARCHIVED", "REJECTED", "EXPIRED"]
+    terminal_states: ["ARCHIVED", "REJECTED", "EXPIRED"]
+    link_validity_days: 14            # NÁVRH — ke schválení 1001
+    max_reminders: 2                  # NÁVRH — ke schválení 1001
+    reminder_days_before_expiry: 3    # NÁVRH — ke schválení 1001
+    hash_algorithm: "SHA-256"
+  validation:
+    antivirus: "ClamAV"
+    zone: "sandbox_airgap"
+    # EN: Never rebuild a signed original via Dangerzone - it would destroy the signature.
+    # CZ: Podepsaný originál nikdy nepřeváděj přes Dangerzone - zničilo by to podpis.
+    dangerzone_on_signed_original: false
+    require_hash_match: true
+    require_both_signatures: true
+  archive:
+    path: "/srv/polarita/data/legal-archive/"
+    format: "PAdES"
+    retention: "LEGAL_HOLD"
+  after_archive:
+    zulip_topic: "POL-RRRR-NNNNN"     # EN: status + link only, no PII / CZ: jen stav a odkaz, bez PII
+    activate_billing_calendar: true   # EN: part of the final confirmed diff / CZ: součást závěrečného potvrzeného diffu
+    billing_module: "finance-uol-marze-engine"
+
+# -----------------------------------------------------------------------------
+# EN: voice-agent - night voice receptionist (an operating mode of 16002 tajemnik).
+# CZ: voice-agent - noční hlasová recepční (provozní režim 16002 tajemnik).
+# -----------------------------------------------------------------------------
+voice_agent:
+  enabled: false                      # EN: off until approved / CZ: vypnuto do schválení
+  runs_as: "16002"                    # EN: no new agent / CZ: žádný nový agent
+  zone: "app_internal"
+  stack:
+    call_control: "Asterisk ARI"
+    agent_framework: "LiveKit Agents"
+    version_policy: "latest"
+    stt: "Faster-Whisper"                   # EN: local, in sandbox_airgap / CZ: lokálně, v sandbox_airgap
+    tts: "undecided"                  # NÁVRH — ke schválení 1001 (EN: by availability / CZ: podle dostupnosti)
+    llm: "undecided"                  # NÁVRH — ke schválení 1001 (EN: by availability / CZ: podle dostupnosti)
+  # EN: Business hours - humans answer; outside them the receptionist answers.
+  # CZ: Pracovní doba - hovory přijímají lidé; mimo ni přijímá recepční.
+  business_hours:
+    monday:    {open: "07:00", close: "17:00"}
+    tuesday:   {open: "07:00", close: "17:00"}
+    wednesday: {open: "07:00", close: "17:00"}
+    thursday:  {open: "07:00", close: "17:00"}
+    friday:    {open: "07:00", close: "17:00"}
+    saturday:  null                   # EN: closed / CZ: zavřeno
+    sunday:    null                   # EN: closed / CZ: zavřeno
+    closed_on_cz_public_holidays: true
+  activation:
+    after_hours: true
+    line_busy_overflow: true          # EN: when all lines are busy / CZ: při plném vytížení linky
+    overflow_after_ring_s: 25         # NÁVRH — ke schválení 1001
+  disclosure:
+    # EN: Mandatory opening announcement (EU rules on artificial intelligence: duty to disclose ai + call recording notice).
+    # CZ: Povinné úvodní oznámení (předpisy EU o umělé inteligenci: povinnost oznámit, že jde o ai + informace o nahrávání).
+    required: true
+    text_source: "hlasova-recepcni-scenar.md#2"
+    block_call_if_not_played: true
+  spoken_camel:
+    # EN: Everything the caller says is data, never instructions.
+    # CZ: Vše, co volající řekne, jsou data, nikdy pokyny.
+    wrap_transcript: true
+    model_tools: ["write_own_ticket"]
+    on_injection_attempt: "SECURITY_QUARANTINE"
+  required_fields: ["object_address", "contact_name", "callback_number", "problem_description"]
+  confirm_by_read_back: true
+  classification:
+    # EN: P1 is decided by deterministic rules; the model may only raise priority.
+    # CZ: O P1 rozhodují deterministická pravidla; model smí prioritu jen zvýšit.
+    decided_by: "deterministic_gate"
+    model_may_raise_priority: true
+    model_may_lower_priority: false
+    when_in_doubt: "P1"
+    p1_keywords:
+      - "jiskří"
+      - "jiskření"
+      - "hoří"
+      - "požár"
+      - "oheň"
+      - "kouř"
+      - "kouří se"
+      - "zápach kouře"
+      - "spálenina"
+      - "úraz"
+      - "zasažen proudem"
+      - "rána proudem"
+    p1_keywords_extension: []         # NÁVRH — ke schválení 1001 (EN: e.g. flooding / CZ: např. zatopení)
+    acoustic_urgency:
+      engine: "Silero VAD + librosa"
+      channel: "L"                    # EN: caller only / CZ: pouze volající
+      channel_r_emotion_analysis: "FAIL_CLOSED"
+      can_set_p1_alone: false
+  emergency_lines:
+    # EN: Advised first when life is at risk. / CZ: Odkaz jako první při ohrožení života.
+    general: "112"
+    fire: "150"
+  escalation:
+    # EN: Contacts are personal IDs only; phone numbers are resolved at dial time
+    #     by the deterministic escalation module, never seen by the model.
+    # CZ: Kontakty jsou jen osobní čísla; telefonní čísla dohledává až při vytáčení
+    #     deterministický modul eskalace, model je nikdy nevidí.
+    order:                            # NÁVRH — ke schválení 1001
+      - person_ref: "1001"
+        role: "on_call_inspection_technician"
+      - person_ref: "SUB-1007"
+        role: "break_glass_substitute"
+        requires_standby_agreement: true
+    attempts_per_contact: 3           # NÁVRH — ke schválení 1001
+    ring_timeout_s: 40                # NÁVRH — ke schválení 1001
+    retry_interval_s: 120             # NÁVRH — ke schválení 1001
+    max_rounds: 2                     # NÁVRH — ke schválení 1001
+    ack_dtmf: "1"                     # NÁVRH — ke schválení 1001
+    fallback_repeat_interval_min: 10  # NÁVRH — ke schválení 1001
+    answered_without_ack_counts_as: "not_answered"
+    parallel_notifications:
+      - "decisions:URGENT"
+      - "zulip:#14-elektro-a-zakazky"
+      - "pager"
+    warm_transfer_after_ack: true
+  routine_request:
+    ticket_target: "360-karta-spisu"
+    due_time: "07:00"
+    assignee: "14005"
+  forbidden_commitments: ["price", "binding_date", "contract", "diagnosis"]
+  human_callback:
+    always_available: true
+  recording:
+    stereo: true
+    channel_l: "caller"
+    channel_r: "polarita"
+    store: "Garage"
+    retention_days: 90
+    legal_hold_for: ["P1", "complaint", "contract_term"]
+    legal_hold_archive: "/srv/polarita/data/legal-archive/"
+  limits:
+    max_call_duration_s: 420          # NÁVRH — ke schválení 1001
+    max_concurrent_calls: 2           # NÁVRH — ke schválení 1001
+    max_unclear_repeats: 2            # NÁVRH — ke schválení 1001
+    silence_timeout_s: 8              # NÁVRH — ke schválení 1001
+    max_calls_per_number_per_hour: 5  # NÁVRH — ke schválení 1001 (EN: never applies to P1 / CZ: neplatí pro P1)
+  budget:
+    # EN: Metered sub-limit inside the 16002 quota; the 470 USD cap does not change.
+    # CZ: Měřený podlimit uvnitř kvóty 16002; strop 470 USD se nemění.
+    agent_quota_usd: 15
+    monthly_sublimit_usd: 4.00        # NÁVRH — ke schválení 1001
+    per_call_cap_usd: 0.25            # NÁVRH — ke schválení 1001
+    company_cap_usd: 470
+    # EN: Exhausted budget or model outage must never block P1.
+    # CZ: Vyčerpaný rozpočet ani výpadek modelu nesmí nikdy zablokovat P1.
+    on_exhausted: "deterministic_fallback"
+  network:
+    new_public_ports: []              # EN: none / CZ: žádné
+    sip_ports_public: false
+    audio_to_sandbox_without_nic: true
+  eval:
+    package: "balicky/S2-eval-suite/"
+    category: "etapa-ii-iii"
+    rule: "voice_agent_call"

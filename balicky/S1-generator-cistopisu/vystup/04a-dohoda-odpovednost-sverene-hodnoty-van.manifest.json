@@ -1,0 +1,29 @@
+{
+  "document": "04a-dohoda-odpovednost-sverene-hodnoty-van",
+  "title": "Dohoda o odpovědnosti k ochraně hodnot svěřených zaměstnanci k vyúčtování — pojízdný sklad",
+  "draft_watermark": true,
+  "generated_utc": "2026-11-18 06:11 UTC",
+  "variables": {
+    "spis_id": "POL-2027-00004",
+    "jmeno_zamestnance": "Jan Vzorový",
+    "osobni_cislo": "1099",
+    "pracovni_pozice": "elektromontér (vzorové zařazení)",
+    "oznaceni_van": "VAN-101-01",
+    "vozidlo_spz": "0AA 0000",
+    "datum_vstupni_inventury": "29. 1. 2027",
+    "cislo_inventurniho_zapisu": "INV-VAN-101-01-2027-001 (VZOR)",
+    "castka_bez_dph": "86 450,00 Kč",
+    "misto_parkovani": "uzamčený dvůr pobočky CZ-101 (vzorový údaj)",
+    "perioda_inventur": "nejméně jednou za kalendářní čtvrtletí",
+    "norma_prirozenych_ubytku": "0,5 % z hodnoty materiálu vydaného za inventarizační období (vzorový údaj)",
+    "datum_ucinnosti": "1. 2. 2027",
+    "misto_podpisu": "Praha",
+    "datum_podpisu": "29. 1. 2027"
+  },
+  "sha256": {
+    "template": "ad8cd3f24d9618caba159ef6a63f5d79412691e5c7ac3ade78a5ecfb5d30a6c5",
+    "data": "a70e2f8e131166586c26a4e3a44332d6bf92d1e84da631a5d21f168cd0d2fb17",
+    "pdf": "f5460839aea40410ab3a6f8bbcd7f91fde34dca726ec3ff8d4702570831371f7"
+  },
+  "pages": 3
+}

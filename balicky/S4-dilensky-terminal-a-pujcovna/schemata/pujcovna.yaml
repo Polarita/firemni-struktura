@@ -1,0 +1,446 @@
+# =============================================================================
+# metadata-schema-kernel · declarative schema DRAFT / deklarativní schéma NÁVRH
+# Module / Modul: pujcovna-meridel · Blok 16 · balíček S4 · Verze 2.7
+# EN: B2B rental of measuring instruments and temporary power sources as an
+#     extension of the collision-free resource calendar in
+#     centralni-lhutnik-a-objekty. Nothing here is deployed (greenfield design).
+# CZ: B2B půjčovna měřidel a dočasných zdrojů jako rozšíření bezkolizního
+#     kalendáře zdrojů v centralni-lhutnik-a-objekty. Nic z toho není nasazeno
+#     (greenfield návrh).
+# EN: No prices here. The price list is a PROPOSAL to be approved by 1001.
+# CZ: Žádné ceny. Ceník je NÁVRH — ke schválení 1001.
+# EN: The exact DSL of metadata-schema-kernel is fixed by 17001 during
+#     implementation; this file is a design input, not a tested migration.
+# CZ: Přesný formát (DSL) metadata-schema-kernel určí 17001 při implementaci;
+#     tento soubor je návrhový podklad, ne otestovaná migrace.
+# =============================================================================
+
+schema:
+  name: pujcovna_meridel
+  module: pujcovna-meridel
+  package: S4
+  block: 16
+  release: Polarita-2.7
+  schema_version: 0.1.0-draft
+  status: DRAFT                 # EN: proposal only / CZ: pouze návrh
+  owner_ai: 17001               # EN: 17001 programator / CZ: 17001 programator
+  operator_ai: 14005            # EN: 14005 zakazky runs the calendar / CZ: 14005 zakazky vede kalendář
+  finance_ai: 16001             # EN: 16001 ucetni, billing drafts / CZ: 16001 ucetni, návrhy fakturace
+  judges: [15001, 17004]        # EN: terms and security review / CZ: kontrola podmínek a bezpečnosti
+  approver_person_no: 1001      # EN: human approval in Decisions / CZ: lidské schválení v Decisions
+
+storage:
+  rental:
+    database: db_erp_lhutnik
+    schema: pujcovna
+
+conventions:
+  optimistic_locking: version_etag
+  audit_columns: [created_at, created_by_person_no, updated_at, version]
+  pii_allowed: false            # EN: contact persons live outside this schema / CZ: kontaktní osoby žijí mimo toto schéma
+  cross_database_links: api_only
+  secrets: openbao_only
+  mutations_by_ai: draft_only   # EN: ai prepares DRAFT, 1001 confirms / CZ: ai připraví DRAFT, 1001 potvrzuje
+  money: decimal_only           # EN: exact decimals, never floats / CZ: přesná desetinná čísla, nikdy float
+
+types:
+  case_id:
+    base: string
+    pattern: '^POL-[0-9]{4}-[0-9]{5}$'    # EN: file number / CZ: číslo spisu POL-RRRR-NNNNN
+  person_no:
+    base: integer
+    min: 1001                   # EN: living natural persons only / CZ: výhradně živé fyzické osoby
+    max: 9999
+  org_code:
+    base: string
+    pattern: '^ORG-[A-Z0-9-]+$' # EN: legal entity code / CZ: kód právnické osoby
+  warehouse_code:
+    base: string
+    pattern: '^MAIN-[1-9][0-9]{2}$'
+  object_key:
+    base: string                # EN: Garage (S3) object key / CZ: klíč objektu v Garage (S3)
+  currency:
+    base: string
+    pattern: '^[A-Z]{3}$'       # EN: three-letter currency code / CZ: třípísmenný kód měny
+
+enums:
+  asset_category:
+    - NETWORK_ANALYZER          # EN: power quality / network analyzer / CZ: analyzátor sítí
+    - THERMAL_CAMERA            # EN: thermal imaging camera / CZ: termokamera
+    - EV_CHARGER_TESTER         # EN: EV charger tester / CZ: tester EV nabíječek
+    - MOBILE_SITE_SWITCHBOARD   # EN: mobile construction-site switchboard / CZ: mobilní staveništní rozváděč
+    - GENERATOR                 # EN: generator set / CZ: elektrocentrála
+    - OTHER                     # EN: other, approved by 1001 / CZ: jiné, schvaluje 1001
+  # EN: What Lhutnik must hold as valid before an asset may leave the store.
+  # CZ: Co musí Lhůtník evidovat jako platné, než zdroj opustí sklad.
+  compliance_kind:
+    - CALIBRATION               # EN: calibration of an instrument / CZ: kalibrace měřidla
+    - PERIODIC_INSPECTION       # EN: inspection of a source or switchboard / CZ: revize / kontrola zdroje či rozváděče
+  asset_status:
+    - IN_STOCK                  # EN: in warehouse, usable / CZ: na skladě, použitelné
+    - OUT_INTERNAL              # EN: on an internal job / CZ: na interním výjezdu
+    - OUT_RENTAL                # EN: handed over to a renter / CZ: předáno nájemci
+    - RETURN_INSPECTION         # EN: returned, being checked / CZ: vráceno, probíhá kontrola
+    - IN_SERVICE                # EN: repair or calibration / CZ: oprava nebo kalibrace
+    - BLOCKED                   # EN: compliance expired / CZ: propadlá kalibrace či revize
+    - RETIRED                   # EN: removed from use / CZ: vyřazeno
+  renter_type:
+    - CERTIFIED_PARTNER_SUB     # EN: verified partner subcontractor / CZ: prověřený partner Certified Partner SUB
+    - B2B_CUSTOMER              # EN: business customer / CZ: B2B zákazník
+  renter_status: [PENDING_VERIFICATION, APPROVED, SUSPENDED]
+  price_list_status:
+    - DRAFT_PROPOSAL            # EN: PROPOSAL, not usable for confirmation / CZ: NÁVRH, nelze podle něj potvrzovat
+    - APPROVED                  # EN: approved by 1001 / CZ: schváleno 1001
+    - RETIRED                   # EN: no longer valid / CZ: již neplatí
+  reservation_status:
+    - DRAFT                     # EN: being prepared / CZ: rozpracováno
+    - REQUESTED                 # EN: sent for confirmation / CZ: odesláno k potvrzení
+    - CONFIRMED                 # EN: confirmed by 1001 / CZ: potvrzeno 1001
+    - HANDED_OVER               # EN: asset is with the renter / CZ: zdroj je u nájemce
+    - RETURNED                  # EN: asset is back, not settled yet / CZ: zdroj vrácen, zatím nevyúčtováno
+    - CLOSED                    # EN: settled and invoiced / CZ: vyúčtováno a vyfakturováno
+    - REJECTED                  # EN: refused / CZ: zamítnuto
+    - PREEMPTED                 # EN: slot taken by an internal revision trip / CZ: termín obsadil interní revizní výjezd
+    - CANCELLED                 # EN: cancelled / CZ: zrušeno
+  deposit_status: [NOT_SET, REQUESTED, RECEIVED, SETTLED]
+  deposit_kind: [REQUESTED, RECEIVED, REFUNDED, WITHHELD]
+  protocol_direction:
+    - HANDOVER                  # EN: handover to the renter / CZ: předání nájemci
+    - RETURN                    # EN: return to Polarita / CZ: vrácení Polaritě
+  protocol_status: [DRAFT, SIGNED, SEALED]
+  condition_grade:
+    - OK                        # EN: without defects / CZ: bez závad
+    - WEAR                      # EN: normal wear / CZ: běžné opotřebení
+    - DAMAGED                   # EN: damaged / CZ: poškozeno
+    - INCOMPLETE                # EN: accessories missing / CZ: chybí příslušenství
+    - NOT_WORKING               # EN: not working / CZ: nefunkční
+  damage_status: [OPEN, ESTIMATED, APPROVED, SETTLED, DISMISSED]
+  invoice_request_status: [DRAFT, IN_DECISIONS, APPROVED, HANDED_TO_FINANCE]
+
+entities:
+
+  # ---------------------------------------------------------------------------
+  # EN: A rentable asset; the master record stays in centralni-lhutnik-a-objekty.
+  # CZ: Půjčovatelný zdroj; hlavní záznam zůstává v centralni-lhutnik-a-objekty.
+  # ---------------------------------------------------------------------------
+  rental_asset:
+    storage: rental
+    table: rental_asset
+    fields:
+      id: {type: uuid, primary_key: true}
+      asset_ref: {type: external_ref, target: 'centralni-lhutnik-a-objekty:asset', required: true, unique: true}
+      asset_qr: {type: string, required: true, unique: true}    # EN: QR on the asset / CZ: QR na zdroji
+      category: {type: enum, enum: asset_category, required: true}
+      serial_number: {type: string, required: true}
+      home_warehouse: {type: warehouse_code, required: true}
+      rentable: {type: boolean, required: true, default: false}  # EN: released for rental by 1001 / CZ: do půjčovny uvolnil 1001
+      compliance_kind: {type: enum, enum: compliance_kind, required: true}
+      # EN: Deadline record in Lhutnik (calibration or inspection).
+      # CZ: Záznam lhůty v Lhůtníku (kalibrace nebo revize / kontrola).
+      lhutnik_deadline_ref: {type: external_ref, target: 'centralni-lhutnik-a-objekty:deadline', required: true}
+      accessories: {type: json, required: false}        # EN: list of accessories / CZ: seznam příslušenství
+      status: {type: enum, enum: asset_status, required: true, default: IN_STOCK}
+    state_machine:
+      field: status
+      initial: IN_STOCK
+      transitions:
+        - {from: IN_STOCK, to: OUT_INTERNAL, action: issue_internal, guards: [compliance_valid_today]}
+        - {from: OUT_INTERNAL, to: IN_STOCK, action: return_internal, guards: []}
+        - {from: IN_STOCK, to: OUT_RENTAL, action: hand_over, guards: [handover_protocol_sealed, compliance_valid_whole_period]}
+        - {from: OUT_RENTAL, to: RETURN_INSPECTION, action: take_back, guards: [return_protocol_sealed]}
+        - {from: RETURN_INSPECTION, to: IN_STOCK, action: accept, guards: [condition_ok_or_wear, compliance_valid_today]}
+        - {from: RETURN_INSPECTION, to: IN_SERVICE, action: send_to_service, guards: [reason_recorded]}
+        - {from: IN_SERVICE, to: IN_STOCK, action: back_from_service, guards: [compliance_valid_today]}
+        - {from: IN_STOCK, to: BLOCKED, action: block_expired, guards: [compliance_expired]}
+        - {from: BLOCKED, to: IN_SERVICE, action: send_to_service, guards: [reason_recorded]}
+        - {from: IN_STOCK, to: RETIRED, action: retire, guards: [mutation_confirm_1001]}
+        - {from: IN_SERVICE, to: RETIRED, action: retire, guards: [mutation_confirm_1001]}
+        - {from: BLOCKED, to: RETIRED, action: retire, guards: [mutation_confirm_1001]}
+
+  # ---------------------------------------------------------------------------
+  # EN: Who may rent. No PII: only a company code or a personal number.
+  # CZ: Kdo si smí půjčovat. Bez PII: jen kód firmy nebo osobní číslo.
+  # ---------------------------------------------------------------------------
+  renter:
+    storage: rental
+    table: renter
+    fields:
+      id: {type: uuid, primary_key: true}
+      renter_type: {type: enum, enum: renter_type, required: true}
+      org_code: {type: org_code, required: false, required_when: "renter_type = 'B2B_CUSTOMER'"}
+      # EN: Personal number of a Certified Partner SUB (series 1001-9999).
+      # CZ: Osobní číslo Certified Partner SUB (řada 1001–9999).
+      sub_person_no: {type: person_no, required: false, required_when: "renter_type = 'CERTIFIED_PARTNER_SUB'"}
+      framework_contract_ref: {type: external_ref, target: 'spisy:document', required: false, required_to_close: true}
+      status: {type: enum, enum: renter_status, required: true, default: PENDING_VERIFICATION}
+      approved_decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_to_close: true}
+      suspend_reason: {type: text, required: false, required_when: "status = 'SUSPENDED'"}
+    state_machine:
+      field: status
+      initial: PENDING_VERIFICATION
+      transitions:
+        - {from: PENDING_VERIFICATION, to: APPROVED, action: approve, guards: [framework_contract_signed, mutation_confirm_1001]}
+        - {from: APPROVED, to: SUSPENDED, action: suspend, guards: [reason_recorded]}
+        - {from: SUSPENDED, to: APPROVED, action: reinstate, guards: [mutation_confirm_1001]}
+    close_requirements:           # EN: needed for APPROVED / CZ: nutné pro stav APPROVED
+      fields: [framework_contract_ref, approved_decisions_ref]
+
+  # ---------------------------------------------------------------------------
+  # EN: Price list header and lines. All amounts are empty until 1001 approves.
+  # CZ: Hlavička a řádky ceníku. Všechny částky jsou prázdné do schválení 1001.
+  # ---------------------------------------------------------------------------
+  rental_price_list:
+    storage: rental
+    table: rental_price_list
+    fields:
+      id: {type: uuid, primary_key: true}
+      name: {type: string, required: true}
+      currency: {type: currency, required: true}
+      valid_from: {type: date, required: false, required_to_close: true}
+      status: {type: enum, enum: price_list_status, required: true, default: DRAFT_PROPOSAL}
+      approved_decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_to_close: true}
+    state_machine:
+      field: status
+      initial: DRAFT_PROPOSAL
+      transitions:
+        - {from: DRAFT_PROPOSAL, to: APPROVED, action: approve, guards: [all_lines_priced, mutation_confirm_1001]}
+        - {from: APPROVED, to: RETIRED, action: retire, guards: [mutation_confirm_1001]}
+    close_requirements:           # EN: needed for APPROVED / CZ: nutné pro stav APPROVED
+      fields: [valid_from, approved_decisions_ref]
+
+  rental_price_line:
+    storage: rental
+    table: rental_price_line
+    fields:
+      id: {type: uuid, primary_key: true}
+      price_list_id: {type: ref, ref: rental_price_list.id, required: true}
+      category: {type: enum, enum: asset_category, required: true}
+      asset_id: {type: ref, ref: rental_asset.id, required: false}   # EN: optional per-asset price / CZ: volitelná cena pro konkrétní zdroj
+      # EN: Amounts intentionally nullable: no invented numbers in the design.
+      # CZ: Částky záměrně mohou být prázdné: návrh neobsahuje vymyšlená čísla.
+      daily_rate: {type: decimal, required: false, required_to_close: true}
+      deposit_amount: {type: decimal, required: false, required_to_close: true}
+    close_requirements:           # EN: needed before the list can be APPROVED / CZ: nutné před schválením ceníku
+      fields: [daily_rate, deposit_amount]
+
+  # ---------------------------------------------------------------------------
+  # EN: One rental of one asset for one period, always under a file number.
+  # CZ: Jedna výpůjčka jednoho zdroje na jedno období, vždy pod číslem spisu.
+  # ---------------------------------------------------------------------------
+  rental_reservation:
+    storage: rental
+    table: rental_reservation
+    fields:
+      id: {type: uuid, primary_key: true}
+      case_id: {type: case_id, required: true, indexed: true}
+      asset_id: {type: ref, ref: rental_asset.id, required: true}
+      renter_id: {type: ref, ref: renter.id, required: true}
+      # EN: Booking in the shared resource calendar; one table for internal
+      #     and rental bookings keeps the no-overlap rule in one place.
+      # CZ: Rezervace ve sdíleném kalendáři zdrojů; jedna tabulka pro interní
+      #     i půjčovní rezervace drží pravidlo bez překryvu na jednom místě.
+      calendar_booking_ref: {type: external_ref, target: 'centralni-lhutnik-a-objekty:resource_booking', required: false, required_to_close: true}
+      period_from: {type: timestamptz, required: true}
+      period_to: {type: timestamptz, required: true}
+      price_list_id: {type: ref, ref: rental_price_list.id, required: false, required_to_close: true}
+      deposit_amount: {type: decimal, required: false, required_to_close: true}
+      deposit_currency: {type: currency, required: false, required_to_close: true}
+      deposit_status: {type: enum, enum: deposit_status, required: true, default: NOT_SET}
+      confirmed_decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_to_close: true}
+      handover_protocol_id: {type: ref, ref: handover_protocol.id, required: false, required_to_close: true}
+      return_protocol_id: {type: ref, ref: handover_protocol.id, required: false, required_to_close: true}
+      invoice_request_id: {type: ref, ref: rental_invoice_request.id, required: false, required_to_close: true}
+      status: {type: enum, enum: reservation_status, required: true, default: DRAFT}
+      status_reason: {type: text, required: false, required_when: "status IN ('REJECTED', 'PREEMPTED', 'CANCELLED')"}
+    constraints:
+      - {kind: check, expression: "period_to > period_from"}
+      # EN: No overlap of the same asset; enforced in the shared calendar table
+      #     for internal and rental bookings together.
+      # CZ: Žádný překryv téhož zdroje; vynucuje sdílená tabulka kalendáře pro
+      #     interní i půjčovní rezervace dohromady.
+      - {kind: exclusion_via, target: 'centralni-lhutnik-a-objekty:resource_booking', columns: [asset_id, period_from, period_to]}
+    state_machine:
+      field: status
+      initial: DRAFT
+      transitions:
+        - {from: DRAFT, to: REQUESTED, action: request, guards: [renter_approved, asset_rentable, slot_free_in_calendar, compliance_valid_whole_period]}
+        - {from: REQUESTED, to: CONFIRMED, action: confirm, guards: [price_list_approved, slot_free_in_calendar, compliance_valid_whole_period, mutation_confirm_1001]}
+        - {from: REQUESTED, to: REJECTED, action: reject, guards: [reason_recorded]}
+        - {from: REQUESTED, to: PREEMPTED, action: preempt_by_internal_revision, guards: [internal_revision_booking_exists, reason_recorded]}
+        - {from: CONFIRMED, to: HANDED_OVER, action: hand_over, guards: [deposit_received, handover_protocol_sealed, compliance_valid_whole_period]}
+        - {from: HANDED_OVER, to: RETURNED, action: take_back, guards: [return_protocol_sealed]}
+        - {from: RETURNED, to: CLOSED, action: close, guards: [deposit_settled, damage_claims_resolved, invoice_request_handed_to_finance]}
+        - {from: DRAFT, to: CANCELLED, action: cancel, guards: [reason_recorded]}
+        - {from: REQUESTED, to: CANCELLED, action: cancel, guards: [reason_recorded]}
+        # EN: A confirmed rental is never cancelled automatically; a clash with
+        #     an internal revision trip goes to 1001 in Decisions.
+        # CZ: Potvrzená výpůjčka se nikdy neruší automaticky; střet s interním
+        #     revizním výjezdem jde k 1001 do Decisions.
+        - {from: CONFIRMED, to: CANCELLED, action: cancel_confirmed, guards: [reason_recorded, mutation_confirm_1001]}
+    close_requirements:           # EN: needed for CLOSED / CZ: nutné pro stav CLOSED
+      fields: [calendar_booking_ref, price_list_id, deposit_amount, deposit_currency, confirmed_decisions_ref, handover_protocol_id, return_protocol_id, invoice_request_id]
+
+  # ---------------------------------------------------------------------------
+  # EN: Digital handover / return protocol with photo documentation.
+  # CZ: Digitální předávací / vratný protokol s fotodokumentací.
+  # ---------------------------------------------------------------------------
+  handover_protocol:
+    storage: rental
+    table: handover_protocol
+    fields:
+      id: {type: uuid, primary_key: true}
+      reservation_id: {type: ref, ref: rental_reservation.id, required: true}
+      case_id: {type: case_id, required: true, indexed: true}
+      direction: {type: enum, enum: protocol_direction, required: true}
+      performed_at: {type: timestamptz, required: false, required_to_close: true}
+      place: {type: warehouse_code, required: false, required_to_close: true}
+      # EN: Polarita side: a living person, never an ai.
+      # CZ: Strana Polarity: živá osoba, nikdy ai.
+      polarita_person_no: {type: person_no, required: false, required_to_close: true}
+      # EN: Renter's signer as a reference only; the name is rendered into the
+      #     PDF from the contact register and is not stored here.
+      # CZ: Podepisující za nájemce jen odkazem; jméno se do PDF doplní
+      #     z registru kontaktů a zde se neukládá.
+      renter_signer_ref: {type: external_ref, target: 'registr-kontaktu:contact', required: false, required_to_close: true}
+      condition: {type: enum, enum: condition_grade, required: false, required_to_close: true}
+      condition_note: {type: text, required: false, required_when: "condition IN ('DAMAGED', 'INCOMPLETE', 'NOT_WORKING')"}
+      accessories_check: {type: json, required: false, required_to_close: true}   # EN: item -> present yes/no / CZ: položka -> přítomno ano/ne
+      photo_keys: {type: json, required: false, required_to_close: true}          # EN: list of Garage keys / CZ: seznam klíčů v Garage
+      # EN: Snapshot from Lhutnik at the moment of the protocol.
+      # CZ: Otisk z Lhůtníku v okamžiku protokolu.
+      compliance_valid_until: {type: date, required: false, required_to_close: true}
+      compliance_document_ref: {type: external_ref, target: 'centralni-lhutnik-a-objekty:calibration', required: false, required_to_close: true}
+      # EN: Readings for generators (hours, fuel); empty for instruments.
+      # CZ: Stavy u elektrocentrál (motohodiny, palivo); u měřidel prázdné.
+      operating_hours: {type: decimal, required: false}
+      fuel_level_percent: {type: integer, required: false, min: 0, max: 100}
+      safety_briefing_confirmed: {type: boolean, required: false, required_when: "direction = 'HANDOVER'"}
+      polarita_signature_key: {type: object_key, required: false, required_to_close: true}
+      renter_signature_key: {type: object_key, required: false, required_to_close: true}
+      pdf_key: {type: object_key, required: false, required_to_close: true}
+      seal_ref: {type: string, required: false, required_to_close: true}          # EN: pyHanko seal + TSA / CZ: pečeť pyHanko + TSA
+      status: {type: enum, enum: protocol_status, required: true, default: DRAFT}
+    constraints:
+      - {kind: unique, columns: [reservation_id, direction]}
+    state_machine:
+      field: status
+      initial: DRAFT
+      transitions:
+        - {from: DRAFT, to: SIGNED, action: sign, guards: [photos_minimum_met, accessories_checked, both_signatures_present]}
+        - {from: SIGNED, to: SEALED, action: seal, guards: [pdf_rendered, server_seal_applied]}
+    close_requirements:           # EN: needed for SEALED / CZ: nutné pro stav SEALED
+      fields: [performed_at, place, polarita_person_no, renter_signer_ref, condition, accessories_check, photo_keys, compliance_valid_until, compliance_document_ref, polarita_signature_key, renter_signature_key, pdf_key, seal_ref]
+
+  # ---------------------------------------------------------------------------
+  # EN: Append-only deposit ledger; movements of money are confirmed by 1001.
+  # CZ: Neměnný deník kaucí; pohyby peněz potvrzuje 1001.
+  # ---------------------------------------------------------------------------
+  deposit_transaction:
+    storage: rental
+    table: deposit_transaction
+    append_only: true
+    fields:
+      id: {type: uuid, primary_key: true}
+      reservation_id: {type: ref, ref: rental_reservation.id, required: true}
+      case_id: {type: case_id, required: true, indexed: true}
+      kind: {type: enum, enum: deposit_kind, required: true}
+      amount: {type: decimal, required: true}
+      currency: {type: currency, required: true}
+      # EN: Read-only match with the bank statement via finance-uol-marze-engine.
+      # CZ: Párování s bankovním výpisem jen pro čtení přes finance-uol-marze-engine.
+      bank_match_ref: {type: external_ref, target: 'finance-uol-marze-engine:bank_match', required: false, required_when: "kind IN ('RECEIVED', 'REFUNDED')"}
+      decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_when: "kind IN ('REFUNDED', 'WITHHELD')"}
+      reason: {type: text, required: false, required_when: "kind = 'WITHHELD'"}
+      recorded_at: {type: timestamptz, required: true}
+
+  # ---------------------------------------------------------------------------
+  # EN: Damage or loss found on return.
+  # CZ: Škoda nebo ztráta zjištěná při vrácení.
+  # ---------------------------------------------------------------------------
+  damage_claim:
+    storage: rental
+    table: damage_claim
+    fields:
+      id: {type: uuid, primary_key: true}
+      reservation_id: {type: ref, ref: rental_reservation.id, required: true}
+      case_id: {type: case_id, required: true, indexed: true}
+      return_protocol_id: {type: ref, ref: handover_protocol.id, required: true}
+      description: {type: text, required: true}
+      photo_keys: {type: json, required: true}
+      estimate_amount: {type: decimal, required: false, required_to_close: true}
+      estimate_currency: {type: currency, required: false, required_to_close: true}
+      decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_to_close: true}
+      status: {type: enum, enum: damage_status, required: true, default: OPEN}
+    state_machine:
+      field: status
+      initial: OPEN
+      transitions:
+        - {from: OPEN, to: ESTIMATED, action: estimate, guards: [estimate_recorded]}
+        - {from: ESTIMATED, to: APPROVED, action: approve, guards: [mutation_confirm_1001]}
+        - {from: APPROVED, to: SETTLED, action: settle, guards: [deposit_settled]}
+        - {from: OPEN, to: DISMISSED, action: dismiss, guards: [reason_recorded, mutation_confirm_1001]}
+        - {from: ESTIMATED, to: DISMISSED, action: dismiss, guards: [reason_recorded, mutation_confirm_1001]}
+    close_requirements:           # EN: needed for SETTLED / CZ: nutné pro stav SETTLED
+      fields: [estimate_amount, estimate_currency, decisions_ref]
+
+  # ---------------------------------------------------------------------------
+  # EN: Billing basis handed to finance-uol-marze-engine (DRAFT invoice only).
+  # CZ: Podklad k fakturaci předaný do finance-uol-marze-engine (jen DRAFT faktury).
+  # ---------------------------------------------------------------------------
+  rental_invoice_request:
+    storage: rental
+    table: rental_invoice_request
+    fields:
+      id: {type: uuid, primary_key: true}
+      reservation_id: {type: ref, ref: rental_reservation.id, required: true, unique: true}
+      case_id: {type: case_id, required: true, indexed: true}
+      price_list_id: {type: ref, ref: rental_price_list.id, required: true}
+      billed_from: {type: timestamptz, required: true}
+      billed_to: {type: timestamptz, required: true}
+      # EN: Computed from the approved price list only, never typed by ai.
+      # CZ: Počítá se výhradně ze schváleného ceníku, ai částku nikdy nepíše ručně.
+      net_amount: {type: decimal, required: false, derived: true, required_to_close: true}
+      currency: {type: currency, required: false, required_to_close: true}
+      decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_to_close: true}
+      finance_ref: {type: external_ref, target: 'finance-uol-marze-engine:invoice_draft', required: false, required_to_close: true}
+      status: {type: enum, enum: invoice_request_status, required: true, default: DRAFT}
+    state_machine:
+      field: status
+      initial: DRAFT
+      transitions:
+        - {from: DRAFT, to: IN_DECISIONS, action: submit, guards: [price_list_approved, return_protocol_sealed]}
+        - {from: IN_DECISIONS, to: APPROVED, action: approve, guards: [mutation_confirm_1001]}
+        - {from: IN_DECISIONS, to: DRAFT, action: send_back, guards: [reason_recorded]}
+        - {from: APPROVED, to: HANDED_TO_FINANCE, action: hand_to_finance, guards: [finance_draft_created]}
+    close_requirements:           # EN: needed for HANDED_TO_FINANCE / CZ: nutné pro stav HANDED_TO_FINANCE
+      fields: [net_amount, currency, decisions_ref, finance_ref]
+
+# EN: Named guards used in the state machines above; evaluated on the server.
+# CZ: Pojmenované zámky použité ve stavových automatech výše; vyhodnocuje server.
+guards:
+  compliance_valid_today: "EN: calibration / inspection in Lhutnik is valid today / CZ: kalibrace či revize v Lhůtníku dnes platí"
+  compliance_valid_whole_period: "EN: calibration / inspection is valid until the planned return / CZ: kalibrace či revize platí až do plánovaného vrácení"
+  compliance_expired: "EN: calibration / inspection in Lhutnik has expired / CZ: kalibrace či revize v Lhůtníku propadla"
+  condition_ok_or_wear: "EN: return protocol condition is OK or WEAR / CZ: stav ve vratném protokolu je OK nebo WEAR"
+  handover_protocol_sealed: "EN: HANDOVER protocol is SEALED / CZ: protokol HANDOVER je SEALED"
+  return_protocol_sealed: "EN: RETURN protocol is SEALED / CZ: protokol RETURN je SEALED"
+  framework_contract_signed: "EN: rental terms signed by both parties are in the file / CZ: oboustranně podepsané podmínky půjčovny jsou ve spisu"
+  all_lines_priced: "EN: every price line has a rate and a deposit / CZ: každý řádek ceníku má sazbu i kauci"
+  renter_approved: "EN: renter status is APPROVED / CZ: nájemce je ve stavu APPROVED"
+  asset_rentable: "EN: asset has rentable = true and is not BLOCKED or RETIRED / CZ: zdroj má rentable = true a není BLOCKED ani RETIRED"
+  slot_free_in_calendar: "EN: no internal or rental booking overlaps the period / CZ: období se nekryje s žádnou interní ani půjčovní rezervací"
+  internal_revision_booking_exists: "EN: an internal revision trip needs the asset in the period / CZ: zdroj v období potřebuje interní revizní výjezd"
+  price_list_approved: "EN: price list status is APPROVED / CZ: ceník je ve stavu APPROVED"
+  deposit_received: "EN: deposit matched on the bank statement or waived by 1001 / CZ: kauce spárována na výpisu nebo ji 1001 prominul"
+  deposit_settled: "EN: deposit refunded or withheld with 1001 confirmation / CZ: kauce vrácena nebo zadržena s potvrzením 1001"
+  damage_claims_resolved: "EN: every damage_claim is SETTLED or DISMISSED / CZ: každá škoda je SETTLED nebo DISMISSED"
+  invoice_request_handed_to_finance: "EN: rental_invoice_request is HANDED_TO_FINANCE / CZ: podklad k fakturaci je HANDED_TO_FINANCE"
+  photos_minimum_met: "EN: photo count meets the PROPOSED minimum set by 1001 / CZ: počet fotografií splňuje minimum (NÁVRH — ke schválení 1001)"
+  accessories_checked: "EN: every accessory item is ticked / CZ: každá položka příslušenství je odškrtnuta"
+  both_signatures_present: "EN: both parties signed on the device / CZ: obě strany podepsaly na zařízení"
+  pdf_rendered: "EN: protocol PDF rendered by Typst / CZ: PDF protokolu vysázeno v Typst"
+  server_seal_applied: "EN: server seal with timestamp applied / CZ: připojena serverová pečeť s časovým razítkem"
+  estimate_recorded: "EN: repair estimate is stored / CZ: je uložen odhad opravy"
+  finance_draft_created: "EN: invoice DRAFT exists in finance-uol-marze-engine / CZ: v finance-uol-marze-engine existuje DRAFT faktury"
+  mutation_confirm_1001: "EN: confirmed by 1001 in Decisions / CZ: potvrzeno osobou 1001 v Decisions"
+  reason_recorded: "EN: a written reason is stored / CZ: je uložen písemný důvod"

@@ -1,0 +1,54 @@
+# Registr rozvojových balíčků `S1–S7` — zapracováno ve Verzi 2.0 jako `Bloky 13–19` · Polarita s.r.o.
+
+> **Účel dokumentu:** Tento dokument byl do Verze 1.8 zásobníkem návrhů „na později“. **Ve Verzi 2.0 (`Polarita-2.0`) jsou všechny balíčky `S1–S7` zapracovány** do složky [`balicky/`](./balicky/README.md) jako samostatně spustitelné **`Bloky 13–19`** (Rozvojová Etapa II = `Bloky 13–18`, Strategická Etapa III = `Blok 19`) a tento dokument slouží jako jejich **registr**: uchovává stav každého balíčku, co u něj zbývá, a odkaz na řídicí dokument bloku. Podrobná zadání balíčků byla z tohoto dokumentu ve Verzi 2.3 odstraněna, protože je plně převzaly řídicí dokumenty bloků ve složce `balicky/`; původní znění zadání zůstává v historii repozitáře (značka `Polarita-2.2`). Balíčky rozšiřují jádro **`Etapy I: Bloky 0 – 12`** dle [`README.md`](./README.md) a navazují přímo na schválenou strukturu oddělení `11–18`, `20 ai` specialistů (`11001`–`18001`) a pevný měsíční strop `470 USD / měsíc`.
+> **Žádná zpětná závislost `Etapy I` na tomto zásobníku:** Povinné právní, ceníkové a testovací minimum pro ostrý start Dne 30 je již **plně součástí `Etapy I`** (*základní směrnice a doložka o pravidlech pro sledování zaměstnanců podle pracovněprávních předpisů, záznam GDPR, vzory SoD, dohody o vozidle s obecnou odpovědností za škodu, protokolu `Break-Glass` a základní sazebník v `Bloku 0 / 8 / 9`, stejně jako základních `20 YAML` chytáků a spouštěče `Promptfoo` v `Bloku 7` a `Bloku 12`*). Balíčky `S1–S3` níže proto nepředstavují blokující předpoklad startu, nýbrž nadstavbovou automatizaci pro **Rozvojovou Etapu II**; žádný z `Bloků 13–19` se nespouští před `12/12 PASS` Go-Live Gate.
+> **Co je součástí jádra Etapy I (`README` + `00` + `software/00–11`):** Vylepšení `P1–P3`, centrální Podatelna ISDS `w9bbdva` (`Po–Pá 06:50` s ověřením na `czebox.cz` a režimem `PAUSED` v neobsazené nepřítomnosti), `Elektro WMS` + `fleet-gps-bridge`, legislativní a provozní blok `M1–M4`, vzory Draivix `D1–D5` (vč. sjednocení analytiky na **`Umami` nad `PostgreSQL`** s **`0× MySQL`, `0× MongoDB`**), vlna **`N1–N8`** (*`metadata-schema-kernel`, 360° Karta spisu s tlačítky „Pracuj“, `cz-sk-registry-kernel` s DB mutexem číselných řad, `Mapy.cz` shlukování výjezdů + maticový bezkolizní kalendář zdrojů, `MIT` nástroje `AigisCode` + `polarita-ads-mcp` + `Worker/Judge worktree` + `claude-powerline-rust`, webová Kalkulačka rizik SVJ/B2B, 48h digitální převzetí šanonů a partnerský model `100 % realizace + trvalé % z MRR`*) **i kompletní komunikační a hlasová páteř `K1–K5`** (*softwarová ústředna `Asterisk` + `WebRTC` + `Linphone` se stereo nahráváním `90 dnů / LEGAL_HOLD`, lokální `WhisperX` + `Silero VAD + librosa` (`MIT / ISC`) s akustickou urgencí na `Kanálu L` a zákazem emoční analýzy zaměstnanců podle předpisů EU o umělé inteligenci, 8cestný `CaMeL` router `comm-gateway` s vrstvenou obranou `<untrusted_inbound_comm>`, interní týmová komunikace `Zulip` s tématy `POL-RRRR-NNNNN`, poštovní server `Stalwart Mail` `JMAP / IMAP IDLE / ManageSieve` a zákaznický omnichannel `Chatwoot CE` za `Headscale VPN + oauth2-proxy`*).
+> **Zásada aktivace:** Každý balíček `S1–S7` níže je samostatně spustitelný v Etapě II / III bez nutnosti měnit organizační schémata nebo navyšovat počet `ai` agentů (`20`) či strop `470 USD / měsíc`.
+> **Co znamená „zapracováno“:** Balíčky `S1–S3` jsou ve složce `balicky/` spustitelné a ověřené spuštěním; balíčky `S4–S7` jsou úplné specifikace s realizačními prompty a ověřitelnými podmínkami dokončení. Nic z toho není nasazeno na serveru `polarita-hq`, který v tomto greenfield návrhu ještě neexistuje.
+
+---
+
+## Přehled zapracovaných balíčků (`S1 – S7` = `Bloky 13 – 19`)
+
+| Kód / Blok | Název balíčku | Primární oddělení a `ai` agenti | Doporučené pořadí nasazení | Původ návrhu | Stav |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`S1`** · [`Blok 13`](./balicky/S1-generator-cistopisu/README.md) | **Automatizovaný generátor PDF čistopisů smluv a protokolů (`Typst / HTML→PDF` nadstavba)** | Odd. `15` (`15001`, `15002`), Odd. `13` (`13001`), Odd. `14` (`14005`), Odd. `16` (`16002`), Odd. `18` (`18001`) | **1. (Rozvojová Etapa II — automatizace sazby nad základními vzory z `Bloku 0`)** | Interní audit Polarita | Spustitelné a ověřené; čeká právní revize |
+| **`S2`** · [`Blok 14`](./balicky/S2-eval-suite/README.md) | **Rozšířená CI regresní sada `Eval Suite 100+` (syntetické audio stopy + webový dashboard)** | Odd. `17` (`17004`, `17005`), Odd. `15` (`15001`, `15002`) | **2. (Rozvojová Etapa II — rozšíření základních `20 YAML` testů z `Bloku 7`)** | Interní audit Polarita | Spustitelné a ověřené (`157/157`) |
+| **`S3`** · [`Blok 15`](./balicky/S3-konfigurator-a-tarify/README.md) | **Interaktivní konfigurátor balíčků na klíč a rozšířená GTM kniha tarifů MRR** | Odd. `12` (`12001`, `12002`), Odd. `14` (`14002`, `14005`), Odd. `16` (`16001`) | **3. (Rozvojová Etapa II — obchodní škálování nad základním ceníkem z `Bloku 9`)** | Interní audit + vzor Draivix | Spustitelné; výchozí ceny schválil `1001` (15. 11. 2026) |
+| **`S4`** · [`Blok 16`](./balicky/S4-dilensky-terminal-a-pujcovna/README.md) | **Dotykový Dílenský terminál rozváděčů (platná norma pro rozváděče nízkého napětí) + Půjčovna měřidel a elektrocentrál** | Odd. `13` (`13001`), Odd. `14` (`14001`, `14003`), Odd. `17` (`17001`) | **4. (Rozvojová Etapa II — rozšíření výroby a servisu)** | Inspirace Draivix (`Sklad a výroba` / `Projekty a servis`) | Specifikace připravená k vývoji |
+| **`S5`** · [`Blok 17`](./balicky/S5-podpis-a-hlasova-recepcni/README.md) | **Dvoustranný elektronický podpis smluv (poskytovatel dle rozhodnutí `R-03`, např. `Signi / BankID`) a noční 24/7 hlasová `ai` recepční (`LiveKit Voice Agent`)** | Odd. `12` (`12002`), Odd. `14` (`14005`), Odd. `16` (`16002`), Odd. `17` (`17001`) | **5. (Rozvojová Etapa II — bezpapírové uzavírání SoD a noční záchyt havárií)** | Nadstavba nad `K1–K5` + vzor Draivix (`Signi`) | Specifikace připravená k vývoji |
+| **`S6`** · [`Blok 18`](./balicky/S6-ziva-prirucka-e2e/README.md) | **Samo-dokumentující E2E testy (živá příručka ze screenshotů) a 30min vývojová smyčka** | Odd. `17` (`17001`, `17002`, `17004`, `17005`) | **6. (Rozvojová Etapa II — průmyslová automatizace interního UI)** | Inspirace Draivix (`K2 Case Study` & `codex-runner`) | Specifikace připravená k vývoji |
+| **`S7`** · [`Blok 19`](./balicky/S7-polarita-elektro-cloud/README.md) | **Vertikální oborový SaaS „Polarita Elektro Cloud“ (`N9` — spin-off elektro jádra)** | Odd. `11` (`11001`), Odd. `14`, Odd. `15`, Odd. `17` (`17001`–`17005`) | **7. (Strategická Etapa III — po 12–18 měs. a 100+ objektech)** | Inspirace TRITON IT → Draivix (`N9`) | Architektura připravena; spuštění podmíněno bránou |
+
+---
+
+## Co je zapracováno a co zbývá
+
+| Balíček · Blok | Zapracováno (od Verze 2.0) | Zbývá | Řídicí dokument |
+| :--- | :--- | :--- | :--- |
+| **`S1`** · `Blok 13` | Spustitelné a ověřené spuštěním: 15 šablon v 8 sestavách, vzorová data, generátor `generate_pdfs.py` (15 PDF, 69 stran, vodoznak `VZOR`), manifest pro `mutation_confirm` a testy. | Právní revize šablon (`15001` + advokát), normová revize sestavy č. 5 (`15002`) a nasazení do `sandbox_airgap`. | [`balicky/S1-generator-cistopisu/README.md`](./balicky/S1-generator-cistopisu/README.md) |
+| **`S2`** · `Blok 14` | Spustitelné a ověřené spuštěním: 157 scénářů (20 základních `ES-001`–`ES-020` + 137 rozšířených, 17 se syntetickou stereo stopou), referenční politika, hodnotitel `run_eval_suite.py`, 21 testů a trendový report; dry-run `VERIFIED_PASS 157/157`. | Úloha v `Gitea Actions` a živý běh proti `paperclip-orchestrator` (stereo stopy jsou tónové makety, ne řeč). | [`balicky/S2-eval-suite/README.md`](./balicky/S2-eval-suite/README.md) |
+| **`S3`** · `Blok 15` | Spustitelné a ověřené spuštěním: `cenik.json`, cenové jádro `pricing.py` (11 testů), konfigurátor, kniha tarifů MRR a kalkulační a provizní matice. | Výchozí ceny schválil `1001` dne 15. 11. 2026 beze změn. Zbývá zápis schválení do `Decisions`, porovnání cen s trhem a převod konfigurátoru do webu `polarita.cz`. | [`balicky/S3-konfigurator-a-tarify/README.md`](./balicky/S3-konfigurator-a-tarify/README.md) |
+| **`S4`** · `Blok 16` | Úplná specifikace: řídicí dokument se třemi prompty, dvě schémata pro `metadata-schema-kernel`, checklist kusového ověření a předávací protokol půjčovny. | Vývoj PWA, hardware kiosku a ceník půjčovny (rozhodnutí `1001`). | [`balicky/S4-dilensky-terminal-a-pujcovna/README.md`](./balicky/S4-dilensky-terminal-a-pujcovna/README.md) |
+| **`S5`** · `Blok 17` | Úplná specifikace: řídicí dokument se třemi prompty, podpisový workflow, scénář hlasové recepční a příklad konfigurace. | Výběr poskytovatele a úrovní elektronického podpisu (`15001` + `1001`), vývoj `esign-bridge` a `voice-agent`. | [`balicky/S5-podpis-a-hlasova-recepcni/README.md`](./balicky/S5-podpis-a-hlasova-recepcni/README.md) |
+| **`S6`** · `Blok 18` | Úplná specifikace: řídicí dokument se třemi prompty, pravidla 30min smyčky a vzorový test `Playwright` (nespuštěn — aplikace ještě neexistuje). | Vývoj testů a generátoru příručky nad nasazeným systémem. | [`balicky/S6-ziva-prirucka-e2e/README.md`](./balicky/S6-ziva-prirucka-e2e/README.md) |
+| **`S7`** · `Blok 19` | Architektura Strategické Etapy III: řídicí dokument se třemi prompty, brána `Go / No-Go`, vzor `Row-Level Security`, struktura tarifů a osnova licenčních podmínek. | Spuštění je podmíněno splněním a podpisem brány `Go / No-Go`; SaaS není spuštěn ani nabízen. | [`balicky/S7-polarita-elektro-cloud/README.md`](./balicky/S7-polarita-elektro-cloud/README.md) |
+
+Neověřené právní a normové údaje balíčků a hodnoty čekající na rozhodnutí jednatele `1001` eviduje [`06-REGISTR-OVERENI-PRAVA-A-NOREM.md`](./06-REGISTR-OVERENI-PRAVA-A-NOREM.md).
+
+---
+
+## Jak balíčky aktivovat
+
+1. Po `12/12 PASS` Go-Live Gate (`Blok 12`) zvol podle obchodních priorit blok `13–18`; doporučené pořadí je vzestupné.
+2. Otevři řídicí dokument bloku ve složce [`balicky/`](./balicky/README.md) a postupuj podle jeho tří promptů; blok je uzavřen splněním všech položek kapitoly 4 (`DoD`) a zápisem do `Decisions`.
+3. V chatu stačí zadat například:
+   - *„Spusť `Blok 13` — nech zrevidovat šablony `S1` a nasaď generátor čistopisů.“*
+   - *„Zapoj sadu `S2` (`Eval Suite 100+`) do `Gitea Actions` podle `Bloku 14`.“*
+   - *„Připrav ceník ke schválení a nasaď konfigurátor podle `Bloku 15`.“*
+   - *„Vyviň balíček `S4` / `S5` / `S6` podle řídicího dokumentu `Bloku 16` / `17` / `18`.“*
+4. `Blok 19` (`S7`) se nespouští pokynem, ale splněním a podpisem brány `Go / No-Go`.
+
+## Zásobník dalších návrhů (`S8+`)
+
+Zásobník je po zapracování `S1–S7` prázdný. Nové návrhy se sem zapisují jako `S8`, `S9`… se stejnou strukturou (cíl, obsah, podmínka dokončení, primární oddělení) a do architektury se zapracují až rozhodnutím jednatele `1001` v další verzi.

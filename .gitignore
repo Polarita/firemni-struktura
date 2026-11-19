@@ -1,0 +1,11 @@
+# EN: Print PDFs are build outputs. They are not stored in Git: build them with the scripts
+#     (nastroje/build_org_pdfs.py, nastroje/build_software_pdfs.py, balicky/S1-generator-cistopisu/generate_pdfs.py)
+#     or take them from the release of the given version.
+# CZ: Tisková PDF jsou výstupy sestavení. Do Gitu se neukládají: sestav je skripty
+#     (nastroje/build_org_pdfs.py, nastroje/build_software_pdfs.py, balicky/S1-generator-cistopisu/generate_pdfs.py)
+#     nebo je vezmi z vydání (Release) příslušné verze.
+/*.pdf
+/balicky/S1-generator-cistopisu/vystup/*.pdf
+__pycache__/
+*.py[cod]
+.pytest_cache/

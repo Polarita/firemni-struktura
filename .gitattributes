@@ -1,0 +1,15 @@
+# Line endings and binary files of the Polarita blueprint folder.
+# Konce řádků a binární soubory složky návrhu Polarita.
+*.md    text
+*.json  text
+*.yaml  text
+*.yml   text
+*.html  text
+*.sql   text
+*.ts    text
+*.py    text eol=lf
+*.sh    text eol=lf
+nastroje/pre-commit text eol=lf
+*.pdf   binary
+*.wav   binary
+*.png   binary

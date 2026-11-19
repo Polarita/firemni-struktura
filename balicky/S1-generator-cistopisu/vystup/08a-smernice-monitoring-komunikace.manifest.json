@@ -1,0 +1,26 @@
+{
+  "document": "08a-smernice-monitoring-komunikace",
+  "title": "Vnitřní směrnice o monitoringu firemních komunikačních prostředků a nahrávání hovorů",
+  "draft_watermark": true,
+  "generated_utc": "2026-11-18 06:12 UTC",
+  "variables": {
+    "spis_id": "POL-2027-00001",
+    "verze_smernice": "1.0",
+    "datum_ucinnosti": "1. 2. 2027",
+    "dalsi_prijemci_udaju": "žádní. (VZOR)",
+    "kontakt_pro_pisemny_kanal": "info@polarita.cz",
+    "odkaz_informace_pro_volajici": "web polarita.cz, sekce Ochrana osobních údajů (VZOR — přesnou adresu stránky je nutné doplnit)",
+    "kontakt_pro_uplatneni_prav": "info@polarita.cz",
+    "nahrazovana_uprava": "žádná, jde o první vydání. (VZOR)",
+    "datum_pristiho_prezkumu": "31. 1. 2028",
+    "umisteni_smernice": "portal-spolupracovniku, sekce Vnitřní předpisy (VZOR)",
+    "misto_podpisu": "Praha",
+    "datum_podpisu": "25. 1. 2027"
+  },
+  "sha256": {
+    "template": "31d4c50b9f3bc75fab763d4de5f43d67d5dbbf906e6c050272956aef2cc2339e",
+    "data": "f0794024420167e3ae6dbe51a200ac63ca49b3f39930a126ac29458b220a368d",
+    "pdf": "56ef1f4ca56613326ee511fa47430bda243b77fb2401554f5291bca5698db372"
+  },
+  "pages": 5
+}

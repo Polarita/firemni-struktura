@@ -1,0 +1,88 @@
+# 06 — Zálohování odolné proti ransomwaru (`3-2-1-1-0` + týdenní datová obnova + čtvrtletní DR drill) a monitoring · Verze 2.7
+
+Tento dokument definuje zálohovací a dohledovou vrstvu společnosti **Polarita s.r.o.** (oddělení `17` — `17003 spravce-site` pod kontrolou `17004 klicnik`) — víceúrovňovou ochranu dat, automatické každotýdenní ověření datové obnovitelnosti záloh všech `6` doménových i `9` servisních databází, čtvrtletní end-to-end zkoušku obnovy celé infrastruktury na čistý stroj (*Full Bare-Metal / VM DR Drill*) a distribuovaný monitoring s acyklickým pořadím nasazení a okamžitým out-of-band varováním na mobil i počítač.
+
+---
+
+## 1. Seznam vybraného softwaru
+
+| Oblast | Vybraný software | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 2.7) | Odpovědný `ai` / garant |
+| :--- | :--- | :--- | :--- | :--- |
+| **Šifrované geograficky oddělené zálohování (proti ransomwaru)** | **Restic** + **Restic REST Server** *(režim `--append-only`)* | `latest` | Klientsky šifrované, deduplikované zálohování `/srv/polarita/` přes privátní VPN `Headscale` na druhý fyzicky oddělený server v jiné lokalitě. Serverová komponenta **`Restic REST Server (--append-only)`** zaručuje, že ani napadený hlavní server nemůže smazat či přepsat dřívější zálohy. | `17003` `spravce-site` *(kontrola klíčů `17004` `klicnik`)* |
+| **Lokální atomické snapshoty úložiště** | **Sanoid** *(nad `OpenZFS`; u větve `ext4 / LVM thin` blokové snapshoty `LVM thin` / API hypervizoru)* | `latest` | Automatická správa 15minutových, hodinových, denních a měsíčních snapshotů `OpenZFS` (a u větve `ext4 / LVM thin` blokových snapshotů `LVM thin` či API hypervizoru) pro rychlý návrat stavu při nepovedené aktualizaci nebo lidské chybě se změřenou dobou návratu. | `17003` `spravce-site` |
+| **Transakčně čistá záloha databází** | **pgBackRest / pg_dump** | `latest` | Konzistentní zálohování všech `6` doménových i `9` servisních databází `PostgreSQL` za plného provozu bez poškození rozpracovaných transakcí. | `17003` `spravce-site` |
+| **Dvoustupňová zkouška obnovy (nedělní `03:00` datový drill + čtvrtletní *Full DR Drill*)** | **Incus izolovaná instance** + **systemd timer** + **čtvrtletní čisté VM / stroj** | `latest` | *(1)* **Týdně (neděle `03:00`):** rozbalí nejnovější šifrovanou zálohu všech `6 + 9` DB, `Vaultu` (`git fsck`) a vzorku `legal-archive` (kontrolní součty) do odpojeného kontejneru v `Incus`. *(2)* **Čtvrtletně (*Full Bare-Metal / VM DR Drill*):** kompletní obnova infrastruktury z `OpenTofu` + `Break-Glass` obálky s **YubiKey** na čisté VM/stroj mimo produkční hostitel (vč. `Headscale`, `OpenBao`, `Keycloak` přihlášení a smoke testu aplikací) se změřeným `RPO / RTO`. | `17003` `spravce-site` *(kontrola `17004` `klicnik` a `1001`)* |
+| **Distribuovaný monitoring serverů, požární zóny skladu a aplikačních vrstev** | **Checkmk Raw** + **smartmontools** *(+ IP teplotní čidla skladu)* | `latest` | Nepřetržitý dohled nad železem (CPU, RAM, teploty, SMART stav disků, `OpenZFS` / `LVM thin` pool), stavem všech `Incus` instancí, platností HTTPS certifikátů `Caddy`, příchozím MX relayem `Stalwart Mail` v `dmz_edge` (port `25`, fronta, lokální úložiště `RocksDB`), odemčením `OpenBao`, během `PostgreSQL`, čerstvostí záloh v `Bloku 6` (teplota požární zóny baterií Li-Ion / LFP se připojí se skladem `Elektro WMS` v `Bloku 9`); přírůstkové kontroly aplikačních služeb (`Zulip`, `metadata-schema-kernel`, `prevzeti-sanonu`, `Asterisk`, poštovní jádro `Stalwart Mail` z `Bloku 11`, `WhisperX`, `cz-sk-registry-kernel`) se registrují okamžitě při nasazení příslušných `Bloků 7–11`. | `17003` `spravce-site` |
+| **Okamžité doručování kritických varování (acyklicky od `Bloku 6`)** | **Telegram** *(primární nezávislý out-of-band pager od `Bloku 6`)* + **SMTP nouzový kanál** + **`Zulip` (`#17-it-secops` od `Bloku 7`)** | `latest` | V `Bloku 6` doručuje kritická varování nezávislý out-of-band pager **`Telegram`** do mobilu jednatele (`1001`) a záložní SMTP kanál (funguje i při úplném výpadku `polarita-hq`); v `Bloku 7` po startu `Zulipu` se připojuje týmový webhook `#17-it-secops`. | `17003` `spravce-site` |
+
+---
+
+## 2. Architektonická pravidla a zdůvodnění výběru
+
+1. **Zlatý standard `3-2-1-1-0` a poctivé rozlišení datového drillu vs. plné obnovy provozu (`F31`):**
+   * **3 kopie dat:** produkční data na zrcadleném `OpenZFS` (`polarita-hq`), lokální záloha a snapshoty (`Sanoid`, příp. `LVM thin` / snapshot hypervizoru na `ext4 / VPS`), vzdálená kopie v druhé fyzické lokalitě.
+   * **2 různá úložiště / stroje** a **1 kopie geograficky mimo hlavní budovu** (ochrana proti požáru, vytopení nebo krádeži).
+   * **1 kopie neměnná (`immutable` / `append-only`):** Záložní **`Restic REST Server (--append-only)`** přijímá nová zálohovací data, ale odmítá příkazy k mazání z hlavního serveru. Šifrovací klíč k zálohám je chráněn v `OpenBao` a má offline kopii v zapečetěné obálce `Break-Glass` (s dešifrováním přes **YubiKey**), aby šlo zálohy obnovit i tehdy, když hlavní server kompletně shoří.
+   * **Dvoustupňové ověření obnovy (`0` chyb):** Nedělní test v `03:00` v izolovaném kontejneru `Incus` ověřuje datovou a kryptografickou čitelnost záloh všech **`6` doménových + `9` servisních databází**, `Vaultu` a `legal-archive`, ale sám o sobě se nevydává za důkaz obnovy celého hostitele. Úplnou obnovu provozu (síť `Headscale`, odemčení `OpenBao`, identitu `Keycloak` a aplikační průchod) prokazuje povinný **čtvrtletní *Full Bare-Metal / VM DR Drill*** na čistý stroj/VM se změřeným **`RPO / RTO`**.
+2. **Acyklické nasazení monitoringu a proč držíme `Telegram` jako primární out-of-band pager (`F05`):**
+   * V `Bloku 6` ještě neběží týmový `Zulip` (`Blok 7`) ani ústředna `Asterisk` (`Blok 11`). Proto `Checkmk Raw (latest)` v `Bloku 6` uzavírá přejímku nad vrstvami `Bloků 1–6` s okamžitým doručením alertu přes nezávislý out-of-band **`Telegram` pager** a nouzový SMTP kanál; napojení webhooku `#17-it-secops` v `Zulipu` probíhá v `Bloku 7` a aplikační sondy se přidávají souběžně s nasazením `Bloků 7–11`. Pokud by `polarita-hq` zhasl bez proudu nebo konektivity, `Telegram` z druhé lokality nadále okamžitě zalarmuje jednatele (`1001`).
+3. **Nulový šum v upozorněních:**
+   * Do mobilu (`Telegram` pager) chodí pouze skutečné stavy vyžadující pozornost (kritický výpadek lokality, selhání disku, překročení teploty požární zóny skladu baterií po nasazení `Bloku 9`, ztráta SIP registrace po nasazení `Bloku 11`, neúspěšná nedělní či čtvrtletní obnova zálohy, blížící se expirace certifikátu) a potvrzení o vyřešení, nikoliv stovky rutinních hlášení denně.
+
+---
+
+## 3. Pokyny k instalaci a konfiguraci pro `ai` (Prompty)
+
+### Prompt 1 — Nasazení `Sanoid (latest)`, záloh všech `6 + 9` databází `PostgreSQL` a neměnného `Restic REST Server (--append-only)` mezi lokalitami (`pro 17003 spravce-site` + `17004 klicnik`)
+
+```text
+Jsi správce serveru (17003 spravce-site). Nasaď na centrálním serveru polarita-hq a záložním serveru v druhé lokalitě zálohovací architekturu 3-2-1-1-0 pomocí Sanoid (latest), pgBackRest/pg_dump (latest) a Restic + Restic REST Server (--append-only):
+
+1. Lokální snapshoty úložiště:
+   - Na OpenZFS nakonfiguruj Sanoid (latest) pro datasety v /srv/polarita/ (snapshoty každých 15 minut + hodinové, denní a měsíční s automatickou retencí; u datasetu legal-archive nastav dlouhodobou ochranu bez automatického odmazávání uzavřených ročních sad). Na větvi ext4 / LVM thin nakonfiguruj blokové snapshoty LVM thin nebo API snapshoty hypervizoru a změř reálný čas lokálního rollbacku.
+2. Konzistentní zálohy všech 6 doménových + 9 servisních databází a infrastruktury:
+   - Nastav kontinuální archivaci WAL přes pgBackRest (PITR) a před každým nočním během zálohy transakčně konzistentní export / zálohu všech 6 doménových databází (db_eshop, db_akademie, db_erp_lhutnik, db_gdpr_zkousky, db_hr_lide, db_paperclip) i všech 9 servisních databází (keycloak, zulip, stalwart, chatwoot, umami, paperless, vikunja, traccar, gitea — u ještě nenasazených bloků se databáze zařazují automaticky při založení), šifrovaný export stavu trezoru OpenBao a konfigurací Incus / OpenTofu / Headscale / Keycloak / Vaultwarden včetně konfigurace a lokálního úložiště RocksDB příchozího MX relaye Stalwart Mail v dmz_edge.
+3. Vzdálený záložní server Restic REST Server (latest) v režimu --append-only:
+   - Záložní uzel v druhé fyzické lokalitě (viz požadavky na stroj v kap. 1 README) nejprve připrav stejně jako hlavní server (čistý Ubuntu Server latest LTS, hardening SSH, Incus, žádné jiné kontejnerové prostředí) a připoj jej do privátní VPN Headscale; na něm (dostupném výhradně přes tuto VPN) spusť v instanci Incus Restic REST Server s povinným přepínačem --append-only a oddělenými přístupovými údaji.
+   - Na hlavním serveru polarita-hq nastav noční zálohovací úlohu Restic (latest) přes systemd timer (žádná hesla v příkazové řádce — zálohovací klíč načítej bezpečně z OpenBao pouze do paměti procesu).
+4. Záchranná obnova při úplné ztrátě hlavního serveru:
+   - Ověř s 17004 klicnik, že dešifrovací klíč repozitáře Restic je zálohován v PGP obálce chráněné hardwarovým klíčem YubiKey vlastníka (1001), aby šlo zálohy v druhé lokalitě rozbalit i bez původního serveru polarita-hq.
+```
+
+### Prompt 2 — Nedělní `03:00` datová zkouška obnovy v `Incus` a čtvrtletní *Full Bare-Metal / VM DR Drill* (`pro 17003 spravce-site` + `17004 klicnik`)
+
+```text
+Připrav a aktivuj na serveru polarita-hq dvoustupňové ověřování obnovitelnosti záloh (týdenní datový drill každou neděli v 03:00 + čtvrtletní Full Bare-Metal / VM DR Drill):
+
+1. Týdenní automatická datová zkouška (každou neděli v 03:00 v izolovaném kontejneru Incus):
+   - Spusť restic check pro kontrolu kryptografické integrity vzdáleného repozitáře Restic REST Server (--append-only).
+   - Vytvoř v Incus (latest) dočasný bez-síťový zkušební kontejner (profil sandbox_airgap, nic = none).
+   - Na hostiteli obnov ze vzdáleného Restic repozitáře do dočasného datasetu (který připojíš do zkušebního kontejneru bez sítě) nejnovější zálohu všech aktivních databází ze sady 6 doménových + 9 servisních databází PostgreSQL, znalostního Vaultu a vzorku dosud existujících dokumentů (.zfo, Výrobní pasy CE, revize, zapečetěné PDF listy Stavebního deníku a důkazní hovory LEGAL_HOLD) z legal-archive.
+   - Uvnitř zkušebního kontejneru nastartuj PostgreSQL, proveď kontrolní SQL dotazy nad klíčovými tabulkami, ověř kontrolní součty SHA-256 obnovených souborů i Git integritu Vaultu (git fsck), zkušební kontejner vždy čistě odstraň a zapiš protokol (VERIFIED_PASS / FAIL_CLOSED, trvání, velikost) do /srv/polarita/vault/07-IT-a-Architektura/ a do stavového souboru Checkmk.
+2. Čtvrtletní Full Bare-Metal / VM DR Drill (úplná obnova infrastruktury na čistý stroj / čisté VM):
+   - Jednou za čtvrtletí (a povinně před ostrou přejímkou v Bloku 12) proveď s 17004 klicnik a 1001 kompletní izolovanou obnovu z OpenTofu + Break-Glass obálky s YubiKey na čisté VM / čistý záložní stroj mimo produkční hostitel: obnova sítě Headscale, odemčení OpenBao, přihlášení přes Keycloak + YubiKey, nastartování databází a aplikační smoke test. Změř dosažené RPO a RTO a ulož podepsaný protokol do Vaultu.
+```
+
+### Prompt 3 — Distribuovaný monitoring `Checkmk Raw (latest)` s acyklickým nasazením notifikací a aplikačních sond (`pro 17003 spravce-site`)
+
+```text
+Podle schváleného firemního standardu monitoringu nasaď a nakonfiguruj Checkmk Raw (latest) pro kompletní dohled nad serverem polarita-hq a pobočkovými/záložními uzly v acyklickém pořadí bloků:
+
+1. Nasazení a registrace uzlů (Blok 6):
+   - Provozuj Checkmk Raw (latest) v distribuovaném zapojení mezi hlavní a záložní lokalitou přes privátní VPN Headscale (šifrovaná komunikace agentů, žádné nechráněné porty do internetu).
+   - Aktivuj sledování hostitele: vytížení CPU, paměť RAM, stav OpenZFS poolů (zpool status, příp. LVM thin pool), SMART zdraví a teploty disků (smartmontools), systémové služby (systemd) a síťová rozhraní.
+2. Základní sondy Bloku 6 a přírůstková registrace sond Bloků 7–11:
+   - V Bloku 6 aktivuj lokální kontroly pro: a) všechny běžící instance v Incus (latest), b) stav trezoru OpenBao (initialized: true, sealed: false), c) platnost TLS certifikátů na reverzní proxy Caddy, d) běh PostgreSQL, Valkey a Garage, e) stáří noční zálohy Restic a výsledek nedělní i čtvrtletní zkoušky obnovy (stav 0 chyb), f) dostupnost portu 25, délku fronty a volné místo lokálního úložiště RocksDB příchozího MX relaye Stalwart Mail v dmz_edge (běží od Bloku 3).
+   - Připrav deklarativní šablony Checkmk, které se aktivují ihned při nasazení navazujících bloků: v Bloku 7 dostupnost Paperclip, Zulip a metadata-schema-kernel (+ registrace webhooku #17-it-secops v Zulipu); v Blocích 8–9 hlídání 48h SLA fronty prevzeti-sanonu a webů a v Bloku 9 teplotní čidlo vyhrazené požární zóny skladu bateriových modulů Li-Ion / LFP (okamžitý CRITICAL alert při překročení teplotního limitu); v Bloku 11 odezva cz-sk-registry-kernel (vč. cache ADIS pro ručení za DPH), registrace SIPS/SRTP SIP trunku ústředny Asterisk, fronta poštovního jádra Stalwart Mail a dostupnost WhisperX workeru.
+3. Notifikace bez šumu:
+   - V Bloku 6 napoj kritické stavy (CRITICAL / DOWN / RECOVERY) na nezávislý out-of-band Telegram pager (tajemství z OpenBao) a záložní SMTP kanál a ověř cvičným výpadkem doručení na mobil (Android / Apple iOS) i následné hlášení RECOVERY; v Bloku 7 připoj kanál Zulip #17-it-secops.
+```
+
+---
+
+## 4. Ověřitelné podmínky dokončení Bloku 6
+
+- [ ] Noční šifrované zálohy **`Restic (latest)`** všech aktivních databází ze sady `6` doménových + `9` servisních DB se ukládají přes VPN do druhé fyzické lokality na **`Restic REST Server (--append-only)`** a lokální snapshoty spravuje **`Sanoid (latest)`** (příp. blokové `LVM thin` / hypervizor snapshoty na `ext4 / LVM thin` se změřenou dobou návratu).
+- [ ] Dešifrovací klíč k zálohám je nezávisle uložen v obálce `Break-Glass` (obnovitelný přes **YubiKey** i při zničení hlavního serveru).
+- [ ] Běží nedělní `03:00` automatický datový drill obnovy do izolované instance **`Incus`** (`0` chyb, čistý úklid) a je zaveden i rozvrh čtvrtletního ***Full Bare-Metal / VM DR Drill*** na čisté VM/stroj s měřením `RPO / RTO`.
+- [ ] Distribuovaný **`Checkmk Raw (latest)`** hlídá v `Bloku 6` disky, `OpenZFS`, `Incus`, `OpenBao`, `Caddy`, příchozí MX relay `Stalwart Mail` v `dmz_edge` (port `25`, fronta, lokální úložiště), `PostgreSQL` i čerstvost záloh s ověřeným doručením kritického alertu na out-of-band **Telegram** pager a e-mail (a v `Blocích 7–11` plynule připojuje webhook `#17-it-secops` v **`Zulipu`** a sondy aplikačních služeb).

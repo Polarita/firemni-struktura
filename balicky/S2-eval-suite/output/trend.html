@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eval Suite Polarita — trend</title>
+<style>
+:root { --bg:#f4f7fa; --fg:#102c41; --muted:#465d6d; --card:#fff; --line:#cfdce4; --ok:#0b6b49; --bad:#a9420b; }
+@media (prefers-color-scheme: dark) { :root { --bg:#0f1b24; --fg:#e6eef3; --muted:#9db1bf; --card:#172733; --line:#2b4252; --ok:#4ccf9a; --bad:#ff9a66; } }
+body { background:var(--bg); color:var(--fg); font-family:"Segoe UI",Roboto,Arial,sans-serif; margin:0; padding:16px; }
+main { max-width:920px; margin:0 auto; }
+h1 { font-size:1.4rem; margin:0 0 4px; } h2 { font-size:1.05rem; margin:24px 0 8px; }
+p.sub { color:var(--muted); margin:0 0 16px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; overflow-x:auto; }
+table { border-collapse:collapse; width:100%; font-size:.9rem; } th,td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; } td.ok { color:var(--ok); font-weight:700; } td.bad { color:var(--bad); font-weight:700; }
+svg { width:100%; height:auto; } .axis { stroke:var(--line); } .trend { fill:none; stroke:var(--fg); stroke-width:2; } text { fill:var(--muted); font-size:11px; }
+</style></head><body><main>
+<h1>Eval Suite Polarita — trendový report</h1>
+<p class="sub">Sada <code>eval_suite_polarita_extended</code> verze 2.0 · poslední běh 2026-11-18T06:13:21Z · režim dry-run · <strong>157 / 157 (100.0 %)</strong> · VERIFIED_PASS</p>
+<div class="card"><svg viewBox="0 0 860 220" role="img" aria-label="Vývoj úspěšnosti v čase">
+<line class="axis" x1="36" y1="184" x2="824" y2="184"/><line class="axis" x1="36" y1="36" x2="36" y2="184"/>
+<line class="axis" stroke-dasharray="4 4" x1="36" y1="36" x2="824" y2="36"/>
+<text x="4" y="40">100 %</text><text x="12" y="188">0 %</text>
+<polyline class="trend" points="36.0,36.0 193.6,36.0 351.2,36.0 508.8,36.0 666.4,36.0 824.0,36.0"/><circle cx="36.0" cy="36.0" r="4" fill="#0b6b49"><title>2026-11-14T12:23:05Z · dry-run · 157/157</title></circle><circle cx="193.6" cy="36.0" r="4" fill="#0b6b49"><title>2026-11-15T07:25:00Z · dry-run · 157/157</title></circle><circle cx="351.2" cy="36.0" r="4" fill="#0b6b49"><title>2026-11-15T09:15:03Z · dry-run · 157/157</title></circle><circle cx="508.8" cy="36.0" r="4" fill="#0b6b49"><title>2026-11-15T10:38:20Z · dry-run · 157/157</title></circle><circle cx="666.4" cy="36.0" r="4" fill="#0b6b49"><title>2026-11-15T12:27:15Z · dry-run · 157/157</title></circle><circle cx="824.0" cy="36.0" r="4" fill="#0b6b49"><title>2026-11-18T06:13:21Z · dry-run · 157/157</title></circle></svg></div>
+<h2>Poslední běh podle kategorií</h2>
+<div class="card"><table><thead><tr><th>Kategorie</th><th class="num">Prošlo</th><th class="num">Celkem</th></tr></thead><tbody><tr><td><code>clean-room</code></td><td class='num'>8</td><td class='num'>8</td></tr><tr><td><code>counterparty</code></td><td class='num'>4</td><td class='num'>4</td></tr><tr><td><code>engineering</code></td><td class='num'>12</td><td class='num'>12</td></tr><tr><td><code>etapa-ii-iii</code></td><td class='num'>8</td><td class='num'>8</td></tr><tr><td><code>excavation-dtm</code></td><td class='num'>5</td><td class='num'>5</td></tr><tr><td><code>finance-invoices</code></td><td class='num'>13</td><td class='num'>13</td></tr><tr><td><code>hr-hard-stop</code></td><td class='num'>13</td><td class='num'>13</td></tr><tr><td><code>isds</code></td><td class='num'>11</td><td class='num'>11</td></tr><tr><td><code>operations</code></td><td class='num'>32</td><td class='num'>32</td></tr><tr><td><code>prompt-injection</code></td><td class='num'>19</td><td class='num'>19</td></tr><tr><td><code>vault-secrets</code></td><td class='num'>12</td><td class='num'>12</td></tr><tr><td><code>voice-channel</code></td><td class='num'>10</td><td class='num'>10</td></tr><tr><td><code>wms-ads</code></td><td class='num'>10</td><td class='num'>10</td></tr></tbody></table></div>
+<h2>Neúspěšné scénáře posledního běhu</h2>
+<div class="card"><p>Žádné — poslední běh má verdikt <strong>VERIFIED_PASS</strong> u všech scénářů.</p></div>
+<h2>Historie běhů (nejnovější nahoře)</h2>
+<div class="card"><table><thead><tr><th>Čas (UTC)</th><th>Režim</th><th>Výběr</th><th class="num">Prošlo</th><th class="num">Skóre</th><th>Verdikt</th></tr></thead><tbody><tr><td>2026-11-18T06:13:21Z</td><td>dry-run</td><td>all</td><td class='num'>157 / 157</td><td class='num'>100.0 %</td><td class='ok'>VERIFIED_PASS</td></tr><tr><td>2026-11-15T12:27:15Z</td><td>dry-run</td><td>all</td><td class='num'>157 / 157</td><td class='num'>100.0 %</td><td class='ok'>VERIFIED_PASS</td></tr><tr><td>2026-11-15T10:38:20Z</td><td>dry-run</td><td>all</td><td class='num'>157 / 157</td><td class='num'>100.0 %</td><td class='ok'>VERIFIED_PASS</td></tr><tr><td>2026-11-15T09:15:03Z</td><td>dry-run</td><td>all</td><td class='num'>157 / 157</td><td class='num'>100.0 %</td><td class='ok'>VERIFIED_PASS</td></tr><tr><td>2026-11-15T07:25:00Z</td><td>dry-run</td><td>all</td><td class='num'>157 / 157</td><td class='num'>100.0 %</td><td class='ok'>VERIFIED_PASS</td></tr><tr><td>2026-11-14T12:23:05Z</td><td>dry-run</td><td>all</td><td class='num'>157 / 157</td><td class='num'>100.0 %</td><td class='ok'>VERIFIED_PASS</td></tr></tbody></table></div>
+</main></body></html>

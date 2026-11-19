@@ -1,0 +1,409 @@
+# =============================================================================
+# metadata-schema-kernel · declarative schema DRAFT / deklarativní schéma NÁVRH
+# Module / Modul: dilensky-terminal · Blok 16 · balíček S4 · Verze 2.7
+# EN: Touch workshop kiosk for switchboard assembly, routine verification and
+#     CE / PHE label printing. Nothing here is deployed; server polarita-hq
+#     does not exist yet (greenfield design).
+# CZ: Dotykový dílenský kiosk pro kompletaci rozváděčů, kusové ověření a tisk
+#     štítku CE / podkladu PHE. Nic z toho není nasazeno; server polarita-hq
+#     zatím neexistuje (greenfield návrh).
+# EN: The exact DSL of metadata-schema-kernel is fixed by 17001 during
+#     implementation; this file is a design input, not a tested migration.
+# CZ: Přesný formát (DSL) metadata-schema-kernel určí 17001 při implementaci;
+#     tento soubor je návrhový podklad, ne otestovaná migrace.
+# =============================================================================
+
+schema:
+  name: dilensky_terminal
+  module: dilensky-terminal
+  package: S4
+  block: 16
+  release: Polarita-2.7
+  schema_version: 0.1.0-draft
+  status: DRAFT                 # EN: proposal only / CZ: pouze návrh
+  owner_ai: 17001               # EN: 17001 programator / CZ: 17001 programator
+  operator_ai: 13001            # EN: warehouse MAIN-101 operations / CZ: provoz skladu MAIN-101
+  judges: [15002, 17004]        # EN: independent review / CZ: nezávislá kontrola
+  approver_person_no: 1001      # EN: human approval in Decisions / CZ: lidské schválení v Decisions
+
+# EN: Where the data lives. No new database engine, no new database.
+# CZ: Kde data žijí. Žádný nový databázový stroj, žádná nová databáze.
+storage:
+  workshop:
+    database: db_erp_lhutnik
+    schema: dilna
+  wms_extension:
+    database: db_eshop
+    schema: elektro_wms_dilna   # EN: Polarita extension tables only / CZ: pouze nástavbové tabulky Polarity
+    vendor_tables_touched: false  # EN: never MedusaJS vendor tables / CZ: nikdy vendor tabulky MedusaJS
+
+# EN: Rules valid for every entity below.
+# CZ: Pravidla platná pro všechny entity níže.
+conventions:
+  optimistic_locking: version_etag   # EN: version / ETag / CZ: version / ETag
+  audit_columns: [created_at, created_by_person_no, updated_at, version]
+  pii_allowed: false            # EN: no names, birth numbers, contacts / CZ: žádná jména, rodná čísla, kontakty
+  cross_database_links: api_only  # EN: no foreign keys across databases / CZ: žádné cizí klíče mezi databázemi
+  secrets: openbao_only         # EN: no secrets in schema or code / CZ: žádná tajemství ve schématu ani v kódu
+  mutations_by_ai: draft_only   # EN: ai prepares DRAFT, 1001 confirms / CZ: ai připraví DRAFT, 1001 potvrzuje
+
+# EN: Reusable value types. / CZ: Opakovaně použitelné typy hodnot.
+types:
+  case_id:
+    base: string
+    pattern: '^POL-[0-9]{4}-[0-9]{5}$'    # EN: file number / CZ: číslo spisu POL-RRRR-NNNNN
+  person_no:
+    base: integer
+    min: 1001                   # EN: living natural persons only / CZ: výhradně živé fyzické osoby
+    max: 9999
+  branch_code:
+    base: string
+    pattern: '^[A-Z]{2}-[1-9][0-9]{2}$'   # EN: e.g. CZ-101 / CZ: např. CZ-101
+  warehouse_code:
+    base: string
+    pattern: '^MAIN-[1-9][0-9]{2}$'       # EN: e.g. MAIN-101 / CZ: např. MAIN-101
+  station_code:
+    base: string
+    pattern: '^KIOSK-[1-9][0-9]{2}-[0-9]{2}$'  # EN: PROPOSAL of kiosk code / CZ: NÁVRH kódu kiosku (ke schválení 1001)
+  object_key:
+    base: string                # EN: Garage (S3) object key / CZ: klíč objektu v Garage (S3)
+
+enums:
+  unit_status:
+    - PLANNED                   # EN: created from the file / CZ: založeno ze spisu
+    - IN_ASSEMBLY               # EN: being assembled / CZ: probíhá kompletace
+    - ASSEMBLED                 # EN: assembly finished / CZ: kompletace dokončena
+    - IN_VERIFICATION           # EN: routine verification running / CZ: probíhá kusové ověření
+    - VERIFIED_PASS             # EN: overall result VYHOVUJE / CZ: celkový výrok VYHOVUJE
+    - VERIFIED_FAIL             # EN: overall result NEVYHOVUJE / CZ: celkový výrok NEVYHOVUJE
+    - PASSPORT_ISSUED           # EN: passport issued, declaration signed / CZ: pas vydán, prohlášení podepsáno
+    - LABELLED                  # EN: CE label printed and affixed / CZ: štítek CE vytištěn a osazen
+    - RELEASED                  # EN: released to elektro-wms dispatch / CZ: uvolněno k expedici v elektro-wms
+    - CANCELLED                 # EN: cancelled / CZ: zrušeno
+  operation_status: [READY, RUNNING, PAUSED, DONE, CANCELLED]
+  operation_event_kind: [START, PAUSE, RESUME, STOP]
+  input_source: [TOUCH, SCANNER, CAMERA]   # EN: tap, USB reader, camera / CZ: dotyk, USB čtečka, kamera
+  scan_method: [GS1_DATAMATRIX, GS1_128, QR, MANUAL]
+  verification_status: [OPEN, IN_PROGRESS, CLOSED_PASS, CLOSED_FAIL, VOIDED]
+  # EN: Document-facing verdicts stay in Czech, as on the printed protocol.
+  # CZ: Výroky určené do dokumentu zůstávají česky, jako na tištěném protokolu.
+  verdict: [VYHOVUJE, NEVYHOVUJE, NEPOUZIJE_SE]
+  overall_verdict: [VYHOVUJE, NEVYHOVUJE]
+  # EN: Routine verification points; scope and limits come from the standards
+  #     register kept by 15002 (current LV switchgear standard). Temperature rise is
+  #     NOT here: it is design verification by calculation (current method).
+  # CZ: Body kusového ověření; rozsah a meze dává registr norem vedený 15002
+  #     (platná norma pro rozváděče nízkého napětí). Oteplení zde NENÍ: jde o ověření návrhu
+  #     výpočtem (podle platné metodiky).
+  verification_point:
+    - ENCLOSURE_PROTECTION      # EN: degree of protection of enclosure / CZ: stupeň ochrany krytem
+    - CLEARANCES_CREEPAGE       # EN: clearances and creepage distances / CZ: vzdušné vzdálenosti a povrchové cesty
+    - SHOCK_PROTECTION_PE       # EN: protection against electric shock, protective circuit / CZ: ochrana před úrazem, ochranný obvod PE
+    - BUILT_IN_COMPONENTS       # EN: incorporation of built-in components / CZ: vestavění vestavných součástí
+    - INTERNAL_CIRCUITS         # EN: internal circuits and connections / CZ: vnitřní obvody a spoje
+    - EXTERNAL_TERMINALS        # EN: terminals for external conductors / CZ: svorky pro vnější vodiče
+    - MECHANICAL_OPERATION      # EN: mechanical operation / CZ: mechanická funkce
+    - DIELECTRIC_PROPERTIES     # EN: dielectric properties (incl. insulation resistance where allowed) / CZ: dielektrické vlastnosti (vč. izolačního odporu, kde to norma připouští)
+    - WIRING_FUNCTION           # EN: wiring, operational performance and function / CZ: zapojení, pracovní charakteristiky a funkce
+  verification_method: [VISUAL, MECHANICAL_CHECK, MEASUREMENT, ELECTRICAL_TEST, FUNCTION_TEST]
+  declaration_status: [DRAFT, IN_DECISIONS, SIGNED, REJECTED]
+  label_type:
+    - CE_NAMEPLATE              # EN: CE nameplate with QR / CZ: výrobní štítek CE s QR
+    - PHE_BASIS                 # EN: basis for PHE recycling fee / CZ: podklad pro recyklační příspěvek PHE
+  label_status: [BLOCKED, READY, PRINTED, REPRINT_REQUESTED, VOIDED]
+
+entities:
+
+  # ---------------------------------------------------------------------------
+  # EN: One manufactured switchboard (assembly) under one file.
+  # CZ: Jeden vyráběný rozváděč pod jedním spisem.
+  # ---------------------------------------------------------------------------
+  switchboard_unit:
+    storage: workshop
+    table: switchboard_unit
+    fields:
+      id: {type: uuid, primary_key: true}
+      case_id: {type: case_id, required: true, indexed: true}
+      branch_code: {type: branch_code, required: true}
+      warehouse_code: {type: warehouse_code, required: true}
+      # EN: Factory serial number, assigned atomically by cz-sk-registry-kernel.
+      # CZ: Výrobní číslo, přiděluje atomicky cz-sk-registry-kernel.
+      serial_number: {type: string, required: false, unique: true, required_to_close: true}
+      type_designation: {type: string, required: true}
+      # EN: Bill of materials and design verification come from cad-urs-engine.
+      # CZ: Kusovník a ověření návrhu pocházejí z cad-urs-engine.
+      bom_ref: {type: external_ref, target: 'cad-urs-engine:bom', required: true}
+      design_verification_ref: {type: external_ref, target: 'cad-urs-engine:design_verification', required: false, required_to_close: true}
+      passport_ref: {type: external_ref, target: 'cad-urs-engine:passport', required: false, required_to_close: true}
+      status: {type: enum, enum: unit_status, required: true, default: PLANNED}
+      released_at: {type: timestamptz, required: false}
+    state_machine:
+      field: status
+      initial: PLANNED
+      transitions:
+        - {from: PLANNED, to: IN_ASSEMBLY, action: start_assembly, guards: [bom_locked]}
+        - {from: IN_ASSEMBLY, to: ASSEMBLED, action: finish_assembly, guards: [all_operations_done, all_serialized_components_scanned]}
+        - {from: ASSEMBLED, to: IN_VERIFICATION, action: open_verification, guards: [design_verification_present]}
+        - {from: IN_VERIFICATION, to: VERIFIED_PASS, action: close_verification_pass, guards: [verification_closed_pass]}
+        - {from: IN_VERIFICATION, to: VERIFIED_FAIL, action: close_verification_fail, guards: [verification_closed_fail]}
+        - {from: VERIFIED_FAIL, to: IN_ASSEMBLY, action: rework, guards: [defects_recorded]}
+        - {from: VERIFIED_PASS, to: PASSPORT_ISSUED, action: issue_passport, guards: [serial_number_assigned, passport_present, declaration_signed_by_1001]}
+        - {from: PASSPORT_ISSUED, to: LABELLED, action: confirm_label, guards: [ce_label_printed]}
+        - {from: LABELLED, to: RELEASED, action: release_to_wms, guards: [phe_basis_printed]}
+        - {from: PLANNED, to: CANCELLED, action: cancel, guards: [mutation_confirm_1001]}
+        - {from: IN_ASSEMBLY, to: CANCELLED, action: cancel, guards: [mutation_confirm_1001]}
+    close_requirements:           # EN: needed to reach RELEASED / CZ: nutné pro stav RELEASED
+      fields: [serial_number, design_verification_ref, passport_ref]
+
+  # ---------------------------------------------------------------------------
+  # EN: One production operation on a unit (Start / Pause / Stop).
+  # CZ: Jedna výrobní operace na rozváděči (Start / Pauza / Stop).
+  # ---------------------------------------------------------------------------
+  work_operation:
+    storage: workshop
+    table: work_operation
+    fields:
+      id: {type: uuid, primary_key: true}
+      unit_id: {type: ref, ref: switchboard_unit.id, required: true}
+      case_id: {type: case_id, required: true, indexed: true}
+      operation_code: {type: string, required: true}   # EN: from operation catalogue / CZ: z číselníku operací
+      sequence_no: {type: integer, required: true}
+      person_no: {type: person_no, required: false, required_to_close: true}
+      station_code: {type: station_code, required: false, required_to_close: true}
+      status: {type: enum, enum: operation_status, required: true, default: READY}
+      # EN: Net working time, derived from events, without pauses.
+      # CZ: Čistý čas práce odvozený z událostí, bez pauz.
+      net_duration_s: {type: integer, required: false, derived: true}
+      note: {type: text, required: false}
+    constraints:
+      # EN: A person may have at most one RUNNING operation at a time.
+      # CZ: Osoba smí mít v jednu chvíli nejvýše jednu operaci ve stavu RUNNING.
+      - {kind: unique_partial, columns: [person_no], where: "status = 'RUNNING'"}
+    state_machine:
+      field: status
+      initial: READY
+      transitions:
+        - {from: READY, to: RUNNING, action: start, guards: [person_competent, unit_in_assembly]}
+        - {from: RUNNING, to: PAUSED, action: pause, guards: []}
+        - {from: PAUSED, to: RUNNING, action: resume, guards: [person_competent]}
+        - {from: RUNNING, to: DONE, action: stop, guards: []}
+        - {from: READY, to: CANCELLED, action: cancel, guards: [reason_recorded]}
+        - {from: PAUSED, to: CANCELLED, action: cancel, guards: [reason_recorded]}
+    close_requirements:           # EN: needed to reach DONE / CZ: nutné pro stav DONE
+      fields: [person_no, station_code]
+
+  # ---------------------------------------------------------------------------
+  # EN: Append-only log of kiosk taps and scans; never updated or deleted.
+  # CZ: Neměnný deník klepnutí a pípnutí na kiosku; nikdy se nemění ani nemaže.
+  # ---------------------------------------------------------------------------
+  operation_event:
+    storage: workshop
+    table: operation_event
+    append_only: true
+    fields:
+      id: {type: uuid, primary_key: true}
+      operation_id: {type: ref, ref: work_operation.id, required: true}
+      case_id: {type: case_id, required: true, indexed: true}
+      kind: {type: enum, enum: operation_event_kind, required: true}
+      person_no: {type: person_no, required: true}
+      station_code: {type: station_code, required: true}
+      source: {type: enum, enum: input_source, required: true}
+      occurred_at: {type: timestamptz, required: true}   # EN: time on the kiosk / CZ: čas na kiosku
+      received_at: {type: timestamptz, required: true}   # EN: time on the server / CZ: čas na serveru
+      queued_offline: {type: boolean, required: true, default: false}
+
+  # ---------------------------------------------------------------------------
+  # EN: Serial number of a built-in device scanned into the bill of materials.
+  #     Lives next to elektro-wms in db_eshop (extension tables only).
+  # CZ: Sériové číslo zabudovaného přístroje naskenované do kusovníku.
+  #     Žije vedle elektro-wms v db_eshop (pouze nástavbové tabulky).
+  # ---------------------------------------------------------------------------
+  component_scan:
+    storage: wms_extension
+    table: component_scan
+    fields:
+      id: {type: uuid, primary_key: true}
+      unit_ref: {type: external_ref, target: 'dilensky-terminal:switchboard_unit', required: true}
+      case_id: {type: case_id, required: true, indexed: true}
+      bom_line_ref: {type: external_ref, target: 'cad-urs-engine:bom_line', required: true}
+      stock_item_ref: {type: external_ref, target: 'elektro-wms:stock_item', required: true}
+      gtin: {type: string, required: false}              # EN: GS1 AI 01 / CZ: GS1 AI 01
+      serial_number: {type: string, required: true}      # EN: GS1 AI 21 or manual / CZ: GS1 AI 21 nebo ručně
+      batch: {type: string, required: false}             # EN: GS1 AI 10 / CZ: GS1 AI 10
+      scan_method: {type: enum, enum: scan_method, required: true}
+      # EN: Photo of the device label is mandatory for MANUAL entries.
+      # CZ: Fotografie štítku přístroje je povinná u ručního zápisu (MANUAL).
+      label_photo_key: {type: object_key, required: false, required_when: "scan_method = 'MANUAL'"}
+      scanned_by_person_no: {type: person_no, required: true}
+      scanned_at: {type: timestamptz, required: true}
+    constraints:
+      # EN: One device serial number may sit in one switchboard only.
+      # CZ: Jedno sériové číslo přístroje smí být jen v jednom rozváděči.
+      - {kind: unique, columns: [gtin, serial_number]}
+      - {kind: unique, columns: [bom_line_ref, serial_number]}
+
+  # ---------------------------------------------------------------------------
+  # EN: Routine verification of one unit (header of the checklist).
+  # CZ: Kusové ověření jednoho rozváděče (hlavička checklistu).
+  # ---------------------------------------------------------------------------
+  routine_verification:
+    storage: workshop
+    table: routine_verification
+    fields:
+      id: {type: uuid, primary_key: true}
+      unit_id: {type: ref, ref: switchboard_unit.id, required: true}
+      case_id: {type: case_id, required: true, indexed: true}
+      # EN: Version of the standards register (15002) used for criteria.
+      # CZ: Verze registru norem (15002), ze které se berou kritéria.
+      standards_register_ref: {type: external_ref, target: 'registr-csn-15002:version', required: true, required_to_close: true}
+      design_verification_ref: {type: external_ref, target: 'cad-urs-engine:design_verification', required: true, required_to_close: true}
+      verifier_person_no: {type: person_no, required: true, required_to_close: true}
+      # EN: Snapshot of the ZPUSOBILY gate from portal-spolupracovniku (Clean Room).
+      # CZ: Otisk stavu ZPŮSOBILÝ z portal-spolupracovniku (Clean Room).
+      verifier_competent: {type: boolean, required: false, required_to_close: true}
+      competence_checked_at: {type: timestamptz, required: false, required_to_close: true}
+      status: {type: enum, enum: verification_status, required: true, default: OPEN}
+      overall_verdict: {type: enum, enum: overall_verdict, required: false, required_to_close: true}
+      closed_at: {type: timestamptz, required: false, required_to_close: true}
+      void_reason: {type: text, required: false, required_when: "status = 'VOIDED'"}
+    state_machine:
+      field: status
+      initial: OPEN
+      transitions:
+        - {from: OPEN, to: IN_PROGRESS, action: begin, guards: [person_competent, design_verification_present]}
+        - {from: IN_PROGRESS, to: CLOSED_PASS, action: close_pass, guards: [all_points_have_verdict, no_point_nevyhovuje, instruments_calibrated_on_test_day, person_competent, online_with_server]}
+        - {from: IN_PROGRESS, to: CLOSED_FAIL, action: close_fail, guards: [all_points_have_verdict, some_point_nevyhovuje, defects_recorded, instruments_calibrated_on_test_day, person_competent, online_with_server]}
+        - {from: CLOSED_PASS, to: VOIDED, action: void, guards: [mutation_confirm_1001, reason_recorded]}
+        - {from: CLOSED_FAIL, to: VOIDED, action: void, guards: [mutation_confirm_1001, reason_recorded]}
+    close_requirements:           # EN: needed for CLOSED_PASS / CLOSED_FAIL / CZ: nutné pro CLOSED_PASS / CLOSED_FAIL
+      fields: [standards_register_ref, design_verification_ref, verifier_person_no, verifier_competent, competence_checked_at, overall_verdict, closed_at]
+
+  # ---------------------------------------------------------------------------
+  # EN: One point of the routine verification checklist.
+  # CZ: Jeden bod checklistu kusového ověření.
+  # ---------------------------------------------------------------------------
+  verification_item:
+    storage: workshop
+    table: verification_item
+    fields:
+      id: {type: uuid, primary_key: true}
+      verification_id: {type: ref, ref: routine_verification.id, required: true}
+      case_id: {type: case_id, required: true, indexed: true}
+      point: {type: enum, enum: verification_point, required: true}
+      method: {type: enum, enum: verification_method, required: true}
+      verdict: {type: enum, enum: verdict, required: false, required_to_close: true}
+      # EN: Measured value as exact decimal; the limit comes from the register.
+      # CZ: Naměřená hodnota jako přesné desetinné číslo; mez dává registr.
+      measured_value: {type: decimal, required: false, required_when: "method IN ('MEASUREMENT', 'ELECTRICAL_TEST')"}
+      measured_unit: {type: string, required: false, required_when: "method IN ('MEASUREMENT', 'ELECTRICAL_TEST')"}
+      criterion_ref: {type: external_ref, target: 'registr-csn-15002:criterion', required: false, required_to_close: true}
+      # EN: Instrument from the Lhutnik calendar; mandatory for measurements.
+      # CZ: Měřidlo z Lhůtníku; povinné u měření a elektrických zkoušek.
+      instrument_ref: {type: external_ref, target: 'centralni-lhutnik-a-objekty:asset', required: false, required_when: "method IN ('MEASUREMENT', 'ELECTRICAL_TEST')"}
+      calibration_valid_until: {type: date, required: false, required_when: "method IN ('MEASUREMENT', 'ELECTRICAL_TEST')"}
+      calibration_certificate_ref: {type: external_ref, target: 'centralni-lhutnik-a-objekty:calibration', required: false, required_when: "method IN ('MEASUREMENT', 'ELECTRICAL_TEST')"}
+      performed_by_person_no: {type: person_no, required: false, required_to_close: true}
+      performed_at: {type: timestamptz, required: false, required_to_close: true}
+      defect_note: {type: text, required: false, required_when: "verdict = 'NEVYHOVUJE'"}
+      not_applicable_reason: {type: text, required: false, required_when: "verdict = 'NEPOUZIJE_SE'"}
+      photo_keys: {type: json, required: false}          # EN: list of Garage keys / CZ: seznam klíčů v Garage
+    constraints:
+      - {kind: unique, columns: [verification_id, point]}
+      # EN: Hard-Stop: calibration must be valid on the day of the test.
+      # CZ: Hard-Stop: kalibrace musí platit v den zkoušky.
+      - {kind: check, expression: "calibration_valid_until IS NULL OR calibration_valid_until >= performed_at::date"}
+    close_requirements:           # EN: needed before the header can close / CZ: nutné před uzavřením hlavičky
+      fields: [verdict, criterion_ref, performed_by_person_no, performed_at]
+
+  # ---------------------------------------------------------------------------
+  # EN: EU declaration of conformity: ai drafts, a human (1001) signs.
+  # CZ: EU prohlášení o shodě: ai připraví návrh, podepisuje člověk (1001).
+  # ---------------------------------------------------------------------------
+  declaration_of_conformity:
+    storage: workshop
+    table: declaration_of_conformity
+    fields:
+      id: {type: uuid, primary_key: true}
+      unit_id: {type: ref, ref: switchboard_unit.id, required: true, unique: true}
+      case_id: {type: case_id, required: true, indexed: true}
+      draft_pdf_key: {type: object_key, required: true}  # EN: DRAFT from cad-urs-engine / CZ: DRAFT z cad-urs-engine
+      status: {type: enum, enum: declaration_status, required: true, default: DRAFT}
+      decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_to_close: true}
+      # EN: Must be a human; an ai number (5 digits) is rejected by the type.
+      # CZ: Musí být člověk; číslo ai (5 cifer) typ odmítne.
+      signed_by_person_no: {type: person_no, required: false, required_to_close: true, allowed_values: [1001]}
+      signed_at: {type: timestamptz, required: false, required_to_close: true}
+      signed_pdf_key: {type: object_key, required: false, required_to_close: true}
+      reject_reason: {type: text, required: false, required_when: "status = 'REJECTED'"}
+    state_machine:
+      field: status
+      initial: DRAFT
+      transitions:
+        - {from: DRAFT, to: IN_DECISIONS, action: submit, guards: [verification_closed_pass, judge_15002_pass]}
+        - {from: IN_DECISIONS, to: SIGNED, action: sign, guards: [mutation_confirm_1001, qes_signature_present]}
+        - {from: IN_DECISIONS, to: REJECTED, action: reject, guards: [reason_recorded]}
+        - {from: REJECTED, to: DRAFT, action: redraft, guards: []}
+    close_requirements:           # EN: needed for SIGNED / CZ: nutné pro stav SIGNED
+      fields: [decisions_ref, signed_by_person_no, signed_at, signed_pdf_key]
+
+  # ---------------------------------------------------------------------------
+  # EN: Print job of the CE nameplate or the PHE basis.
+  # CZ: Tisková úloha štítku CE nebo podkladu PHE.
+  # ---------------------------------------------------------------------------
+  label_print_job:
+    storage: workshop
+    table: label_print_job
+    fields:
+      id: {type: uuid, primary_key: true}
+      unit_id: {type: ref, ref: switchboard_unit.id, required: true}
+      case_id: {type: case_id, required: true, indexed: true}
+      label_type: {type: enum, enum: label_type, required: true}
+      status: {type: enum, enum: label_status, required: true, default: BLOCKED}
+      template_version: {type: string, required: false, required_to_close: true}   # EN: Typst template / CZ: šablona Typst
+      payload_hash: {type: string, required: false, required_to_close: true}       # EN: hash of printed data / CZ: otisk tištěných dat
+      printed_by_person_no: {type: person_no, required: false, required_to_close: true}
+      printed_at: {type: timestamptz, required: false, required_to_close: true}
+      station_code: {type: station_code, required: false, required_to_close: true}
+      copies: {type: integer, required: false, default: 1}
+      reprint_reason: {type: text, required: false, required_when: "status = 'REPRINT_REQUESTED'"}
+    state_machine:
+      field: status
+      initial: BLOCKED
+      transitions:
+        - {from: BLOCKED, to: READY, action: unlock, guards: [verification_closed_pass, passport_present, declaration_signed_by_1001]}
+        - {from: READY, to: PRINTED, action: print, guards: [online_with_server]}
+        - {from: PRINTED, to: REPRINT_REQUESTED, action: request_reprint, guards: [reason_recorded]}
+        - {from: REPRINT_REQUESTED, to: READY, action: approve_reprint, guards: [mutation_confirm_1001]}
+        - {from: BLOCKED, to: VOIDED, action: void, guards: [reason_recorded]}
+        - {from: READY, to: VOIDED, action: void, guards: [reason_recorded]}
+    close_requirements:           # EN: needed for PRINTED / CZ: nutné pro stav PRINTED
+      fields: [template_version, payload_hash, printed_by_person_no, printed_at, station_code]
+
+# EN: Named guards used in the state machines above. Each is evaluated on the
+#     server, never only in the kiosk browser.
+# CZ: Pojmenované zámky použité ve stavových automatech výše. Každý se
+#     vyhodnocuje na serveru, nikdy jen v prohlížeči kiosku.
+guards:
+  bom_locked: "EN: bill of materials is approved in cad-urs-engine / CZ: kusovník je schválen v cad-urs-engine"
+  all_operations_done: "EN: every work_operation is DONE or CANCELLED / CZ: všechny operace jsou DONE nebo CANCELLED"
+  all_serialized_components_scanned: "EN: every serialized BOM line has a component_scan / CZ: každý řádek kusovníku s povinným S/N má component_scan"
+  design_verification_present: "EN: design verification incl. temperature rise by calculation exists / CZ: existuje ověření návrhu vč. oteplení výpočtem"
+  person_competent: "EN: portal-spolupracovniku returns ZPUSOBILY ANO for the person / CZ: portal-spolupracovniku vrací pro osobu ZPŮSOBILÝ: ANO"
+  unit_in_assembly: "EN: unit status is IN_ASSEMBLY / CZ: rozváděč je ve stavu IN_ASSEMBLY"
+  all_points_have_verdict: "EN: all nine points have a verdict / CZ: všech devět bodů má výrok"
+  no_point_nevyhovuje: "EN: no point has NEVYHOVUJE / CZ: žádný bod nemá NEVYHOVUJE"
+  some_point_nevyhovuje: "EN: at least one point has NEVYHOVUJE / CZ: aspoň jeden bod má NEVYHOVUJE"
+  defects_recorded: "EN: every failed point has a defect note / CZ: každý nevyhovující bod má popis závady"
+  instruments_calibrated_on_test_day: "EN: every used instrument has a valid calibration in Lhutnik on the test day / CZ: každé použité měřidlo má v den zkoušky platnou kalibraci v Lhůtníku"
+  online_with_server: "EN: no closing or printing from the offline queue / CZ: žádné uzavření ani tisk z offline fronty"
+  verification_closed_pass: "EN: latest routine_verification is CLOSED_PASS / CZ: poslední kusové ověření je CLOSED_PASS"
+  verification_closed_fail: "EN: latest routine_verification is CLOSED_FAIL / CZ: poslední kusové ověření je CLOSED_FAIL"
+  serial_number_assigned: "EN: serial number assigned by cz-sk-registry-kernel / CZ: výrobní číslo přiděleno modulem cz-sk-registry-kernel"
+  passport_present: "EN: passport generated by cad-urs-engine and sealed / CZ: pas vygenerován v cad-urs-engine a opatřen pečetí"
+  judge_15002_pass: "EN: independent review by 15002 passed / CZ: nezávislá kontrola 15002 prošla"
+  declaration_signed_by_1001: "EN: declaration_of_conformity is SIGNED by person 1001 / CZ: prohlášení o shodě je SIGNED osobou 1001"
+  qes_signature_present: "EN: personal qualified signature is in the PDF / CZ: v PDF je osobní kvalifikovaný podpis"
+  ce_label_printed: "EN: label_print_job CE_NAMEPLATE is PRINTED / CZ: tisková úloha CE_NAMEPLATE je PRINTED"
+  phe_basis_printed: "EN: label_print_job PHE_BASIS is PRINTED / CZ: tisková úloha PHE_BASIS je PRINTED"
+  mutation_confirm_1001: "EN: confirmed by 1001 in Decisions / CZ: potvrzeno osobou 1001 v Decisions"
+  reason_recorded: "EN: a written reason is stored / CZ: je uložen písemný důvod"

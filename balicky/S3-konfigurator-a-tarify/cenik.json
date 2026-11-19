@@ -1,0 +1,114 @@
+{
+  "meta": {
+    "name": "cenik_polarita",
+    "version": "2.0",
+    "status": "SCHVALENO_1001",
+    "approved": true,
+    "approved_by": "1001",
+    "approved_on": "2026-11-15",
+    "valid_from": "2026-11-15",
+    "currency": "CZK",
+    "prices_exclude_vat": true,
+    "note": "Výchozí ceník schválil jednatel 1001 dne 15. 11. 2026 ve znění návrhu, beze změn. Hodnoty nebyly porovnány s trhem ani s nákupními ceníky; při založení firmy se schválení zapíše do Decisions jako výchozí stav a každá další změna prochází mutation_confirm. Nejde o závaznou nabídku zákazníkovi."
+  },
+  "mrr_tariffs": [
+    {
+      "code": "START_SVJ",
+      "label": "Start SVJ",
+      "audience": "SVJ a bytová družstva",
+      "base_monthly_per_object": 1490,
+      "extra_entrance_monthly": 490,
+      "sla_response": "následující pracovní den",
+      "labour_discount_pct": 0,
+      "includes": [
+        "48h digitální převzetí starých šanonů (N7)",
+        "Hlídání všech lhůt v Centrálním Lhůtníku",
+        "Digitální kniha objektu pod QR kódem na rozváděči",
+        "Pravidelné revize společných prostor a hromosvodu LPS v ceně",
+        "Neomezený počet členů výboru SVJ v portálu"
+      ]
+    },
+    {
+      "code": "STANDARD_OBJEKT",
+      "label": "Standard Objekt",
+      "audience": "SVJ, bytové domy a menší firmy",
+      "base_monthly_per_object": 2990,
+      "extra_entrance_monthly": 790,
+      "sla_response": "do 8 pracovních hodin",
+      "labour_discount_pct": 5,
+      "includes": [
+        "Vše z tarifu Start SVJ",
+        "Termovizní diagnostika hlavních rozváděčů",
+        "Prioritní servisní SLA odezva přes Helpdesk",
+        "Vzdálený Read-Only dohled EV wallboxů (OCPP) a FVE střídačů",
+        "Roční souhrnná zpráva pro pojišťovnu"
+      ]
+    },
+    {
+      "code": "MAXI_AREAL_B2B",
+      "label": "Maxi Areál / B2B",
+      "audience": "Areály, výrobní a logistické firmy",
+      "base_monthly_per_object": 6900,
+      "extra_entrance_monthly": 1490,
+      "sla_response": "garantovaná pohotovost do 4 hodin",
+      "labour_discount_pct": 10,
+      "includes": [
+        "Vše z tarifu Standard Objekt",
+        "Garantovaná pohotovostní SLA lhůta",
+        "Preventivní údržba trafostanic, kompenzací a nouzového osvětlení",
+        "Zvýhodněná hodinová sazba montérů",
+        "Prioritní koordinace u 14005 zakazky"
+      ]
+    }
+  ],
+  "turnkey_packages": [
+    {
+      "code": "EV_WALLBOX",
+      "label": "Chytrý EV Wallbox pro garáž SVJ / rodinný dům",
+      "unit": "ks",
+      "price_from": 38000,
+      "price_to": 95000,
+      "includes": "Wallbox, jištění a chránič, dynamické řízení výkonu DLM, OCPP dohled, výchozí revize"
+    },
+    {
+      "code": "STOUPACKY_HER",
+      "label": "Modernizace stoupaček a hlavního elektroměrového rozváděče SVJ",
+      "unit": "vchod",
+      "price_from": 180000,
+      "price_to": 950000,
+      "includes": "Projekt, nové stoupací vedení, elektroměrový rozváděč s Výrobním pasem CE podle platné normy pro rozváděče nízkého napětí, stavební přípomoce, výchozí revize"
+    },
+    {
+      "code": "FVE_BESS",
+      "label": "Komunitní a firemní FVE + BESS",
+      "unit": "instalace",
+      "price_from": 450000,
+      "price_to": 3500000,
+      "includes": "Projekt, FVE a bateriové úložiště s datovou připraveností pasu baterie (předpisy EU o bateriích, povinné od 18. 2. 2027 pro LMT, EV a průmyslové baterie > 2 kWh), registrace EDC, bezpečná instalace podle předpisů o bezpečné instalaci výroben z obnovitelných zdrojů"
+    }
+  ],
+  "hourly_rates": {
+    "electrotechnician": {"label": "Montér-elektrotechnik", "rate": 590},
+    "lead_electrotechnician": {"label": "Vedoucí elektrotechnik", "rate": 690},
+    "revision_technician": {"label": "Revizní technik (TIČR)", "rate": 990},
+    "designer": {"label": "Projektant elektro", "rate": 1190}
+  },
+  "material_markup_pct": 15,
+  "minimum_contribution_margin_pct": 22,
+  "retention_pct": {"min": 5, "max": 10},
+  "partner_commission": {
+    "note": "Trvalá provize Certified Partner SUB z uhrazeného měsíčního paušálu MRR přivedených objektů; pásmo 10–15 % je dáno návrhem firmy, stupně uvnitř pásma schválil 1001 dne 15. 11. 2026.",
+    "tiers": [
+      {"min_objects": 1, "pct": 10.0},
+      {"min_objects": 5, "pct": 12.5},
+      {"min_objects": 10, "pct": 15.0}
+    ]
+  },
+  "seasonal_coefficients": [
+    {"months": [1, 2], "coefficient": 0.95, "label": "Zimní útlum montáží"},
+    {"months": [3, 4, 5], "coefficient": 1.0, "label": "Jarní standard"},
+    {"months": [6, 7, 8, 9], "coefficient": 1.05, "label": "Hlavní sezóna FVE a EV"},
+    {"months": [10, 11, 12], "coefficient": 1.0, "label": "Podzimní revize"}
+  ],
+  "indexation": "Roční indexace paušálu o průměrnou míru inflace vyhlášenou ČSÚ za předchozí kalendářní rok (dle paušální servisní smlouvy, sestava S1 č. 2)."
+}
