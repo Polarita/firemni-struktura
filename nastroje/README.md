@@ -27,7 +27,7 @@ Skripty v této složce udržují návrh vnitřně konzistentní a sestavují ti
 
 Změna verze: `python nastroje/bump_version.py <nová verze>`, potom kroky 3 a 4.
 
-Instalace hooku (jednou): z kořene repozitáře `cp polarita/firemni-struktura/nastroje/pre-commit .git/hooks/pre-commit`, nebo ze složky `firemni-struktura` `cp nastroje/pre-commit ../../.git/hooks/pre-commit`. Hook nedělá nic u commitů, které se této složky netýkají.
+Instalace hooku (jednou): z kořene tohoto repozitáře `cp nastroje/pre-commit .git/hooks/pre-commit`. Hook funguje i tehdy, když návrh leží jako podsložka `polarita/firemni-struktura` většího repozitáře: pak se kopíruje do `.git/hooks/` toho repozitáře a u commitů, které se složky netýkají, nedělá nic.
 
 ## Co kontrola hlídá
 
