@@ -1,4 +1,4 @@
-# Vzor digitálního předávacího protokolu půjčovny · Blok 16 · Verze 2.7
+# Vzor digitálního předávacího protokolu půjčovny · Blok 16 · Verze 2.8
 
 Vzor pro modul `pujcovna-meridel`. Protokol vzniká v PWA `portal-spolupracovniku`, sází se v `Typst` do PDF, opatří se serverovou pečetí `pyHanko` s časovým razítkem a uloží se ke spisu výpůjčky. Proměnné ve složených závorkách doplní systém; hodnoty bez schválení `1001` (ceník, výše kauce, minimální počet fotografií) jsou `NÁVRH — ke schválení 1001` a tento vzor žádné částky neobsahuje.
 
@@ -135,21 +135,22 @@ Návrh vypořádání připraví `16001 ucetni` jako `DRAFT`. Vrácení i zadrž
 
 ---
 
-## Technická patička
+## Technická patička (v PDF před pečetěním)
 
 | Údaj | Hodnota |
 | :--- | :--- |
-| Šablona | `{{template_version}}` (`Typst`) |
-| Otisk dokumentu | `{{pdf_sha256}}` |
-| Serverová pečeť a časové razítko | `{{seal_ref}}` (`pyHanko` + TSA) |
-| Uložení | `Garage`, objekt `{{pdf_key}}`; archivace ke spisu dle spisového plánu |
+| Protokol a spis | `{{protocol_no}}` / `{{case_id}}` |
+| Šablona a datum sazby | `{{template_version}}` (`Typst`), vygenerováno `{{rendered_at}}` |
+| Cílové uložení | `Garage`, objekt `{{pdf_key}}`; archivace ke spisu dle spisového plánu |
+
+> **Externí metadata po zapečetění (ukládají se vedle PDF v DB a spisu, nikdy uvnitř samotného těla PDF před výpočtem otisku):** `pdf_sha256` (kontrolní otisk výsledného zapečetěného souboru) a `seal_ref` (`pyHanko` + TSA časové razítko).
 
 ## Pravidla, která systém u protokolu vynucuje
 
 1. Bez přijaté kauce (nebo jejího prominutí rozhodnutím `1001`) a bez zapečetěné Části A zdroj nesmí opustit sklad.
 2. Kalibrace nebo revize musí podle Lhůtníku platit až do plánovaného vrácení; jinak předání nelze dokončit.
 3. Protokol nelze podepsat, dokud není odškrtnuto všechno příslušenství a nahrán minimální počet fotografií.
-4. Po zapečetění se protokol nemění; oprava je nový protokol s odkazem na původní.
+4. Po zapečetění se protokol nemění; oprava je nový protokol s odkazem `supersedes_protocol_id` na původní (původní přechází do stavu `SUPERSEDED` a zůstává archivován).
 5. Po zapečetěné Části B jde zdroj do stavu kontroly po vrácení a zpět do nabídky se dostane až po přijetí skladem nebo po servisu.
 
 ## Poznámka k návrhu

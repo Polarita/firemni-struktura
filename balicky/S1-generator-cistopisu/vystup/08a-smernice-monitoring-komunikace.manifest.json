@@ -2,7 +2,7 @@
   "document": "08a-smernice-monitoring-komunikace",
   "title": "Vnitřní směrnice o monitoringu firemních komunikačních prostředků a nahrávání hovorů",
   "draft_watermark": true,
-  "generated_utc": "2026-11-18 06:12 UTC",
+  "generated_utc": "2026-11-19 19:51 UTC",
   "variables": {
     "spis_id": "POL-2027-00001",
     "verze_smernice": "1.0",
@@ -18,9 +18,9 @@
     "datum_podpisu": "25. 1. 2027"
   },
   "sha256": {
-    "template": "31d4c50b9f3bc75fab763d4de5f43d67d5dbbf906e6c050272956aef2cc2339e",
+    "template": "fce256b14673465ef75c480c04b4f03f57acdfadaf7cc77acc66a2b2091135b9",
     "data": "f0794024420167e3ae6dbe51a200ac63ca49b3f39930a126ac29458b220a368d",
-    "pdf": "56ef1f4ca56613326ee511fa47430bda243b77fb2401554f5291bca5698db372"
+    "pdf": "c8a176262da0fc85b66e938e62448a4f5f8f6a5a05995c571e63808a2e7f1e80"
   },
   "pages": 5
 }

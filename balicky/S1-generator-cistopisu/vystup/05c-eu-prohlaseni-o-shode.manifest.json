@@ -2,7 +2,7 @@
   "document": "05c-eu-prohlaseni-o-shode",
   "title": "EU prohlášení o shodě",
   "draft_watermark": true,
-  "generated_utc": "2026-11-18 06:12 UTC",
+  "generated_utc": "2026-11-19 19:51 UTC",
   "variables": {
     "spis_id": "POL-2027-00001",
     "oznaceni_rozvadece": "+RH1 (hlavní domovní rozváděč)",
@@ -33,9 +33,9 @@
     "datum_podpisu": "15. 3. 2027"
   },
   "sha256": {
-    "template": "5ab51bbf1dbbcecf866034346dc6a8791c0e64343f86e92de0c6f9fd8f296b47",
+    "template": "61395f4a4ef53335be13e768abbd3dab893aa442633a9439d2a10a37821922cb",
     "data": "f0c88a31ed7d36db1fc9b9e4f885576d4432dcbf170a204843d5b88c2604fc8e",
-    "pdf": "cf27c1e2ab9ba59746984acd14541f9063bfe0f5bf9126c3806641d72872aab2"
+    "pdf": "aa0e065f95e244ec96f0e110091ee58c5025d806f3dca55b0fac2f9f9c58caf2"
   },
   "pages": 3
 }

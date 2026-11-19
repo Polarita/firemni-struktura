@@ -3,16 +3,23 @@
 Tests of the consistency check: the repository must pass and every rule must catch a planted defect.
 Testy kontroly konzistence: repozitář musí projít a každé pravidlo musí zachytit podstrčenou vadu.
 
-Usage / Použití:  python -m unittest -v test_check_consistency   (run inside nastroje/ / spustit v nastroje/)
+Usage / Použití:  python -m unittest -v test_check_consistency
 """
 
 from __future__ import annotations
 
+import copy
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+HERE = Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+
+import bump_version
 import check_consistency as cc
 import sync_prompt_core
 
@@ -24,7 +31,7 @@ class RepositoryTests(unittest.TestCase):
     def test_canon_budgets_sum_to_total(self) -> None:
         canon = json.loads(cc.CANON_PATH.read_text(encoding="utf-8"))
         self.assertEqual(sum(a["budget_usd"] for a in canon["agents"]), canon["budget_total_usd"])
-        self.assertEqual(len(canon["agents"]), 20)
+        self.assertEqual(len(canon["agents"]), canon["documents"]["agent_cards"])
 
     def test_prompt_core_sync_is_idempotent(self) -> None:
         self.assertEqual(sync_prompt_core.main(["--check"]), 0)
@@ -43,7 +50,7 @@ class RuleTests(unittest.TestCase):
     def test_forbidden_terms_are_caught(self) -> None:
         for planted in ("centrální sklad `CZ-101+`", "operace DownloadMessage", "obrana CA-MEL", "8směrný router",
                         "ČKAIT IE01", "librosa (MIT / BSD)", "konektor Mourek-Access", "server Albrechtice",
-                        "spusť docker run nginx", "tým AI agentů", "vlákno #zakazky"):
+                        "spusť docker run nginx", "tým AI agentů", "AI-first řešení", "vlákno #zakazky"):
             self.assertTrue(self.errors(cc.check_forbidden, planted, True), planted)
 
     def test_legal_numbers_and_standard_designations_are_caught(self) -> None:
@@ -85,7 +92,43 @@ class RuleTests(unittest.TestCase):
 
     def test_foreign_version_is_caught(self) -> None:
         self.assertTrue(self.errors(cc.check_versions, "# Dokument · Verze 0.9"))
+        self.assertTrue(self.errors(cc.check_versions, f"# Dokument · Verze {self.canon['version']}.1"))
         self.assertEqual(self.errors(cc.check_versions, f"# Dokument · Verze {self.canon['version']}"), [])
+
+    def test_budget_and_count_defects_are_caught(self) -> None:
+        bad_canon = copy.deepcopy(self.canon)
+        bad_canon["budget_total_usd"] = 999
+        report = cc.Report()
+        cc.check_budgets(bad_canon, report)
+        self.assertTrue(any("agent budgets sum" in e for e in report.errors))
+
+        bad_counts = copy.deepcopy(self.canon)
+        bad_counts["documents"]["core_pdf"] = 99
+        report2 = cc.Report()
+        cc.check_counts(bad_counts, report2)
+        self.assertTrue(any("documents.core_pdf" in e for e in report2.errors))
+
+    def test_prompt_core_personalization_and_chapter4_targeting(self) -> None:
+        core = sync_prompt_core.load_core()
+        ceo = next(a for a in self.canon["agents"] if a["sysid"] == "ceo")
+        klicnik = next(a for a in self.canon["agents"] if a["sysid"] == "klicnik")
+        pravni = next(a for a in self.canon["agents"] if a["sysid"] == "pravni-specialista")
+
+        ceo_text = sync_prompt_core.card_path(ceo).read_text(encoding="utf-8")
+        self.assertNotIn("eskaluj agentovi ceo", "\n".join(sync_prompt_core.personalize_core(core, ceo)))
+        self.assertNotIn("nahlas agentovi klicnik", "\n".join(sync_prompt_core.personalize_core(core, klicnik)))
+        self.assertNotIn("u agentů pravni-specialista nebo normovac", "\n".join(sync_prompt_core.personalize_core(core, pravni)))
+
+        with_example_above = ceo_text.replace("## 4.", "## 3.5 Ukázka\n\n```text\nukázka\n```\n\n## 4.")
+        rendered = sync_prompt_core.render(with_example_above, ceo, core, self.canon["budget_total_usd"])
+        self.assertIn("```text\nukázka\n```", rendered)
+
+    def test_bump_canon_updates_uniquely(self) -> None:
+        raw = '{"version": "2.7", "release_tag": "Polarita-2.7"}'
+        updated = bump_version.bump_canon(raw, "2.7", "2.8")
+        self.assertEqual(json.loads(updated), {"version": "2.8", "release_tag": "Polarita-2.8"})
+        with self.assertRaises(RuntimeError):
+            bump_version.bump_canon('{"version": "2.6"}', "2.7", "2.8")
 
     def test_markdown_structure_defects_are_caught(self) -> None:
         with tempfile.TemporaryDirectory(dir=cc.ROOT) as tmp:

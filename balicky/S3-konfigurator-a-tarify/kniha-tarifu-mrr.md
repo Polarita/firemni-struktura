@@ -1,4 +1,4 @@
-# GTM kniha tarifů MRR — paušál „Elektro Správa SVJ a Firem“ · Verze 2.7
+# GTM kniha tarifů MRR — paušál „Elektro Správa SVJ a Firem“ · Verze 2.8
 
 Obchodní kniha pro `12001 marketing`, `12002 obsah-geo`, `14005 zakazky` a živé obchodníky. Popisuje, **co který tarif obsahuje a jak se prodává**. Částky zde záměrně nejsou — jediným zdrojem cen je [`cenik.json`](./cenik.json) a z něj generovaný [`prehled-cen.md`](./prehled-cen.md) (stav `SCHVÁLENO 1001`, 15. 11. 2026).
 
@@ -25,8 +25,8 @@ Obchodní kniha pro `12001 marketing`, `12002 obsah-geo`, `14005 zakazky` a živ
 | **Roční souhrnná zpráva pro pojišťovnu** | — | ano | ano |
 | **Garantovaná pohotovostní SLA lhůta** | — | — | ano |
 | **Preventivní údržba trafostanic, kompenzací a nouzového osvětlení** | — | — | ano |
-| **Zvýhodněná hodinová sazba montérů** | — | — | ano |
-| **Prioritní koordinace u `14005 zakazky`** | — | — | ano |
+| **Zvýhodněná hodinová sazba montérů** | — | sleva 5 % | sleva 10 % |
+| **Prioritní dispečink a koordinace zakázek (`14005 zakazky`)** | — | — | ano |
 
 ## 3. Produktizované balíčky na klíč (cena od–do)
 

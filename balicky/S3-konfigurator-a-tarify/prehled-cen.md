@@ -1,6 +1,6 @@
 # Přehled cen a sazeb (generováno z `cenik.json`)
 
-> **Stav: `SCHVALENO_1001`** — Výchozí ceník schválil jednatel 1001 dne 15. 11. 2026 ve znění návrhu, beze změn. Hodnoty nebyly porovnány s trhem ani s nákupními ceníky; při založení firmy se schválení zapíše do Decisions jako výchozí stav a každá další změna prochází mutation_confirm. Nejde o závaznou nabídku zákazníkovi.
+> **Stav: `SCHVALENO_1001`** — Výchozí ceník schválil jednatel 1001 dne 15. 11. 2026 ve znění návrhu, beze změn. Hodnoty nebyly porovnány s trhem ani s nákupními ceníky; při založení firmy se schválení zapíše do Decisions jako výchozí stav a každá další změna prochází mutation_confirm. Nejde o závaznou nabídku zákazníkovi; veřejný konfigurátor dostává přes pricing.public_price_list pouze veřejný výřez bez interních sazeb, marží a provizí.
 > Tento soubor se neupravuje ručně; vzniká příkazem `python pricing.py --build`.
 
 ## Tarify paušálu „Elektro Správa SVJ a Firem“ (MRR, bez DPH)

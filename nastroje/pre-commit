@@ -1,34 +1,66 @@
 #!/bin/sh
-# Git pre-commit hook: run the Polarita consistency check when the blueprint folder has staged changes.
-# Git pre-commit hook: spustí kontrolu konzistence Polarita, když jsou připravené změny ve složce návrhu.
+# Git pre-commit hook: run the Polarita consistency check and fast unit tests when the blueprint folder has staged changes.
+# Git pre-commit hook: spustí kontrolu konzistence a rychlé testy Polarita, když jsou připravené změny ve složce návrhu.
 #
 # Install / Instalace:
 #   cp <blueprint folder>/nastroje/pre-commit <repository root>/.git/hooks/pre-commit
+#   chmod +x <repository root>/.git/hooks/pre-commit
 #   cp <složka návrhu>/nastroje/pre-commit <kořen repozitáře>/.git/hooks/pre-commit
+#   chmod +x <kořen repozitáře>/.git/hooks/pre-commit
 #
 # EN: Works both when the blueprint is the repository root (its own repository) and when it lives in
-#     the subfolder polarita/firemni-struktura of a larger repository. It does nothing for commits
-#     that do not touch the blueprint.
+#     the subfolder Polarita/firemni-struktura (or polarita/firemni-struktura) of a larger repository.
+#     It does nothing for commits that do not touch the blueprint.
 # CZ: Funguje, když je návrh kořenem repozitáře (vlastní repozitář), i když leží v podsložce
-#     polarita/firemni-struktura většího repozitáře. U commitů, které se návrhu netýkají, nedělá nic.
+#     Polarita/firemni-struktura (nebo polarita/firemni-struktura) většího repozitáře.
+#     U commitů, které se návrhu netýkají, nedělá nic.
 
 ROOT="$(git rev-parse --show-toplevel)"
 if [ -f "$ROOT/nastroje/check_consistency.py" ]; then
     FOLDER="."
     CHANGED="$(git diff --cached --name-only)"
+elif [ -d "$ROOT/Polarita/firemni-struktura/nastroje" ]; then
+    FOLDER="Polarita/firemni-struktura"
+    CHANGED="$(git diff --cached --name-only | grep "^$FOLDER/" || true)"
 else
     FOLDER="polarita/firemni-struktura"
-    CHANGED="$(git diff --cached --name-only | grep "^$FOLDER/")"
+    CHANGED="$(git diff --cached --name-only | grep "^$FOLDER/" || true)"
 fi
-PYTHON="$(command -v python || command -v python3)"
-if [ -n "$CHANGED" ]; then
-    if [ -z "$PYTHON" ]; then
-        echo "pre-commit: nenalezen python ani python3 — commit zastaven." >&2
-        exit 1
-    fi
-    if ! (cd "$ROOT/$FOLDER/nastroje" && "$PYTHON" check_consistency.py); then
-        echo "pre-commit: kontrola konzistence selhala — commit zastaven (oprav nálezy nebo uprav nastroje/kanon.json)." >&2
-        exit 1
-    fi
+
+[ -z "$CHANGED" ] && exit 0
+
+find_python() {
+    for candidate in python3 python "py -3"; do
+        # shellcheck disable=SC2086
+        if $candidate -c "import sys; assert sys.version_info >= (3, 10)" >/dev/null 2>&1; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+PYTHON="$(find_python)" || {
+    echo "pre-commit: nenalezen Python 3.10+ (python3 / python / py -3) — commit zastaven." >&2
+    exit 1
+}
+
+# shellcheck disable=SC2086
+if ! (cd "$ROOT/$FOLDER/nastroje" && $PYTHON check_consistency.py && $PYTHON -m unittest test_check_consistency); then
+    echo "pre-commit: kontrola konzistence nebo její testy selhaly — commit zastaven (oprav nálezy nebo uprav nastroje/kanon.json)." >&2
+    exit 1
 fi
+
+# shellcheck disable=SC2086
+if ! (cd "$ROOT/$FOLDER/balicky/S1-generator-cistopisu" && $PYTHON generate_pdfs.py --check); then
+    echo "pre-commit: kontrola šablon a dat S1 selhala — commit zastaven." >&2
+    exit 1
+fi
+
+# shellcheck disable=SC2086
+if ! (cd "$ROOT/$FOLDER/balicky/S3-konfigurator-a-tarify" && $PYTHON -m unittest test_pricing); then
+    echo "pre-commit: testy cenového jádra S3 selhaly — commit zastaven." >&2
+    exit 1
+fi
+
 exit 0

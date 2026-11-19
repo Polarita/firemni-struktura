@@ -17,19 +17,33 @@ Usage / Použití:  python nastroje/check_consistency.py [--warnings]
 
 from __future__ import annotations
 
+import functools
 import json
 import re
 import sys
 from pathlib import Path
 
+HERE = Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+
 import sync_prompt_core
 
 ROOT = Path(__file__).resolve().parents[1]
-CANON_PATH = Path(__file__).resolve().parent / "kanon.json"
+CANON_PATH = HERE / "kanon.json"
 CORE_DIRS = ("", "oddeleni", "software", "agenti-a-prompty")
-SKIP_PARTS = {".git", "__pycache__", "vystup", "output", "audio"}
-VERSION_RE = re.compile(r"Verz(?:e|i|í) (\d+\.\d+)|VERZE (\d+\.\d+)|Version (\d+\.\d+)|Polarita-(\d+\.\d+)")
+SKIP_PARTS = {".git", "__pycache__", "vystup", "output", "audio", ".venv", "venv", "node_modules", "scratch"}
+VERSION_RE = re.compile(
+    r"Verz(?:e|i|í) (\d+\.\d+(?:\.\d+)?)|VERZE (\d+\.\d+(?:\.\d+)?)|"
+    r"Version (\d+\.\d+(?:\.\d+)?)|Polarita-(\d+\.\d+(?:\.\d+)?)"
+)
+VERSION_SUFFIXES = (".md", ".py", ".json", ".yaml", ".yml", ".html", ".sql", ".ts")
 LINK_RE = re.compile(r"\]\(([^)\s]+)\)")
+
+
+@functools.lru_cache(maxsize=None)
+def _compiled(pattern: str) -> re.Pattern[str]:
+    return re.compile(pattern)
 
 
 class Report:
@@ -63,7 +77,7 @@ def all_text_files() -> list[Path]:
     files = []
     for path in sorted(ROOT.rglob("*")):
         if path.is_file() and not SKIP_PARTS.intersection(path.relative_to(ROOT).parts) \
-                and (path.suffix in (".md", ".py", ".yaml", ".yml", ".json", ".sql", ".ts", ".html") or path.name == "pre-commit"):
+                and (path.suffix in VERSION_SUFFIXES or path.name == "pre-commit"):
             files.append(path)
     return files
 
@@ -126,7 +140,7 @@ def check_forbidden(path: Path, text: str, canon: dict, is_core: bool, report: R
     for rule in canon["forbidden"]:
         if rule.get("scope") == "core" and not is_core:
             continue
-        pattern = re.compile(rule["pattern"])
+        pattern = _compiled(rule["pattern"])
         for number, line in enumerate(text.split("\n"), 1):
             if pattern.search(line):
                 report.error(f"{where}:{number}", f"forbidden term /{rule['pattern']}/ — {rule['reason']}")
@@ -138,13 +152,15 @@ def check_agents(path: Path, text: str, canon: dict, report: Report) -> None:
     by_id = {agent["id"]: agent for agent in canon["agents"]}
     sysids = {agent["sysid"] for agent in canon["agents"]}
     names = {agent["name"]: agent["id"] for agent in canon["agents"]}
+    ids_alt = "|".join(re.escape(agent["id"]) for agent in canon["agents"])
+    id_sysid_re = re.compile(rf"`?\b({ids_alt})\b`?\s+`?([a-z]+(?:-[a-z]+)*)\b")
     for number, line in enumerate(text.split("\n"), 1):
-        for match in re.finditer(r"`?\b(1[1-8]00[1-5])\b`?\s+`?([a-z]+(?:-[a-z]+)*)\b", line):
+        for match in id_sysid_re.finditer(line):
             agent_id, word = match.groups()
             if agent_id in by_id and word in sysids and by_id[agent_id]["sysid"] != word:
                 report.error(f"{where}:{number}", f"agent {agent_id} paired with system id {word}")
         for name, owner in names.items():
-            for match in re.finditer(r"\b(1[1-8]00[1-5])\b[^|.;\n\d]{0,25}" + re.escape(name), line):
+            for match in re.finditer(rf"\b({ids_alt})\b[^|.;\n\d]{{0,25}}" + re.escape(name), line):
                 if match.group(1) != owner:
                     report.error(f"{where}:{number}", f"name {name} paired with agent {match.group(1)}")
 
@@ -240,15 +256,20 @@ def check_counts(canon: dict, report: Report) -> None:
 def check_prompt_core(canon: dict, report: Report) -> None:
     core = sync_prompt_core.load_core()
     for agent in canon["agents"]:
-        path = sync_prompt_core.card_path(agent)
-        current = read(path)
-        if current != sync_prompt_core.render(current, agent, core, canon["budget_total_usd"]):
-            report.error(rel(path), "shared prompt core differs from 00-SPOLECNE-JADRO-PROMPTU.md (run sync_prompt_core.py)")
+        try:
+            path = sync_prompt_core.card_path(agent)
+            current = read(path)
+            if current != sync_prompt_core.render(current, agent, core, canon["budget_total_usd"]):
+                report.error(rel(path), "shared prompt core differs from 00-SPOLECNE-JADRO-PROMPTU.md (run sync_prompt_core.py)")
+        except ValueError as err:
+            report.error("agenti-a-prompty", str(err))
 
 
 def run() -> Report:
     canon = json.loads(CANON_PATH.read_text(encoding="utf-8"))
     report = Report()
+    if canon.get("release_tag") != f"Polarita-{canon['version']}":
+        report.error("nastroje/kanon.json", f"release_tag {canon.get('release_tag')} differs from Polarita-{canon['version']}")
     core_files = set(core_markdown())
     long_lines = 0
     for path in all_text_files():
@@ -258,13 +279,13 @@ def run() -> Report:
             check_structure(path, text, report)
             check_agents(path, text, canon, report)
             check_names(path, text, canon, report)
-        if path.suffix in (".md", ".py"):
+        if path.suffix in VERSION_SUFFIXES:
             check_versions(path, text, canon, report)
         if path.suffix == ".md" or path.name in ("build_org_pdfs.py", "build_software_pdfs.py"):
             check_database_sets(path, text, canon, report)
         check_forbidden(path, text, canon, is_core, report)
         if is_core:
-            too_long = sum(1 for line in text.split("\n") if len(line) > canon["long_line_warning_chars"])
+            too_long = sum(1 for line in text.replace("\r\n", "\n").split("\n") if len(line) > canon["long_line_warning_chars"])
             long_lines += too_long
             if too_long:
                 report.warn(rel(path), f"{too_long} lines longer than {canon['long_line_warning_chars']} characters")

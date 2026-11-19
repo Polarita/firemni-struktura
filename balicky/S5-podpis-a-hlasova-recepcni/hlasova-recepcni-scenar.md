@@ -1,4 +1,4 @@
-# Scénář noční hlasové ai recepční (`voice-agent`, režim `16002 tajemnik`) · Blok 17 · Verze 2.7
+# Scénář noční hlasové ai recepční (`voice-agent`, režim `16002 tajemnik`) · Blok 17 · Verze 2.8
 
 Tento dokument je závazná předloha hovoru pro hlasovou recepční. Doplňuje řídicí dokument [README.md](README.md) (pravidla 11–23). Jde o návrh: služba `voice-agent` není naprogramována ani nasazena, znění hlášek a všechny číselné parametry schvaluje `1001`. Recepční smí říkat jen věty z tohoto scénáře a jejich věcně shodné obměny; nic dalšího jménem firmy neslibuje.
 
@@ -17,11 +17,11 @@ Tento dokument je závazná předloha hovoru pro hlasovou recepční. Doplňuje 
 
 ## 2. Doslovné znění úvodní hlášky
 
-Hláška se přehraje vždy celá a jako první; bez ní hovor nepokračuje (`ai_disclosure_played = true`).
+Hláška začíná vždy jako první; bez odehrání povinného identifikátoru `ai` hovor nepokračuje (`ai_disclosure_played = true`). Pokud volající již během hlášky křičí zjevné znaky `P1` (*barge-in*), zachytí je audio proud ihned pro deterministickou bránu `P1`, ale přechod do rozhovoru pokračuje až po dokončení povinné věty o `ai` a nahrávání (odmítne-li volající nahrávání zavěšením nebo výslovným nesouhlasem, nahrávka mimo tísňové `P1` se zastaví a hovor se ukončí s odkazem na e-mail).
 
-> „Dobrý den, dovolali jste se do společnosti Polarita s.r.o. Mluvíte s digitální recepční — jsem umělá inteligence, ne člověk. Hovor je nahráván a přepisován, abychom mohli váš požadavek vyřídit. Pokud hoří nebo je někdo v ohrožení života, volejte prosím ihned tísňovou linku 112 nebo hasiče na lince 150. Kdykoli můžete říct, že chcete mluvit s člověkem, a zařídím, aby vám náš pracovník zavolal zpět. S čím vám mohu pomoci?“
+> „Dobrý den, dovolali jste se do společnosti Polarita s.r.o. Mluvíte s digitální recepční — jsem umělá inteligence, ne člověk. Hovor je nahráván a přepisován, abychom mohli váš požadavek vyřídit; podrobnosti o zpracování údajů najdete na polarita.cz/soukromi a pokud s nahráváním nesouhlasíte, můžete zavěsit a napsat nám e-mailem. Pokud hoří nebo je někdo v ohrožení života, volejte prosím ihned tísňovou linku 112 nebo hasiče na lince 150. Kdykoli můžete říct, že chcete mluvit s člověkem, a zařídím, aby vám náš pracovník zavolal zpět. S čím vám mohu pomoci?“
 
-Poznámky ke znění: text plní povinnost oznámit, že jde o `ai`, podle předpisů EU o umělé inteligenci a informační povinnost o nahrávání (GDPR, předpisy o elektronických komunikacích); odkaz na úplnou informaci o zpracování osobních údajů doplní `15001`. Znění je `NÁVRH — ke schválení 1001` po právní kontrole `15001`.
+Poznámky ke znění: text plní povinnost oznámit, že jde o `ai`, podle předpisů EU o umělé inteligenci a informační povinnost o nahrávání a právu na námitku / nesouhlas (GDPR včetně odkazu na zásady soukromí, předpisy o elektronických komunikacích); přesné znění odkazu potvrdí `15001`. Znění je `NÁVRH — ke schválení 1001` po právní kontrole `15001`.
 
 ---
 
@@ -87,7 +87,7 @@ Otázky 1–6 jsou povinné. U `P1` se otázky 8 a 9 nekladou. Recepční neklad
 
 Pravidla:
 
-1. O `P1` rozhoduje **deterministická brána**: klíčová slova v přepisu `Kanálu L` (seznam v `konfigurace-priklad.yaml`), kladná odpověď na otázku 6 a akustická urgence `Kanálu L` (`Silero VAD + librosa`).
+1. O `P1` rozhoduje **deterministická brána**: klíčová slova v přepisu `Kanálu L` (seznam s kontextovým filtrem záporů `negation_filter` v `konfigurace-priklad.yaml`, aby odpověď typu *„ne, nic nejiskří ani nehoří“* na otázku 6 nespouštěla planý poplach; při nejasném či rozporuplném výroku stále platí `P1`), kladná odpověď na otázku 6 a akustická urgence `Kanálu L` (`Silero VAD + librosa`).
 2. LLM smí prioritu **jen zvýšit**, nikdy snížit. Jednou přiznané `P1` v hovoru zůstává.
 3. **Při pochybnosti platí `P1`** — raději zbytečně vzbuzený technik než přehlédnutý požár.
 4. Akustická urgence sama `P1` nezakládá ani neruší; je doplňkovým signálem. Emoce volajícího se nevyhodnocují a neukládají.
@@ -104,7 +104,7 @@ Jiné technické rady recepční nedává — neříká, co vypnout, zapnout ani
 
 ## 6. Eskalační řetězec při `P1`
 
-Řetězec spouští a řídí deterministický modul eskalace, nikoli model. Telefonní čísla se dohledávají až v okamžiku vytáčení podle osobních čísel; recepční (`ai`) je nevidí a volajícímu je nesděluje.
+Řetězec spouští a řídí **asynchronní deterministický eskalační worker (`escalation_worker`) oddělený od samotného telefonního hovoru**, nikoli model ani synchronní smyčka v hovoru. Limit délky hovoru (`max_call_duration_s = 420 s`) tak eskalaci nikdy nepřeruší — pokud hovor skončí dřív, worker pokračuje v buzení samostatně až do potvrzení člověkem. Telefonní čísla se dohledávají až v okamžiku vytáčení podle osobních čísel; recepční (`ai`) je nevidí a volajícímu je nesděluje.
 
 | Proměnná | Význam | Hodnota |
 | :--- | :--- | :--- |
@@ -118,7 +118,7 @@ Jiné technické rady recepční nedává — neříká, co vypnout, zapnout ani
 
 Průběh:
 
-1. **Souběžná zpráva:** hned po přiznání `P1` jde položka `URGENT` do `Decisions`, zpráva do `Zulip` (`#14-elektro-a-zakazky`, téma spisu) a zpráva na pager; obsahuje adresu, zpětné číslo, popis a odkaz na nahrávku `#t=MM:SS`.
+1. **Souběžná zpráva:** hned po přiznání `P1` jde položka `URGENT` do `Decisions`, zpráva do `Zulip` (`#14-elektro-a-zakazky`, téma spisu) a nouzové upozornění přes `comm-gateway` / záložní SMS bránu (`asterisk:sms_backup`); obsahuje adresu, zpětné číslo, popis a odkaz na nahrávku `#t=MM:SS`.
 2. **Volání první osoby v pořadí** přes `Asterisk`; po přijetí se přehraje strojové shrnutí (adresa, povaha havárie, zpětné číslo).
 3. **Potvrzení převzetí** stiskem klávesy `ACK_DTMF`. Přijatý hovor bez potvrzení (hlasová schránka) se počítá jako nepřijatý.
 4. **Opakování:** bez potvrzení se pokus opakuje po `RETRY_INTERVAL_S`, nejvýše `ATTEMPTS_PER_CONTACT`×; potom přichází další osoba v pořadí.

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Deterministic pricing kernel of package S3 (Version 2.7): MRR tariffs, turnkey packages,
+Deterministic pricing kernel of package S3 (Version 2.8): MRR tariffs, turnkey packages,
 labour rates, margin Hard-Stop and the partner commission matrix (N8).
-Deterministické cenové jádro balíčku S3 (Verze 2.7): tarify MRR, balíčky na klíč,
+Deterministické cenové jádro balíčku S3 (Verze 2.8): tarify MRR, balíčky na klíč,
 hodinové sazby, Hard-Stop marže a provizní matice partnerů (N8).
 
 EN: All amounts come from cenik.json (single source of truth; meta.approved tells whether 1001
@@ -20,7 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +46,24 @@ def _money(value: Decimal) -> Decimal:
     return value.quantize(CENT, rounding=ROUND_HALF_UP)
 
 
+def _require_int(value: Any, name: str, minimum: int = 0) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+        raise PricingError(f"{name} must be an integer >= {minimum}")
+    return value
+
+
+def _require_nonneg_decimal(value: Any, name: str) -> Decimal:
+    if isinstance(value, bool) or value is None:
+        raise PricingError(f"{name} must be a non-negative finite number")
+    try:
+        dec = Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError) as exc:
+        raise PricingError(f"{name} must be a non-negative finite number") from exc
+    if not dec.is_finite() or dec < 0:
+        raise PricingError(f"{name} must be a non-negative finite number")
+    return dec
+
+
 def _tariff(price_list: dict[str, Any], code: str) -> dict[str, Any]:
     for tariff in price_list["mrr_tariffs"]:
         if tariff["code"] == code:
@@ -58,8 +76,8 @@ def monthly_fee(price_list: dict[str, Any], tariff_code: str, objects: int, extr
     EN: Monthly MRR fee without VAT. No surcharge per committee member or portal user.
     CZ: Měsíční paušál MRR bez DPH. Žádný příplatek za člena výboru ani uživatele portálu.
     """
-    if objects < 1 or extra_entrances < 0:
-        raise PricingError("objects must be >= 1 and extra_entrances >= 0")
+    objects = _require_int(objects, "objects", 1)
+    extra_entrances = _require_int(extra_entrances, "extra_entrances", 0)
     tariff = _tariff(price_list, tariff_code)
     total = Decimal(tariff["base_monthly_per_object"]) * objects + Decimal(tariff["extra_entrance_monthly"]) * extra_entrances
     return _money(total)
@@ -75,11 +93,10 @@ def package_range(price_list: dict[str, Any], package_code: str, quantity: int, 
     EN: Transparent "from–to" price of a turnkey package, optionally with the seasonal coefficient.
     CZ: Transparentní cena „od–do“ balíčku na klíč, volitelně se sezónním koeficientem.
     """
-    if quantity < 1:
-        raise PricingError("quantity must be >= 1")
+    quantity = _require_int(quantity, "quantity", 1)
     for package in price_list["turnkey_packages"]:
         if package["code"] == package_code:
-            coefficient = seasonal_coefficient(price_list, month) if month else Decimal(1)
+            coefficient = seasonal_coefficient(price_list, month) if month is not None else Decimal(1)
             return (_money(Decimal(package["price_from"]) * quantity * coefficient),
                     _money(Decimal(package["price_to"]) * quantity * coefficient))
     raise PricingError(f"unknown package: {package_code}")
@@ -87,6 +104,9 @@ def package_range(price_list: dict[str, Any], package_code: str, quantity: int, 
 
 def seasonal_coefficient(price_list: dict[str, Any], month: int) -> Decimal:
     """Seasonal coefficient for a calendar month. / Sezónní koeficient pro kalendářní měsíc."""
+    month = _require_int(month, "month", 1)
+    if month > 12:
+        raise PricingError(f"no seasonal coefficient for month {month}")
     for band in price_list["seasonal_coefficients"]:
         if month in band["months"]:
             return Decimal(str(band["coefficient"]))
@@ -98,14 +118,15 @@ def labour_price(price_list: dict[str, Any], hours_by_role: dict[str, float], ta
     EN: Labour price from hourly rates; a tariff may grant a discount on labour.
     CZ: Cena práce z hodinových zúčtovacích sazeb; tarif může poskytnout slevu na práci.
     """
+    if not isinstance(hours_by_role, dict):
+        raise PricingError("hours_by_role must be a mapping")
     total = Decimal(0)
     for role, hours in hours_by_role.items():
         if role not in price_list["hourly_rates"]:
             raise PricingError(f"unknown role: {role}")
-        if hours < 0:
-            raise PricingError("hours must be >= 0")
-        total += Decimal(price_list["hourly_rates"][role]["rate"]) * Decimal(str(hours))
-    if tariff_code:
+        hours_dec = _require_nonneg_decimal(hours, f"hours[{role}]")
+        total += Decimal(price_list["hourly_rates"][role]["rate"]) * hours_dec
+    if tariff_code is not None:
         discount = Decimal(_tariff(price_list, tariff_code)["labour_discount_pct"]) / 100
         total *= (Decimal(1) - discount)
     return _money(total)
@@ -113,7 +134,8 @@ def labour_price(price_list: dict[str, Any], hours_by_role: dict[str, float], ta
 
 def material_price(price_list: dict[str, Any], purchase_cost: Decimal | int | float) -> Decimal:
     """Material sale price = purchase cost + markup. / Prodejní cena materiálu = nákup + přirážka."""
-    return _money(Decimal(str(purchase_cost)) * (Decimal(100 + price_list["material_markup_pct"]) / 100))
+    cost_dec = _require_nonneg_decimal(purchase_cost, "purchase_cost")
+    return _money(cost_dec * (Decimal(100 + price_list["material_markup_pct"]) / 100))
 
 
 def margin_check(price_list: dict[str, Any], price_without_vat: Decimal | int | float, direct_costs: Decimal | int | float) -> dict[str, Any]:
@@ -121,17 +143,19 @@ def margin_check(price_list: dict[str, Any], price_without_vat: Decimal | int | 
     EN: Contribution margin check. Below the minimum the offer is Hard-Stopped until signed by 1001.
     CZ: Kontrola krycího příspěvku. Pod minimem je nabídka zastavena (Hard-Stop) do podpisu 1001.
     """
-    price = Decimal(str(price_without_vat))
-    costs = Decimal(str(direct_costs))
+    price = _require_nonneg_decimal(price_without_vat, "price_without_vat")
+    costs = _require_nonneg_decimal(direct_costs, "direct_costs")
     if price <= 0:
         raise PricingError("price must be > 0")
-    margin_pct = ((price - costs) / price * 100).quantize(CENT, rounding=ROUND_HALF_UP)
+    raw_margin_pct = (price - costs) / price * 100
+    margin_pct = raw_margin_pct.quantize(CENT, rounding=ROUND_HALF_UP)
     minimum = Decimal(price_list["minimum_contribution_margin_pct"])
-    return {"contribution_margin_pct": margin_pct, "minimum_pct": minimum, "hard_stop": margin_pct < minimum}
+    return {"contribution_margin_pct": margin_pct, "minimum_pct": minimum, "hard_stop": raw_margin_pct < minimum}
 
 
 def partner_commission_pct(price_list: dict[str, Any], active_objects: int) -> Decimal:
     """Commission tier by number of referred active objects. / Stupeň provize dle počtu přivedených aktivních objektů."""
+    active_objects = _require_int(active_objects, "active_objects", 0)
     if active_objects < 1:
         return Decimal(0)
     pct = Decimal(0)
@@ -146,7 +170,37 @@ def partner_commission(price_list: dict[str, Any], paid_monthly_mrr: Decimal | i
     EN: Permanent monthly commission from PAID monthly MRR of referred objects (10–15 %).
     CZ: Trvalá měsíční provize z UHRAZENÉHO měsíčního MRR přivedených objektů (10–15 %).
     """
-    return _money(Decimal(str(paid_monthly_mrr)) * partner_commission_pct(price_list, active_objects) / 100)
+    paid = _require_nonneg_decimal(paid_monthly_mrr, "paid_monthly_mrr")
+    return _money(paid * partner_commission_pct(price_list, active_objects) / 100)
+
+
+def with_vat(price_list: dict[str, Any], net_amount: Decimal | int | float, *, reduced_residential: bool = False) -> Decimal:
+    """
+    EN: Informational price including VAT (21% standard, 12% reduced residential rate).
+    CZ: Orientační cena včetně DPH (21 % základní sazba, 12 % snížená sazba pro bydlení).
+    """
+    amount = _require_nonneg_decimal(net_amount, "net_amount")
+    rates = price_list["meta"]["vat_rates"]
+    pct = rates["residential_reduced_pct"] if reduced_residential else rates["standard_pct"]
+    return _money(amount * (Decimal(100 + pct) / 100))
+
+
+def public_price_list(price_list: dict[str, Any]) -> dict[str, Any]:
+    """
+    EN: Return public subset for the standalone web configurator (excludes internal rates, margins and commissions).
+    CZ: Vrátí veřejný výřez ceníku pro webový konfigurátor (bez interních hodinových sazeb, marží a provizí).
+    """
+    public_meta_keys = (
+        "name", "version", "status", "approved", "approved_by",
+        "approved_on", "valid_from", "currency", "prices_exclude_vat", "vat_rates",
+    )
+    return {
+        "meta": {k: price_list["meta"][k] for k in public_meta_keys},
+        "mrr_tariffs": price_list["mrr_tariffs"],
+        "turnkey_packages": price_list["turnkey_packages"],
+        "seasonal_coefficients": price_list["seasonal_coefficients"],
+        "indexation": price_list["indexation"],
+    }
 
 
 def _czk(value: Decimal | int) -> str:
@@ -207,7 +261,7 @@ def build(price_list: dict[str, Any]) -> list[Path]:
     marker = "/*__PRICE_LIST_JSON__*/"
     if template.count(marker) != 1:
         raise PricingError("template must contain exactly one price list marker")
-    embedded = json.dumps(price_list, ensure_ascii=False).replace("</", "<\\/")
+    embedded = json.dumps(public_price_list(price_list), ensure_ascii=False).replace("</", "<\\/")
     CONFIGURATOR_PATH.write_text(template.replace(marker, embedded), encoding="utf-8", newline="\n")
     OVERVIEW_PATH.write_text(render_overview(price_list), encoding="utf-8", newline="\n")
     return [CONFIGURATOR_PATH, OVERVIEW_PATH]

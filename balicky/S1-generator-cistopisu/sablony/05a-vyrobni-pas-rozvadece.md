@@ -92,7 +92,7 @@ Ověření návrhu bylo provedeno podle platné normy pro rozváděče nízkého
 
 ## 7. Ověření oteplení výpočtem
 
-Oteplení je ověřeno v rámci ověření návrhu výpočtem; není předmětem kusového ověření. Výpočet provedlo deterministické výpočetní jádro cad-urs-engine nad normovou bází ve Vaultu (03-Normy-a-Metodiky/).
+Oteplení je ověřeno v rámci ověření návrhu výpočtem; není předmětem kusového ověření. Výpočet provedl autorizovaný výpočetní modul výrobce na základě řízené normové dokumentace výrobce.
 
 | Položka | Hodnota |
 | :--- | :--- |
@@ -152,7 +152,7 @@ Po naskenování se zobrazí stav platnosti revize a vstup do Servisního Helpde
 5. Předpisy o posuzování shody stanovených výrobků při jejich dodávání na trh.
 6. Konkrétní označení výše uvedených a další použité normy a předpisy: {{dalsi_pouzite_normy}}
 
-Platnost a edice citovaných norem byly ověřeny v normové bázi ve Vaultu (03-Normy-a-Metodiky/) ke dni {{datum_overeni_norem}}.
+Platnost a edice citovaných norem byly ověřeny v řízené normové dokumentaci výrobce ke dni {{datum_overeni_norem}}.
 
 ## 14. Schválení pasu
 

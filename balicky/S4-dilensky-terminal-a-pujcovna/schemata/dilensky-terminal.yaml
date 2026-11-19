@@ -1,6 +1,6 @@
 # =============================================================================
 # metadata-schema-kernel · declarative schema DRAFT / deklarativní schéma NÁVRH
-# Module / Modul: dilensky-terminal · Blok 16 · balíček S4 · Verze 2.7
+# Module / Modul: dilensky-terminal · Blok 16 · balíček S4 · Verze 2.8
 # EN: Touch workshop kiosk for switchboard assembly, routine verification and
 #     CE / PHE label printing. Nothing here is deployed; server polarita-hq
 #     does not exist yet (greenfield design).
@@ -18,7 +18,7 @@ schema:
   module: dilensky-terminal
   package: S4
   block: 16
-  release: Polarita-2.7
+  release: Polarita-2.8
   schema_version: 0.1.0-draft
   status: DRAFT                 # EN: proposal only / CZ: pouze návrh
   owner_ai: 17001               # EN: 17001 programator / CZ: 17001 programator
@@ -147,11 +147,14 @@ entities:
         - {from: IN_VERIFICATION, to: VERIFIED_PASS, action: close_verification_pass, guards: [verification_closed_pass]}
         - {from: IN_VERIFICATION, to: VERIFIED_FAIL, action: close_verification_fail, guards: [verification_closed_fail]}
         - {from: VERIFIED_FAIL, to: IN_ASSEMBLY, action: rework, guards: [defects_recorded]}
+        - {from: VERIFIED_PASS, to: IN_VERIFICATION, action: reopen_after_void, guards: [verification_voided, mutation_confirm_1001]}
+        - {from: PASSPORT_ISSUED, to: IN_VERIFICATION, action: invalidate_passport_after_void, guards: [verification_voided, passport_revoked, mutation_confirm_1001]}
         - {from: VERIFIED_PASS, to: PASSPORT_ISSUED, action: issue_passport, guards: [serial_number_assigned, passport_present, declaration_signed_by_1001]}
         - {from: PASSPORT_ISSUED, to: LABELLED, action: confirm_label, guards: [ce_label_printed]}
         - {from: LABELLED, to: RELEASED, action: release_to_wms, guards: [phe_basis_printed]}
         - {from: PLANNED, to: CANCELLED, action: cancel, guards: [mutation_confirm_1001]}
         - {from: IN_ASSEMBLY, to: CANCELLED, action: cancel, guards: [mutation_confirm_1001]}
+        - {from: ASSEMBLED, to: CANCELLED, action: cancel, guards: [mutation_confirm_1001]}
     close_requirements:           # EN: needed to reach RELEASED / CZ: nutné pro stav RELEASED
       fields: [serial_number, design_verification_ref, passport_ref]
 
@@ -176,8 +179,9 @@ entities:
       net_duration_s: {type: integer, required: false, derived: true}
       note: {type: text, required: false}
     constraints:
-      # EN: A person may have at most one RUNNING operation at a time.
-      # CZ: Osoba smí mít v jednu chvíli nejvýše jednu operaci ve stavu RUNNING.
+      # EN: A person may have at most one RUNNING operation at a time, and RUNNING requires person_no.
+      # CZ: Osoba smí mít v jednu chvíli nejvýše jednu operaci ve stavu RUNNING a RUNNING vyžaduje person_no.
+      - {kind: check, expression: "status <> 'RUNNING' OR person_no IS NOT NULL"}
       - {kind: unique_partial, columns: [person_no], where: "status = 'RUNNING'"}
     state_machine:
       field: status
@@ -211,6 +215,7 @@ entities:
       occurred_at: {type: timestamptz, required: true}   # EN: time on the kiosk / CZ: čas na kiosku
       received_at: {type: timestamptz, required: true}   # EN: time on the server / CZ: čas na serveru
       queued_offline: {type: boolean, required: true, default: false}
+      idempotency_key: {type: string, required: true, unique: true}   # EN: prevents duplicate offline replays / CZ: brání duplicitnímu přehrání offline fronty
 
   # ---------------------------------------------------------------------------
   # EN: Serial number of a built-in device scanned into the bill of materials.
@@ -237,9 +242,9 @@ entities:
       scanned_by_person_no: {type: person_no, required: true}
       scanned_at: {type: timestamptz, required: true}
     constraints:
-      # EN: One device serial number may sit in one switchboard only.
-      # CZ: Jedno sériové číslo přístroje smí být jen v jednom rozváděči.
-      - {kind: unique, columns: [gtin, serial_number]}
+      # EN: One device serial number may sit in one switchboard only (PostgreSQL UNIQUE NULLS NOT DISTINCT).
+      # CZ: Jedno sériové číslo přístroje smí být jen v jednom rozváděči (PostgreSQL UNIQUE NULLS NOT DISTINCT).
+      - {kind: unique, nulls_distinct: false, columns: [gtin, serial_number]}
       - {kind: unique, columns: [bom_line_ref, serial_number]}
 
   # ---------------------------------------------------------------------------
@@ -304,16 +309,19 @@ entities:
       calibration_certificate_ref: {type: external_ref, target: 'centralni-lhutnik-a-objekty:calibration', required: false, required_when: "method IN ('MEASUREMENT', 'ELECTRICAL_TEST')"}
       performed_by_person_no: {type: person_no, required: false, required_to_close: true}
       performed_at: {type: timestamptz, required: false, required_to_close: true}
+      # EN: Explicit Europe/Prague calendar date so the CHECK constraint stays IMMUTABLE in PostgreSQL.
+      # CZ: Explicitní datum v pásmu Europe/Prague, aby CHECK omezení zůstalo v PostgreSQL IMMUTABLE.
+      performed_on: {type: date, required: false, required_to_close: true}
       defect_note: {type: text, required: false, required_when: "verdict = 'NEVYHOVUJE'"}
       not_applicable_reason: {type: text, required: false, required_when: "verdict = 'NEPOUZIJE_SE'"}
       photo_keys: {type: json, required: false}          # EN: list of Garage keys / CZ: seznam klíčů v Garage
     constraints:
       - {kind: unique, columns: [verification_id, point]}
-      # EN: Hard-Stop: calibration must be valid on the day of the test.
-      # CZ: Hard-Stop: kalibrace musí platit v den zkoušky.
-      - {kind: check, expression: "calibration_valid_until IS NULL OR calibration_valid_until >= performed_at::date"}
+      # EN: Hard-Stop: calibration must be valid on the day of the test (IMMUTABLE date check).
+      # CZ: Hard-Stop: kalibrace musí platit v den zkoušky (IMMUTABLE kontrola data).
+      - {kind: check, expression: "calibration_valid_until IS NULL OR calibration_valid_until >= performed_on"}
     close_requirements:           # EN: needed before the header can close / CZ: nutné před uzavřením hlavičky
-      fields: [verdict, criterion_ref, performed_by_person_no, performed_at]
+      fields: [verdict, criterion_ref, performed_by_person_no, performed_at, performed_on]
 
   # ---------------------------------------------------------------------------
   # EN: EU declaration of conformity: ai drafts, a human (1001) signs.
@@ -398,6 +406,8 @@ guards:
   online_with_server: "EN: no closing or printing from the offline queue / CZ: žádné uzavření ani tisk z offline fronty"
   verification_closed_pass: "EN: latest routine_verification is CLOSED_PASS / CZ: poslední kusové ověření je CLOSED_PASS"
   verification_closed_fail: "EN: latest routine_verification is CLOSED_FAIL / CZ: poslední kusové ověření je CLOSED_FAIL"
+  verification_voided: "EN: referenced routine_verification transitioned to VOIDED / CZ: navázané kusové ověření přešlo do VOIDED"
+  passport_revoked: "EN: previously issued passport and CE label are revoked in registry and WMS / CZ: dříve vydaný pas a štítek CE jsou zneplatněny v registru i WMS"
   serial_number_assigned: "EN: serial number assigned by cz-sk-registry-kernel / CZ: výrobní číslo přiděleno modulem cz-sk-registry-kernel"
   passport_present: "EN: passport generated by cad-urs-engine and sealed / CZ: pas vygenerován v cad-urs-engine a opatřen pečetí"
   judge_15002_pass: "EN: independent review by 15002 passed / CZ: nezávislá kontrola 15002 prošla"

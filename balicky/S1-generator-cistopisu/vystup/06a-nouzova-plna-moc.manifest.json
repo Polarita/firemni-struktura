@@ -2,11 +2,13 @@
   "document": "06a-nouzova-plna-moc",
   "title": "Nouzová omezená provozní plná moc (režim Break-Glass)",
   "draft_watermark": true,
-  "generated_utc": "2026-11-18 06:12 UTC",
+  "generated_utc": "2026-11-19 19:51 UTC",
   "variables": {
     "spis_id": "POL-2027-00001",
     "cislo_plne_moci": "PM-BG-2027-001 (VZOR)",
     "jmeno_zmocnence": "Karel Zástupný (VZOR)",
+    "datum_narozeni_zmocnence": "01. 01. 1980 (VZOR)",
+    "bydliste_zmocnence": "Vzorová 123/4, 110 00 Praha 1 (VZOR)",
     "osobni_cislo": "1007 (SUB-1007)",
     "role_zmocnence": "zástupný revizní technik (SUB-1007)",
     "ico_zmocnence": "00000000",
@@ -25,9 +27,9 @@
     "datum_prijeti_plne_moci": "1. 2. 2027"
   },
   "sha256": {
-    "template": "48773c8f8b554cd8a24324206d2acd297ae4d234d96645b43f65dd5fbf8fd735",
-    "data": "ec05464080826f1be5b430c9280e4425812e2359c9f0bb83f611228e66540e68",
-    "pdf": "4d43921b0bb1974575d3bb4d13b0962caab7edffb3acf2b7b52283d8c375ecf7"
+    "template": "de77f7e55f6b2931df391e8c3c819d94876897fa46e1b57a69b8d74087f42329",
+    "data": "aba45ac83af29e98429d7e11b1c064d330b210776cbcf3cb4609ffb8582269e1",
+    "pdf": "702c54c28720ed26ee3cedde5dd00a3e70491ed5473d8f40704c2a954c323f7b"
   },
   "pages": 4
 }

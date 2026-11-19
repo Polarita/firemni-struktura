@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Tests of the pricing kernel of package S3 (Version 2.7).
-Testy cenového jádra balíčku S3 (Verze 2.7).
+Tests of the pricing kernel of package S3 (Version 2.8).
+Testy cenového jádra balíčku S3 (Verze 2.8).
 
 Usage / Použití:  python -m unittest -v test_pricing
 """
@@ -80,8 +80,11 @@ class PricingTests(unittest.TestCase):
     def test_margin_hard_stop_below_minimum(self) -> None:
         minimum = Decimal(self.price_list["minimum_contribution_margin_pct"])
         below = pricing.margin_check(self.price_list, 100_000, 100_000 * (1 - (minimum - 1) / 100))
+        border_below = pricing.margin_check(self.price_list, 100_000, 78_004)  # 21.996% rounds to 22.00%
         at_minimum = pricing.margin_check(self.price_list, 100_000, 100_000 * (1 - minimum / 100))
         self.assertTrue(below["hard_stop"])
+        self.assertEqual(border_below["contribution_margin_pct"], Decimal("22.00"))
+        self.assertTrue(border_below["hard_stop"])
         self.assertFalse(at_minimum["hard_stop"])
 
     def test_partner_commission_stays_within_10_to_15_percent(self) -> None:
@@ -95,13 +98,46 @@ class PricingTests(unittest.TestCase):
         markup = Decimal(100 + self.price_list["material_markup_pct"]) / 100
         self.assertEqual(pricing.material_price(self.price_list, 1000), (Decimal(1000) * markup).quantize(Decimal("0.01")))
 
+    def test_public_price_list_excludes_internal_fields(self) -> None:
+        pub = pricing.public_price_list(self.price_list)
+        for secret_key in ("hourly_rates", "material_markup_pct", "minimum_contribution_margin_pct", "retention_pct", "partner_commission"):
+            self.assertNotIn(secret_key, pub)
+        self.assertNotIn("note", pub["meta"])
+        self.assertIn("vat_rates", pub["meta"])
+
+    def test_with_vat_rates(self) -> None:
+        self.assertEqual(pricing.with_vat(self.price_list, 1000), Decimal("1210.00"))
+        self.assertEqual(pricing.with_vat(self.price_list, 1000, reduced_residential=True), Decimal("1120.00"))
+
+    def test_month_zero_and_out_of_range_are_rejected(self) -> None:
+        for bad_month in (0, 13, -1):
+            with self.assertRaises(pricing.PricingError):
+                pricing.package_range(self.price_list, "EV_WALLBOX", 1, month=bad_month)
+        with self.assertRaises(pricing.PricingError):
+            pricing.material_price(self.price_list, -1)
+        with self.assertRaises(pricing.PricingError):
+            pricing.margin_check(self.price_list, 1000, -1)
+
+    def test_boolean_and_nan_inputs_are_rejected(self) -> None:
+        with self.assertRaises(pricing.PricingError):
+            pricing.monthly_fee(self.price_list, "START_SVJ", True)  # type: ignore[arg-type]
+        with self.assertRaises(pricing.PricingError):
+            pricing.labour_price(self.price_list, {"electrotechnician": True})  # type: ignore[dict-item]
+        with self.assertRaises(pricing.PricingError):
+            pricing.material_price(self.price_list, float("nan"))
+
     def test_built_configurator_embeds_current_price_list(self) -> None:
-        # konfigurator.html must be regenerated after every change of cenik.json.
-        # konfigurator.html se musí přegenerovat po každé změně cenik.json.
+        # konfigurator.html must be regenerated after every change of cenik.json and embed only public_price_list.
+        # konfigurator.html se musí přegenerovat po každé změně cenik.json a smí obsahovat jen public_price_list.
         page = pricing.CONFIGURATOR_PATH.read_text(encoding="utf-8")
+        pub = pricing.public_price_list(self.price_list)
+        expected_embedded = json.dumps(pub, ensure_ascii=False).replace("</", "<\\/")
+        self.assertEqual(page, pricing.TEMPLATE_PATH.read_text(encoding="utf-8").replace("/*__PRICE_LIST_JSON__*/", expected_embedded))
         match = re.search(r"const PRICE_LIST = (\{.*?\});\n", page, flags=re.DOTALL)
         self.assertIsNotNone(match)
-        self.assertEqual(json.loads(match.group(1).replace("<\\/", "</")), self.price_list)
+        self.assertEqual(json.loads(match.group(1).replace("<\\/", "</")), pub)
+        for forbidden in ("hourly_rates", "material_markup_pct", "minimum_contribution_margin_pct", "retention_pct", "partner_commission", "14005"):
+            self.assertNotIn(forbidden, page)
         self.assertEqual(pricing.OVERVIEW_PATH.read_text(encoding="utf-8"), pricing.render_overview(self.price_list))
 
 

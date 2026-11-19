@@ -21,7 +21,7 @@ a
 
 ## Článek 2 — Dílčí objednávky
 
-1. Jednotlivá díla zadává objednatel dílčími objednávkami vystavenými v portálu objednatele (modul portal-spolupracovniku). Vzor dílčí objednávky je v příloze č. 1.
+1. Jednotlivá díla zadává objednatel dílčími objednávkami vystavenými v partnerském portálu objednatele. Vzor dílčí objednávky je v příloze č. 1.
 2. Dílčí objednávka vždy obsahuje: a) vymezení uceleného díla nebo měrných jednotek (například kompletní montáž a zapojení podružného rozváděče podle výkresu, provedení určeného počtu metrů kabelové trasy, provedení revize určeného zařízení); b) místo plnění a provozní okno přístupu do objektu zákazníka; c) termín dokončení díla nebo jeho milníku; d) cenu díla; e) údaj, kdo dodává materiál.
 3. Dílčí smlouva o dílo je uzavřena okamžikem, kdy partner objednávku v portálu potvrdí. Nepotvrdí-li ji do {{lhuta_potvrzeni_objednavky_dni}} pracovních dnů, objednávka zaniká.
 4. Cena díla se nikdy nesjednává ani nevyúčtovává podle odpracovaných hodin nebo docházky, nýbrž za ucelený výsledek nebo za měrné jednotky provedeného díla.
@@ -72,12 +72,12 @@ a
 
 ## Článek 9 — Provize z měsíčního paušálu přivedeného objektu
 
-1. Přivede-li partner objednateli zákazníka (společenství vlastníků jednotek nebo podnikatele), který s objednatelem uzavře paušální servisní smlouvu „Elektro Správa SVJ a Firem“ (dále jen „paušální smlouva“), náleží partnerovi vedle ceny podle článku 8 trvalá provize ve výši {{provize_mrr_procent}} % z každého měsíčního paušálu bez daně z přidané hodnoty, který zákazník objednateli skutečně uhradil. Provize se sjednává v rozmezí 10 až 15 %.
+1. Přivede-li partner objednateli zákazníka (společenství vlastníků jednotek nebo podnikatele), který s objednatelem uzavře paušální servisní smlouvu „Elektro Správa SVJ a Firem“ (dále jen „paušální smlouva“), náleží partnerovi vedle ceny podle článku 8 trvalá provize ve výši {{provize_mrr_procent}} % z každého měsíčního paušálu bez daně z přidané hodnoty, který zákazník objednateli skutečně uhradil.
 2. Podmínkou vzniku nároku je, že partner příležitost zaregistroval v portálu dříve, než objednatel se zákazníkem o paušální smlouvě sám začal jednat, a že paušální smlouva byla uzavřena do {{lhuta_uzavreni_po_registraci_mesicu}} měsíců od registrace.
 3. Nárok na provizi trvá po celou dobu, po kterou paušální smlouva trvá a zákazník paušál hradí. Základem provize je paušál ve skutečně uhrazené výši včetně jeho zvýšení indexací; provize nenáleží z plateb za práce nad rámec paušálu. Vrátí-li objednatel zákazníkovi paušál nebo jeho část, provize z vrácené částky nenáleží.
 4. Objednatel vede provize v Partnerském provizním ledgeru, do něhož má partner v portálu přístup, a předloží partnerovi vyúčtování provizí za každé {{obdobi_vyuctovani_provize}} do {{lhuta_vyuctovani_provize_dni}} dnů po jeho skončení. Na základě vyúčtování vystaví partner fakturu se splatností podle článku 8.
 5. Nárok na provizi z již přivedených objektů trvá i po skončení této smlouvy. Zaniká však dnem, kdy objednatel smlouvu ukončil z důvodu podle článku 13 odst. 3 písm. c) nebo d).
-6. Partner není oprávněn uzavírat smlouvy jménem objednatele, přijímat za něj platby ani za něj činit závazné nabídky. Ujednání tohoto článku je nevýhradní a řídí se pravidly občanského práva o obchodním zastoupení v rozsahu, v jakém se na ně vztahují.
+6. Partner není oprávněn uzavírat smlouvy jménem objednatele, přijímat za něj platby ani za něj činit závazné nabídky. Ujednání tohoto článku je nevýhradní a představuje nepojmenované smluvní zprostředkování a doporučení obchodní příležitosti v rámci subdodavatelské spolupráce bez vzniku obchodního zastoupení (konečnou formulaci posoudí advokát před prvním použitím).
 
 ## Článek 10 — Odpovědnost za vady a za škodu
 

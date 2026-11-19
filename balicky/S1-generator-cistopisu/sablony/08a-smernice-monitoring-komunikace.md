@@ -1,5 +1,5 @@
 # Vnitřní směrnice o monitoringu firemních komunikačních prostředků a nahrávání hovorů
-**Evidenční číslo:** {{spis_id}}
+**Spis:** {{spis_id}}
 
 **Verze:** {{verze_smernice}} · **Účinnost od:** {{datum_ucinnosti}} · **Vydal:** Václav Šercl, jednatel
 

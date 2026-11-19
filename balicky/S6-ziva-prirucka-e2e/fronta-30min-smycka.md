@@ -1,4 +1,4 @@
-# Fronta 30min vývojové smyčky UI — pravidla · Blok 18 (S6) · Verze 2.7
+# Fronta 30min vývojové smyčky UI — pravidla · Blok 18 (S6) · Verze 2.8
 
 Tento dokument stanoví pravidla fronty drobných interních úprav ne-normového UI a tiskových sestav nad **`metadata-schema-kernel`**. Doplňuje řídicí dokument [`README.md`](README.md) (kapitola 2, pravidla 5–7). Smyčka je připravený návrh — na živém serveru zatím nebyla spuštěna (server `polarita-hq` neexistuje).
 
@@ -76,10 +76,10 @@ Požadavek s nevyplněným polem, s více úpravami najednou nebo s kterýmkoliv
 | 1. Stav „před“ | `17001` `programator` (*Worker*) | Založí `wt-worker` z aktuální hlavní větve a E2E testem pořídí snímky výchozího stavu. | Snímky `před` |
 | 2. Úprava | `17001` `programator` (*Worker*) | Provede jednu úpravu v povolených cestách; nejvýše 2 samo-opravy. | Diff |
 | 3. Stav „po“ | `17001` `programator` (*Worker*) | Spustí E2E test dotčeného procesu a pořídí snímky nového stavu. | Snímky `po`, výstup testů |
-| 4. Deterministická kontrola | **`AigisCode`** + **`gitleaks`** | Ověří povolené cesty, hranice vrstev a nepřítomnost tajemství. | `0` porušení / FAIL |
-| 5. Nezávislý posudek | `17004` `klicnik` (*Judge*) | Ve `wt-judge` dostane výhradně Zadání, diff, výstup testů a snímky; posoudí shodu se Zadáním a bezpečnost. | PASS / FAIL s důvodem |
-| 6. Náhled | `17005` `ai-provoz` | Při PASS založí položku v `Decisions` s diffem a snímky `před → po`. | Položka v `Decisions` |
-| 7. Rozhodnutí | `1001` | `mutation_confirm` → sloučení do hlavní větve; `mutation_cancel` → zahození. | Sloučeno / zahozeno |
+| 4. Deterministická kontrola | **`AigisCode`** + **`gitleaks`** + kontrola testů | Ověří povolené cesty, hranice vrstev, nepřítomnost tajemství a **integritu E2E asercí** (žádné smazané `expect`, `.skip` ani změkčení kontrol). | `0` porušení / FAIL |
+| 5. Nezávislý posudek | `17004` `klicnik` (*Judge*) | Ve `wt-judge` dostane výhradně Zadání, diff, výstup testů a snímky; posoudí shodu se Zadáním, integritu testů, nepřítomnost PII ve snímcích a bezpečnost. | PASS / FAIL s důvodem |
+| 6. Náhled a kontrola hlavní větve | `17005` `ai-provoz` | Ověří, že se hlavní větev od založení `wt-worker` neposunula (případně spustí rebase a kontrolní snímky), a při PASS založí položku v `Decisions` s diffem a snímky `před → po`. | Položka v `Decisions` |
+| 7. Rozhodnutí | `1001` | `mutation_confirm` → po finálním ověření, že cílový commit stále sedí na aktuální `main`, sloučení (`fast-forward` / re-run); `mutation_cancel` → zahození. | Sloučeno / zahozeno |
 
 Po sloučení proběhne běžný běh na hlavní větvi a `manual-builder` vygeneruje novou verzi příručky, takže změna UI se do příručky propíše sama.
 
@@ -89,9 +89,10 @@ Po sloučení proběhne běžný běh na hlavní větvi a `manual-builder` vygen
 
 - [ ] Diff zasahuje pouze do povolených cest (kapitola 2) a do žádné zakázané (kapitola 3).
 - [ ] `AigisCode` i `gitleaks` hlásí `0` porušení.
-- [ ] E2E test dotčeného procesu prošel proti testovacímu prostředí se syntetickými daty; žádné ověření v testu nebylo odstraněno ani oslabeno.
+- [ ] E2E test dotčeného procesu prošel proti testovacímu prostředí se syntetickými daty; **integrita testových asercí** zůstala neporušená (žádné odstraněné ani oslabené `expect`, žádné `.skip` nebo podmínkové obcházení).
+- [ ] Hlavní větev (`main`) je shodná se základem testovaného diffu (bez nekontrolovaného rozchodu po `wt-worker` před sloučením).
 - [ ] Ke každé změněné obrazovce nebo sestavě existuje dvojice snímků `před → po` a snímek `po` odpovídá poli `pozadovany_stav`.
-- [ ] Ve snímcích, diffu ani v popisu nejsou osobní údaje ani tajemství.
+- [ ] Ve snímcích, diffu ani v popisu nejsou osobní údaje ani tajemství (vč. viditelných textů mimo `[data-e2e-mask]`).
 - [ ] Limity z kapitoly 7 nebyly překročeny.
 - [ ] `Judge` (`17004`) vydal PASS a běžel na modelu jiného výrobce než `Worker`.
 - [ ] `1001` potvrdil položku v `Decisions` akcí `mutation_confirm`.

@@ -1,4 +1,4 @@
-# Blok 13 · Balíček S1 — Automatizovaný generátor PDF čistopisů smluv a protokolů · Verze 2.7
+# Blok 13 · Balíček S1 — Automatizovaný generátor PDF čistopisů smluv a protokolů · Verze 2.8
 
 Tento dokument je řídicím dokumentem **`Bloku 13`** Rozvojové Etapy II společnosti **Polarita s.r.o.** Balíček povyšuje právní a provozní minimum připravené v `Bloku 0` a `Bloku 8` na **šablonovaný generátor tiskových PDF čistopisů**: 15 šablon v 8 sestavách s jednotnými proměnnými, vzorová data, generátor [`generate_pdfs.py`](./generate_pdfs.py) a manifest každého dokumentu pro transakční diff `mutation_confirm`. Šablony vyplňují agenti `15001 pravni-specialista`, `14005 zakazky`, `13001 eshop`, `16002 tajemnik` a `18001 personalista`. Balíček nepřidává žádného `ai` agenta ani databázi.
 
@@ -8,7 +8,7 @@ Tento dokument je řídicím dokumentem **`Bloku 13`** Rozvojové Etapy II spole
 
 ## 1. Seznam softwaru a modulů
 
-| Oblast | Soubor / modul | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 2.7) | Odpovědný `ai` / garant |
+| Oblast | Soubor / modul | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 2.8) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Šablony** | [`sablony/`](./sablony/) (15× `.md`) | verzováno v `Gitea`, cílově `/srv/polarita/vault/04-Pravo-a-Smlouvy/` | Čistopisy v Markdownu s proměnnými `{{snake_case}}`; první řádek nadpis, druhý řádek `**Spis:** {{spis_id}}`. | `15001` `pravni-specialista` *(technické sestavy `15002` `normovac`)* |
 | **Vzorová data** | [`data/`](./data/) (15× `.json`) | fiktivní hodnoty | Ke každé šabloně plochý JSON se všemi proměnnými — slouží k testu a jako vzor vstupu. Žádné skutečné osobní údaje. | `15001` `pravni-specialista` |
@@ -35,12 +35,11 @@ Tento dokument je řídicím dokumentem **`Bloku 13`** Rozvojové Etapy II spole
    | 8 | Směrnice a informační doložka o monitoringu komunikace a nahrávání hovorů (`K5`) | `08a-smernice-monitoring-komunikace`, `08b-informacni-dolozka-zamestnance` |
 
 2. **Jednotné proměnné:**
-   * Společné názvy napříč šablonami: `{{spis_id}}`, `{{ico_klienta}}`, `{{castka_bez_dph}}`, dále `{{nazev_klienta}}`, `{{sidlo_klienta}}`, `{{datum_podpisu}}` a další. Generátor selže, pokud kterákoli proměnná chybí, přebývá nebo je prázdná.
-   * Osobní údaje zaměstnanců se do šablon nedostávají — dohody pracují s osobním číslem (`1001+`) a jménem; rodná čísla a adresy zůstávají v `db_hr_lide`.
-3. **Transakční diff `mutation_confirm`:**
-   * Ke každému PDF vzniká `<dokument>.manifest.json` s vyplněnými proměnnými a otisky `SHA-256`. Fronta `Decisions` z něj ukáže jednateli přesný rozdíl `před → po` a po potvrzení se otisk PDF zapíše do spisu `POL-RRRR-NNNNN`.
+   * Společné názvy napříč šablonami: `{{spis_id}}`, `{{ico_klienta}}`, `{{castka_bez_dph}}`, dále `{{nazev_klienta}}`, `{{sidlo_klienta}}`, `{{datum_podpisu}}`, `{{pracovni_pozice}}` a další. Generátor selže, pokud kterákoli proměnná chybí, přebývá nebo je prázdná.
+   * Tabulky s pevným počtem řádků ve vzorových šablonách (`01a`, `04c`, `05a`, `05b`, `06b`) slouží jako pevný demonstrátor struktury; před ostrým nasazením v `Bloku 13` se pro zakázky s proměnným počtem položek rozšíří o generované opakovatelné bloky řádků nad polem vstupních dat.
+   * Osobní údaje zaměstnanců se do pracovních konceptů nedostávají — dohody pracují s osobním číslem (`1001+`) a jménem (u finálního podpisového originálu plné moci `06a` se doplňují identifikační údaje zmocněnce); rodná čísla a adresy zůstávají v `db_hr_lide`.
 4. **`ai` připravuje, člověk podepisuje:**
-   * Výchozí běh tiskne vodoznak `VZOR`. Přepínač `--final` (bez vodoznaku) se používá až po kontrole `15001` a schválení v `Decisions`.
+   * Výchozí běh tiskne vodoznak `VZOR` i evidenční patičku konceptu. Přepínač `--final` (bez vodoznaku a bez interní ai patičky) se používá až po kontrole `15001` a schválení v `Decisions`.
    * Generátor nikdy nepodepisuje ani neodesílá. EU prohlášení o shodě a revizní dokumenty podepisuje výhradně oprávněná fyzická osoba.
 5. **Sazba `Typst` × `HTML → PDF`:**
    * Zadání připouští obě cesty. Tento balíček používá `HTML → PDF` (headless Chromium, tisk bez sítě), protože běží bez instalace dalšího sázecího nástroje. Na `polarita-hq` poběží tisk v bez-síťové zóně `sandbox_airgap`; přechod na `Typst` je možný beze změny šablon a dat.
@@ -66,7 +65,7 @@ Proveď nezávislou kontrolu šablon balíčku S1 společnosti Polarita s.r.o. p
 Nasaď generátor PDF čistopisů na server polarita-hq:
 
 1. Ulož šablony do /srv/polarita/vault/04-Pravo-a-Smlouvy/sablony/ (neosobní vzory, 0 PII) a generátor do Gitea; spusť python -m unittest test_generate_pdfs a python generate_pdfs.py — pokračuj jen při úspěchu všech dokumentů.
-2. Tisk PDF spouštěj v bez-síťovém kontejneru zóny sandbox_airgap (nic = none); vstupní data předávej jako JSON soubor, výstup jako PDF + manifest.
+2. Tisk PDF spouštěj v bez-síťovém kontejneru zóny sandbox_airgap (eth0 none); vstupní data předávej jako JSON soubor, výstup jako PDF + manifest.
 3. Zaregistruj typovaný MCP nástroj generate_document(template, data), který ai agentům vrací pouze cestu ke konceptu s vodoznakem VZOR a manifest; běh bez vodoznaku (--final) povol jen po mutation_confirm v Decisions.
 4. Po podpisu (QES 1001 v JSignPdf, případně pečeť pyHanko u interních záznamů) ulož dokument do legal-archive a otisk SHA-256 zapiš do spisu POL-RRRR-NNNNN.
 5. Předej nasazení ke kontrole 17004 klicnik (žádná tajemství v šablonách ani datech, žádná síť při tisku).
@@ -96,7 +95,7 @@ Připrav koncept dokumentu ke konkrétnímu spisu:
 
 ---
 
-## 5. Stav ve Verzi 2.7
+## 5. Stav ve Verzi 2.8
 
 Stav ověřovacího běhu (počet vygenerovaných PDF, počet stran, výsledky testů) je zapsán v souboru [`vystup/OVERENI.md`](./vystup/OVERENI.md).
 

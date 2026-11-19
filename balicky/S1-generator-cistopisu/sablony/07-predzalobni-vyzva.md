@@ -83,7 +83,7 @@ Výzva je odeslána nejméně sedm dnů před podáním návrhu na zahájení ř
 | Částka | {{celkem_k_uhrade}} |
 | Zpráva pro příjemce | {{zprava_pro_prijemce}} |
 
-QR platba (řetězec pro vygenerování platebního QR kódu): {{qr_platba_spayd}}
+Textový podklad pro bezhotovostní QR platbu (SPAYD): {{qr_platba_spayd}} *(lze načíst do bankovní aplikace nebo zadat podle tabulky výše)*.
 
 ## 7. Upozornění na soudní vymáhání
 

@@ -1,7 +1,7 @@
 {
   "_comment": "Jediný zdroj kanonických hodnot návrhu Polarita s.r.o. Kontroluje je nastroje/check_consistency.py; verzi mění nastroje/bump_version.py.",
-  "version": "2.7",
-  "release_tag": "Polarita-2.7",
+  "version": "2.8",
+  "release_tag": "Polarita-2.8",
   "company": {
     "name": "Polarita s.r.o.",
     "ico": "14180324",
@@ -60,7 +60,7 @@
     {"pattern": "DPP \\(?`?12 000 Kč`? ?/ ?`?300 h", "reason": "hlídaný limit DPP je 300 h / 11 999 Kč"},
     {"pattern": "(?i)albrechtic|d[eě][cč][ií]n|\\bmourek\\b|tail6ca0e4|wendy", "reason": "návrh je čistý greenfield koncept; žádné odkazy na jiné stroje ani živý provoz"},
     {"pattern": "(?i)docker[- ]compose (up|run)|docker run |dockerd? (start|install)|apt(-get)? install[^\\n]{0,40}docker", "reason": "virtualizace je výhradně Incus + OpenTofu, Docker se neinstaluje"},
-    {"pattern": "(?<!GS1 )(?<![A-Za-z_-])AI(?![A-Za-z_-])", "reason": "zkratka ai se píše malými písmeny (výjimka GS1 AI)"},
+    {"pattern": "(?<!GS1 )(?<!ODDELENI-)(?<![A-Za-z_])AI(?![A-Za-z_])", "reason": "zkratka ai se píše malými písmeny (výjimka GS1 AI)"},
     {"pattern": "#(marketing|nakup|zakazky)\\b", "reason": "kanály Zulip mají tvar #NN-nazev"},
     {"pattern": "(?i)\\bherdr\\b", "reason": "nástroj není součástí návrhu"},
     {"pattern": "\\d+/\\d{4} Sb\\.|Sb\\. m\\. s\\.", "reason": "návod neobsahuje čísla předpisů ani označení norem (viz dokument 06)"},
@@ -68,7 +68,8 @@
     {"pattern": "ČSN ?(EN|IEC|ISO|P |\\d)|\\b(EN|IEC|ISO)([ /](IEC|TR))? ?\\d{3,}", "reason": "návod neobsahuje čísla předpisů ani označení norem (viz dokument 06)"},
     {"pattern": "\\(E[US]\\) ?\\d{4}/\\d+|\\d{4}/\\d+/E[US]\\b|\\b(EU|ES) \\d{4}/\\d+", "reason": "návod neobsahuje čísla předpisů ani označení norem (viz dokument 06)"},
     {"pattern": "čl\\. ?\\d+ ?(odst|písm|GDPR|nař|směr)|GDPR čl\\.", "reason": "návod neobsahuje čísla předpisů ani označení norem (viz dokument 06)"},
-    {"pattern": "\\b(61439|60890|50110|62305|60364)\\b|Lex OZE|(?i:flexinovel)|EU `?ai`? Act|\\b(ZDPH|OSŘ|ZoÚ|eIDAS|GPSR|PPDS|ZZVZ)\\b|par[4678](?:\\b|_)|(?:\\b|_)92[cC](?:\\b|_)", "reason": "návod neobsahuje čísla předpisů ani označení norem (viz dokument 06)"}
+    {"pattern": "\\b(61439|60890|50110|62305|60364)\\b|Lex OZE|(?i:flexinovel)|EU `?ai`? Act|\\b(ZDPH|OSŘ|ZoÚ|eIDAS|GPSR|PPDS|ZZVZ)\\b|par[4678](?:\\b|_)|(?:\\b|_)92[cC](?:\\b|_)", "reason": "návod neobsahuje čísla předpisů ani označení norem (viz dokument 06)"},
+    {"pattern": "04\\.06\\.19[6]9|Zázvorkov[a]|1996/2[8]", "reason": "osobní údaje fyzických osob (datum narození, trvalé bydliště) se v repozitáři neukládají"}
   ],
   "long_line_warning_chars": 1000
 }

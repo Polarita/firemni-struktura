@@ -1,6 +1,6 @@
-# Blok 19 · Balíček S7 — Polarita Elektro Cloud (oborový SaaS spin-off, N9) · Verze 2.7
+# Blok 19 · Balíček S7 — Polarita Elektro Cloud (oborový SaaS spin-off, N9) · Verze 2.8
 
-Tento dokument je řídicím dokumentem **`Bloku 19`** Strategické Etapy III společnosti **Polarita s.r.o.** (balíček `S7`, vlna `N9`, release `Polarita-2.7`). Vychází ze strategického vzoru `TRITON IT → Draivix`: firma si nejprve postaví, v ostrém provozu odladí a vyčistí vlastní `ai-first` systém (Etapa I, `Bloky 0–12`, na serveru `polarita-hq`) a teprve po objektivně změřené bráně **`Go / No-Go`** jej otevře trhu jako oborovou SaaS platformu **„Polarita Elektro Cloud“** pro elektro firmy a revizní techniky v ČR a SR. Platforma běží ve **vlastním produkčním klastru zcela odděleném od `polarita-hq`**; každý zákaznický tenant má izolované databázové schéma s vynuceným **`PostgreSQL Row-Level Security`**, vlastní šifrovací klíč v **`OpenBao`** a vlastní režim **`Clean Room`**. Ve Verzi 2.7 je připravena architektura, brána a vzory — **Blok 19 se nespouští, dokud brána není splněna a schválena `1001`**.
+Tento dokument je řídicím dokumentem **`Bloku 19`** Strategické Etapy III společnosti **Polarita s.r.o.** (balíček `S7`, vlna `N9`, release `Polarita-2.8`). Vychází ze strategického vzoru `TRITON IT → Draivix`: firma si nejprve postaví, v ostrém provozu odladí a vyčistí vlastní `ai-first` systém (Etapa I, `Bloky 0–12`, na serveru `polarita-hq`) a teprve po objektivně změřené bráně **`Go / No-Go`** jej otevře trhu jako oborovou SaaS platformu **„Polarita Elektro Cloud“** pro elektro firmy a revizní techniky v ČR a SR. Platforma běží ve **vlastním produkčním klastru zcela odděleném od `polarita-hq`**; všichni tenanti sdílejí jednotné aplikační schéma s vynuceným **`PostgreSQL Row-Level Security`** (`FORCE` + `AS RESTRICTIVE` + složený klíč `(tenant_id, id)`, s možností vyhrazeného schématu jen jako volitelného enterprise nadstandardu), vlastní šifrovací klíč v **`OpenBao`** a vlastní režim **`Clean Room`**. Ve Verzi 2.8 je připravena architektura, brána a vzory — **Blok 19 se nespouští, dokud brána není splněna a schválena `1001`**.
 
 Soubory balíčku: tento `README.md`, brána [`go-no-go-gate.md`](go-no-go-gate.md), vzor izolace [`rls-vzor.sql`](rls-vzor.sql), struktura tarifů [`tarify-saas.md`](tarify-saas.md) a osnova podmínek [`licencni-podminky-osnova.md`](licencni-podminky-osnova.md).
 
@@ -12,7 +12,7 @@ Soubory balíčku: tento `README.md`, brána [`go-no-go-gate.md`](go-no-go-gate.
 | :--- | :--- | :--- | :--- | :--- |
 | **Brána spuštění Strategické Etapy III** | Protokol **`Go / No-Go`** *(`go-no-go-gate.md`)* nad daty z `centralni-lhutnik-a-objekty`, `cad-urs-engine`, `Eval Suite` a Partnerského provizního ledgeru | dokument + měření *(jen agregované počty, `0` PII)* | Pět objektivních kritérií; `ai` připraví pouze koncept protokolu (`DRAFT`), rozhodnutí `GO` podepisuje výhradně `1001`. | `11001` `ceo` / `17005` `ai-provoz` *(rozhoduje `1001`)* |
 | **Oddělený produkční klastr SaaS** | **`Incus`** + **`OpenTofu`** *(stejný stack jako `polarita-hq`, jiný hardware, jiné sítě, jiné zálohy)* | `latest` *(`0× Docker` na hostiteli)* | Samostatný klastr bez síťové, databázové a klíčové vazby na `polarita-hq`; se zdrojovým kódem ho spojují jen podepsané release tagy z `Gitea`. | `17003` `spravce-site` *(audit `17004` `klicnik`)* |
-| **Multi-tenant datová vrstva** | **`PostgreSQL`** *(izolované schéma na tenant + `ROW LEVEL SECURITY` s `FORCE`)* řízený **`metadata-schema-kernel`** | `latest` *(vzor `rls-vzor.sql`)* | Každý tenant má vlastní schéma; každá tabulka nese `tenant_id` a politiku podle `NULLIF(current_setting('app.tenant_id', true), '')::uuid`; aplikační role nemá `BYPASSRLS` ani `SUPERUSER`. | `17001` `programator` *(Judge `17004` `klicnik`)* |
+| **Multi-tenant datová vrstva** | **`PostgreSQL`** *(sdílené schéma + `FORCE` a `AS RESTRICTIVE` `ROW LEVEL SECURITY` + složený PK `(tenant_id, id)`)* řízený **`metadata-schema-kernel`** | `latest` *(vzor `rls-vzor.sql`)* | Primární model: jednotné sdílené schéma (kvůli `PgBouncer` a jediné migraci), každá tabulka nese `tenant_id`, omezující politiku `AS RESTRICTIVE` podle `current_tenant_id()` a složený klíč s `tenant_id`; aplikační role nemá `BYPASSRLS` ani `SUPERUSER`. Vyhrazené schéma je jen volitelná nadstavba. | `17001` `programator` *(Judge `17004` `klicnik`)* |
 | **Klíče, tajemství a identita tenantů** | **`OpenBao`** *(vlastní instance klastru, vlastní šifrovací klíč na tenant)* + **`Keycloak`** *(OIDC SSO)* | `latest` | Citlivá pole tenanta se šifrují jeho vlastním klíčem; `tenant_id` se odvozuje z ověřeného tokenu OIDC, nikdy ze vstupu klienta. | `17004` `klicnik` / `17003` `spravce-site` |
 | **`Clean Room` na tenant** | `Read-Only` pohledy s maskováním PII *(vzor z `Bloku 5`)* | `latest` | `ai` asistent tenanta čte osobní údaje jen přes maskované pohledy téhož tenanta; žádný sdílený kontext ani paměť mezi tenanty. | `17004` `klicnik` / `17001` `programator` |
 | **Produktové moduly SaaS edice** | **`centralni-lhutnik-a-objekty`**, **`cad-urs-engine`**, **`cz-sk-registry-kernel`**, **`WhisperX`** | `latest` *(vydání z tagů v `Gitea`)* | Digitální kniha objektu a Lhůtník, výpočty a Výrobní pas rozváděče, stavební deník, registry ČR / SR — viz pravidlo 4. | `17001` `programator` *(normy `15002` `normovac`)* |
@@ -30,17 +30,17 @@ Soubory balíčku: tento `README.md`, brána [`go-no-go-gate.md`](go-no-go-gate.
 2. **Vlastní produkční klastr a žádná data interního provozu Polarity v SaaS:**
    * SaaS klastr je fyzicky i logicky oddělený od `polarita-hq`: vlastní `Incus`, sítě, `PostgreSQL`, `OpenBao`, zálohy a monitoring. Mezi klastry není žádné databázové spojení, sdílený klíč, sdílený Vault ani sdílená záloha.
    * Do SaaS klastru se nikdy nepřenášejí data interního provozu Polarity (spisy `POL-RRRR-NNNNN`, `db_hr_lide`, `db_gdpr_zkousky`, hovory, účetnictví, Vault). Vlastní zakázky Polarita s.r.o. dál zpracovává výhradně na `polarita-hq`.
-3. **Multi-tenancy — schéma na tenant + vynucené `Row-Level Security` + vlastní klíč + vlastní `Clean Room`:**
-   * Každý tenant má izolované databázové schéma; každá tabulka má `tenant_id`, `ENABLE` i `FORCE ROW LEVEL SECURITY` a politiku podle `NULLIF(current_setting('app.tenant_id', true), '')::uuid`. Aplikace se připojuje rolí bez `BYPASSRLS`; nenastavený tenant znamená `0` řádků (`FAIL_CLOSED`). Vzor včetně testů „tenant A nevidí tenanta B“ je v `rls-vzor.sql`.
+3. **Multi-tenancy — sdílené schéma + vynucená `AS RESTRICTIVE` `Row-Level Security` + vlastní klíč + vlastní `Clean Room`:**
+   * Primárním modelem je sdílené aplikační schéma (kvůli sdružování spojení `PgBouncer` a jednotným migracím): každá tabulka má složený primární klíč `(tenant_id, id)` (bez globální sekvence), `ENABLE` i `FORCE ROW LEVEL SECURITY` a omezující politiku `AS RESTRICTIVE` podle bezpečného `current_tenant_id()`. Vyhrazené schéma pro jednotlivého tenanta je jen volitelný enterprise nadstandard. Aplikace se připojuje rolí bez `BYPASSRLS`; nenastavený nebo neplatný tenant znamená `0` řádků (`FAIL_CLOSED`). Vzor včetně testů „tenant A nevidí tenanta B“ a `Clean Room` pohledů s `security_invoker = true` je v `rls-vzor.sql`.
    * Každý tenant má vlastní šifrovací klíč v `OpenBao`; smazání klíče po ukončení smlouvy a uplynutí lhůt činí jeho data nečitelnými i v zálohách.
    * `ai` asistent pracuje vždy v kontextu jediného tenanta přes jeho `Clean Room`; data tenanta se nepoužívají k učení ani k odpovědím jinému tenantovi.
 4. **Produktový rozsah SaaS edice (čtyři body zadání):**
    * *(1)* **Digitální kniha objektu s QR štítky + 48h `ai` vytěžení starých šanonů + Centrální Lhůtník** — s logem předplatitelské elektro firmy a klientským portálem pro její vlastní SVJ a průmyslové zákazníky.
    * *(2)* **`ai` asistent revizního technika (`≤ 4 h`), rozpočtáře CS ÚRS a hlasové kanceláře (`WhisperX`)** — přepis naměřených tabulek, fotek závad a telefonních dohod o vícepracích, kontrola 9 vrstev přípomocí CS ÚRS přes tlačítka `„Pracuj“` na 360° Kartě zakázky.
-   * *(3)* **Generátor Výrobního pasu rozváděče podle platné normy pro rozváděče nízkého napětí (výpočet oteplení podle platné metodiky + `CE`) + Elektronický stavební deník** s hlasovým diktováním z mobilu + bezkolizní kalendář zdrojů a trasy `Mapy.cz`.
-   * *(4)* **Česko-slovenské jádro `cz-sk-registry-kernel`** — `ARES`, `ADIS` (ručení za DPH), `ISIR`, `CEE`, `RPO`, `RegisterUZ`, `ISDOC` / `Peppol` a připravenost `EET 2.0`.
+   * *(3)* **Generátor Výrobního pasu rozváděče podle platné normy pro rozváděče nízkého napětí (výpočet oteplení podle platné metodiky + `CE`) + Elektronický stavební deník** s hlasovým diktováním z mobilu + bezkolizní kalendář zdrojů a trasy (`Mapy.cz` API — **vyžaduje komerční licenci a uvedení v Příloze 4**, případně vlastní `OSM/OSRM`).
+   * *(4)* **Česko-slovenské jádro `cz-sk-registry-kernel`** — `ARES`, `ADIS` (ručení za DPH), `ISIR`, `CEE`, `RPO`, `RegisterUZ`, `ISDOC` / `Peppol` a připravenost na případnou zákonnou evidenci tržeb.
 5. **Tarify bez příplatku za montéra + měřený rozpočet tokenů s tvrdým stropem na tenant:**
-   * Předplatné se platí za celou elektro firmu (`Solo RT` / `Elektro Tým` / `Elektro Firma`), nikdy za hlavu montéra v terénu. Všechny ceny a číselné limity jsou v `tarify-saas.md` vedeny jako `NÁVRH — ke schválení 1001`.
+   * Předplatné se platí za celou elektro firmu (`Solo RT` / `Elektro Tým` / `Elektro Firma`), nikdy za hlavu montéra v terénu (s rozlišením kancelářských uživatelských účtů a parametrů *fair-use* v `tarify-saas.md`). Všechny ceny a číselné limity jsou v `tarify-saas.md` vedeny jako `NÁVRH — ke schválení 1001`.
    * Každý tenant má vlastní měřený rozpočet tokenů s tvrdým stropem; spotřeba tenantů se nikdy neúčtuje do interního stropu `470 USD / měsíc` a naopak. Interní strop `470 USD` a počet `20` `ai` zaměstnanců se Blokem 19 nemění.
 6. **`Liability Firewall` — `ai` generuje jen `DRAFT`:**
    * Polarita Elektro Cloud dodává softwarový a deterministický výpočetní nástroj. Každý výstup `ai` je koncept (`DRAFT`); odbornou, normovou a zákonnou odpovědnost za vydanou revizní zprávu, Výrobní pas či prohlášení o shodě nese vždy podepisující revizní technik / zhotovitel zákazníka s vlastním Oprávněním TIČR.
@@ -79,9 +79,9 @@ Tento prompt smí být spuštěn až po podpisu GO v protokolu brány. Role: 170
    - Postav samostatný klastr Incus + OpenTofu (0× Docker na hostiteli) bez jakéhokoliv síťového, databázového a klíčového spojení s polarita-hq. Vlastní PostgreSQL (latest), OpenBao (latest), Keycloak (latest), zálohy a monitoring.
    - Do klastru nepřenášej žádná data interního provozu Polarity.
 2. Datová vrstva (17001):
-   - Rozšiř metadata-schema-kernel tak, aby pro každého tenanta generoval izolované schéma a u každé tabulky sloupec tenant_id, ENABLE a FORCE ROW LEVEL SECURITY a politiku podle NULLIF(current_setting('app.tenant_id', true), '')::uuid. Vyjdi ze vzoru balicky/S7-polarita-elektro-cloud/rls-vzor.sql (vzor nebyl spuštěn proti živé databázi).
+   - Rozšiř metadata-schema-kernel tak, aby v primárním sdíleném schématu každé tabulce generoval složený klíč (tenant_id, id), ENABLE a FORCE ROW LEVEL SECURITY, omezující politiku AS RESTRICTIVE podle bezpečného current_tenant_id() a vlastní Clean Room pohledy (security_invoker = true); vyhrazené schéma ponech jen jako volitelnou nadstavbu. Vyjdi ze vzoru balicky/S7-polarita-elektro-cloud/rls-vzor.sql (vzor nebyl spuštěn proti živé databázi).
    - Aplikační role nesmí mít SUPERUSER ani BYPASSRLS. Hodnotu app.tenant_id nastavuj pouze uvnitř transakce z ověřeného tokenu OIDC, nikdy ze vstupu klienta.
-   - Pro každého tenanta založ vlastní šifrovací klíč v OpenBao a vlastní Clean Room pohledy s maskováním osobních údajů.
+   - Pro každého tenanta založ vlastní šifrovací klíč v OpenBao.
 3. Testy izolace (17001 píše, 17004 posuzuje):
    - Zařaď do Gitea Actions testy dokazující, že tenant A nevidí, nezmění ani nesmaže data tenanta B, že bez nastaveného tenanta dotaz vrátí 0 řádků a že ai asistent jednoho tenanta nedostane kontext jiného.
    - Vydání do SaaS klastru zablokuj, pokud neprojde kterýkoliv test izolace, AigisCode nebo Eval Suite na 100 %.
@@ -118,7 +118,7 @@ Tento prompt smí být spuštěn až po podpisu GO a po prošlých testech izola
 
 - [ ] Protokol brány `Go / No-Go` má všech pět kritérií změřených se zdrojem a datem, verdikt `GO` a podpis `1001`; bez něj se žádná další podmínka neplní.
 - [ ] SaaS klastr běží odděleně od `polarita-hq` (vlastní `Incus`, `PostgreSQL`, `OpenBao`, `Keycloak`, zálohy) a audit `17004` potvrdil `0` síťových, databázových a klíčových vazeb i `0` dat interního provozu Polarity v klastru.
-- [ ] Každá tabulka tenantů má `ENABLE` i `FORCE ROW LEVEL SECURITY`, aplikační role nemá `BYPASSRLS` a testy izolace (tenant A × tenant B, nenastavený tenant = `0` řádků) procházejí v `Gitea Actions` při každém vydání.
+- [ ] Každá tabulka tenantů ve sdíleném schématu má složený klíč `(tenant_id, id)`, `ENABLE` i `FORCE ROW LEVEL SECURITY` a politiku `AS RESTRICTIVE`, aplikační role nemá `BYPASSRLS` a testy izolace (tenant A × tenant B, nenastavený/neplatný tenant = `0` řádků, `Clean Room` pohled s `security_invoker = true`) procházejí v `Gitea Actions` při každém vydání.
 - [ ] Každý tenant má vlastní šifrovací klíč v `OpenBao` a vlastní `Clean Room`; test prokázal, že `ai` asistent jednoho tenanta nedostane data jiného.
 - [ ] Měřený rozpočet tokenů má tvrdý strop na tenant (test: po dosažení stropu se zastaví jen `ai` funkce daného tenanta) a tarify v `tarify-saas.md` jsou schváleny `1001`.
 - [ ] Licenční podmínky s články `Liability Firewall` a zpracovatelská smlouva prošly revizí `15001` a advokátem a byly schváleny `1001`; v produktu nelze vydat dokument bez úkonu oprávněné osoby zákazníka.
@@ -126,7 +126,7 @@ Tento prompt smí být spuštěn až po podpisu GO a po prošlých testech izola
 
 ---
 
-## 5. Stav ve Verzi 2.7
+## 5. Stav ve Verzi 2.8
 
 **Hotové v této složce (architektura, brána a vzory):**
 
@@ -141,4 +141,4 @@ Tento prompt smí být spuštěn až po podpisu GO a po prošlých testech izola
 - Pořízení a stavba SaaS klastru, rozšíření `metadata-schema-kernel` o tenanty, měření tokenů, klientský portál a onboarding pilotního tenanta.
 - Měření brány samotné — vyžaduje 12–18 měsíců ostrého provozu na serveru `polarita-hq`, který zatím neexistuje (greenfield návrh).
 
-Polarita Elektro Cloud ve Verzi 2.7 **není spuštěn, nasazen ani nabízen zákazníkům**; neexistuje žádný tenant, klastr ani uzavřená smlouva. Blok 19 se spustí nejdříve po splnění brány a podpisu `1001`.
+Polarita Elektro Cloud ve Verzi 2.8 **není spuštěn, nasazen ani nabízen zákazníkům**; neexistuje žádný tenant, klastr ani uzavřená smlouva. Blok 19 se spustí nejdříve po splnění brány a podpisu `1001`.

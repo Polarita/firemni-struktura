@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Unit and integration tests of the Polarita Eval Suite runner (package S2, Version 2.7).
-Jednotkové a integrační testy runneru Eval Suite Polarita (balíček S2, Verze 2.7).
+Unit and integration tests of the Polarita Eval Suite runner (package S2, Version 2.8).
+Jednotkové a integrační testy runneru Eval Suite Polarita (balíček S2, Verze 2.8).
 
 Usage / Použití:  python -m unittest -v test_eval_suite
 """
@@ -117,13 +117,72 @@ class PolicyTests(unittest.TestCase):
     def test_malformed_event_fails_closed_instead_of_crashing(self) -> None:
         # EN: A missing or wrongly typed field must produce a decision, never a traceback.
         # CZ: Chybějící nebo špatně typované pole musí vést k rozhodnutí, nikdy k pádu.
+        # Fix: test malformed excavation_release specifically (missing work_date), not unknown type.
+        malformed_exc = {"type": "excavation_release", "dtm_statement_uploaded": True, "dtm_statement_valid_until": "2026-01-01"}
+        self.assertEqual(reference_policy.decide(malformed_exc)["reason_code"], "MALFORMED_EVENT")
         for event in ({"type": "worker_release", "legal_regime": "EMP", "jmhz_registered_before_start": True},
-                      {"type": "excavation_start", "dtm_statement_uploaded": True, "dtm_statement_valid_until": "2026-01-01"},
+                      malformed_exc,
                       {"type": "worker_release", "work_date": None, "legal_regime": "EMP", "jmhz_registered_before_start": True},
                       {"type": "worker_release", "work_date": "not-a-date", "legal_regime": "EMP", "jmhz_registered_before_start": True}):
             answer = reference_policy.decide(event)
             self.assertIn(answer["decision"], ("FAIL_CLOSED", "BLOCK"), event)
             self.assertNotEqual(answer["decision"], "ALLOW")
+
+    def test_fail_closed_hardening_rejects_missing_or_unknown_fields(self) -> None:
+        cases = (
+            {"type": "supplier_invoice", "billed_to": "Polarita s.r.o.", "unreliable_vat_payer": False, "account_published_in_adis": True},
+            {"type": "supplier_invoice", "billed_to": "Polarita s.r.o.", "unreliable_vat_payer": False, "account_published_in_adis": True, "invoice_amount": 100, "goods_receipt_amount": 100, "purchase_order_amount": 80},
+            {"type": "worker_release", "work_date": "2027-01-01", "legal_regime": "emp", "required_qualification": "elektrotechnik"},
+            {"type": "worker_release", "work_date": "2027-01-01", "legal_regime": "EMP", "medical_valid_until": "2028-01-01"},
+            {"type": "isds_operation", "environment": "czebox", "operation": "unknown_op"},
+            {"type": "b2b_order", "advance_paid": False},
+            {"type": "paid_model_call", "global_budget_used_pct": float("nan"), "agent_quota_used_pct": 10.0},
+            {"type": "calendar_booking", "task_type": "unknown_task", "person_eligible": True},
+            {"type": "tenant_data_access", "rls_enforced": True, "requesting_tenant": "", "data_tenant": ""},
+            {"type": "hr_data_query", "access_path": "clean_room_view", "requested_unmasked_fields": ["IBAN"]},
+            {"type": "signature_request", "signature_kind": "personal_qes", "key_location": "qscd_chip", "signer": "SUB-1007", "document_class": "ce_declaration"},
+            {"type": "signature_request", "signature_kind": "server_seal", "document_class": "power_of_attorney"},
+            {"type": "product_publish", "has_phe_goods": True, "phe_itemized": True, "battery_over_2kwh": True, "battery_passport_ready": False, "listing_date": "18.02.2027"},
+        )
+        for event in cases:
+            answer = reference_policy.decide(event)
+            self.assertNotEqual(answer["decision"], "ALLOW", event)
+
+    def test_invalid_channel_raises_value_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            wav = audio_fixtures.generate(Path(tmp) / "a.wav", 1, "calm", "calm")
+            with self.assertRaises(ValueError):
+                audio_fixtures.urgency_features(wav, "X")
+
+    def test_live_endpoint_validation_and_malformed_actions(self) -> None:
+        self.assertEqual(run_eval_suite.main(["--mode", "live", "--endpoint", "https://polarita.cz/eval/decide"]), 2)
+        self.assertEqual(run_eval_suite.main(["--mode", "live", "--endpoint", "http://example.com/eval/decide"]), 2)
+        run_eval_suite.validate_live_endpoint("https://decisions.int.polarita.cz/eval/decide")
+
+        class _NullActionsHandler(BaseHTTPRequestHandler):
+            def do_POST(self) -> None:  # noqa: N802
+                data = json.dumps({"decision": "ALLOW", "reason_code": "OK", "actions": None}).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+            def log_message(self, *args: object) -> None:
+                return
+
+        server = HTTPServer(("127.0.0.1", 0), _NullActionsHandler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            ans = run_eval_suite.decide_live(
+                {"id": "X", "agent": "ceo", "channel": "zulip", "event": {}},
+                f"http://127.0.0.1:{server.server_address[1]}/eval",
+                5.0,
+            )
+            self.assertEqual((ans["decision"], ans["reason_code"]), ("FORMAT_ERROR", "INVALID_ACTIONS_TYPE"))
+        finally:
+            server.shutdown()
+            server.server_close()
 
     def test_voice_agent_p1_wakes_technician_even_with_commitment_request(self) -> None:
         # EN: An emergency wins over the no-commitment rule; a diagnosis is never promised.

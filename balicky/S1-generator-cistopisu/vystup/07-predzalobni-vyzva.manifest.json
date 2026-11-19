@@ -2,7 +2,7 @@
   "document": "07-predzalobni-vyzva",
   "title": "Předžalobní výzva k plnění",
   "draft_watermark": true,
-  "generated_utc": "2026-11-18 06:12 UTC",
+  "generated_utc": "2026-11-19 19:51 UTC",
   "variables": {
     "spis_id": "POL-2027-00001",
     "nazev_klienta": "Společenství vlastníků Vzorová 12 (VZOR)",
@@ -49,9 +49,9 @@
     "prilohy": "kopie faktury č. FV-2027-00001; kopie předávacího protokolu; kopie upomínek ze dne 2. 4. 2027 a 9. 4. 2027 (VZOR)"
   },
   "sha256": {
-    "template": "64627f6c12c2e568f5532c98658a38433f0874672964afc5c5e24643c16410af",
+    "template": "a4edc343d26bf1b715fe8e6268b4620ce4fade8e95b7230ac4ce9fecbd046046",
     "data": "5488755bf61099fc03c18d73eadfe3d7546f1aea446eca054cf8f9a17d1d284d",
-    "pdf": "2b4f4d7975500c33c37bfe942d04b7a8aed60ff029b19b0737eee3ed3ff8d219"
+    "pdf": "c54c7a21b0299da191e29c2b97b19b917e787ebd34183a572b407acd71f41f08"
   },
   "pages": 4
 }

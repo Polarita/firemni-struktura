@@ -1,11 +1,11 @@
 /**
  * EN: SAMPLE ONLY — NOT EXECUTED. This spec is a pattern for Block 18 (package S6,
- *     Polarita-2.7). It has never been run: the application under test and the test
+ *     Polarita-2.8). It has never been run: the application under test and the test
  *     environment do not exist yet (greenfield design, server `polarita-hq` is not
  *     built). All selectors, screen texts and the seed record are illustrative and
  *     must be adapted to the real application before the first run.
  * CZ: POUZE VZOR — NEBYL SPUŠTĚN. Tento test je vzorem pro Blok 18 (balíček S6,
- *     Polarita-2.7). Nikdy neběžel: testovaná aplikace ani testovací prostředí zatím
+ *     Polarita-2.8). Nikdy neběžel: testovaná aplikace ani testovací prostředí zatím
  *     neexistují (greenfield návrh, server `polarita-hq` není postaven). Všechny
  *     selektory, texty obrazovek a záznam ze seedu jsou ilustrační a před prvním
  *     během se musí přizpůsobit skutečné aplikaci.
@@ -63,8 +63,8 @@ interface Manifest {
   steps: ManifestStep[];
 }
 
-// EN: Per-test step counter (keyed by Playwright test id, so parallel workers do not collide).
-// CZ: Počítadlo kroků pro každý test (klíčem je id testu, takže se paralelní běhy nepletou).
+// EN: Per-test + per-retry step counter so retries start cleanly from step 1.
+// CZ: Počítadlo kroků na test a pokus (retry), takže opakovaný pokus vždy začíná od kroku 1.
 const stepCounters = new Map<string, number>();
 
 /**
@@ -74,7 +74,7 @@ const stepCounters = new Map<string, number>();
 function slugify(text: string): string {
   return text
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
@@ -82,23 +82,25 @@ function slugify(text: string): string {
 
 /**
  * EN: Documented step. Takes a captioned screenshot and appends one record to the
- *     chapter manifest (JSON). The Czech caption is also used as the Playwright
- *     step title, so the HTML report and the manual show the same sentence.
+ *     per-test chapter manifest (JSON). Note: [data-e2e-mask] covers annotated DOM
+ *     nodes only — all test fixtures must strictly use synthetic 0-PII seeds.
  * CZ: Dokumentovaný krok. Pořídí popsaný snímek obrazovky a připíše jeden záznam do
- *     manifestu kapitoly (JSON). Český popisek se použije i jako název kroku
- *     v Playwrightu, takže HTML report i příručka ukazují stejnou větu.
+ *     manifestu testu (JSON). Upozornění: maskování [data-e2e-mask] zakryje jen
+ *     označené prvky DOM — testovací prostředí smí obsahovat výhradně syntetická data (0 PII).
  */
 export async function krok(page: Page, popisek: string): Promise<void> {
   const info = test.info();
 
   await test.step(popisek, async () => {
-    const order = (stepCounters.get(info.testId) ?? 0) + 1;
-    stepCounters.set(info.testId, order);
+    const counterKey = `${info.testId}#retry-${info.retry}`;
+    const order = (stepCounters.get(counterKey) ?? 0) + 1;
+    stepCounters.set(counterKey, order);
 
-    const screenshotName = `${CHAPTER.id}-${String(order).padStart(2, '0')}-${slugify(popisek).slice(0, 48)}.png`;
+    const safeTestKey = info.testId.replace(/[^a-zA-Z0-9_-]+/g, '_');
+    const screenshotName = `${CHAPTER.id}-${safeTestKey.slice(-12)}-${String(order).padStart(2, '0')}-${slugify(popisek).slice(0, 48)}.png`;
     const screenshotDir = path.join(MANUAL_DIR, 'screenshots');
     const manifestDir = path.join(MANUAL_DIR, 'manifest');
-    const manifestFile = path.join(manifestDir, `${CHAPTER.id}.json`);
+    const manifestFile = path.join(manifestDir, `${CHAPTER.id}-${safeTestKey}.json`);
 
     await mkdir(screenshotDir, { recursive: true });
     await mkdir(manifestDir, { recursive: true });
@@ -137,8 +139,19 @@ export async function krok(page: Page, popisek: string): Promise<void> {
   });
 }
 
+function requireBaseUrl(): string {
+  if (!BASE_URL) {
+    throw new Error('POLARITA_E2E_BASE_URL is not set / není nastavena proměnná POLARITA_E2E_BASE_URL');
+  }
+  const parsed = new URL(BASE_URL);
+  if (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') {
+    throw new Error(`Unsafe POLARITA_E2E_BASE_URL protocol: ${parsed.protocol}`);
+  }
+  return BASE_URL;
+}
+
 test.use({
-  baseURL: BASE_URL,
+  baseURL: BASE_URL ?? 'about:blank',
   locale: 'cs-CZ',
   timezoneId: 'Europe/Prague',
   viewport: { width: 1280, height: 800 },
@@ -146,25 +159,26 @@ test.use({
 
 test.describe(CHAPTER.title, () => {
   test.beforeAll(() => {
-    // EN: Fail loudly instead of skipping — a missing variable must not look like a green run.
-    // CZ: Hlasité selhání místo přeskočení — chybějící proměnná nesmí vypadat jako zelený běh.
-    if (!BASE_URL) {
-      throw new Error('POLARITA_E2E_BASE_URL is not set / není nastavena proměnná POLARITA_E2E_BASE_URL');
-    }
+    // EN: Fail loudly instead of skipping — missing URL or credentials must fail before goto('/').
+    // CZ: Hlasité selhání místo přeskočení — chybějící URL či údaje musí selhat před voláním goto('/').
+    requireBaseUrl();
     if (!TEST_USER || !TEST_PASSWORD) {
       throw new Error('Test account is not provided / není dodán testovací účet (POLARITA_E2E_USER, POLARITA_E2E_PASSWORD)');
     }
   });
 
   test('Otevření spisu a příprava konceptu tlačítkem „Pracuj“', async ({ page }) => {
-    await page.goto('/');
+    const validatedUrl = requireBaseUrl();
+    await page.goto(new URL('/', validatedUrl).toString());
 
     // EN: FAIL_CLOSED guard — continue only if the page declares itself a test environment.
     // CZ: Pojistka FAIL_CLOSED — pokračuj jen tehdy, když se stránka hlásí jako testovací prostředí.
     await expect(page.getByTestId('env-banner')).toContainText('TESTOVACÍ PROSTŘEDÍ');
 
-    // EN: Sign in with the synthetic test account (single sign-on form).
-    // CZ: Přihlášení syntetickým testovacím účtem (formulář jednotného přihlášení).
+    // EN: Sign in with the synthetic test account; for real Keycloak OIDC / MFA suites,
+    //     prefer a shared setup project using Playwright storageState instead of repeating login.
+    // CZ: Přihlášení syntetickým účtem; u ostrých OIDC testů za Keycloakem (příp. MFA) použij
+    //     sdílený setup projekt a storageState, aby se přihlášení neopakovalo v každé kapitole.
     await page.getByLabel('Uživatelské jméno').fill(TEST_USER);
     await page.getByLabel('Heslo').fill(TEST_PASSWORD);
     await page.getByRole('button', { name: 'Přihlásit se' }).click();

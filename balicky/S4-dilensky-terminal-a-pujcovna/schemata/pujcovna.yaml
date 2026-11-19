@@ -1,6 +1,6 @@
 # =============================================================================
 # metadata-schema-kernel · declarative schema DRAFT / deklarativní schéma NÁVRH
-# Module / Modul: pujcovna-meridel · Blok 16 · balíček S4 · Verze 2.7
+# Module / Modul: pujcovna-meridel · Blok 16 · balíček S4 · Verze 2.8
 # EN: B2B rental of measuring instruments and temporary power sources as an
 #     extension of the collision-free resource calendar in
 #     centralni-lhutnik-a-objekty. Nothing here is deployed (greenfield design).
@@ -20,7 +20,7 @@ schema:
   module: pujcovna-meridel
   package: S4
   block: 16
-  release: Polarita-2.7
+  release: Polarita-2.8
   schema_version: 0.1.0-draft
   status: DRAFT                 # EN: proposal only / CZ: pouze návrh
   owner_ai: 17001               # EN: 17001 programator / CZ: 17001 programator
@@ -102,12 +102,12 @@ enums:
     - REJECTED                  # EN: refused / CZ: zamítnuto
     - PREEMPTED                 # EN: slot taken by an internal revision trip / CZ: termín obsadil interní revizní výjezd
     - CANCELLED                 # EN: cancelled / CZ: zrušeno
-  deposit_status: [NOT_SET, REQUESTED, RECEIVED, SETTLED]
+  deposit_status: [NOT_SET, REQUESTED, RECEIVED, WAIVED, SETTLED]
   deposit_kind: [REQUESTED, RECEIVED, REFUNDED, WITHHELD]
   protocol_direction:
     - HANDOVER                  # EN: handover to the renter / CZ: předání nájemci
     - RETURN                    # EN: return to Polarita / CZ: vrácení Polaritě
-  protocol_status: [DRAFT, SIGNED, SEALED]
+  protocol_status: [DRAFT, SIGNED, SEALED, SUPERSEDED]
   condition_grade:
     - OK                        # EN: without defects / CZ: bez závad
     - WEAR                      # EN: normal wear / CZ: běžné opotřebení
@@ -150,6 +150,7 @@ entities:
         - {from: OUT_RENTAL, to: RETURN_INSPECTION, action: take_back, guards: [return_protocol_sealed]}
         - {from: RETURN_INSPECTION, to: IN_STOCK, action: accept, guards: [condition_ok_or_wear, compliance_valid_today]}
         - {from: RETURN_INSPECTION, to: IN_SERVICE, action: send_to_service, guards: [reason_recorded]}
+        - {from: RETURN_INSPECTION, to: BLOCKED, action: block_expired, guards: [compliance_expired]}
         - {from: IN_SERVICE, to: IN_STOCK, action: back_from_service, guards: [compliance_valid_today]}
         - {from: IN_STOCK, to: BLOCKED, action: block_expired, guards: [compliance_expired]}
         - {from: BLOCKED, to: IN_SERVICE, action: send_to_service, guards: [reason_recorded]}
@@ -175,13 +176,15 @@ entities:
       status: {type: enum, enum: renter_status, required: true, default: PENDING_VERIFICATION}
       approved_decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_to_close: true}
       suspend_reason: {type: text, required: false, required_when: "status = 'SUSPENDED'"}
+    constraints:
+      - {kind: check, expression: "(renter_type = 'B2B_CUSTOMER' AND org_code IS NOT NULL) OR (renter_type = 'CERTIFIED_PARTNER_SUB' AND sub_person_no IS NOT NULL)"}
     state_machine:
       field: status
       initial: PENDING_VERIFICATION
       transitions:
-        - {from: PENDING_VERIFICATION, to: APPROVED, action: approve, guards: [framework_contract_signed, mutation_confirm_1001]}
+        - {from: PENDING_VERIFICATION, to: APPROVED, action: approve, guards: [framework_contract_signed, decisions_ref_recorded, mutation_confirm_1001]}
         - {from: APPROVED, to: SUSPENDED, action: suspend, guards: [reason_recorded]}
-        - {from: SUSPENDED, to: APPROVED, action: reinstate, guards: [mutation_confirm_1001]}
+        - {from: SUSPENDED, to: APPROVED, action: reinstate, guards: [decisions_ref_recorded, mutation_confirm_1001]}
     close_requirements:           # EN: needed for APPROVED / CZ: nutné pro stav APPROVED
       fields: [framework_contract_ref, approved_decisions_ref]
 
@@ -220,6 +223,8 @@ entities:
       # CZ: Částky záměrně mohou být prázdné: návrh neobsahuje vymyšlená čísla.
       daily_rate: {type: decimal, required: false, required_to_close: true}
       deposit_amount: {type: decimal, required: false, required_to_close: true}
+    constraints:
+      - {kind: check, expression: "(daily_rate IS NULL OR daily_rate > 0) AND (deposit_amount IS NULL OR deposit_amount >= 0)"}
     close_requirements:           # EN: needed before the list can be APPROVED / CZ: nutné před schválením ceníku
       fields: [daily_rate, deposit_amount]
 
@@ -247,13 +252,13 @@ entities:
       deposit_currency: {type: currency, required: false, required_to_close: true}
       deposit_status: {type: enum, enum: deposit_status, required: true, default: NOT_SET}
       confirmed_decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_to_close: true}
-      handover_protocol_id: {type: ref, ref: handover_protocol.id, required: false, required_to_close: true}
-      return_protocol_id: {type: ref, ref: handover_protocol.id, required: false, required_to_close: true}
-      invoice_request_id: {type: ref, ref: rental_invoice_request.id, required: false, required_to_close: true}
+      # EN: Child protocols and invoice requests reference reservation_id (avoids cyclic FK).
+      # CZ: Podřízené protokoly a podklady fakturace odkazují na reservation_id (bez cyklického FK).
       status: {type: enum, enum: reservation_status, required: true, default: DRAFT}
       status_reason: {type: text, required: false, required_when: "status IN ('REJECTED', 'PREEMPTED', 'CANCELLED')"}
     constraints:
       - {kind: check, expression: "period_to > period_from"}
+      - {kind: check, expression: "deposit_amount IS NULL OR deposit_amount >= 0"}
       # EN: No overlap of the same asset; enforced in the shared calendar table
       #     for internal and rental bookings together.
       # CZ: Žádný překryv téhož zdroje; vynucuje sdílená tabulka kalendáře pro
@@ -264,7 +269,7 @@ entities:
       initial: DRAFT
       transitions:
         - {from: DRAFT, to: REQUESTED, action: request, guards: [renter_approved, asset_rentable, slot_free_in_calendar, compliance_valid_whole_period]}
-        - {from: REQUESTED, to: CONFIRMED, action: confirm, guards: [price_list_approved, slot_free_in_calendar, compliance_valid_whole_period, mutation_confirm_1001]}
+        - {from: REQUESTED, to: CONFIRMED, action: confirm, guards: [renter_approved, asset_rentable, price_list_approved, slot_free_in_calendar, compliance_valid_whole_period, deposit_terms_set, confirmed_in_decisions, mutation_confirm_1001]}
         - {from: REQUESTED, to: REJECTED, action: reject, guards: [reason_recorded]}
         - {from: REQUESTED, to: PREEMPTED, action: preempt_by_internal_revision, guards: [internal_revision_booking_exists, reason_recorded]}
         - {from: CONFIRMED, to: HANDED_OVER, action: hand_over, guards: [deposit_received, handover_protocol_sealed, compliance_valid_whole_period]}
@@ -278,7 +283,7 @@ entities:
         #     revizním výjezdem jde k 1001 do Decisions.
         - {from: CONFIRMED, to: CANCELLED, action: cancel_confirmed, guards: [reason_recorded, mutation_confirm_1001]}
     close_requirements:           # EN: needed for CLOSED / CZ: nutné pro stav CLOSED
-      fields: [calendar_booking_ref, price_list_id, deposit_amount, deposit_currency, confirmed_decisions_ref, handover_protocol_id, return_protocol_id, invoice_request_id]
+      fields: [calendar_booking_ref, price_list_id, deposit_amount, deposit_currency, confirmed_decisions_ref]
 
   # ---------------------------------------------------------------------------
   # EN: Digital handover / return protocol with photo documentation.
@@ -319,15 +324,19 @@ entities:
       renter_signature_key: {type: object_key, required: false, required_to_close: true}
       pdf_key: {type: object_key, required: false, required_to_close: true}
       seal_ref: {type: string, required: false, required_to_close: true}          # EN: pyHanko seal + TSA / CZ: pečeť pyHanko + TSA
+      supersedes_protocol_id: {type: ref, ref: handover_protocol.id, required: false}
+      superseded_reason: {type: text, required: false, required_when: "status = 'SUPERSEDED'"}
       status: {type: enum, enum: protocol_status, required: true, default: DRAFT}
     constraints:
-      - {kind: unique, columns: [reservation_id, direction]}
+      - {kind: unique_partial, columns: [reservation_id, direction], where: "status <> 'SUPERSEDED'"}
+      - {kind: check, expression: "direction <> 'HANDOVER' OR safety_briefing_confirmed = true"}
     state_machine:
       field: status
       initial: DRAFT
       transitions:
-        - {from: DRAFT, to: SIGNED, action: sign, guards: [photos_minimum_met, accessories_checked, both_signatures_present]}
+        - {from: DRAFT, to: SIGNED, action: sign, guards: [photos_minimum_met, accessories_checked, safety_briefing_if_handover, both_signatures_present]}
         - {from: SIGNED, to: SEALED, action: seal, guards: [pdf_rendered, server_seal_applied]}
+        - {from: SEALED, to: SUPERSEDED, action: supersede, guards: [replacement_protocol_sealed, reason_recorded, mutation_confirm_1001]}
     close_requirements:           # EN: needed for SEALED / CZ: nutné pro stav SEALED
       fields: [performed_at, place, polarita_person_no, renter_signer_ref, condition, accessories_check, photo_keys, compliance_valid_until, compliance_document_ref, polarita_signature_key, renter_signature_key, pdf_key, seal_ref]
 
@@ -352,6 +361,8 @@ entities:
       decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_when: "kind IN ('REFUNDED', 'WITHHELD')"}
       reason: {type: text, required: false, required_when: "kind = 'WITHHELD'"}
       recorded_at: {type: timestamptz, required: true}
+    constraints:
+      - {kind: check, expression: "amount > 0"}
 
   # ---------------------------------------------------------------------------
   # EN: Damage or loss found on return.
@@ -404,6 +415,9 @@ entities:
       decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_to_close: true}
       finance_ref: {type: external_ref, target: 'finance-uol-marze-engine:invoice_draft', required: false, required_to_close: true}
       status: {type: enum, enum: invoice_request_status, required: true, default: DRAFT}
+    constraints:
+      - {kind: check, expression: "billed_to > billed_from"}
+      - {kind: check, expression: "net_amount IS NULL OR net_amount >= 0"}
     state_machine:
       field: status
       initial: DRAFT
@@ -425,21 +439,26 @@ guards:
   handover_protocol_sealed: "EN: HANDOVER protocol is SEALED / CZ: protokol HANDOVER je SEALED"
   return_protocol_sealed: "EN: RETURN protocol is SEALED / CZ: protokol RETURN je SEALED"
   framework_contract_signed: "EN: rental terms signed by both parties are in the file / CZ: oboustranně podepsané podmínky půjčovny jsou ve spisu"
+  decisions_ref_recorded: "EN: approved_decisions_ref is populated / CZ: approved_decisions_ref je vyplněno"
   all_lines_priced: "EN: every price line has a rate and a deposit / CZ: každý řádek ceníku má sazbu i kauci"
   renter_approved: "EN: renter status is APPROVED / CZ: nájemce je ve stavu APPROVED"
   asset_rentable: "EN: asset has rentable = true and is not BLOCKED or RETIRED / CZ: zdroj má rentable = true a není BLOCKED ani RETIRED"
   slot_free_in_calendar: "EN: no internal or rental booking overlaps the period / CZ: období se nekryje s žádnou interní ani půjčovní rezervací"
   internal_revision_booking_exists: "EN: an internal revision trip needs the asset in the period / CZ: zdroj v období potřebuje interní revizní výjezd"
   price_list_approved: "EN: price list status is APPROVED / CZ: ceník je ve stavu APPROVED"
-  deposit_received: "EN: deposit matched on the bank statement or waived by 1001 / CZ: kauce spárována na výpisu nebo ji 1001 prominul"
-  deposit_settled: "EN: deposit refunded or withheld with 1001 confirmation / CZ: kauce vrácena nebo zadržena s potvrzením 1001"
+  deposit_terms_set: "EN: price_list_id, deposit_amount and deposit_currency are set / CZ: price_list_id, deposit_amount a deposit_currency jsou nastaveny"
+  confirmed_in_decisions: "EN: confirmed_decisions_ref and calendar_booking_ref are recorded / CZ: confirmed_decisions_ref a calendar_booking_ref jsou zapsány"
+  deposit_received: "EN: deposit_status is RECEIVED or WAIVED (matched on bank statement or waived by 1001) / CZ: deposit_status je RECEIVED nebo WAIVED (kauce spárována na výpisu nebo ji 1001 prominul)"
+  deposit_settled: "EN: deposit_status is SETTLED (refunded or withheld with 1001 confirmation) / CZ: deposit_status je SETTLED (kauce vrácena nebo zadržena s potvrzením 1001)"
   damage_claims_resolved: "EN: every damage_claim is SETTLED or DISMISSED / CZ: každá škoda je SETTLED nebo DISMISSED"
   invoice_request_handed_to_finance: "EN: rental_invoice_request is HANDED_TO_FINANCE / CZ: podklad k fakturaci je HANDED_TO_FINANCE"
   photos_minimum_met: "EN: photo count meets the PROPOSED minimum set by 1001 / CZ: počet fotografií splňuje minimum (NÁVRH — ke schválení 1001)"
   accessories_checked: "EN: every accessory item is ticked / CZ: každá položka příslušenství je odškrtnuta"
+  safety_briefing_if_handover: "EN: for HANDOVER protocol, safety_briefing_confirmed is true / CZ: u protokolu HANDOVER je safety_briefing_confirmed true"
   both_signatures_present: "EN: both parties signed on the device / CZ: obě strany podepsaly na zařízení"
   pdf_rendered: "EN: protocol PDF rendered by Typst / CZ: PDF protokolu vysázeno v Typst"
   server_seal_applied: "EN: server seal with timestamp applied / CZ: připojena serverová pečeť s časovým razítkem"
+  replacement_protocol_sealed: "EN: replacement protocol referencing supersedes_protocol_id is SEALED / CZ: náhradní protokol s odkazem supersedes_protocol_id je ve stavu SEALED"
   estimate_recorded: "EN: repair estimate is stored / CZ: je uložen odhad opravy"
   finance_draft_created: "EN: invoice DRAFT exists in finance-uol-marze-engine / CZ: v finance-uol-marze-engine existuje DRAFT faktury"
   mutation_confirm_1001: "EN: confirmed by 1001 in Decisions / CZ: potvrzeno osobou 1001 v Decisions"

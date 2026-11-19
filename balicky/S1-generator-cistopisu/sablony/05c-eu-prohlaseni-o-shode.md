@@ -63,7 +63,7 @@ Shoda byla posouzena na základě těchto použitých norem a technických speci
 | 3 | {{metodika_otepleni}} | Ověření oteplení výpočtem (technická zpráva, není harmonizovanou normou) |
 | 4 | {{dalsi_pouzite_normy}} | Konkrétní označení výše uvedených a další použité normy a specifikace |
 
-Platnost a edice citovaných norem byly ověřeny v normové bázi ve Vaultu (03-Normy-a-Metodiky/) ke dni {{datum_overeni_norem}}.
+Platnost a edice citovaných norem byly ověřeny v řízené normové dokumentaci výrobce ke dni {{datum_overeni_norem}}.
 
 ## 7. Doplňující informace
 

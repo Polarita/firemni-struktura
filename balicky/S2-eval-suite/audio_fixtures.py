@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Synthetic stereo audio fixtures for the Polarita Eval Suite (package S2, Version 2.7).
-Syntetické stereo zvukové makety pro Eval Suite Polarita (balíček S2, Verze 2.7).
+Synthetic stereo audio fixtures for the Polarita Eval Suite (package S2, Version 2.8).
+Syntetické stereo zvukové makety pro Eval Suite Polarita (balíček S2, Verze 2.8).
 
 EN: Generates deterministic 16-bit PCM stereo WAV files (Channel L = external caller,
     Channel R = Polarita employee) from tone-burst profiles and measures a simple acoustic
@@ -102,8 +102,10 @@ def read_channel(path: Path, channel: str) -> list[float]:
     EN: Return normalized samples of Channel L. Channel R is refused (FAIL_CLOSED).
     CZ: Vrátí normalizované vzorky Kanálu L. Kanál R je odmítnut (FAIL_CLOSED).
     """
-    if channel != "L":
+    if channel == "R":
         raise ChannelRProhibitedError("analysis is allowed on Channel L only / analýza je povolena pouze na Kanálu L")
+    if channel != "L":
+        raise ValueError(f"unknown audio channel: {channel!r} (expected 'L' or 'R')")
     with wave.open(str(path), "rb") as handle:
         if handle.getnchannels() != 2 or handle.getsampwidth() != 2:
             raise ValueError("expected 16-bit stereo WAV / očekáván 16bitový stereo WAV")

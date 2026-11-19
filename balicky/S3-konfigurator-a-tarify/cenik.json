@@ -9,7 +9,11 @@
     "valid_from": "2026-11-15",
     "currency": "CZK",
     "prices_exclude_vat": true,
-    "note": "Výchozí ceník schválil jednatel 1001 dne 15. 11. 2026 ve znění návrhu, beze změn. Hodnoty nebyly porovnány s trhem ani s nákupními ceníky; při založení firmy se schválení zapíše do Decisions jako výchozí stav a každá další změna prochází mutation_confirm. Nejde o závaznou nabídku zákazníkovi."
+    "vat_rates": {
+      "standard_pct": 21,
+      "residential_reduced_pct": 12
+    },
+    "note": "Výchozí ceník schválil jednatel 1001 dne 15. 11. 2026 ve znění návrhu, beze změn. Hodnoty nebyly porovnány s trhem ani s nákupními ceníky; při založení firmy se schválení zapíše do Decisions jako výchozí stav a každá další změna prochází mutation_confirm. Nejde o závaznou nabídku zákazníkovi; veřejný konfigurátor dostává přes pricing.public_price_list pouze veřejný výřez bez interních sazeb, marží a provizí."
   },
   "mrr_tariffs": [
     {
@@ -41,7 +45,8 @@
         "Termovizní diagnostika hlavních rozváděčů",
         "Prioritní servisní SLA odezva přes Helpdesk",
         "Vzdálený Read-Only dohled EV wallboxů (OCPP) a FVE střídačů",
-        "Roční souhrnná zpráva pro pojišťovnu"
+        "Roční souhrnná zpráva pro pojišťovnu",
+        "Sleva 5 % na hodinovou sazbu montérů"
       ]
     },
     {
@@ -56,8 +61,8 @@
         "Vše z tarifu Standard Objekt",
         "Garantovaná pohotovostní SLA lhůta",
         "Preventivní údržba trafostanic, kompenzací a nouzového osvětlení",
-        "Zvýhodněná hodinová sazba montérů",
-        "Prioritní koordinace u 14005 zakazky"
+        "Zvýhodněná hodinová sazba montérů (sleva 10 %)",
+        "Prioritní dispečink a koordinace zakázek"
       ]
     }
   ],

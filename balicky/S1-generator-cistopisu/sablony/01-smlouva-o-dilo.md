@@ -29,7 +29,7 @@ a
 3. Cena platí pro rozsah díla podle rozpočtu. Změnit ji lze pouze schváleným Změnovým listem podle článku 6.
 4. Objednatel uhradí zálohu ve výši {{zaloha_procent}} % ceny díla, tj. {{zaloha_castka}}, do {{zaloha_splatnost_dni}} dnů ode dne uzavření této smlouvy na základě zálohové faktury. Zhotovitel není povinen zahájit práce ani objednat materiál před připsáním zálohy na svůj účet; o dobu prodlení objednatele s úhradou zálohy se prodlužují termíny plnění.
 5. Zbývající část ceny vyúčtuje zhotovitel konečnou fakturou vystavenou po předání a převzetí díla, případně dílčími fakturami podle harmonogramu v příloze č. 3. Splatnost faktur je {{splatnost_faktur_dni}} dnů ode dne jejich doručení objednateli.
-6. Smluvní strany sjednávají zádržné ve výši {{zadrzne_procent}} % ceny díla bez DPH, tj. {{zadrzne_castka}} (zádržné se sjednává v rozmezí 5 až 10 %). Zádržné si objednatel ponechá z konečné faktury a uvolní je do {{zadrzne_uvolneni_dni}} dnů ode dne, kdy zhotovitel odstraní poslední vadu a nedodělek uvedené v předávacím protokolu; neobsahuje-li protokol žádné vady, běží lhůta ode dne jeho podpisu. Zhotovitel je oprávněn zádržné nahradit bankovní zárukou ve stejné výši.
+6. Smluvní strany sjednávají zádržné ve výši {{zadrzne_procent}} % ceny díla bez DPH, tj. {{zadrzne_castka}}. Zádržné si objednatel ponechá z konečné faktury a uvolní je do {{zadrzne_uvolneni_dni}} dnů ode dne, kdy zhotovitel odstraní poslední vadu a nedodělek uvedené v předávacím protokolu; neobsahuje-li protokol žádné vady, běží lhůta ode dne jeho podpisu. Zhotovitel je oprávněn zádržné nahradit bankovní zárukou ve stejné výši.
 7. Faktury zasílá zhotovitel elektronicky na e-mail objednatele uvedený v záhlaví smlouvy. Platba je uhrazena dnem připsání na účet zhotovitele.
 8. Při prodlení s úhradou náleží zhotoviteli úrok z prodlení ve výši stanovené právními předpisy. Je-li objednatel v prodlení s úhradou jakékoli splatné částky déle než {{prodleni_preruseni_dni}} dnů, je zhotovitel oprávněn po předchozím písemném upozornění přerušit provádění díla; o dobu přerušení se prodlužují termíny plnění.
 9. Je-li zhotovitel ke dni uskutečnění plnění veden jako nespolehlivý plátce nebo požaduje-li úhradu na účet nezveřejněný správcem daně, je objednatel oprávněn uhradit částku DPH přímo správci daně, aby předešel ručení za DPH; tím je jeho dluh v této části splněn.
@@ -60,7 +60,7 @@ a
 
 ## Článek 6 — Vícepráce, méněpráce a Změnový list
 
-1. Jakákoli změna rozsahu, technického řešení, ceny nebo termínu díla je možná pouze na základě Změnového listu víceprací a méněprací (dále jen „Změnový list“), jehož vzor tvoří přílohu č. 2. Změnový list vystavuje zhotovitel a schvaluje objednatel elektronicky v portálu zhotovitele (modul portal-spolupracovniku) nebo podpisem.
+1. Jakákoli změna rozsahu, technického řešení, ceny nebo termínu díla je možná pouze na základě Změnového listu víceprací a méněprací (dále jen „Změnový list“), jehož vzor tvoří přílohu č. 2. Změnový list vystavuje zhotovitel a schvaluje objednatel elektronicky v klientském portálu zhotovitele nebo podpisem.
 2. Za objednatele je oprávněn Změnové listy schvalovat: {{osoba_opravnena_zmeny}}.
 3. Zhotovitel neprovede vícepráce bez schváleného Změnového listu a objednateli bez něj nevzniká nárok na jejich provedení. Ústní pokyn objednatele, včetně pokynu uděleného telefonicky, je pouze podnětem k vystavení Změnového listu.
 4. Zjistí-li zhotovitel skryté překážky týkající se místa plnění, které znemožňují provést dílo dohodnutým způsobem (zejména nesoudržné zdivo a omítky, nutnost odstranění starých vrstev maleb, nepřiznané rozvody v konstrukcích, nevyhovující stav stávající instalace), oznámí to bez zbytečného odkladu objednateli a navrhne mu Změnový list. Do jeho schválení může zhotovitel provádění dotčené části díla přerušit a není po tuto dobu v prodlení.
@@ -143,9 +143,9 @@ a
 1. Smlouva se řídí právním řádem České republiky, zejména občanským právem. Spory rozhodují věcně a místně příslušné soudy České republiky.
 2. Smlouvu lze měnit jen písemnými číslovanými dodatky nebo schváleným Změnovým listem podle článku 6.
 3. Je-li některé ustanovení smlouvy neplatné nebo nevymahatelné, nedotýká se to ostatních ustanovení; strany je nahradí ustanovením, které se mu svým účelem nejvíce blíží.
-4. Podléhá-li smlouva uveřejnění podle předpisů o registru smluv, zajistí uveřejnění objednatel.
+4. Podléhá-li smlouva uveřejnění podle předpisů o registru smluv, zajistí uveřejnění objednatel a smlouva nabývá účinnosti dnem jejího uveřejnění v registru smluv.
 5. Přílohy: č. 1 Nabídka a položkový rozpočet, č. 2 Vzor Změnového listu víceprací a méněprací, č. 3 Harmonogram plnění a plateb.
-6. Smlouva je vyhotovena ve dvou stejnopisech nebo v elektronické podobě a nabývá účinnosti dnem podpisu oběma stranami. Strany prohlašují, že si smlouvu přečetly, jejímu obsahu rozumějí a uzavírají ji svobodně a vážně.
+6. Smlouva je vyhotovena ve dvou stejnopisech nebo v elektronické podobě a — nepodléhá-li uveřejnění podle odstavce 4 — nabývá účinnosti dnem podpisu oběma stranami. Strany prohlašují, že si smlouvu přečetly, jejímu obsahu rozumějí a uzavírají ji svobodně a vážně.
 
 ## Podpisy
 

@@ -2,7 +2,7 @@
   "document": "03-ramcova-smlouva-certified-partner-sub",
   "title": "Rámcová smlouva o spolupráci — Certified Partner SUB",
   "draft_watermark": true,
-  "generated_utc": "2026-11-18 06:11 UTC",
+  "generated_utc": "2026-11-19 19:51 UTC",
   "variables": {
     "spis_id": "POL-2027-00003",
     "cislo_smlouvy": "RS-SUB-2027-0001 (VZOR)",
@@ -52,9 +52,9 @@
     "castka_s_dph": "45 980,00 Kč"
   },
   "sha256": {
-    "template": "9e1a4d80dd6693d54edd88dd95010fdabe59486a2ffce837d1fd10711ce8e801",
+    "template": "f215b5974c20b746f3942553c974f6c04335ca643be1a716533d2e9343c2846e",
     "data": "1c55a9fa3c1048b8253301ef8f359966e7063e38160385955bdf3a9e27445312",
-    "pdf": "d3cda30d38e0eb03167a11bafe41458f6d28b6ef6425929e8b5f5c6a10ea5b66"
+    "pdf": "82423882458d3088e41434fb75c87dce8910914db7c9605d0388f5772168ffa8"
   },
   "pages": 6
 }

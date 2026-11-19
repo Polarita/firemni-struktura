@@ -2,7 +2,7 @@
   "document": "05b-protokol-kusove-zkousky",
   "title": "Protokol o kusovém ověření rozváděče",
   "draft_watermark": true,
-  "generated_utc": "2026-11-18 06:12 UTC",
+  "generated_utc": "2026-11-19 19:51 UTC",
   "variables": {
     "spis_id": "POL-2027-00001",
     "nazev_klienta": "Společenství vlastníků Vzorová 12 (VZOR)",
@@ -70,7 +70,7 @@
   "sha256": {
     "template": "d714f25d4eaa6ff8cabf2b21335e8e039bac5312507d4d0840fb89ce1cf28322",
     "data": "5961f33ba61837fac6bffd9da919401734de9cb5daeb2e1259140ecfc47ad829",
-    "pdf": "753f58f694c7cf23b7f1db128d2b160cd1bdbe01e6d9ae190db72e45a2fd8db7"
+    "pdf": "213951b2871ae005cdc6fdf8ec0a8c1c6e31bd4e21ab6a69b721dc48ecacf263"
   },
   "pages": 4
 }

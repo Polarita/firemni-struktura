@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Generátor tiskových PDF výstupů softwarové architektury Polarita s.r.o. (Verze 2.7):
+Generátor tiskových PDF výstupů softwarové architektury Polarita s.r.o. (Verze 2.8):
   1) 05-SOFTWAROVA-MAPA-A3-2026.pdf (1 strana A3 na šířku 420×297 mm, čitelná sazba bez zmenšení)
   2) 04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf (souborná Modrá kniha A4, 0× file:// URI, 1:1 měřítko)
 Cesty jsou relativní k umístění skriptu (nastroje/ ve složce firemni-struktura/); HTML předlohy vznikají
@@ -10,24 +10,26 @@ Spuštění: python nastroje/build_software_pdfs.py   (vyžaduje balík markdown
 Striktně bez čísel verzí u softwaru, protokolů a licencí!
 """
 
-import re
+import json
 import os
+import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from urllib.parse import unquote
 import markdown
 
 ROOT_STRUCT = Path(__file__).resolve().parents[1]
+CANON = json.loads((Path(__file__).resolve().parent / "kanon.json").read_text(encoding="utf-8"))
+VER = CANON["version"]
+BUDGET_TOTAL = CANON["budget_total_usd"]
+COMPANY = CANON["company"]
 SW_DIR = ROOT_STRUCT / "software"
-SCRATCH_DIR = Path(tempfile.gettempdir()) / "polarita-pdf-build"
 
 OUT_BOOK_PDF = ROOT_STRUCT / "04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf"
 OUT_POSTER_PDF = ROOT_STRUCT / "05-SOFTWAROVA-MAPA-A3-2026.pdf"
-
-POSTER_HTML_PATH = SCRATCH_DIR / "poster_software_a3.html"
-BOOK_HTML_PATH = SCRATCH_DIR / "book_software_a4.html"
 
 # EN: Browser candidates for headless printing: the POLARITA_PDF_BROWSER variable first, then usual
 #     Windows paths, then command names found on PATH (Linux, macOS).
@@ -58,6 +60,11 @@ def doc_slug(rel_posix: str) -> str:
     return "doc-" + re.sub(r"[^A-Za-z0-9_-]+", "-", rel_posix).strip("-")
 
 
+def github_slugify(value: str, separator: str = "-") -> str:
+    """GitHub-compatible anchor slug preserving Czech diacritics."""
+    return re.sub(r"[^\w\s-]", "", value.lower(), flags=re.UNICODE).strip().replace(" ", separator)
+
+
 def sanitize_html_links(html: str, source_rel: str, included_rels: set[str]) -> str:
     """
     F32 fix: Převede odkazy uvnitř knihy na interní #doc-... kotvy a odkazy mimo knihu na <span class="local-ref">,
@@ -65,12 +72,15 @@ def sanitize_html_links(html: str, source_rel: str, included_rels: set[str]) -> 
     """
     src_dir = (ROOT_STRUCT / source_rel).parent.resolve()
     root_res = ROOT_STRUCT.resolve()
+    anchor_prefix = f"{doc_slug(source_rel)}--"
 
     def repl(match: re.Match) -> str:
         href = match.group(1).strip()
         inner = match.group(2)
-        if href.startswith(("https://", "http://", "mailto:", "#")):
+        if href.startswith(("https://", "http://", "mailto:")):
             return match.group(0)
+        if href.startswith("#"):
+            return f'<a href="#{anchor_prefix}{href[1:]}">{inner}</a>'
         raw_path = unquote(href.split("#", 1)[0]).strip()
         if not raw_path:
             return inner
@@ -86,12 +96,26 @@ def sanitize_html_links(html: str, source_rel: str, included_rels: set[str]) -> 
     return re.sub(r'<a\s+href="([^"]+)"[^>]*>(.*?)</a>', repl, html, flags=re.DOTALL)
 
 
+def apply_canon_tokens(html: str) -> str:
+    """Substitute canonical values from kanon.json into static poster/overview templates."""
+    replacements = {
+        "__VER__": VER,
+        "__BUDGET_TOTAL__": str(BUDGET_TOTAL),
+        "__ICO__": COMPANY["ico"],
+        "__DIC__": COMPANY["dic"],
+        "__ISDS__": COMPANY["isds"],
+    }
+    for token, value in replacements.items():
+        html = html.replace(token, value)
+    return html
+
+
 def build_poster_html() -> str:
-    return r"""<!DOCTYPE html>
+    template = r"""<!DOCTYPE html>
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<title>Polarita s.r.o. — Softwarová a serverová architektura · Verze 2.7 (A3)</title>
+<title>Polarita s.r.o. — Softwarová a serverová architektura · Verze __VER__ (A3)</title>
 <style>
   @page {
     size: 420mm 297mm;
@@ -411,19 +435,19 @@ def build_poster_html() -> str:
   <!-- 1. TOP DARK HEADER -->
   <header class="topbar">
     <div class="top-left">
-      <h1>POLARITA S.R.O. — SOFTWAROVÁ A SERVEROVÁ ARCHITEKTURA · VERZE 2.7 (2026)</h1>
+      <h1>POLARITA S.R.O. — SOFTWAROVÁ A SERVEROVÁ ARCHITEKTURA · VERZE __VER__ (2026)</h1>
       <div class="sub">
         <span class="em">0 Kč licencí · 100 % Open-Source + 10 modulů Odd. 17 · 6+9 DB PostgreSQL · 0× MySQL/MongoDB</span> · Asterisk + WhisperX + Silero VAD + librosa + Zulip + Stalwart + Chatwoot
       </div>
     </div>
     <div class="top-right">
       <div class="pill-row">
-        <span class="hpill">IČO: 14180324 · DIČ: CZ14180324 · ISDS: w9bbdva · Pobočka 101</span>
+        <span class="hpill">IČO: __ICO__ · DIČ: __DIC__ · ISDS: __ISDS__ · Pobočka 101</span>
         <span class="hpill accent">Kanály: latest LTS &amp; latest · Ověřená matice kompatibility</span>
       </div>
       <div class="pill-row">
         <span class="hpill">polarita-hq (Ubuntu Server LTS · OpenZFS · 0 Dockeru · 0 veř. SIP portů)</span>
-        <span class="hpill">20 ai = 470 USD/m (85+15 %) · Stage 1/2 Eval 20/20</span>
+        <span class="hpill">20 ai = __BUDGET_TOTAL__ USD/m (85+15 %) · Stage 1/2 Eval 20/20</span>
       </div>
     </div>
   </header>
@@ -450,9 +474,9 @@ def build_poster_html() -> str:
       <div class="u-eyebrow">ŘÍDICÍ MOZEK 20 ai (BLOK 7), ZULIP, METADATA KERNEL &amp; WORKER / JUDGE</div>
       <div class="u-title">Paperclip + Zulip · metadata-schema-kernel · AigisCode · Stage 1/2 Eval</div>
       <ul class="u-list">
-        <li><code>Paperclip</code> (1 zdroj promptů z <code>Gitea</code>) + <code>Zulip</code> v <code>Bloku 7</code> · <code>Decisions</code> diff <code>mutation_confirm</code> · tvrdý strop <code>470 USD/m</code> (<code>85 % + 15 % P1</code>)</li>
-        <li>Worktrees <code>wt-worker / wt-judge</code> · <code>Draivix/aigiscode (MIT)</code> + <code>Gitea CI</code> · dvoustupňový <code>Promptfoo</code> (<code>Stage 1</code> mocky v Bloku 7, <code>Stage 2</code> v Bloku 12)</li>
-        <li><code>metadata-schema-kernel</code> (výhradně vlastní schémata v <code>db_erp_lhutnik</code>, 0 zásahů do vendor DB!) · <code>polarita-ads-mcp (PAUSED)</code> · <code>Nod</code></li>
+        <li><code>Paperclip</code> (rozšíření Polarity <code>N-10</code>, <code>decisions.int.polarita.cz</code>) + <code>Zulip</code> v <code>Bloku 7</code> · <code>Claude / Gemini / Codex CLI</code> · strop <code>470 USD/m</code> (<code>85 % + 15 % P1</code>)</li>
+        <li>Worktrees <code>wt-worker / wt-judge</code> · <code>Draivix/aigiscode (MIT)</code> + <code>Gitea CI</code> · dvoustupňový <code>Promptfoo</code> (<code>Stage 1</code> samostatné v Bloku 7, <code>Stage 2</code> v Bloku 12)</li>
+        <li><code>metadata-schema-kernel</code> (vlastní schémata <code>db_erp_lhutnik</code> + <code>wms</code>, 0 zásahů do vendor DB!) · <code>polarita-ads-mcp (PAUSED)</code> · <code>Nod</code> (egress ACL)</li>
       </ul>
     </div>
 
@@ -463,12 +487,12 @@ def build_poster_html() -> str:
     </div>
 
     <div class="u-card emerald">
-      <div class="u-eyebrow">FYZICKÝ SERVER, CELÁ FIRMA V INCUS &amp; 4 ZÓNY (0 DOCKERU · 6+9 DB PG · 0× MYSQL/MONGODB)</div>
-      <div class="u-title">Server polarita-hq · Ubuntu Server LTS · OpenZFS</div>
+      <div class="u-eyebrow">FYZICKÝ SERVER, CELÁ FIRMA V INCUS &amp; 4 ZÓNY (0 DOCKERU · 6+9 PG DB + PGBOUNCER · 0× MYSQL)</div>
+      <div class="u-title">Server polarita-hq · Ubuntu Server LTS · OpenZFS (MVP 64 GB / Plný 128 GB+GPU)</div>
       <ul class="u-list">
         <li>Zrcadlený <code>OpenZFS</code> nad <code>/srv/polarita/</code> · <code>Incus (latest)</code> (<code>LXC</code> + <code>OCI</code> + <code>KVM</code>) deklarativně řízený přes <code>OpenTofu (latest)</code></li>
-        <li><strong>4 zóny:</strong> <code>dmz_edge</code> (<code>Caddy</code> + MX <code>Stalwart</code>) · <code>app_internal</code> (<code>Asterisk</code>, <code>Zulip</code>, <code>Chatwoot</code> za <code>oauth2-proxy</code>) · <code>data_vault</code> (<code>6+9 PG DB</code> + <code>OpenBao</code>) · <code>sandbox_airgap</code></li>
-        <li><code>Restic REST Server (--append-only)</code> (nedělní datový drill <code>03:00</code> + čtvrtletní <strong>Full Bare-Metal / VM DR Drill</strong>) · <code>Checkmk Raw</code> + <code>Telegram</code> pager</li>
+        <li><strong>4 zóny:</strong> <code>dmz_edge</code> (<code>Caddy + 3478/udp</code> + MX) · <code>app_internal</code> (storefronty, <code>Zulip</code>, <code>Chatwoot /app/*</code> za <code>oauth2-proxy</code>) · <code>data_vault</code> (<code>6+9 PG DB + PgBouncer</code> + <code>OpenBao raft</code>) · <code>sandbox_airgap (eth0 none)</code></li>
+        <li><code>Restic REST Server (--append-only)</code> + watchdog (nedělní drill <code>03:00</code> + čtvrtletní <strong>Full DR Drill</strong>) · <code>Checkmk Raw</code> + <code>Telegram</code> + ext. SMTP</li>
       </ul>
     </div>
   </section>
@@ -489,8 +513,8 @@ def build_poster_html() -> str:
             <span class="mcard-title">01 · Ubuntu Server &amp; OpenZFS</span>
             <span class="mtag">OS + FS</span>
           </div>
-          <div class="mcard-role">Zrcadlený základ /srv/polarita/ + 5 klientských OS</div>
-          <div class="mcard-desc"><code>Ubuntu Server (latest LTS)</code> se samoopravnými součty <code>OpenZFS</code> (na hostiteli jen OS + <code>Incus</code>); podpora <code>Win / Linux / macOS / Android / iOS</code>.</div>
+          <div class="mcard-role">Zrcadlený základ /srv/polarita/ + MVP/Plný + 5 OS</div>
+          <div class="mcard-desc"><code>Ubuntu Server (latest LTS)</code> se samoopravnými součty <code>OpenZFS</code> (profily <code>MVP 64 GB</code> / <code>Plný 128 GB+GPU</code>); podpora <code>Win / Linux / macOS / Android / iOS</code>.</div>
         </div>
         <div class="mcard">
           <div class="mcard-top">
@@ -505,8 +529,8 @@ def build_poster_html() -> str:
             <span class="mcard-title">03 · Headscale, Caddy &amp; SIP</span>
             <span class="mtag">VPN &amp; TLS</span>
           </div>
-          <div class="mcard-role">Mesh VPN, HTTPS/MX hrana a odchozí SIPS/SRTP</div>
-          <div class="mcard-desc"><code>Cloudflare DNS</code>, <code>Caddy (latest)</code> + MX <code>25/tcp Stalwart</code>, <strong>0 veřejných SIP portů</strong> (odchozí <code>SIPS/SRTP</code> <code>Asterisk</code>) a vlastní <code>Headscale (latest)</code>.</div>
+          <div class="mcard-role">Mesh VPN (+ 3478/udp), HTTPS/MX hrana a odchozí SIPS</div>
+          <div class="mcard-desc"><code>Cloudflare</code> (<code>trusted_proxies</code>), <code>Caddy</code> (<code>wss://ocpp</code>) + MX <code>25/tcp</code>, <strong>0 veř. SIP portů</strong> (odchozí <code>SIPS/SRTP</code>) a <code>Headscale (+ 3478/udp STUN)</code>.</div>
         </div>
         <div class="mcard">
           <div class="mcard-top">
@@ -514,7 +538,7 @@ def build_poster_html() -> str:
             <span class="mtag sec">IPS &amp; SSH</span>
           </div>
           <div class="mcard-role">Jaderný firewall, komunitní IPS a správa uzlů</div>
-          <div class="mcard-desc">Striktní pravidla mezi zónami v <code>nftables</code>, detekce útoků <code>CrowdSec</code> a správa přes <code>OpenSSH</code> klíče.</div>
+          <div class="mcard-desc">Striktní pravidla mezi zónami v <code>nftables</code>, detekce útoků <code>CrowdSec</code> (+ bouncer) a správa přes <code>OpenSSH</code> klíče.</div>
         </div>
       </div>
       <div class="col-foot">Garanti: 17003 &amp; 17004 · 0 veř. SIP portů</div>
@@ -530,19 +554,19 @@ def build_poster_html() -> str:
       <div class="col-body">
         <div class="mcard">
           <div class="mcard-top">
-            <span class="mcard-title">OpenBao + TPM + YubiKey</span>
+            <span class="mcard-title">OpenBao (raft) + TPM + YubiKey</span>
             <span class="mtag sec">Trezor</span>
           </div>
           <div class="mcard-role">API klíče, SIPS/SRTP, DKIM, ISDS a pečetní certifikát</div>
-          <div class="mcard-desc">Tajemství pouze v RAM (0 hesel v <code>.env</code>), <code>Read-Only</code> certifikát ISDS <code>w9bbdva</code>, <code>SIPS/SRTP</code>, DKIM, <code>.p12 EET 2.0</code> a <code>Break-Glass SEAL</code>.</div>
+          <div class="mcard-desc">Tajemství pouze v RAM (odpoj. klíče TPM <code>N-16</code>, 0 v <code>.env</code>), <code>Vaultwarden SQLite</code>, <code>ISDS w9bbdva</code>, vypnutý <code>.p12 EET 2.0</code> a zap. <code>YubiKey č. 2</code>.</div>
         </div>
         <div class="mcard">
           <div class="mcard-top">
             <span class="mcard-title">Keycloak, oauth2-proxy &amp; PII</span>
             <span class="mtag">SSO &amp; PII</span>
           </div>
-          <div class="mcard-role">OIDC SSO + forward-auth Chatwoot CE + Clean Room</div>
-          <div class="mcard-desc"><code>Keycloak SSO</code> (<code>YubiKey</code> + <code>oauth2-proxy</code> a <code>Platform API</code> pro <code>Chatwoot CE</code>), <code>Clean Room</code> (0 PII ve Vaultu) a <code>Kanál R FAIL_CLOSED</code> (pravidla sledování).</div>
+          <div class="mcard-role">OIDC SSO + forward-auth Chatwoot/Vault + Clean Room</div>
+          <div class="mcard-desc"><code>Keycloak SSO</code> (<code>PG</code> Blok 5, <code>oauth2-proxy</code> pro <code>Chatwoot /app/*</code> a <code>SilverBullet</code>), acyklický <code>Clean Room</code> (bez <code>bytea</code>) a <code>Kanál R FAIL_CLOSED</code>.</div>
         </div>
         <div class="mcard">
           <div class="mcard-top">
@@ -550,7 +574,7 @@ def build_poster_html() -> str:
             <span class="mtag sec">CaMeL</span>
           </div>
           <div class="mcard-role">Airgap extrakce + tag + deterministické ACL mimo LLM</div>
-          <div class="mcard-desc">1) <code>ClamAV + Dangerzone + WhisperX</code> v <code>sandbox_airgap (nic=none)</code>, 2) <code>&lt;untrusted_inbound_comm&gt;</code>, 3) ACL a <code>mutation_confirm</code> mimo úsudek modelu.</div>
+          <div class="mcard-desc">1) <code>ClamAV + Dangerzone / Poppler+QPDF + WhisperX</code> (<code>HF_HUB_OFFLINE=1</code>) v <code>sandbox_airgap (eth0 none)</code>, 2) <code>&lt;untrusted_inbound_comm&gt;</code>, 3) ACL + <code>mutation_confirm</code>.</div>
         </div>
         <div class="mcard">
           <div class="mcard-top">
@@ -558,7 +582,7 @@ def build_poster_html() -> str:
             <span class="mtag">QES / pečeť</span>
           </div>
           <div class="mcard-role">Čip QSCD (JSignPdf) vs. serverová pečeť (pyHanko)</div>
-          <div class="mcard-desc">Osobní <code>QES</code> (<code>1001</code> / <code>SUB-1007</code> v <code>JSignPdf</code> na čipu <code>QSCD</code> — soukromý klíč nikdy v OpenBao!) vs. serverová pečeť <code>pyHanko</code> pro Stavební deník.</div>
+          <div class="mcard-desc">Osobní <code>QES</code> (<code>1001</code> / <code>SUB-1007</code> v <code>JSignPdf</code> na stanici a čipu <code>QSCD</code> — klíč nikdy v OpenBao!) vs. serverová pečeť <code>pyHanko</code> pro Stavební deník.</div>
         </div>
       </div>
       <div class="col-foot">Garanti: 17004, 15001 &amp; 1001 · Acyklický Blok 4</div>
@@ -570,23 +594,23 @@ def build_poster_html() -> str:
         <h3>05–06 · 6+9 DB &amp; DR</h3>
         <span class="col-badge">Vrstvy 05–06</span>
       </div>
-      <div class="col-sub">6 doménových + 9 servisních PG DB, 90d/LEGAL_HOLD a DR.</div>
+      <div class="col-sub">6 doménových + 9 servisních PG DB + PgBouncer, 90d/LEGAL_HOLD a DR.</div>
       <div class="col-body">
         <div class="mcard">
           <div class="mcard-top">
-            <span class="mcard-title">05 · 6+9 DB PostgreSQL</span>
+            <span class="mcard-title">05 · 6+9 PG DB + PgBouncer</span>
             <span class="mtag">data_vault</span>
           </div>
-          <div class="mcard-role">Vlastní schémata vs. vendor migrace (0× MySQL · 0× MongoDB)</div>
-          <div class="mcard-desc">6 doménových (<code>db_eshop</code>, <code>db_akademie</code>, <code>db_erp_lhutnik</code>, <code>db_gdpr_zkousky</code>, <code>db_hr_lide</code>, <code>db_paperclip</code>) + 9 servisních DB s jasným vlastníkem migrací.</div>
+          <div class="mcard-role">Vlastní schémata (wms/vault_search) vs. vendor migrace</div>
+          <div class="mcard-desc"><code>PostgreSQL (recordsize=8k) + PgBouncer</code>: 6 doménových + 9 servisních DB (<code>0× MySQL/Mongo</code>); mimo PG jen <code>OpenBao raft</code>, <code>Vaultwarden SQLite</code>, <code>RocksDB</code>.</div>
         </div>
         <div class="mcard">
           <div class="mcard-top">
             <span class="mcard-title">Garage (90d) &amp; WORM LEGAL_HOLD</span>
             <span class="mtag">90d / 10 l</span>
           </div>
-          <div class="mcard-role">Dvouvrstvá retence hovorů, fotky, Gitea a archiv</div>
-          <div class="mcard-desc"><code>Valkey</code>, fotky a <strong><code>90denní</code> stereo hovory</strong> v <code>Garage</code>, <code>Gitea</code> a WORM <code>legal-archive</code> (<strong><code>LEGAL_HOLD 3–10 let</code> dle promlčecích lhůt</strong>, <code>.zfo</code>, pasy CE, deníky).</div>
+          <div class="mcard-role">Dvouvrstvá retence hovorů, bloby pošty, Gitea a archiv</div>
+          <div class="mcard-desc"><code>Valkey</code>, fotky, <code>stalwart-blobs</code> a <strong><code>90d</code> stereo hovory</strong> v <code>Garage</code>, <code>Gitea</code> a WORM <code>legal-archive</code> (<strong><code>LEGAL_HOLD 3–10 let</code></strong>, <code>.zfo</code>, pasy CE, deníky).</div>
         </div>
         <div class="mcard">
           <div class="mcard-top">
@@ -594,15 +618,15 @@ def build_poster_html() -> str:
             <span class="mtag sec">2× DR Drill</span>
           </div>
           <div class="mcard-role">Týdenní datová obnova + čtvrtletní Full DR Drill</div>
-          <div class="mcard-desc"><code>Sanoid</code>, <code>pgBackRest</code> a <code>Restic REST Server (--append-only)</code>: v neděli <code>03:00</code> obnova všech <code>6+9</code> DB v <code>Incus</code> + čtvrtletní <strong>Full DR Drill</strong> na čistý stroj.</div>
+          <div class="mcard-desc"><code>Sanoid</code>, <code>pgBackRest</code> a <code>Restic REST Server (--append-only)</code>: v neděli <code>03:00</code> obnova <code>6+9</code> DB, <code>OpenBao/Vaultwarden/Garage/Gitea</code> v <code>eth0 none</code> + čtvrtletní <strong>Full DR Drill</strong>.</div>
         </div>
         <div class="mcard">
           <div class="mcard-top">
-            <span class="mcard-title">Checkmk Raw + Telegram Pager</span>
+            <span class="mcard-title">Checkmk + Watchdog + Telegram</span>
             <span class="mtag">Monitoring</span>
           </div>
-          <div class="mcard-role">Acyklický dohled od Bloku 6 do Bloku 11</div>
-          <div class="mcard-desc">V <code>Bloku 6</code> primární out-of-band <code>Telegram</code> pager + SMTP (host, ZFS, Incus, OpenBao, MX relay); v <code>Bloku 7</code> připojení <code>Zulip #17-it-secops</code> a v <code>Bloku 11</code> SIP/poštovní jádro.</div>
+          <div class="mcard-role">Acyklický dohled + nezávislý watchdog mimo polarita-hq</div>
+          <div class="mcard-desc">V <code>Bloku 6</code> out-of-band <code>Telegram</code> + ext. SMTP relay + watchdog; v <code>Bloku 7</code> webhook <code>Zulip #17-it-secops</code> a v <code>Bloku 11</code> <code>airgap-spool</code> / SIP / pošta.</div>
         </div>
       </div>
       <div class="col-foot">Garanti: 17003 &amp; 17004 · 6+9 DB · Týdenní + Full DR</div>
@@ -621,8 +645,8 @@ def build_poster_html() -> str:
             <span class="mcard-title">07 · Paperclip + Zulip (Blok 7)</span>
             <span class="mtag">20 ai</span>
           </div>
-          <div class="mcard-role">Strop 470 USD (85+15 %), 1 zdroj promptů a Zulip</div>
-          <div class="mcard-desc"><code>Paperclip</code> + <code>Zulip + LiveKit</code> přímo v <code>Bloku 7</code>, <code>wt-worker/judge</code>, <code>claude-powerline-rust</code> a tvrdý stop všech API při <code>100 %</code> stropu <code>470 USD</code>.</div>
+          <div class="mcard-role">Strop 470 USD (85+15 %), Claude/Gemini/Codex &amp; Zulip</div>
+          <div class="mcard-desc"><code>Paperclip</code> (<code>decisions.int.polarita.cz</code>, rozšíření <code>N-10</code>) + <code>Zulip + LiveKit</code> v <code>Bloku 7</code>, <code>wt-worker/judge</code> a stop při <code>100 %</code> stropu <code>470 USD</code>.</div>
         </div>
         <div class="mcard custom">
           <div class="mcard-top">
@@ -630,15 +654,15 @@ def build_poster_html() -> str:
             <span class="mtag odd17">Odd. 17</span>
           </div>
           <div class="mcard-role">Vlastní schémata + Ads MCP PAUSED + Stage 1/2</div>
-          <div class="mcard-desc"><code>metadata-schema-kernel</code> (jen <code>db_erp_lhutnik</code>), <code>polarita-ads-mcp</code> (<code>PAUSED</code> + Spend Cap) a dvoustupňový <code>Promptfoo</code> (<code>Stage 1</code> &amp; <code>Stage 2</code> = <code>20/20</code>).</div>
+          <div class="mcard-desc"><code>metadata-schema-kernel</code> (<code>db_erp_lhutnik</code>, <code>wms</code>), <code>polarita-ads-mcp</code> (<code>PAUSED</code> + Cap) a <code>Promptfoo</code> (<code>Stage 1</code> samostatné v Bloku 7, <code>Stage 2</code> v B12).</div>
         </div>
         <div class="mcard custom">
           <div class="mcard-top">
             <span class="mcard-title">08 · Vault (0 PII) &amp; ISDS Bridge</span>
             <span class="mtag odd17">Odd. 17</span>
           </div>
-          <div class="mcard-role">SilverBullet + isds-podatelna-bridge (czebox.cz)</div>
-          <div class="mcard-desc"><code>SilverBullet</code> (0 HR karet!); <code>libdatovka</code> čte <code>Po–Pá 06:50</code> jen při aktivní službě <code>1001 / Break-Glass</code> — při neobsazené nepřítomnosti <code>PAUSED</code> (doručení / fikce)!</div>
+          <div class="mcard-role">SilverBullet (oauth2-proxy) + libdatovka (czebox.cz)</div>
+          <div class="mcard-desc"><code>SilverBullet</code> (<code>vault.int.polarita.cz</code>); <code>libdatovka</code> (klíč v RAM <code>memfd/tmpfs</code>) čte <code>06:50</code> jen při službě <code>1001/Break-Glass</code>, <code>&lt;10d PAUSED</code>, <code>≥10d</code> zástupce.</div>
         </div>
         <div class="mcard custom">
           <div class="mcard-top">
@@ -646,7 +670,7 @@ def build_poster_html() -> str:
             <span class="mtag odd17">Odd. 17</span>
           </div>
           <div class="mcard-role">case_id · Mapy.cz · 48h šanony · 3úrovňové OCPP</div>
-          <div class="mcard-desc"><strong>360° Karta + WebRTC + #t=MM:SS</strong>, matice zdrojů dle úkolu + <code>Mapy.cz</code>, <code>DTM ČR</code>, Stavební deník a <code>OCPP</code> (<code>Read-Only</code> / <code>Reset</code> / <code>UpdateFirmware</code> s <code>mutation_confirm</code>).</div>
+          <div class="mcard-desc"><strong>360° Karta + WebRTC + #t=MM:SS</strong>, matice zdrojů + <code>Mapy.cz</code>, <code>DTM ČR</code>, Deník a <code>wss://ocpp.polarita.cz</code> (<code>RO</code> / <code>Reset</code> / <code>Firmware</code> s <code>mutation_confirm</code>).</div>
         </div>
       </div>
       <div class="col-foot">Garanti: 11001, 17001 &amp; 14005 · ISDS PAUSED · 3× OCPP</div>
@@ -665,8 +689,8 @@ def build_poster_html() -> str:
             <span class="mcard-title">Astro + WebChat + Kalkulačka SVJ</span>
             <span class="mtag">polarita.cz</span>
           </div>
-          <div class="mcard-role">Rychlý web, 48h šanony, Chatwoot a Umami nad PG</div>
-          <div class="mcard-desc"><code>Astro + TS + Tailwind</code> (<code>llms.txt</code>), <strong>Kalkulačka SVJ</strong> (<code>/kalkulacka-svj</code>), <code>/prevzeti-sanonu</code>, <code>Chatwoot WebChat</code>, <code>Umami</code> nad PG a <code>Ecomail</code>.</div>
+          <div class="mcard-role">Storefronty v app_internal, Umami cookieless + CMP</div>
+          <div class="mcard-desc"><code>Astro</code> (<code>app_internal</code>), <strong>Kalkulačka SVJ</strong>, <code>/prevzeti-sanonu</code>, <code>Chatwoot WebChat</code>, <code>Umami</code> (bez cookies) + oddělený <code>CMP</code> (rekl. pixely) a <code>Ecomail</code>.</div>
         </div>
         <div class="mcard">
           <div class="mcard-top">
@@ -674,23 +698,23 @@ def build_poster_html() -> str:
             <span class="mtag">polarita.eu</span>
           </div>
           <div class="mcard-role">B2C/B2B e-shop a oddělený complaint_asserted_at</div>
-          <div class="mcard-desc">B2B ceníky (<code>Certified Partner SUB</code>), <code>Balíkobot</code>, Fio QR a v RMA oddělený <code>received_at</code> vs. neměnný <code>complaint_asserted_at</code> (lhůta vyřízení reklamace).</div>
+          <div class="mcard-desc">B2B ceníky (<code>Partner SUB</code>), <code>Balíkobot</code>, Fio QR, podmíněné <code>EET 2.0</code> (vypnuté) a v RMA <code>received_at</code> vs. neměnný <code>complaint_asserted_at</code>.</div>
         </div>
         <div class="mcard custom">
           <div class="mcard-top">
             <span class="mcard-title">Vlastní modul elektro-wms</span>
             <span class="mtag odd17">Odd. 17</span>
           </div>
-          <div class="mcard-role">VAN-*, S/N, PHE, baterie &gt; 2 kWh a SCRAP-CU</div>
-          <div class="mcard-desc">Rezervace staveb, <code>VAN-*</code> (svěřené hodnoty), bubny, <code>S/N</code> + B2B záruky, pas rozváděče, <code>PHE</code>, pasy baterií pro LMT, EV a průmyslové baterie &gt; 2 kWh od <code>18. 2. 2027</code> a <code>SCRAP-CU</code> (přenesená daň).</div>
+          <div class="mcard-role">Schéma wms (db_eshop): VAN-*, S/N, PHE, baterie</div>
+          <div class="mcard-desc">Izolované schéma <code>wms</code>: rezervace, <code>VAN-*</code> (svěřené hodnoty), bubny, <code>S/N</code> + B2B záruky, pas NN, <code>PHE</code>, pasy baterií &gt; 2 kWh od <code>18. 2. 2027</code> a <code>SCRAP-CU</code>.</div>
         </div>
         <div class="mcard custom">
           <div class="mcard-top">
             <span class="mcard-title">Moodle LTS (PHP matice) &amp; Bridge</span>
             <span class="mtag odd17">Odd. 17</span>
           </div>
-          <div class="mcard-role">Podporovaná větev PHP-FPM + poučení vs. 3čl. komise</div>
-          <div class="mcard-desc"><code>Moodle (latest LTS)</code> nad ověřenou kompatibilní větví <code>PHP-FPM</code>; <code>compliance-bridge</code> rozlišuje osobu poučenou (bez komise) a zkoušky před 3čl. komisí s <code>QES</code> podpisem <code>1001</code>.</div>
+          <div class="mcard-role">Clean Room (Blok 9) + poučení vs. 3čl. komise</div>
+          <div class="mcard-desc"><code>Moodle LTS</code> nad ověřenou větví <code>PHP-FPM</code>; živé <code>Clean Room</code> pohledy nad <code>db_gdpr_zkousky</code> v B9 (bez <code>bytea</code>); zkoušky před 3čl. komisí s <code>QES 1001</code>.</div>
         </div>
       </div>
       <div class="col-foot">Garanti: 17002, 13001 &amp; 14004 · Matice Moodle/PHP</div>
@@ -709,8 +733,8 @@ def build_poster_html() -> str:
             <span class="mcard-title">QElectroTech &amp; Průmyslový CAD</span>
             <span class="mtag">Produkce</span>
           </div>
-          <div class="mcard-role">Schémata .qet + LibreDWG/ezdxf/IfcOpenShell</div>
-          <div class="mcard-desc">Produkční elektro schémata v <code>QElectroTech</code> (značky dle platné normy), desktop <code>LibreCAD / FreeCAD / LibreOffice</code> a bez-síťové čtení výkresů v <code>sandbox_airgap</code>.</div>
+          <div class="mcard-role">Stanice 1001+ (.qet XML) + LibreDWG/ezdxf/Ifc</div>
+          <div class="mcard-desc">Desktop editor <code>QElectroTech</code> na stanicích <code>1001+</code> (server jen XML <code>.qet</code> / izolovaný export), <code>LibreCAD / FreeCAD</code> a čtení v <code>sandbox_airgap (eth0 none)</code>.</div>
         </div>
         <div class="mcard">
           <div class="mcard-top">
@@ -734,7 +758,7 @@ def build_poster_html() -> str:
             <span class="mtag odd17">Odd. 17</span>
           </div>
           <div class="mcard-role">Kladné i negativní revize (NESCHOPNO) + .xc4</div>
-          <div class="mcard-desc">9 vrstev přípomocí <code>.xc4</code>, vícepráce <code>#t=MM:SS</code>; <code>FAIL_CLOSED</code> na neúplné vstupy, ale při překročení limitů norem generuje návrh <strong>negativní revize <code>NESCHOPNO</code></strong> pro RT!</div>
+          <div class="mcard-desc">9 vrstev přípomocí <code>.xc4</code>, vícepráce <code>#t=MM:SS</code>; <code>FAIL_CLOSED</code> na neúplné vstupy, ale při překročení limitů norem generuje <strong>negativní revizi <code>NESCHOPNO</code></strong> (RT pod vl. TIČR)!</div>
         </div>
       </div>
       <div class="col-foot">Garanti: 14001–14003 &amp; 15002 · Pasy NN · Neg. revize</div>
@@ -753,32 +777,32 @@ def build_poster_html() -> str:
             <span class="mcard-title">cz-sk-registry &amp; finance-uol</span>
             <span class="mtag odd17">Odd. 17</span>
           </div>
-          <div class="mcard-role">ADIS · DB mutex · odpovědnost 1001 + ORG-UOL</div>
-          <div class="mcard-desc"><code>ARES/VIES/ADIS/ISIR/CEE/SK RPO</code> (vč. ručení za DPH) + DB mutex řad, <code>ISDOC/Peppol</code>, <code>EET 2.0</code>, MRR ledger a mzdy 2. den → smluvní <code>ORG-UOL</code> 3. prac. den.</div>
+          <div class="mcard-role">ADIS · DB mutex (ORG-UOL řada) · odpovědnost 1001</div>
+          <div class="mcard-desc"><code>ARES/VIES/ADIS/ISIR/CEE/SK</code> + DB mutex řad, <code>ISDOC</code> (dávka <code>ORG-UOL</code>), podmíněné <code>EET 2.0</code> (vypnuté), MRR ledger a mzdy 2. den → <code>ORG-UOL</code> 3. prac. den.</div>
         </div>
         <div class="mcard custom">
           <div class="mcard-top">
             <span class="mcard-title">PWA portal-spolupracovniku</span>
             <span class="mtag odd17">Odd. 17</span>
           </div>
-          <div class="mcard-role">Přednástupní JMHZ · směny ≥ 14d/3d · pravidla sledování</div>
-          <div class="mcard-desc">Registrace ČSSZ / <code>JMHZ</code> <strong>před zahájením práce</strong>, směny ≥ 14d EMP / ≥ 3d BRI, DPČ ≤ 1/2 doby, 5r Osvědčení vs. 10r Oprávnění TIČR, QR a <code>WhisperX</code>.</div>
+          <div class="mcard-role">Clean Room B11 · přednástupní JMHZ · směny ≥ 14d/3d</div>
+          <div class="mcard-desc">Ostré <code>Clean Room</code> pohledy nad <code>db_hr_lide</code> v B11 (bez <code>bytea</code>), registrace ČSSZ / <code>JMHZ</code> <strong>před prací</strong>, směny ≥ 14d/3d, DPČ ≤ 1/2 doby, 5r/10r TIČR a <code>WhisperX</code>.</div>
         </div>
         <div class="mcard custom">
           <div class="mcard-top">
             <span class="mcard-title">Traccar + fleet-gps + Mapy.cz</span>
             <span class="mtag odd17">Odd. 17</span>
           </div>
-          <div class="mcard-role">Matice zdrojů dle úkolu &amp; vozidla v obecném režimu</div>
-          <div class="mcard-desc">Rezervace zdrojů dle úkolu (sklad bez blokace auta!) + trasy <code>Mapy.cz</code>; odpovědnost za měřidla a <code>VAN-*</code>, <strong>služební vozidla v obecném režimu odpovědnosti</strong>.</div>
+          <div class="mcard-role">M2M APN VPN / TCP · matice zdrojů &amp; obecná odpovědnost</div>
+          <div class="mcard-desc"><code>Traccar</code> přes M2M VPN/úzký TCP port, rezervace zdrojů dle úkolu + trasy <code>Mapy.cz</code>; měřidla, <code>VAN-*</code> (schodek) a <strong>vozidla v obecném režimu odpovědnosti</strong>.</div>
         </div>
         <div class="mcard custom">
           <div class="mcard-top">
             <span class="mcard-title">Asterisk, librosa &amp; comm-gateway</span>
             <span class="mtag odd17">K1–K5</span>
           </div>
-          <div class="mcard-role">PBX + Silero VAD + librosa + Stalwart + Chatwoot</div>
-          <div class="mcard-desc"><code>Asterisk</code> (IVR s poučením GDPR, stereo), <code>WhisperX</code>, <code>Silero VAD + librosa</code> (<code>MIT/ISC</code>, jen <code>Kanál L</code>!), <code>Stalwart</code> (<code>JMAP/ManageSieve</code>), <code>Chatwoot</code> (<code>oauth2-proxy</code>) a router.</div>
+          <div class="mcard-role">PBX + offline WhisperX + dělený Chatwoot &amp; Stalwart</div>
+          <div class="mcard-desc"><code>Asterisk</code> (stereo), <code>WhisperX</code> (<code>airgap-spool</code>), <code>Silero VAD + librosa</code> (jen <code>Kanál L</code>!), <code>Stalwart</code> (<code>Garage</code> bloby + <code>PTR/rDNS</code>), <code>Chatwoot</code> (<code>widget</code> vs. <code>/app/*</code>) a router.</div>
         </div>
       </div>
       <div class="col-foot">Garanti: 16001, 18001, 16002 &amp; 17001 · Silero + librosa</div>
@@ -789,13 +813,13 @@ def build_poster_html() -> str:
   <!-- 4. BOTTOM 2-BOX STRIP -->
   <footer class="bottom-strip">
     <div class="b-flow">
-      <h4>SÍŤOVÝ TOK PŘES 4 ZÓNY A ACYKLICKÝ POSTUP ZPROVOZNĚNÍ PO BLOCÍCH 0–12 (DEN 0 → DEN 30 · GO-LIVE GATE 12/12) + BLOKY 13–19 (S1–S7) · VERZE 2.7</h4>
-      <p><strong>1. Izolovaný tok dat a hovorů:</strong> Internet (HTTPS + MX <code>25/tcp Stalwart</code>, <code>0</code> veř. SIP portů) → <code>dmz_edge</code> (<code>Caddy + CrowdSec</code>) → <code>app_internal</code> (<code>Asterisk</code>; přepis <code>WhisperX + Silero VAD + librosa Kanál L</code> v <code>sandbox_airgap</code>, <code>Zulip</code>, <code>Chatwoot</code> za <code>oauth2-proxy</code>, 3vrstvý CaMeL <code>comm-gateway</code>, <code>360° Karta + WebRTC</code>, <code>MedusaJS + elektro-wms</code>, <code>Moodle LTS</code>) → <code>data_vault</code> (<code>6+9 DB PostgreSQL</code> + <code>OpenBao</code> + <code>Garage 90d</code> + <code>legal-archive LEGAL_HOLD</code>).</p>
-      <p><strong>2. Bloky 0–6 (Den 0–12 · Základ, Trezor &amp; Data):</strong> <code>S1-min</code> smlouvy → <code>Ubuntu LTS + OpenZFS</code> → <code>Incus + OpenTofu</code> → <code>Headscale VPN</code> → <code>OpenBao + Keycloak</code> (<code>QES</code> vs. <code>pyHanko</code>) → <code>6+9 PG DB</code> + <code>Gitea</code> → <code>Restic REST (--append-only)</code> + <code>Checkmk + Telegram</code>.</p>
-      <p><strong>3. Bloky 7–12 (Den 13–30 · Mozek ai, Moduly &amp; Go-Live):</strong> <code>Paperclip + Zulip</code> + <code>metadata-schema-kernel</code> + <code>Stage 1 Eval</code> → <code>ISDS Bridge (czebox.cz) + 360° Karta</code> → <code>S3-min + WMS + Moodle</code> → <code>QElectroTech + cad-urs-engine</code> → <code>ORG-UOL + JMHZ + Asterisk</code> → <code>Stage 2 Eval + Full DR Drill</code>.</p>
+      <h4>SÍŤOVÝ TOK PŘES 4 ZÓNY A ACYKLICKÝ POSTUP ZPROVOZNĚNÍ PO BLOCÍCH 0–12 (TÝDEN 0 → TÝDNY 11–12 · GO-LIVE GATE 12/12) + BLOKY 13–19 (S1–S7) · VERZE __VER__</h4>
+      <p><strong>1. Izolovaný tok dat a hovorů:</strong> Internet (HTTPS + MX <code>25/tcp Stalwart</code>, <code>3478/udp STUN</code>, <code>0</code> veř. SIP) → <code>dmz_edge</code> (<code>Caddy + CrowdSec</code>) → <code>app_internal</code> (storefronty, <code>Asterisk</code>; offline <code>WhisperX + Silero VAD + librosa Kanál L</code> v <code>sandbox_airgap eth0 none</code> přes <code>airgap-spool</code>, <code>Zulip</code>, dělený <code>Chatwoot</code> za <code>oauth2-proxy</code>, 3vrstvý <code>comm-gateway</code>, <code>360° Karta + WebRTC</code>, <code>MedusaJS + wms</code>, <code>Moodle LTS</code>) → <code>data_vault</code> (<code>6+9 PG DB + PgBouncer</code> + <code>OpenBao raft</code> + <code>Garage 90d</code> + <code>legal-archive</code>).</p>
+      <p><strong>2. Bloky 0–6 (Týdny 0–4 · Základ, Trezor &amp; Data):</strong> <code>S1-min</code> smlouvy → <code>Ubuntu LTS + OpenZFS</code> → <code>Incus + OpenTofu</code> → <code>Headscale VPN</code> → <code>OpenBao + Keycloak</code> (<code>QES</code> vs. <code>pyHanko</code>) → <code>6+9 PG DB + PgBouncer</code> + <code>Gitea</code> → <code>Restic REST (--append-only)</code> + watchdog + <code>Checkmk + Telegram</code>.</p>
+      <p><strong>3. Bloky 7–12 (Týdny 5–12 · Mozek ai, Moduly &amp; Go-Live):</strong> <code>Paperclip + Zulip</code> + <code>metadata-schema-kernel</code> + samostatný <code>Stage 1 Eval</code> → <code>ISDS Bridge (czebox.cz) + 360° Karta</code> → <code>S3-min + wms + Moodle</code> → <code>QElectroTech + cad-urs-engine</code> → <code>ORG-UOL + JMHZ + Asterisk</code> → <code>Stage 2 Eval + Full DR Drill</code>.</p>
     </div>
     <div class="b-rules">
-      <h4>12 PRAVIDEL SOFTWARU + 4 POJISTKY NEPŘEBÍRÁNÍ Z DRAIVIXU (VERZE 2.7)</h4>
+      <h4>12 PRAVIDEL SOFTWARU + 4 POJISTKY NEPŘEBÍRÁNÍ Z DRAIVIXU (VERZE __VER__)</h4>
       <p><strong>1. 0 Kč vendor lock-in</strong> (100 % open-source bez komerčního omezení + 10 modulů Odd. 17) · <strong>2. Ověřená matice kompatibility</strong> (např. <code>Moodle LTS</code> + podporovaná větev <code>PHP-FPM</code>) · <strong>3. 0 Dockeru, 6+9 PG DB, 0× MySQL/Mongo</strong> · <strong>4. 5 klientských OS</strong> · <strong>5. Clean Room (0 PII ve Vaultu) &amp; Kanál R FAIL_CLOSED</strong> · <strong>6. <code>metadata-schema-kernel</code> jen pro vlastní schémata</strong> · <strong>7. OpenBao + 3vrstvý CaMeL + QES vs. pečeť</strong> · <strong>8. Python Decimal + Typst</strong> · <strong>9. ISDS 06:50 jen ve službě (jinak <code>PAUSED</code>) + <code>PAUSED</code> ads</strong> · <strong>10. Platná norma rozváděčů NN, negativní revize &amp; pasy baterií pro LMT, EV a průmyslové baterie &gt; 2 kWh od 18. 2. 2027</strong> · <strong>11. Přednástupní <code>JMHZ</code> &amp; vozidla v obecném režimu</strong> · <strong>12. Stage 1/2 Eval 20/20 &amp; čtvrtletní Full DR Drill</strong> · <strong>4 pojistky:</strong> (a) odpovědnost <code>1001</code> za účetnictví + smluvní <code>ORG-UOL</code>; (b) 0 nočních samo-přepisů norem/HR; (c) HW <code>OpenBao + TPM + YubiKey</code>; (d) <code>Zulip + Asterisk + WhisperX + Silero VAD + librosa</code>.</p>
     </div>
   </footer>
@@ -804,6 +828,7 @@ def build_poster_html() -> str:
 </body>
 </html>
 """
+    return apply_canon_tokens(template)
 
 
 CHAPTER_META = [
@@ -834,13 +859,20 @@ def md_to_html(md_text: str, source_rel: str, included_rels: set[str]) -> str:
             norm_lines.append(line)
     raw_html = markdown.markdown(
         "\n".join(norm_lines),
-        extensions=["tables", "fenced_code", "sane_lists"],
+        extensions=["tables", "fenced_code", "sane_lists", "toc"],
+        extension_configs={"toc": {"slugify": github_slugify}},
+    )
+    anchor_prefix = f"{doc_slug(source_rel)}--"
+    raw_html = re.sub(
+        r'(<h[1-6][^>]*\bid=")([^"]+)(")',
+        lambda m: f"{m.group(1)}{anchor_prefix}{m.group(2)}{m.group(3)}",
+        raw_html,
     )
     return sanitize_html_links(raw_html, source_rel, included_rels)
 
 
 PACKAGE_META = [
-    ("balicky/README.md", "ETAPA II A III · ROZCESTNÍK BALÍČKŮ S1–S7", "Přehled Bloků 13–19, pravidla aktivace a stav ve Verzi 2.7"),
+    ("balicky/README.md", "ETAPA II A III · ROZCESTNÍK BALÍČKŮ S1–S7", f"Přehled Bloků 13–19, pravidla aktivace a stav ve Verzi {VER}"),
     ("balicky/S1-generator-cistopisu/README.md", "Blok 13 · BALÍČEK S1 · GENERÁTOR PDF ČISTOPISŮ", "15 šablon v 8 sestavách, vzorová data, generátor HTML → PDF a manifest pro mutation_confirm"),
     ("balicky/S2-eval-suite/README.md", "Blok 14 · BALÍČEK S2 · EVAL SUITE 100+", "157 scénářů (20 základních + 137 rozšířených), referenční politika, deterministický hodnotitel a trendový report"),
     ("balicky/S3-konfigurator-a-tarify/README.md", "Blok 15 · BALÍČEK S3 · KONFIGURÁTOR A TARIFY MRR", "Jediný zdroj cen cenik.json (výchozí ceny schválil 1001), cenové jádro, konfigurátor a provizní matice"),
@@ -900,7 +932,7 @@ def build_book_html() -> str:
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<title>Polarita s.r.o. — Kompletní softwarová architektura a katalog promptů (Verze 2.7)</title>
+<title>Polarita s.r.o. — Kompletní softwarová architektura a katalog promptů (Verze {VER})</title>
 <style>
   @page {{
     size: A4 portrait;
@@ -1242,9 +1274,9 @@ def build_book_html() -> str:
   <!-- PAGE 1: DARK NAVY COVER -->
   <div class="cover-page">
     <div>
-      <div class="cov-pill">GREENFIELD OPEN-SOURCE &amp; ai-first SOFTWARE BLUEPRINT · VERZE 2.7 · JÁDRO + BALÍČKY S1–S7 · 2026</div>
+      <div class="cov-pill">GREENFIELD OPEN-SOURCE &amp; ai-first SOFTWARE BLUEPRINT · VERZE {VER} · JÁDRO + BALÍČKY S1–S7 · 2026</div>
       <h1 class="cov-h1">POLARITA S.R.O.</h1>
-      <div class="cov-sub">Kompletní softwarová, serverová a komunikační architektura společnosti + katalog realizačních promptů (Vrstvy 01–11 · Verze 2.7)</div>
+      <div class="cov-sub">Kompletní softwarová, serverová a komunikační architektura společnosti + katalog realizačních promptů (Vrstvy 01–11 · Verze {VER})</div>
       <p class="cov-lead">
         Souborná architektonická kniha pro vybudování čisté společnosti od nuly na serveru <code>polarita-hq</code>
         (<code>Ubuntu Server latest LTS</code> + zrcadlený <code>OpenZFS</code> <code>/srv/polarita/</code>) ·
@@ -1261,14 +1293,14 @@ def build_book_html() -> str:
     <div class="cov-grid">
       <div class="cov-stat">
         <div class="num">11 vrstev · Acyklicky</div>
-        <div class="txt">Realizovatelné pořadí Bloků 0–12 (Den 0–30) bez dopředných závislostí + Stage 1/2 Eval</div>
+        <div class="txt">Realizovatelné pořadí Bloků 0–12 (Týdny 0–12) bez dopředných závislostí + Stage 1/2 Eval</div>
       </div>
       <div class="cov-stat">
         <div class="num">0 Kč licencí · MIT/BSD/GPL</div>
         <div class="txt">100 % open-source bez komerčního omezení (Silero VAD + librosa, oauth2-proxy, QElectroTech) + 10 modulů Odd. 17</div>
       </div>
       <div class="cov-stat">
-        <div class="num">6+9 DB PG · 0× MySQL</div>
+        <div class="num">6+9 DB PG + PgBouncer · 0× MySQL</div>
         <div class="txt">6 doménových + 9 servisních DB PostgreSQL · týdenní obnova + čtvrtletní Full DR Drill</div>
       </div>
       <div class="cov-stat">
@@ -1278,19 +1310,19 @@ def build_book_html() -> str:
     </div>
 
     <div class="cov-meta">
-      <div><strong>Subjekt:</strong> Polarita s.r.o. · IČO: <code>14180324</code> · DIČ: <code>CZ14180324</code> · Sp. zn. C 361683 (MS v Praze) · ISDS: <code>w9bbdva</code> (Podatelna <code>16002</code>)</div>
-      <div><strong>Sídlo a výchozí pobočka:</strong> Pobočka <code>101</code> (<code>CZ-101</code> Praha — Centrála), Na Folimance 2155/15, 120 00 Praha 2</div>
+      <div><strong>Subjekt:</strong> Polarita s.r.o. · IČO: <code>{COMPANY['ico']}</code> · DIČ: <code>{COMPANY['dic']}</code> · Sp. zn. C 361683 (MS v Praze) · ISDS: <code>{COMPANY['isds']}</code> (Podatelna <code>16002</code>)</div>
+      <div><strong>Sídlo a výchozí pobočka:</strong> Pobočka <code>101</code> (<code>{COMPANY['branch']}</code> Praha — Centrála), Na Folimance 2155/15, 120 00 Praha 2</div>
       <div><strong>Statutární a odborný garant:</strong> Václav Šercl (os. č. <code>1001</code> · <code>STAT-1001</code> · TIČR E2A) · <strong>Garanti platformy:</strong> Oddělení <code>17</code> (<code>17001</code>–<code>17005</code>)</div>
-      <div><strong>Soulad se strukturou:</strong> Verze 2.7 · Návrhová kniha + realizační prompty pro Bloky 0–12 (<code>Go-Live Gate 12/12</code>) · Plakát: <code>05-SOFTWAROVA-MAPA-A3-2026.pdf</code></div>
+      <div><strong>Soulad se strukturou:</strong> Verze {VER} · Návrhová kniha + realizační prompty pro Bloky 0–12 (<code>Go-Live Gate 12/12</code>) i Část III (Bloky 13–19 / S1–S7) · Plakát: <code>05-SOFTWAROVA-MAPA-A3-2026.pdf</code></div>
     </div>
   </div>
 
   <!-- PAGE 2: EXECUTIVE STRUCTURE & 4 ZONES -->
   <div class="overview-page">
-    <h1>Přehled struktury dokumentu (Softwarová architektura · Verze 2.7)</h1>
+    <h1>Přehled struktury dokumentu (Softwarová architektura · Verze {VER})</h1>
     <p>
       Tato souborná kniha sjednocuje kompletní návrh softwarového, databázového, komunikačního a bezpečnostního vybavení společnosti <strong>Polarita s.r.o.</strong>
-      v plném souladu s <strong>Verzí 2.7</strong> organizační struktury. Všechny vybrané nástroje dodržují zásadu <strong>nulového vendor lock-inu</strong>,
+      v plném souladu s <strong>Verzí {VER}</strong> organizační struktury. Všechny vybrané nástroje dodržují zásadu <strong>nulového vendor lock-inu</strong>,
       ověřují matici vzájemné kompatibility vydání (např. <code>Moodle LTS</code> s podporovanou větví <code>PHP-FPM</code>) a respektují jasné vlastnictví databázových migrací.
     </p>
 
@@ -1298,30 +1330,30 @@ def build_book_html() -> str:
       <thead>
         <tr>
           <th style="width: 20%;">Část knihy</th>
-          <th style="width: 28%;">Zdrojové soubory v <code>software/</code></th>
-          <th style="width: 52%;">Obsah a klíčové výstupy (Verze 2.7)</th>
+          <th style="width: 28%;">Zdrojové soubory v <code>software/</code> a <code>balicky/</code></th>
+          <th style="width: 52%;">Obsah a klíčové výstupy (Verze {VER})</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td><strong>ČÁST I</strong><br>Přehled, 6+9 DB a pořadí stavby</td>
           <td><a href="#{doc_slug('software/00-SEZNAM-SOFTWARU-README.md')}">00-SEZNAM-SOFTWARU-README.md</a></td>
-          <td>Architektonické principy + <strong>4 pojistky nepřebírání z Draivixu</strong>, rozcestník všech 11 vrstev, mapa <strong>6 doménových + 9 servisních databází <code>PostgreSQL</code></strong> s vlastníky migrací, acyklické pořadí výstavby v <strong>Blocích 0–12</strong> (<code>Den 0–30</code>) a návaznost na <code>S1–S7</code>.</td>
+          <td>Architektonické principy + <strong>4 pojistky nepřebírání z Draivixu</strong>, rozcestník všech 11 vrstev, mapa <strong>6 doménových + 9 servisních databází <code>PostgreSQL + PgBouncer</code></strong> s vlastníky migrací, acyklické pořadí výstavby v <strong>Blocích 0–12</strong> (<code>Týdny 0–12</code>) a návaznost na <code>S1–S7</code>.</td>
         </tr>
         <tr>
           <td><strong>ČÁST II · Infrastruktura &amp; Bezpečnost</strong><br>(Vrstvy 01–06)</td>
           <td><code>01-operacni-systemy.md</code> až <code>06-zalohovani-a-monitoring.md</code></td>
-          <td>Hostitel <code>Ubuntu Server (latest LTS)</code> + <code>OpenZFS</code>, <code>Incus + OpenTofu</code>, VPN <code>Headscale</code>, <code>Caddy</code> + MX <code>Stalwart</code>, <strong>0 veř. SIP portů</strong>, <code>OpenBao + TPM + YubiKey</code>, <strong>osobní <code>QES</code> (čip <code>QSCD</code>) vs. pečeť <code>pyHanko</code></strong>, <code>Keycloak + oauth2-proxy</code>, 3vrstvý <code>CaMeL</code>, <code>Restic REST Server (--append-only)</code> (týdenní + čtvrtletní Full DR Drill) a <code>Checkmk + Telegram</code>.</td>
+          <td>Hostitel <code>Ubuntu Server (latest LTS)</code> + <code>OpenZFS</code> (<code>MVP 64 GB</code> / <code>Plný 128 GB + GPU</code>), <code>Incus + OpenTofu</code>, VPN <code>Headscale (+ 3478/udp STUN)</code>, <code>Caddy (trusted_proxies)</code> + MX <code>Stalwart</code>, <strong>0 veř. SIP portů</strong>, <code>OpenBao (raft) + TPM + YubiKey</code>, <code>Vaultwarden (SQLite)</code>, <strong>osobní <code>QES</code> (čip <code>QSCD</code>) vs. pečeť <code>pyHanko</code></strong>, <code>Keycloak + oauth2-proxy</code>, 3vrstvý <code>CaMeL</code>, <code>Restic REST Server (--append-only)</code> + watchdog (týdenní + čtvrtletní Full DR Drill) a <code>Checkmk + Telegram + ext. SMTP</code>.</td>
         </tr>
         <tr>
           <td><strong>ČÁST II · Mozek ai, 10 modulů &amp; Ústředna</strong><br>(Vrstvy 07–11)</td>
           <td><code>07-ai-orchestrace-decisions-a-eval.md</code> až <code>11-finance-uol-hr-bozp-portal-flotila-a-komunikace.md</code></td>
-          <td><code>Paperclip + Zulip</code> v Bloku 7, strop <code>470 USD</code> (85+15 %), <code>metadata-schema-kernel</code> (vlastní schémata), <code>Stage 1 &amp; 2 Promptfoo</code>, ISDS Bridge (<code>06:50</code> ve službě / <code>PAUSED</code>, <code>czebox.cz</code>), <strong>360° Karta + WebRTC</strong>, matice zdrojů + <code>Mapy.cz</code>, 3× <code>OCPP</code>, <code>elektro-wms</code> (baterie &gt; 2 kWh od 18. 2. 2027, RMA <code>complaint_asserted_at</code>), <code>Moodle LTS</code>, <code>QElectroTech + cad-urs-engine</code> (platná norma rozváděčů NN, negativní revize), <code>ORG-UOL</code>, přednástupní <code>JMHZ</code>, obecná odpovědnost za vozidla a <code>Asterisk + WhisperX + Silero VAD + librosa</code>.</td>
+          <td><code>Paperclip + Zulip</code> v Bloku 7 (<code>decisions.int.polarita.cz</code>, rozšíření <code>N-10</code>), <code>Claude / Gemini / Codex CLI</code>, strop <code>{BUDGET_TOTAL} USD</code> (85+15 %), <code>metadata-schema-kernel</code> (vlastní schémata), samostatný <code>Stage 1 &amp; 2 Promptfoo</code>, ISDS Bridge (<code>06:50</code> ve službě / <code>&lt; 10d PAUSED</code>, <code>czebox.cz</code>), <strong>360° Karta + WebRTC</strong>, matice zdrojů + <code>Mapy.cz</code>, 3× <code>OCPP</code> (<code>wss://ocpp.polarita.cz</code>), <code>elektro-wms</code> (schéma <code>wms</code>, baterie &gt; 2 kWh od 18. 2. 2027, RMA <code>complaint_asserted_at</code>), <code>Moodle LTS</code>, <code>QElectroTech</code> (stanice <code>1001+</code>) + <code>cad-urs-engine</code>, <code>ORG-UOL</code>, přednástupní <code>JMHZ</code>, obecná odpovědnost za vozidla a <code>Asterisk + offline WhisperX + Silero VAD + librosa + Stalwart (Garage bloby) + dělený Chatwoot</code>.</td>
         </tr>
         <tr>
           <td><strong>ČÁST III · Rozvojové balíčky S1–S7</strong><br>(Bloky 13–19)</td>
           <td><a href="#{doc_slug('balicky/README.md')}">balicky/README.md</a> a <code>README.md</code> balíčků <code>S1</code> až <code>S7</code></td>
-          <td>Řídicí dokumenty Rozvojové Etapy II a Strategické Etapy III: <code>S1</code> generátor PDF čistopisů, <code>S2</code> <code>Eval Suite 100+</code> (157 scénářů), <code>S3</code> konfigurátor a tarify MRR (výchozí ceny schválil <code>1001</code>), <code>S4</code> dílenský terminál a půjčovna, <code>S5</code> dvoustranný podpis a hlasová recepční, <code>S6</code> živá příručka z E2E testů a <code>S7</code> Polarita Elektro Cloud (brána <code>Go / No-Go</code>).</td>
+          <td>Řídicí dokumenty Rozvojové Etapy II a Strategické Etapy III: <code>S1</code> generátor PDF čistopisů, <code>S2</code> <code>Eval Suite 100+</code> (157 scénářů, 24 testů), <code>S3</code> konfigurátor a tarify MRR (15 testů, výchozí ceny schválil <code>1001</code>), <code>S4</code> dílenský terminál a půjčovna, <code>S5</code> dvoustranný podpis a hlasová recepční, <code>S6</code> živá příručka z E2E testů a <code>S7</code> Polarita Elektro Cloud (brána <code>Go / No-Go</code>).</td>
         </tr>
       </tbody>
     </table>
@@ -1329,20 +1361,20 @@ def build_book_html() -> str:
     <h2>Architektura 4 izolovaných síťových zón na serveru polarita-hq (Incus + OpenTofu)</h2>
     <div class="zone-grid">
       <div class="zone-box dmz">
-        <h4>1. Zóna dmz_edge (Veřejná hrana · HTTPS &amp; MX · 0 veř. SIP portů)</h4>
-        <p>Vstup z internetu přes reverzní proxy <code>Caddy (latest)</code> a příchozí MX relay <code>Stalwart Mail</code> s IPS ochranou <code>CrowdSec</code> + <code>nftables</code>. Ústředna <code>Asterisk</code> nevystavuje žádný veřejný příchozí SIP port (registruje se odchozím <code>SIPS / SRTP</code>).</p>
+        <h4>1. Zóna dmz_edge (Veřejná hrana · HTTPS, STUN &amp; MX · 0 veř. SIP portů)</h4>
+        <p>Vstup z internetu přes reverzní proxy <code>Caddy (latest, trusted_proxies)</code> (publikuje storefronty z <code>app_internal</code>, <code>wss://ocpp.polarita.cz</code>, <code>auth.polarita.cz/realms/*</code> a widget <code>Chatwoot</code>), <code>Headscale (3478/udp STUN)</code> a příchozí MX relay <code>Stalwart Mail (RocksDB)</code> s <code>CrowdSec + nftables</code>. Ústředna <code>Asterisk</code> nevystavuje žádný veřejný příchozí SIP port (odchozí <code>SIPS / SRTP</code>).</p>
       </div>
       <div class="zone-box app">
-        <h4>2. Zóna app_internal (Aplikační, komunikační, ai a vývojová vrstva)</h4>
-        <p>Kontejnery <code>Asterisk</code>, <code>Stalwart Mail</code>, <code>Zulip + LiveKit</code>, <code>Chatwoot CE</code> (za <code>oauth2-proxy</code>), <code>Astro</code>, <code>Umami</code>, <code>MedusaJS + elektro-wms</code>, <code>Moodle LTS</code>, <code>Paperclip</code>, <code>SilverBullet</code>, <code>Gitea</code>, <code>Paperless-ngx</code>, <code>pyHanko</code>, <code>Vikunja</code>, <code>Traccar</code> a <strong>10 modulů oddělení <code>17</code></strong> za <code>Headscale VPN + Keycloak SSO</code>.</p>
+        <h4>2. Zóna app_internal (Storefronty, komunikační, ai a vývojová vrstva)</h4>
+        <p>Storefronty <code>Astro</code>, e-shop <code>MedusaJS + wms</code>, <code>Moodle LTS</code>, <code>Umami (+ odd. CMP)</code>, <code>Asterisk</code>, <code>Stalwart Mail</code>, <code>Zulip + LiveKit</code>, dělený <code>Chatwoot CE</code> (<code>/app/*</code> za <code>oauth2-proxy</code>), <code>Paperclip</code>, <code>SilverBullet (vault.int.polarita.cz)</code>, <code>Gitea</code>, <code>Paperless-ngx</code>, <code>pyHanko</code>, <code>Vikunja</code>, <code>Traccar (M2M VPN)</code> a <strong>10 modulů oddělení <code>17</code></strong> za <code>Headscale VPN + Keycloak SSO</code>.</p>
       </div>
       <div class="zone-box vault">
-        <h4>3. Zóna data_vault (6+9 DB PostgreSQL, Clean Room, 90d Audio a WORM)</h4>
-        <p>Striktně bez internetu: <code>6 doménových + 9 servisních DB PostgreSQL</code> (<code>0× MySQL/MongoDB</code>, DB mutex <code>SELECT FOR UPDATE</code>, <code>Clean Room</code> maskované pohledy), trezor <code>OpenBao</code>, <code>Valkey</code>, <code>Garage</code> (<code>90d</code> audio) a WORM <code>OpenZFS legal-archive</code> (<code>LEGAL_HOLD 3–10 let</code>).</p>
+        <h4>3. Zóna data_vault (6+9 PG DB + PgBouncer, Clean Room, 90d Audio a WORM)</h4>
+        <p>Striktně bez internetu: <code>6 doménových + 9 servisních DB PostgreSQL + PgBouncer</code> (<code>0× MySQL/MongoDB</code>, DB mutex <code>SELECT FOR UPDATE</code>, acyklický <code>Clean Room</code> bez <code>bytea</code>), trezor <code>OpenBao (raft)</code>, <code>Vaultwarden (SQLite)</code>, <code>Valkey</code>, <code>Garage</code> (<code>90d</code> audio + <code>stalwart-blobs</code>) a WORM <code>legal-archive</code> (<code>LEGAL_HOLD 3–10 let</code>).</p>
       </div>
       <div class="zone-box airgap">
-        <h4>4. Zóna sandbox_airgap (Jednorázová bez-síťová karanténa nic = none)</h4>
-        <p>Kontejnery a KVM VM v <code>Incus</code> s <strong>úplně odebraným síťovým rozhraním (<code>nic = none</code>)</strong> pro 1. vrstvu <code>CaMeL</code> očisty příloh a hlasových zpráv (<code>ClamAV + Dangerzone + WhisperX + Silero VAD + librosa</code> → <code>&lt;untrusted_inbound_comm&gt;</code>), <code>48h šanony</code> a čtení výkresů (<code>LibreDWG + ezdxf + IfcOpenShell + PyMuPDF</code>).</p>
+        <h4>4. Zóna sandbox_airgap (Jednorázová bez-síťová karanténa eth0 none)</h4>
+        <p>Kontejnery a KVM VM v <code>Incus</code> s <strong>úplně odebraným síťovým rozhraním (<code>eth0 none</code>)</strong> pro 1. vrstvu <code>CaMeL</code> očisty příloh a offline přepisu audia (<code>ClamAV + Dangerzone / Poppler+QPDF + offline WhisperX s HF_HUB_OFFLINE=1 nad airgap-models &amp; airgap-spool + Silero VAD + librosa</code> → <code>&lt;untrusted_inbound_comm&gt;</code>), <code>48h šanony</code> a čtení výkresů (<code>LibreDWG + ezdxf + IfcOpenShell + PyMuPDF</code>).</p>
       </div>
     </div>
   </div>
@@ -1356,7 +1388,7 @@ def build_book_html() -> str:
           <th style="width: 24%;">Vlastní modul</th>
           <th style="width: 8%;">Vrstva</th>
           <th style="width: 22%;">Technologický stack</th>
-          <th style="width: 46%;">Hlavní účel a napojená databáze (Verze 2.7)</th>
+          <th style="width: 46%;">Hlavní účel a napojená databáze (Verze {VER})</th>
         </tr>
       </thead>
       <tbody>
@@ -1364,7 +1396,7 @@ def build_book_html() -> str:
           <td><code>metadata-schema-kernel</code></td>
           <td>07</td>
           <td><code>Python / TS + JSON/YAML</code></td>
-          <td>Deklarativní generátor entit (<code>N1</code>, <code>F22</code>): generuje migrace, REST API (<code>OpenAPI + ETag</code>), formuláře a typované <code>MCP</code> nástroje <strong>výhradně pro vlastní schémata v <code>db_erp_lhutnik</code></strong> (0 zásahů do vendor schémat cizích aplikací).</td>
+          <td>Deklarativní generátor entit (<code>N1</code>, <code>F22</code>): generuje migrace, REST API (<code>OpenAPI + ETag</code>), formuláře a typované <code>MCP</code> nástroje <strong>výhradně pro vlastní schémata v <code>db_erp_lhutnik</code>, schéma <code>wms</code> v <code>db_eshop</code> a nástavbu <code>db_paperclip</code></strong> (0 zásahů do vendor schémat).</td>
         </tr>
         <tr>
           <td><code>polarita-ads-mcp</code></td>
@@ -1376,25 +1408,25 @@ def build_book_html() -> str:
           <td><code>isds-podatelna-bridge</code></td>
           <td>08</td>
           <td><code>Python + libdatovka</code></td>
-          <td><code>Read-Only</code> čtení ISDS <code>w9bbdva</code> v <code>Po–Pá 06:50</code> <strong>jen při aktivní službě <code>1001 / Break-Glass</code></strong> (při neobsazené nepřítomnosti <code>PAUSED</code> kvůli doručovacím účinkům, testy na <code>czebox.cz</code>, <code>F01</code>).</td>
+          <td><code>Read-Only</code> čtení ISDS <code>w9bbdva</code> v <code>Po–Pá 06:50</code> (klíč v <code>memfd / tmpfs 0400</code>) <strong>jen při aktivní službě <code>1001 / pověřená osoba / Break-Glass</code></strong> (při <code>&lt; 10d PAUSED</code>, testy na <code>czebox.cz</code>, <code>F01</code>).</td>
         </tr>
         <tr>
           <td><code>centralni-lhutnik-a-objekty</code></td>
           <td>08</td>
           <td><code>Python / TS + ocpp + Astro</code></td>
-          <td><strong>360° Karta spisu (<code>case_id</code>) + „Pracuj“ + WebRTC + #t=MM:SS</strong>, <code>48h šanony</code>, matice zdrojů dle úkolu + <code>Mapy.cz</code>, <code>DTM ČR</code>, <strong>Stavební deník</strong> (pečeť <code>pyHanko</code>) a <strong>3úrovňové <code>OCPP</code></strong> v <code>db_erp_lhutnik</code>.</td>
+          <td><strong>360° Karta spisu (<code>case_id</code>) + „Pracuj“ + WebRTC + #t=MM:SS</strong>, <code>48h šanony</code>, matice zdrojů dle úkolu + <code>Mapy.cz</code>, <code>DTM ČR</code>, <strong>Stavební deník</strong> (pečeť <code>pyHanko</code>) a <strong>3úrovňové <code>OCPP</code></strong> (<code>wss://ocpp.polarita.cz</code>) v <code>db_erp_lhutnik</code>.</td>
         </tr>
         <tr>
           <td><code>elektro-wms</code></td>
           <td>09</td>
           <td><code>TS (MedusaJS) + Balíkobot</code></td>
-          <td>Rezervace staveb, <code>VAN-*</code> (svěřené hodnoty), bubny, <code>S/N</code> + B2B záruky, pas rozváděče dle platné normy, <code>PHE</code>, pasy baterií pro LMT, EV a průmyslové baterie &gt; 2 kWh od <code>18. 2. 2027</code>, <code>SCRAP-CU</code> (přenesená daň) a RMA <code>complaint_asserted_at</code> v <code>db_eshop</code>.</td>
+          <td>Ve schématu <code>wms</code> v <code>db_eshop</code>: rezervace staveb, <code>VAN-*</code> (svěřené hodnoty — schodek), bubny, <code>S/N</code> + B2B záruky, pas rozváděče, <code>PHE</code>, pasy baterií &gt; 2 kWh od <code>18. 2. 2027</code>, <code>SCRAP-CU</code> a RMA <code>complaint_asserted_at</code>.</td>
         </tr>
         <tr>
           <td><code>compliance-bridge</code></td>
           <td>09</td>
           <td><code>Python + Typst + pyHanko</code></td>
-          <td>Rozlišení poučení osoby poučené (bez komise, ≤ 3 r.) a zkoušek elektrotechniků před 3čl. komisí, osobní <code>QES</code> podpis <code>1001</code> a výběr <code>Certified Partner SUB</code> nad <code>db_gdpr_zkousky</code> (<code>Clean Room</code>).</td>
+          <td>Rozlišení poučení osoby poučené (bez komise, ≤ 3 r.) a zkoušek elektrotechniků před 3čl. komisí, osobní <code>QES</code> podpis <code>1001</code> a výběr <code>Certified Partner SUB</code> nad <code>db_gdpr_zkousky</code> (<code>Clean Room</code> od Bloku 9).</td>
         </tr>
         <tr>
           <td><code>cad-urs-engine</code></td>
@@ -1406,29 +1438,29 @@ def build_book_html() -> str:
           <td><code>cz-sk-registry-kernel</code></td>
           <td>08 / 11</td>
           <td><code>Python + PostgreSQL + Valkey</code></td>
-          <td>Sdílený CZ/SK základ: <code>ARES</code>, <code>VIES</code>, <strong><code>ADIS</code> (ručení za DPH)</strong>, <code>ISIR / CEE</code>, <code>ČNB</code>, <code>ISDS</code>, <code>SK RPO / RegisterUZ / IČ DPH</code> a <strong>atomický DB mutex číselných řad (<code>SELECT ... FOR UPDATE</code>)</strong>.</td>
+          <td>Sdílený CZ/SK základ: <code>ARES</code>, <code>VIES</code>, <strong><code>ADIS</code> (ručení za DPH)</strong>, <code>ISIR / CEE</code>, <code>ČNB</code>, <code>ISDS</code>, <code>SK RPO / RegisterUZ / IČ DPH</code> a <strong>atomický DB mutex číselných řad (<code>SELECT ... FOR UPDATE</code>, vč. řady <code>ORG-UOL</code>)</strong>.</td>
         </tr>
         <tr>
           <td><code>finance-uol-marze-engine</code></td>
           <td>11</td>
           <td><code>Python Decimal + Typst</code></td>
-          <td><code>Read-Only</code> UOL/banky (odpovědnost účetní jednotky <code>1001</code> + smluvní <code>ORG-UOL</code>), DPH (přenesená daňová povinnost, PHE), <code>ISDOC/Peppol</code>, <code>EET 2.0</code>, mzdy 2.–3. den a <strong>Partnerský ledger 10–15 % MRR</strong>.</td>
+          <td><code>Read-Only</code> UOL/banky (odpovědnost účetní jednotky <code>1001</code> + smluvní <code>ORG-UOL</code> + dávka <code>ISDOC</code>), DPH (přenesená daňová povinnost, PHE), <code>ISDOC/Peppol</code>, podmíněné <code>EET 2.0</code> (vypnuté), mzdy 2.–3. den a <strong>Partnerský ledger 10–15 % MRR</strong>.</td>
         </tr>
         <tr>
           <td><code>portal-spolupracovniku</code>, <code>fleet-gps-bridge</code> &amp; <code>comm-gateway</code></td>
           <td>11</td>
           <td><code>Astro PWA + WhisperX + librosa</code></td>
-          <td><code>db_hr_lide</code> (0 PII ve Vaultu, přednástupní <code>JMHZ</code>, směny ≥ 14d/3d, obecná odpovědnost za vozidla), <code>Traccar</code> a <strong>8cestný <code>comm-gateway</code></strong> (<code>Asterisk + WhisperX + Silero VAD + librosa Kanál L + Stalwart + Chatwoot</code>).</td>
+          <td><code>db_hr_lide</code> (<code>Clean Room</code> od Bloku 11, 0 PII ve Vaultu, přednástupní <code>JMHZ</code>, směny ≥ 14d/3d, obecná odpovědnost za vozidla), <code>Traccar</code> (M2M VPN) a <strong>8cestný <code>comm-gateway</code></strong> (<code>Asterisk + offline WhisperX + Silero VAD + librosa Kanál L + Stalwart + dělený Chatwoot</code>).</td>
         </tr>
       </tbody>
     </table>
 
     <div class="guardrail-box">
-      <h4>Čtyři vědomé architektonické pojistky Verze 2.7 — Co z obecných systémů (Draivix) nepřebíráme</h4>
+      <h4>Čtyři vědomé architektonické pojistky Verze {VER} — Co z obecných systémů (Draivix) nepřebíráme</h4>
       <strong>(a) Nikdy „Bez účetní“:</strong> zákonnou odpovědnost za účetnictví nese <code>Polarita s.r.o. (1001)</code> a odborným smluvním zpracovatelem přiznání, závěrky a mezd je kancelář <code>UOL (ORG-UOL)</code>. ·
       <strong>(b) Žádné nehlídané noční přepisy normového jádra:</strong> normové výpočty (<code>cad-urs-engine</code>), pasy rozváděčů dle platné normy a brána <code>db_hr_lide</code> podléhají <code>Draivix/aigiscode</code>, <code>Stage 1/2 Eval</code> a <code>mutation_confirm</code>. ·
-      <strong>(c) Žádný webový trezor v prohlížeči a žádný export osobního QES klíče:</strong> strojová tajemství žijí v <code>RAM</code> přes <code>OpenBao + TPM + YubiKey</code>; osobní <code>QES</code> klíč zůstává výhradně v čipu <code>QSCD</code>. ·
-      <strong>(d) Žádné komerčně omezené či limitované nástroje:</strong> nasazujeme 100% open-source <code>Zulip + Asterisk + WhisperX + Silero VAD + librosa (MIT/ISC)</code> + <code>Chatwoot CE</code> za <code>oauth2-proxy</code> a zákaz emocí na <code>Kanálu R</code> (<code>FAIL_CLOSED</code>).
+      <strong>(c) Žádný webový trezor v prohlížeči a žádný export osobního QES klíče:</strong> strojová tajemství žijí v <code>RAM</code> přes <code>OpenBao (raft) + TPM + YubiKey</code>; osobní <code>QES</code> klíč zůstává výhradně v čipu <code>QSCD</code>. ·
+      <strong>(d) Žádné komerčně omezené či limitované nástroje:</strong> nasazujeme 100% open-source <code>Zulip + Asterisk + offline WhisperX + Silero VAD + librosa (MIT/ISC)</code> + dělený <code>Chatwoot CE</code> (<code>/app/*</code> za <code>oauth2-proxy</code>) a zákaz emocí na <code>Kanálu R</code> (<code>FAIL_CLOSED</code>).
     </div>
   </div>
 
@@ -1436,7 +1468,7 @@ def build_book_html() -> str:
   <section class="chapter-section" id="{doc_slug('software/00-SEZNAM-SOFTWARU-README.md')}">
     <div class="part-banner">
       <div class="pb-eyebrow">ČÁST I · SOUBOR software/00-SEZNAM-SOFTWARU-README.md</div>
-      <div class="pb-title">Katalog vybraného softwaru, 6 doménových + 9 servisních databází PostgreSQL, acyklické pořadí zprovoznění (Bloky 0–12 · Den 0–30 · Go-Live Gate 12/12) a balíčky S1–S7</div>
+      <div class="pb-title">Katalog vybraného softwaru, 6 doménových + 9 servisních databází PostgreSQL (+ PgBouncer), acyklické pořadí zprovoznění (Bloky 0–12 · Týdny 0–12 · Go-Live Gate 12/12) a balíčky S1–S7</div>
     </div>
     <div class="md-content">
       {readme_html}
@@ -1456,33 +1488,41 @@ def build_book_html() -> str:
 
 def render_pdf(browser: Path, html_path: Path, pdf_path: Path) -> None:
     file_url = html_path.resolve().as_uri()
-    cmd = [
-        str(browser),
-        "--headless=new",
-        "--disable-gpu",
-        "--no-pdf-header-footer",
-        f"--print-to-pdf={pdf_path}",
-        file_url,
-    ]
-    res = subprocess.run(cmd, capture_output=True, text=True)
-    if res.returncode != 0 or not pdf_path.exists():
-        raise RuntimeError(f"Chyba při tisku {pdf_path.name}: {res.stderr}")
+    with tempfile.TemporaryDirectory() as out_tmp:
+        tmp_pdf = Path(out_tmp) / pdf_path.name
+        cmd = [
+            str(browser),
+            "--headless=new",
+            "--disable-gpu",
+            "--no-pdf-header-footer",
+            f"--print-to-pdf={tmp_pdf}",
+            file_url,
+        ]
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        if res.returncode != 0 or not tmp_pdf.is_file() or tmp_pdf.stat().st_size == 0:
+            raise RuntimeError(f"Chyba při tisku {pdf_path.name}: {res.stderr}")
+        shutil.move(str(tmp_pdf), str(pdf_path))
 
 
 def main() -> None:
-    SCRATCH_DIR.mkdir(parents=True, exist_ok=True)
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     browser = find_browser()
     print(f"Použitý prohlížeč: {browser}")
 
-    POSTER_HTML_PATH.write_text(build_poster_html(), encoding="utf-8")
-    BOOK_HTML_PATH.write_text(build_book_html(), encoding="utf-8")
-    print("HTML předlohy softwaru Verze 2.7 vygenerovány v dočasné složce.")
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        scratch = Path(tmp_dir)
+        poster_html = scratch / "poster_software_a3.html"
+        book_html = scratch / "book_software_a4.html"
+        poster_html.write_text(build_poster_html(), encoding="utf-8")
+        book_html.write_text(build_book_html(), encoding="utf-8")
+        print(f"HTML předlohy softwaru Verze {VER} vygenerovány v dočasné složce.")
 
-    render_pdf(browser, POSTER_HTML_PATH, OUT_POSTER_PDF)
-    print(f"Vytvořeno A3 PDF: {OUT_POSTER_PDF} ({OUT_POSTER_PDF.stat().st_size:,} B)")
+        render_pdf(browser, poster_html, OUT_POSTER_PDF)
+        print(f"Vytvořeno A3 PDF: {OUT_POSTER_PDF} ({OUT_POSTER_PDF.stat().st_size:,} B)")
 
-    render_pdf(browser, BOOK_HTML_PATH, OUT_BOOK_PDF)
-    print(f"Vytvořeno A4 PDF: {OUT_BOOK_PDF} ({OUT_BOOK_PDF.stat().st_size:,} B)")
+        render_pdf(browser, book_html, OUT_BOOK_PDF)
+        print(f"Vytvořeno A4 PDF: {OUT_BOOK_PDF} ({OUT_BOOK_PDF.stat().st_size:,} B)")
 
 
 if __name__ == "__main__":

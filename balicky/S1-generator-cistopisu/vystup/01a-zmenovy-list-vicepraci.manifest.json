@@ -2,7 +2,7 @@
   "document": "01a-zmenovy-list-vicepraci",
   "title": "Změnový list víceprací a méněprací",
   "draft_watermark": true,
-  "generated_utc": "2026-11-18 06:11 UTC",
+  "generated_utc": "2026-11-19 19:51 UTC",
   "variables": {
     "spis_id": "POL-2027-00001",
     "cislo_zmenoveho_listu": "ZL-01",
@@ -53,9 +53,9 @@
     "misto_podpisu": "Praha"
   },
   "sha256": {
-    "template": "01cdd34254c15bc6dfa40a73971abba993f70190d2257628c4cd3f639169cd3a",
+    "template": "16df1b3b546fdb2bf4212739bf511d8be68a2b532b98d94fecfc4dd078bf6609",
     "data": "2b614eca91ade5a8298e945906965a447bb085b4cb571d0582fa4c3f6f389090",
-    "pdf": "e11ee0c978a20d065e36553221bfb969d7a2b57e3b603117beae6e2103252136"
+    "pdf": "5caf1c1c380ba545a4c665eca1ab0654f8dad0777f7b6d852b582c8bf0e941cd"
   },
   "pages": 3
 }

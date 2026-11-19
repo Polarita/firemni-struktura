@@ -9,6 +9,9 @@
 *.ts    text
 *.py    text eol=lf
 *.sh    text eol=lf
+*.txt   text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
 nastroje/pre-commit text eol=lf
 *.pdf   binary
 *.wav   binary

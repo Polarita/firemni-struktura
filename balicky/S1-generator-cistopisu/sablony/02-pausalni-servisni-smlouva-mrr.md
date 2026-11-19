@@ -87,7 +87,7 @@ a
 
 ## Článek 10 — Doba trvání a ukončení smlouvy
 
-1. Smlouva se uzavírá na dobu {{doba_trvani}} a nabývá účinnosti dne {{datum_ucinnosti}}.
+1. Smlouva se uzavírá na dobu {{doba_trvani}} a nabývá účinnosti dne {{datum_ucinnosti}}, nepodléhá-li uveřejnění podle článku 13 odst. 4; podléhá-li smlouva uveřejnění v registru smluv, nabývá účinnosti nejdříve dnem uveřejnění.
 2. Každá strana může smlouvu vypovědět i bez uvedení důvodu. Výpovědní doba činí {{vypovedni_doba_mesicu}} měsíce a počíná běžet prvním dnem kalendářního měsíce následujícího po doručení výpovědi druhé straně.
 3. Poskytovatel může smlouvu vypovědět bez výpovědní doby, je-li klient v prodlení s úhradou paušálu nebo jiné splatné částky déle než {{prodleni_vypoved_dni}} dnů a neuhradí-li dluh ani v dodatečné lhůtě určené v písemné upomínce. Po marném uplynutí této dodatečné lhůty je poskytovatel rovněž oprávněn pozastavit poskytování služeb s výjimkou zásahů stupně P1.
 4. Klient může smlouvu vypovědět bez výpovědní doby, poruší-li poskytovatel lhůty podle článku 6 nejméně {{pocet_poruseni_sla}} krát během 12 po sobě jdoucích měsíců nebo neprovede-li z důvodů na své straně revizi zahrnutou v paušálu ve lhůtě podle kalendáře revizí.
@@ -113,9 +113,9 @@ a
 1. Písemnosti si strany doručují přednostně do datové schránky (poskytovatel: w9bbdva), dále doporučenou poštou na adresu sídla nebo e-mailem na adresy uvedené v záhlaví. Výpověď a upomínka podle článku 10 se doručují do datové schránky nebo doporučenou poštou.
 2. Smlouva se řídí právním řádem České republiky, zejména občanským právem. Měnit ji lze jen písemnými číslovanými dodatky, s výjimkou indexace podle článku 7 a změny kontaktních údajů.
 3. Je-li některé ustanovení smlouvy neplatné nebo nevymahatelné, nedotýká se to ostatních ustanovení.
-4. Podléhá-li smlouva uveřejnění podle předpisů o registru smluv, zajistí uveřejnění klient.
+4. Podléhá-li smlouva uveřejnění podle předpisů o registru smluv, zajistí uveřejnění klient a smlouva nabývá účinnosti nejdříve dnem jejího uveřejnění v registru smluv.
 5. Přílohy: č. 1 Specifikace objektu, zařízení a rozsah služeb tarifu včetně kalendáře revizí, č. 2 Ceník prací a dodávek nad rámec paušálu.
-6. Smlouva je vyhotovena ve dvou stejnopisech nebo v elektronické podobě. Strany prohlašují, že si smlouvu přečetly, jejímu obsahu rozumějí a uzavírají ji svobodně a vážně.
+6. Smlouva je vyhotovena ve dvou stejnopisech nebo v elektronické podobě; nepodléhá-li uveřejnění podle odstavce 4, nabývá účinnosti dle článku 10 odst. 1. Strany prohlašují, že si smlouvu přečetly, jejímu obsahu rozumějí a uzavírají ji svobodně a vážně.
 
 ## Podpisy
 

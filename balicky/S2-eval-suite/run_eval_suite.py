@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Deterministic evaluator of the Polarita Eval Suite 100+ (package S2, Version 2.7).
-Deterministický hodnotitel sady Eval Suite 100+ Polarita (balíček S2, Verze 2.7).
+Deterministic evaluator of the Polarita Eval Suite 100+ (package S2, Version 2.8).
+Deterministický hodnotitel sady Eval Suite 100+ Polarita (balíček S2, Verze 2.8).
 
 EN: Runs every scenario of eval_suite_polarita_extended.json either against the built-in
     reference policy (dry-run, no network, no paid services) or against a live gateway
@@ -17,7 +17,7 @@ CZ: Spustí každý scénář z eval_suite_polarita_extended.json buď proti ves
 Usage / Použití:
     python run_eval_suite.py                                  # dry-run, all scenarios / všechny scénáře
     python run_eval_suite.py --suite base                     # only the 20 base traps / jen 20 základních chytáků
-    python run_eval_suite.py --mode live --endpoint https://decisions.polarita.internal/eval/decide
+    python run_eval_suite.py --mode live --endpoint https://decisions.int.polarita.cz/eval/decide
 
 Exit codes / Návratové kódy: 0 = 100 % VERIFIED_PASS, 1 = at least one FAIL, 2 = invalid dataset or usage.
 """
@@ -30,6 +30,7 @@ import json
 import os
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -94,6 +95,23 @@ def decide_dry_run(scenario: dict[str, Any]) -> dict[str, Any]:
     return reference_policy.decide(scenario["event"])
 
 
+def validate_live_endpoint(endpoint: str) -> None:
+    """Reject non-HTTPS (except localhost) and production Polarita endpoints in live mode."""
+    parsed = urllib.parse.urlparse(endpoint)
+    host = (parsed.hostname or "").lower()
+    if not host:
+        raise ValueError("live endpoint has no hostname")
+    if parsed.scheme == "http":
+        if host not in ("127.0.0.1", "localhost", "::1"):
+            raise ValueError("live endpoint must use https:// (http allowed only for localhost)")
+    elif parsed.scheme != "https":
+        raise ValueError("live endpoint must use https://")
+    if (host in ("polarita.cz", "polarita.eu") or host.endswith((".polarita.cz", ".polarita.eu"))) and not any(
+        tag in host for tag in ("test", "staging", "sandbox", "dev", "eval", "int.")
+    ):
+        raise ValueError(f"refusing live run against production host: {host}")
+
+
 def decide_live(scenario: dict[str, Any], endpoint: str, timeout: float) -> dict[str, Any]:
     """
     EN: Ask the live gateway. Contract: POST JSON {scenario_id, agent, channel, event, transcript_mock}
@@ -101,6 +119,10 @@ def decide_live(scenario: dict[str, Any], endpoint: str, timeout: float) -> dict
     CZ: Dotáže se živého gateway. Kontrakt: POST JSON {scenario_id, agent, channel, event, transcript_mock}
         -> JSON {decision, reason_code, actions}. Chyba přenosu či formátu se počítá jako FAIL.
     """
+    try:
+        validate_live_endpoint(endpoint)
+    except ValueError:
+        return {"decision": "FORMAT_ERROR", "reason_code": "ENDPOINT_BLOCKED", "actions": []}
     payload = json.dumps({
         "scenario_id": scenario["id"],
         "agent": scenario["agent"],
@@ -120,10 +142,13 @@ def decide_live(scenario: dict[str, Any], endpoint: str, timeout: float) -> dict
         return {"decision": "TRANSPORT_ERROR", "reason_code": type(error).__name__, "actions": []}
     if not isinstance(answer, dict):
         return {"decision": "FORMAT_ERROR", "reason_code": "NOT_AN_OBJECT", "actions": []}
+    raw_actions = answer.get("actions", [])
+    if not isinstance(raw_actions, list):
+        return {"decision": "FORMAT_ERROR", "reason_code": "INVALID_ACTIONS_TYPE", "actions": []}
     return {
         "decision": str(answer.get("decision", "")),
         "reason_code": str(answer.get("reason_code", "")),
-        "actions": [str(item) for item in answer.get("actions", []) if isinstance(item, (str, int))],
+        "actions": [str(item) for item in raw_actions if isinstance(item, (str, int))],
     }
 
 
@@ -265,12 +290,12 @@ def render_trend(history: list[dict[str, Any]], latest: dict[str, Any]) -> str:
     polyline = " ".join(f"{x:.1f},{y:.1f}" for x, y, _ in points)
     dots = "".join(
         f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="{"#0b6b49" if item["verdict"] == "VERIFIED_PASS" else "#a9420b"}">'
-        f'<title>{html.escape(item["started_utc"])} · {item["mode"]} · {item["passed"]}/{item["total"]}</title></circle>'
+        f'<title>{html.escape(str(item["started_utc"]))} · {html.escape(str(item["mode"]))} · {item["passed"]}/{item["total"]}</title></circle>'
         for x, y, item in points)
     rows = "".join(
-        f"<tr><td>{html.escape(item['started_utc'])}</td><td>{html.escape(item['mode'])}</td><td>{html.escape(item['suite'])}</td>"
+        f"<tr><td>{html.escape(str(item['started_utc']))}</td><td>{html.escape(str(item['mode']))}</td><td>{html.escape(str(item['suite']))}</td>"
         f"<td class='num'>{item['passed']} / {item['total']}</td><td class='num'>{item['score_pct']} %</td>"
-        f"<td class='{'ok' if item['verdict'] == 'VERIFIED_PASS' else 'bad'}'>{item['verdict']}</td></tr>"
+        f"<td class='{'ok' if item['verdict'] == 'VERIFIED_PASS' else 'bad'}'>{html.escape(str(item['verdict']))}</td></tr>"
         for item in reversed(runs))
     category_rows = "".join(
         f"<tr><td><code>{html.escape(name)}</code></td><td class='num'>{bucket['passed']}</td><td class='num'>{bucket['total']}</td></tr>"
@@ -297,7 +322,7 @@ td.num, th.num {{ text-align:right; font-variant-numeric:tabular-nums; }} td.ok 
 svg {{ width:100%; height:auto; }} .axis {{ stroke:var(--line); }} .trend {{ fill:none; stroke:var(--fg); stroke-width:2; }} text {{ fill:var(--muted); font-size:11px; }}
 </style></head><body><main>
 <h1>Eval Suite Polarita — trendový report</h1>
-<p class="sub">Sada <code>{html.escape(str(latest['suite_name']))}</code> verze {html.escape(str(latest['suite_version']))} · poslední běh {html.escape(latest['started_utc'])} · režim {html.escape(latest['mode'])} · <strong>{latest['passed']} / {latest['total']} ({latest['score_pct']} %)</strong> · {latest['verdict']}</p>
+<p class="sub">Sada <code>{html.escape(str(latest['suite_name']))}</code> verze {html.escape(str(latest['suite_version']))} · poslední běh {html.escape(str(latest['started_utc']))} · režim {html.escape(str(latest['mode']))} · <strong>{latest['passed']} / {latest['total']} ({latest['score_pct']} %)</strong> · {html.escape(str(latest['verdict']))}</p>
 <div class="card"><svg viewBox="0 0 {width} {height}" role="img" aria-label="Vývoj úspěšnosti v čase">
 <line class="axis" x1="{pad}" y1="{height - pad}" x2="{width - pad}" y2="{height - pad}"/><line class="axis" x1="{pad}" y1="{pad}" x2="{pad}" y2="{height - pad}"/>
 <line class="axis" stroke-dasharray="4 4" x1="{pad}" y1="{pad}" x2="{width - pad}" y2="{pad}"/>
@@ -313,11 +338,29 @@ svg {{ width:100%; height:auto; }} .axis {{ stroke:var(--line); }} .trend {{ fil
 """
 
 
+def _load_history(history_path: Path) -> list[dict[str, Any]]:
+    history: list[dict[str, Any]] = []
+    for lineno, line in enumerate(history_path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            entry = json.loads(line)
+            if isinstance(entry, dict) and "score_pct" in entry:
+                history.append(entry)
+        except json.JSONDecodeError:
+            print(f"warning: skipping malformed history line {lineno} in {history_path}", file=sys.stderr)
+    return history
+
+
 def write_outputs(report: dict[str, Any], out_dir: Path, keep_history: bool) -> dict[str, Path]:
     """Write report files and the trend page. / Zapíše soubory reportu a trendovou stránku."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    stamp = report["started_utc"].replace("-", "").replace(":", "")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S-%fZ")
     stem = f"eval-report-{report['mode']}-{stamp}"
+    suffix = 0
+    while (out_dir / f"{stem}.json").exists() or (out_dir / f"{stem}.md").exists():
+        suffix += 1
+        stem = f"eval-report-{report['mode']}-{stamp}-{suffix}"
     json_path = out_dir / f"{stem}.json"
     md_path = out_dir / f"{stem}.md"
     json_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
@@ -328,7 +371,7 @@ def write_outputs(report: dict[str, Any], out_dir: Path, keep_history: bool) -> 
         summary = {key: report[key] for key in ("started_utc", "mode", "suite", "total", "passed", "failed", "score_pct", "verdict")}
         with history_path.open("a", encoding="utf-8", newline="\n") as handle:
             handle.write(json.dumps(summary, ensure_ascii=False) + "\n")
-        history = [json.loads(line) for line in history_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        history = _load_history(history_path)
         trend_path = out_dir / "trend.html"
         trend_path.write_text(render_trend(history, report), encoding="utf-8", newline="\n")
         written["history"] = history_path
@@ -352,9 +395,15 @@ def main(argv: list[str] | None = None) -> int:
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
 
-    if args.mode == "live" and not args.endpoint:
-        print("error: --endpoint is required for --mode live", file=sys.stderr)
-        return 2
+    if args.mode == "live":
+        if not args.endpoint:
+            print("error: --endpoint is required for --mode live", file=sys.stderr)
+            return 2
+        try:
+            validate_live_endpoint(args.endpoint)
+        except ValueError as error:
+            print(f"error: {error}", file=sys.stderr)
+            return 2
     try:
         dataset = load_dataset(args.dataset)
     except DatasetError as error:

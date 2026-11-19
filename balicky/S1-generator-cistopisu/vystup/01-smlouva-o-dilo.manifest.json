@@ -2,7 +2,7 @@
   "document": "01-smlouva-o-dilo",
   "title": "Smlouva o dílo — elektromontáže, FVE, EV wallboxy a LPS",
   "draft_watermark": true,
-  "generated_utc": "2026-11-18 06:11 UTC",
+  "generated_utc": "2026-11-19 19:51 UTC",
   "variables": {
     "spis_id": "POL-2027-00001",
     "cislo_smlouvy": "SOD-2027-0001 (VZOR)",
@@ -52,9 +52,9 @@
     "misto_podpisu": "Praha"
   },
   "sha256": {
-    "template": "4359904f5cedce5e1bc02dad08703730237bdca4f54c93b0dcd8926253107ff1",
+    "template": "2235465aa9bd50c4f157b9f071c470da7e603a860821683a18707c93009a6d80",
     "data": "501fc552061178510725dbf5c23b2573ff198b51035050b99b397992f9b58e95",
-    "pdf": "92baa8a0a47139bcb1f17692ad13b61c99b6881a7e73c9f1bf87f5f54ae3944c"
+    "pdf": "5df35422a457bb731d5ce53debb4742ac5e3a2f8bf836ffe397046e6193bf230"
   },
   "pages": 7
 }

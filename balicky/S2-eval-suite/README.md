@@ -1,4 +1,4 @@
-# Blok 14 · Balíček S2 — Rozšířená regresní sada `Eval Suite 100+` (syntetické stereo stopy + webový trendový report) · Verze 2.7
+# Blok 14 · Balíček S2 — Rozšířená regresní sada `Eval Suite 100+` (syntetické stereo stopy + webový trendový report) · Verze 2.8
 
 Tento dokument je řídicím dokumentem **`Bloku 14`** Rozvojové Etapy II společnosti **Polarita s.r.o.** Balíček rozšiřuje základní sadu **20 chytáků** `Promptfoo` z `Bloku 7` (`Stage 1`) a `Bloku 12` (`Stage 2`) na hloubkovou regresní sadu **157 scénářů** (20 základních + 137 rozšířených, z toho 17 se syntetickou stereo stopou) a přidává k ní deterministický hodnotitel, který pustí změnu promptu nebo modelu dál jen při skóre **`100 % VERIFIED_PASS`**. Nepřidává žádného `ai` agenta, žádnou databázi ani placenou službu a běží uvnitř stropu `470 USD / měsíc` (dry-run nestojí nic).
 
@@ -6,7 +6,7 @@ Tento dokument je řídicím dokumentem **`Bloku 14`** Rozvojové Etapy II spole
 
 ## 1. Seznam softwaru a modulů
 
-| Oblast | Soubor / modul | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 2.7) | Odpovědný `ai` / garant |
+| Oblast | Soubor / modul | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 2.8) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Datová sada** | [`eval_suite_polarita_extended.json`](./eval_suite_polarita_extended.json) *(export z [`build_dataset.py`](./build_dataset.py))* | verzováno v `Gitea` | 157 scénářů ve 13 kategoriích: strukturovaná událost, očekávané rozhodnutí, kód důvodu, povinné a zakázané akce, právní opora. Základní sada `ES-001` až `ES-020` je závazným výčtem 20 chytáků `Stage 1 / Stage 2`. | `17005` `ai-provoz` *(Judge `15001`, `15002`)* |
 | **Referenční politika** | [`reference_policy.py`](./reference_policy.py) | čistý `Python` bez závislostí | 25 deterministických pravidel (`Hard-Stop`, `FAIL_CLOSED`, `Decisions`) jako maketa nástrojové vrstvy pro dry-run a spustitelná specifikace, které musí odpovídat živý gateway. Nikdy nevolá jazykový model ani síť. | `17001` `programator` *(kontrola `17004` `klicnik`)* |
@@ -22,7 +22,10 @@ Tento dokument je řídicím dokumentem **`Bloku 14`** Rozvojové Etapy II spole
 1. **Dva nezávislé zdroje pravdy:**
    * Očekávané výsledky jsou u každého scénáře zapsány výslovně v [`build_dataset.py`](./build_dataset.py) a **neodvozují se** z referenční politiky. Dry-run tedy skutečně porovnává zadání se spustitelnou specifikací.
    * Každá kategorie obsahuje blokované případy i **negativní kontroly** (`ALLOW`), aby politika, která vše plošně blokuje, neprošla. Hlídá to test `test_every_category_has_a_negative_control`.
-2. **Pokrytí zadání balíčku `S2`:**
+2. **Co ověřuje `dry-run` vs. `live` / `Promptfoo`:**
+   * **`--mode dry-run`** je **deterministický test nástrojové pojistkové vrstvy (`reference_policy.py`)** nad strukturovanými událostmi `build_dataset.py` — **nevolá jazykový model, nehodnotí systémové prompty ani textovou/hlasovou detekci útoku v `transcript_mock`**. Výsledek `157/157 VERIFIED_PASS` v `dry-run` zaručuje správnou funkci deterministických pojistek, nikoli poslušnost LLM.
+   * **Skutečné ověření promptů a LLM** probíhá až v **`Promptfoo` (`Stage 1` v `Bloku 7` / `Stage 2` v `Bloku 12`)** a přes **`--mode live`** proti testovacímu endpointu `paperclip-orchestrator` (`decisions.int.polarita.cz`), kde orchestrátor předává scénář a `transcript_mock` reálným agentům a jejich nástrojům.
+3. **Pokrytí zadání balíčku `S2`:**
    * Nepřímý prompt injection v e-mailu, příloze `.zfo`, faktuře, historickém PDF i **v přepisu hovoru a hlasové zprávě** (`Spoken CaMeL` v obálce `<untrusted_inbound_comm>`).
    * Emoční a psychologická analýza na **`Kanálu R`** a u interního hovoru → `FAIL_CLOSED` (předpisy EU o umělé inteligenci, pravidla pro sledování zaměstnanců podle pracovněprávních předpisů).
    * `Hard-Stop` způsobilosti (elektrotechnik / vedoucí elektrotechnik / revizní technik podle předpisů o odborné způsobilosti v elektrotechnice, registrace ČSSZ / JMHZ před zahájením práce, lékařská prohlídka), zámek výkopů `DTM ČR`, ručení za DPH podle `ADIS`, oddělení osobních dokladů jednatele, `3-Way Match` a `PHE`, `Clean Room`, `SCRAP-CU` v režimu přenesené daňové povinnosti a zámek `PAUSED` v `polarita-ads-mcp`.
@@ -38,7 +41,7 @@ Tento dokument je řídicím dokumentem **`Bloku 14`** Rozvojové Etapy II spole
    * Referenční politika není jen testovací maketa. Nástrojová vrstva orchestrátoru `Paperclip` má před každým úkonem `ai` volat **tentýž modul** (`reference_policy.decide(event)`, případně z příkazové řádky `python reference_policy.py udalost.json` — návratový kód `0` jen pro `ALLOW`) a rozhodnutí vynutit mimo úsudek jazykového modelu.
    * Tím testovaná pravidla a pravidla v provozu nemohou být dvě různé implementace; každá změna pravidla projde touto sadou dřív, než se dostane do provozu.
 6. **Vztah k `Promptfoo`:**
-   * `Promptfoo` zůstává spouštěčem jazykových testů promptů z `Bloku 7`. Tento hodnotitel k němu přidává deterministickou vrstvu rozhodnutí a v `Gitea Actions` běží jako druhý krok téže brány.
+   * `Promptfoo` YAML definice pro `Stage 1 / Stage 2` vznikají při stavbě orchestrátoru v `Bloku 7` nad základní sadou `ES-001` až `ES-020` tohoto balíčku. Tento hodnotitel doplňuje deterministické ověření pojistek nástrojové vrstvy (`dry-run`) i srovnání živé gateway (`--mode live`) a v `Gitea Actions` běží vedle `Promptfoo`.
 
 ---
 
@@ -93,7 +96,7 @@ Při každém novém pravidle, incidentu nebo balíčku doplň sadu o scénáře
 
 ---
 
-## 5. Stav ve Verzi 2.7
+## 5. Stav ve Verzi 2.8
 
 **Hotovo v této složce a ověřeno spuštěním (`Python 3.12`, Windows, 14. 11. 2026):**
 

@@ -14,6 +14,8 @@
 | Položka | Údaj |
 | :--- | :--- |
 | Jméno a příjmení | {{jmeno_zmocnence}} |
+| Datum narození | {{datum_narozeni_zmocnence}} |
+| Trvalé bydliště | {{bydliste_zmocnence}} |
 | Osobní číslo v evidenci zmocnitele | {{osobni_cislo}} |
 | Role v režimu Break-Glass | {{role_zmocnence}} |
 | IČO zmocněnce (podniká-li) | {{ico_zmocnence}} |
@@ -22,7 +24,7 @@
 
 (dále jen „zmocněnec“)
 
-Úplné identifikační údaje zmocněnce potřebné pro podepisovaný originál (datum narození, bydliště) se doplňují až při podpisu z chráněné personální evidence zmocnitele a do šablony ani do pracovních kopií se neukládají.
+Pro elektronické koncepty se používají zástupné nebo chráněné hodnoty; v podepisovaném originálu musí být uvedeny ověřené identifikační údaje zmocněnce z evidence zmocnitele.
 
 ## III. Účel plné moci
 
@@ -47,7 +49,7 @@ Tato plná moc zmocněnce výslovně **neopravňuje**:
 
 1. odesílat datové zprávy z datové schránky zmocnitele w9bbdva ani činit jakékoli podání vůči orgánům veřejné moci bez jednatele; odchozí datové zprávy odesílá výhradně jednatel;
 2. zadávat, autorizovat ani jinak provádět bankovní platby a nakládat s prostředky na účtech zmocnitele, s výjimkou plateb výslovně a uzavřeným výčtem povolených v článku IV bodu 5, jsou-li tam povoleny;
-3. uzavírat, měnit nebo ukončovat smlouvy a činit jiná právní jednání, jejichž hodnota přesahuje {{limit_ukonu_bez_dph}} bez DPH v jednotlivém případě, a bez ohledu na hodnotu uzavírat smlouvy o úvěru, zápůjčce, ručení nebo zajištění;
+3. uzavírat nové obchodní smlouvy nad rámec úkonů výslovně uvedených v článku IV, ani činit jakákoli jednotlivá související právní jednání k zajištění neodkladného provozu v hodnotě přesahující {{limit_ukonu_bez_dph}} bez DPH, a bez ohledu na hodnotu uzavírat smlouvy o úvěru, zápůjčce, ručení nebo zajištění;
 4. používat osobní kvalifikovaný elektronický podpis jednatele, jeho kvalifikovaný prostředek pro vytváření elektronických podpisů, jeho průkazy, přístupové údaje ani hlavní hardwarový klíč YubiKey jednatele;
 5. zcizovat nebo zatěžovat majetek zmocnitele a zadlužovat zmocnitele;
 6. činit pracovněprávní jednání (zejména uzavírat a ukončovat pracovní poměry a dohody o pracích konaných mimo pracovní poměr);
@@ -58,7 +60,7 @@ Tato plná moc zmocněnce výslovně **neopravňuje**:
 ## VI. Doba platnosti a podmínky aktivace
 
 1. Plná moc se uděluje na dobu od {{platnost_plne_moci_od}} do {{platnost_plne_moci_do}}.
-2. Oprávnění podle článku IV vznikají teprve **aktivací** režimu Break-Glass. Do aktivace není zmocněnec oprávněn za zmocnitele jednat.
+2. Vůči třetím osobám prokazuje zmocněnec své oprávnění předložením této plné moci v rozsahu článku IV. Ve vnitřním vztahu vůči zmocniteli je však zmocněnec povinen jednat na základě této plné moci výhradně po zápisové aktivaci režimu Break-Glass podle bodu 3; jednání mimo aktivaci je porušením smluvních povinností zmocněnce.
 3. Režim Break-Glass se aktivuje buď písemným nebo elektronicky podepsaným pokynem jednatele, anebo — při nedostupnosti jednatele trvající déle než {{lhuta_nedostupnosti}} — zápisem o aktivaci, který pořídí {{osoba_potvrzujici_aktivaci}} po ověření nedostupnosti jednatele způsobem uvedeným v protokolu Break-Glass.
 4. O aktivaci, všech provedených úkonech a ukončení režimu se vede Protokol o aktivaci a ukončení režimu Break-Glass, který je nedílnou součástí spisu {{spis_id}}.
 5. Jedna aktivace trvá nejdéle {{nejdelsi_doba_aktivace}}. Trvá-li nedostupnost jednatele déle, lze režim prodloužit pouze novou aktivací se zápisem do protokolu.

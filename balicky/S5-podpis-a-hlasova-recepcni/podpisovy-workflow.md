@@ -1,4 +1,4 @@
-# Podpisový workflow — dvoustranný elektronický podpis smluv (`esign-bridge`) · Blok 17 · Verze 2.7
+# Podpisový workflow — dvoustranný elektronický podpis smluv (`esign-bridge`) · Blok 17 · Verze 2.8
 
 Tento dokument popisuje krok za krokem tok dvoustranného podpisu Smlouvy o dílo, Změnového listu víceprací a servisní smlouvy `Elektro Správa SVJ a Firem` (MRR). Doplňuje řídicí dokument [README.md](README.md) (pravidla 1–10). Jde o návrh: konektor `esign-bridge` není naprogramován ani nasazen a smlouva s poskytovatelem podpisu není uzavřena.
 
@@ -12,7 +12,7 @@ Tento dokument popisuje krok za krokem tok dvoustranného podpisu Smlouvy o díl
 
 ## 1. Předpoklady před prvním použitím
 
-| Předpoklad | Kdo | Stav ve Verzi 2.7 |
+| Předpoklad | Kdo | Stav ve Verzi 2.8 |
 | :--- | :--- | :--- |
 | Smlouva s poskytovatelem podpisu a zpracovatelská smlouva podle GDPR | `1001` *(posouzení `15001`)* | Neuzavřeno — `NÁVRH — ke schválení 1001` |
 | Matice úrovní podpisu podle typu listiny (prostý / zaručený / kvalifikovaný) | `15001` + `1001` | `NÁVRH — ke schválení 1001` |
@@ -35,10 +35,10 @@ Tento dokument popisuje krok za krokem tok dvoustranného podpisu Smlouvy o díl
 | 7 | `esign-bridge` přes `comm-gateway` | Odešle odkaz klientovi přes `Stalwart Mail` nebo `Chatwoot CE` ze schválené šablony; stav `SENT`. | Zpráva neobsahuje PIN ani text smlouvy. Jiný kanál než schválený v diffu je zakázán. |
 | 8 | Klient (druhá strana) | Otevře odkaz, ověří se přes SMS PIN nebo `BankID` a podepíše u poskytovatele. | Odmítnutí klientem → `REJECTED`; uplynutí platnosti → `EXPIRED`. |
 | 9 | Poskytovatel → `esign-bridge` | Webhook o změně stavu obálky. | Ověření podpisu webhooku, časového okna a jedinečnosti; selhání → `SECURITY_QUARANTINE` + hlášení `17004`. Stav se webhookem nemění. |
-| 10 | `esign-bridge` | Vlastním autentizovaným dotazem stáhne stav a podepsané PDF. | `ClamAV` v `sandbox_airgap`; ověření platnosti podpisu klienta; obsah musí odpovídat schválenému otisku. Originál se nepřevádí přes `Dangerzone`. Neshoda → stopka + hlášení `15001` a `17004`. |
+| 10 | `esign-bridge` | Vlastním autentizovaným dotazem stáhne stav a podepsané PDF. | `ClamAV` v `sandbox_airgap`; ověření platnosti podpisu klienta a přírůstkové revize (`verify_incremental_pdf_revision` + `DocMDP`: hash původního obsahu před podpisem odpovídá `sha256_approved`, klient směl přidat jen podpis/razítko/DSS bez změny textu smlouvy). Originál se nepřevádí přes `Dangerzone`. Neshoda → stopka + hlášení `15001` a `17004`. |
 | 11 | `esign-bridge` | Stav `CLIENT_SIGNED`; připraví listinu k podpisu jednatele a položku do `Decisions`. | Do tohoto bodu nevzniká žádný závazek Polarity. |
 | 12 | `1001` (osobně) | Podepíše lokálně v `JSignPdf` osobním `QES` z čipu `QSCD` s kvalifikovaným časovým razítkem `TSA` (PAdES). | Klíč nikdy neopouští čip. Podpis `ai`, vzdálené vložení klíče nebo pečeť `pyHanko` na smlouvě = `BLOCK`. |
-| 13 | `esign-bridge` + `15001` | Ověří oba podpisy, časové razítko a návaznost otisků; `15001` zkontroluje ověřovací protokol; stav `COUNTERSIGNED_1001`. | Neplatný podpis nebo chybějící razítko → návrat ke kroku 12, nic se nearchivuje. |
+| 13 | `esign-bridge` + `15001` | Ověří oba podpisy, časové razítko a návaznost přírůstkových PDF revizí (`verify_incremental_pdf_revision` + `DocMDP`: podpis `1001` navazuje beze změny obsahu na revizi podepsanou klientem); `15001` zkontroluje ověřovací protokol; stav `COUNTERSIGNED_1001`. | Neplatný podpis nebo chybějící razítko → návrat ke kroku 12, nic se nearchivuje. |
 | 14 | `1001` | Potvrdí závěrečný diff (`mutation_confirm`): archivace, zápis do spisu, aktivace fakturačního kalendáře, odeslání kopie klientovi. | Bez potvrzení se fakturační kalendář neaktivuje. |
 | 15 | `esign-bridge` | Uloží výsledné PDF do `/srv/polarita/data/legal-archive/` s příznakem `LEGAL_HOLD`; stav `ARCHIVED`. | Zápis jen do neměnného archivu; otisk uloženého souboru se ověří zpětným čtením. |
 | 16 | `esign-bridge` → `Zulip` a 360° Karta spisu | Zapíše do tématu `POL-RRRR-NNNNN` stav a odkaz na archivní záznam. | Bez PII a bez textu smlouvy; jen stav, datum a odkaz. |
@@ -107,7 +107,7 @@ Pravidla automatu: žádný stav nelze přeskočit; přechody jsou idempotentní
 | :--- | :--- |
 | `envelope_id`, `case_id`, `branch_id` | Identifikace obálky, spisu `POL-RRRR-NNNNN` a pobočky `101` |
 | `document_type`, `signature_level` | Typ listiny a schválená úroveň podpisu druhé strany |
-| `sha256_approved`, `sha256_client_signed`, `sha256_final` | Otisky listiny ve třech bodech toku |
+| `sha256_approved`, `sha256_client_signed`, `sha256_final`, `revision_check_ok` | Otisky jednotlivých fází souboru PDF (přičemž každý PAdES podpis přidá novou přírůstkovou revizi) a výsledek `verify_incremental_pdf_revision` + `DocMDP`, že obsah podepsaných revizí zůstal nezměněn |
 | `state_from`, `state_to`, `changed_at`, `actor` | Každý přechod stavu; aktér = číslo osoby (`1001`), číslo `ai` (`15001`) nebo `system` |
 | `decisions_id` | Odkaz na položku `Decisions` s `mutation_confirm` / `mutation_cancel` |
 | `channel`, `template_id` | Kanál odeslání a použitá schválená šablona |

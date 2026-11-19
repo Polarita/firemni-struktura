@@ -1,6 +1,6 @@
-# Brána `Go / No-Go` Strategické Etapy III — Polarita Elektro Cloud · Blok 19 (S7) · Verze 2.7
+# Brána `Go / No-Go` Strategické Etapy III — Polarita Elektro Cloud · Blok 19 (S7) · Verze 2.8
 
-Tento dokument stanoví objektivní spouštěč `Bloku 19`. Doplňuje řídicí dokument [`README.md`](README.md) (kapitola 2, pravidlo 1). Dokud protokol v kapitole 4 nenese verdikt `GO` a podpis `1001`, Blok 19 se nespouští. Brána ve Verzi 2.7 **nebyla měřena** — server `polarita-hq` zatím neexistuje, takže žádné z kritérií nelze splnit ani vyhodnotit.
+Tento dokument stanoví objektivní spouštěč `Bloku 19`. Doplňuje řídicí dokument [`README.md`](README.md) (kapitola 2, pravidlo 1). Dokud protokol v kapitole 4 nenese verdikt `GO` a podpis `1001`, Blok 19 se nespouští. Brána ve Verzi 2.8 **nebyla měřena** — server `polarita-hq` zatím neexistuje, takže žádné z kritérií nelze splnit ani vyhodnotit.
 
 ---
 
@@ -11,7 +11,7 @@ Všech pět kritérií musí platit současně ke dni měření. Prahové hodnot
 | # | Kritérium | Prahová hodnota | Zdroj měření v systému | Data připraví | Nezávisle potvrzuje |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `G1` | Bezchybný interní provoz na `polarita-hq` | **12–18 měsíců** souvislého provozu od `12/12 PASS` Go-Live Gate (`Blok 12`); nejdříve po 12 měsících | Protokol Go-Live Gate a protokoly týdenních testů obnovy a čtvrtletních `Full DR Drill` ve Vaultu `07-IT-a-Architektura`; historie incidentů v `Checkmk Raw` | `17003` `spravce-site` | `17004` `klicnik` |
-| `G2` | Aktivně spravované objekty SVJ / B2B v Digitální knize objektu | **≥ 100** objektů | Počet aktivních objektů z modulu `centralni-lhutnik-a-objekty` (`db_erp_lhutnik`) | `14005` `zakazky` | `17005` `ai-provoz` |
+| `G2` | Aktivně spravované objekty SVJ / B2B v Digitální knize objektu | **≥ 100** objektů | Počet aktivních objektů v `centralni-lhutnik-a-objekty` (`db_erp_lhutnik`) spárovaných s platnou fakturací (`finance-uol-marze-engine`) a smluvním vztahem | `14005` `zakazky` + `16001` `ucetni` | `15001` `pravni-specialista` + `17005` `ai-provoz` |
 | `G3` | Vydané revizní zprávy / Výrobní pasy rozváděčů | **≥ 500** vydaných dokumentů (v součtu) | Evidence vydaných dokumentů `cad-urs-engine` ověřená proti podepsaným PDF v `legal-archive`; koncepty (`DRAFT`) se nepočítají | `14003` `revizak` | `15002` `normovac` |
 | `G4` | Stabilní skóre `Eval Suite` | **100 %** | Historie běhů `Eval Suite` z `balicky/S2-eval-suite` a `/srv/polarita/workspace/ai-finops/eval-suite/` (`Stage 2`, běh každé 1. pondělí v měsíci) | `17005` `ai-provoz` | `17004` `klicnik` |
 | `G5` | Aktivní regionální partneři `Certified Partner SUB` | **≥ 15** partnerů | Partnerský provizní ledger (`finance-uol-marze-engine`) a evidence certifikací v `portal-spolupracovniku` | `16001` `ucetni` | `15001` `pravni-specialista` |
@@ -72,8 +72,8 @@ G5 Aktivní Certified Partner SUB            >= 15            __________   _____
 Použité definice pojmů (kapitola 2), verze schválená 1001 dne: ____________________
 
 Nezávislá kontrola měření:
-  G1, G4 — 17004 klicnik:             SOUHLASÍ / NESOUHLASÍ   poznámka: ____________________
-  G2     — 17005 ai-provoz:           SOUHLASÍ / NESOUHLASÍ   poznámka: ____________________
+  G1, G4 — 17004 klicnik:                        SOUHLASÍ / NESOUHLASÍ   poznámka: ____________________
+  G2     — 15001 pravni-spec. + 17005 ai-prov.: SOUHLASÍ / NESOUHLASÍ   poznámka: ____________________
   G3     — 15002 normovac:            SOUHLASÍ / NESOUHLASÍ   poznámka: ____________________
   G5     — 15001 pravni-specialista:  SOUHLASÍ / NESOUHLASÍ   poznámka: ____________________
 

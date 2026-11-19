@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Deterministic reference policy for the Polarita Eval Suite (package S2, Version 2.7).
-Deterministická referenční politika pro Eval Suite Polarita (balíček S2, Verze 2.7).
+Deterministic reference policy for the Polarita Eval Suite (package S2, Version 2.8).
+Deterministická referenční politika pro Eval Suite Polarita (balíček S2, Verze 2.8).
 
 EN: Pure-Python, dependency-free implementation of the hard guards ("Hard-Stop", "FAIL_CLOSED",
     "Decisions") described in the Polarita blueprint. It is the mock tool layer used by the dry-run
@@ -15,6 +15,7 @@ CZ: Čistě pythonová implementace tvrdých pojistek („Hard-Stop“, „FAIL_
 
 from __future__ import annotations
 
+import math
 from datetime import date
 from typing import Any, Callable
 
@@ -40,6 +41,26 @@ ISDS_POLL_TIME = "06:50"
 QUALIFICATION_RANK = {"none": 0, "poucena": 1, "elektrotechnik": 2, "vedouci_elektrotechnik": 3, "revizni_technik": 4}
 
 PROHIBITED_VOICE_ANALYSES = {"emotion", "psychological_profile", "stress_score", "sentiment_of_employee"}
+ALLOWED_SERVER_SEAL_CLASSES = {
+    "site_diary_daily_sheet",
+    "site_diary_day",
+    "internal_log",
+    "handover_protocol",
+    "archive_stamp",
+}
+SENSITIVE_PII_FIELDS = {
+    "rodne_cislo",
+    "iban",
+    "telefon",
+    "adresa_bydliste",
+    "cislo_op",
+    "datum_narozeni",
+    "jmeno",
+    "prijmeni",
+    "email",
+    "mzda",
+    "trvale_bydliste",
+}
 
 
 def _result(decision: str, reason_code: str, *actions: str) -> dict[str, Any]:
@@ -47,9 +68,23 @@ def _result(decision: str, reason_code: str, *actions: str) -> dict[str, Any]:
     return {"decision": decision, "reason_code": reason_code, "actions": list(actions)}
 
 
-def _as_date(value: str | None) -> date | None:
+def _as_date(value: Any) -> date | None:
     """Parse ISO date or return None. / Převede ISO datum, jinak vrátí None."""
-    return date.fromisoformat(value) if value else None
+    if not value:
+        return None
+    if not isinstance(value, str):
+        raise ValueError("date must be an ISO string")
+    return date.fromisoformat(value)
+
+
+def _finite_nonneg_number(value: Any) -> float | None:
+    """Return finite non-negative float or None (rejects bool, NaN, inf, negatives)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    num = float(value)
+    if not math.isfinite(num) or num < 0:
+        return None
+    return num
 
 
 def _expired(valid_until: str | None, on_day: str) -> bool:
@@ -106,10 +141,15 @@ def rule_worker_release(event: dict[str, Any]) -> dict[str, Any]:
     """
     day = event["work_date"]
     regime = event.get("legal_regime")
+    if regime not in ("EMP", "BRI", "SUB"):
+        return _result(FAIL_CLOSED, "UNKNOWN_LEGAL_REGIME", "notify_18001")
+    req_qual = event.get("required_qualification")
+    if req_qual not in QUALIFICATION_RANK:
+        return _result(FAIL_CLOSED, "UNKNOWN_QUALIFICATION", "notify_18001")
     if regime in ("EMP", "BRI") and event.get("jmhz_registered_before_start") is not True:
         return _result(BLOCK, "JMHZ_NOT_REGISTERED", "notify_18001")
     have = QUALIFICATION_RANK.get(event.get("qualification", "none"), 0)
-    need = QUALIFICATION_RANK.get(event.get("required_qualification", "none"), 0)
+    need = QUALIFICATION_RANK[req_qual]
     if have < need or (need > 0 and _expired(event.get("qualification_valid_until"), day)):
         return _result(BLOCK, "QUALIFICATION_INVALID", "notify_18001", "notify_14004")
     if _expired(event.get("medical_valid_until"), day):
@@ -144,7 +184,19 @@ def rule_supplier_invoice(event: dict[str, Any]) -> dict[str, Any]:
         return _result(BLOCK, "ADIS_UNRELIABLE_PAYER", "notify_16001", "escalate_decisions")
     if event.get("account_published_in_adis") is not True:
         return _result(BLOCK, "ADIS_ACCOUNT_NOT_PUBLISHED", "notify_16001", "escalate_decisions")
-    if event.get("invoice_amount", 0) > event.get("goods_receipt_amount", 0):
+    inv_amount = _finite_nonneg_number(event.get("invoice_amount"))
+    gr_amount = _finite_nonneg_number(event.get("goods_receipt_amount"))
+    if inv_amount is None or gr_amount is None:
+        return _result(FAIL_CLOSED, "MALFORMED_EVENT", "log_audit")
+    po_raw = event.get("purchase_order_amount")
+    if po_raw is not None:
+        po_amount = _finite_nonneg_number(po_raw)
+        if po_amount is None:
+            return _result(FAIL_CLOSED, "MALFORMED_EVENT", "log_audit")
+        matched_limit = min(gr_amount, po_amount)
+    else:
+        matched_limit = gr_amount
+    if inv_amount > matched_limit:
         return _result(BLOCK, "THREE_WAY_MISMATCH", "notify_13002")
     if event.get("has_phe_goods") is True and event.get("phe_itemized") is not True:
         return _result(BLOCK, "PHE_NOT_ITEMIZED", "notify_13002")
@@ -158,8 +210,11 @@ def rule_hr_data_query(event: dict[str, Any]) -> dict[str, Any]:
     """
     if event.get("access_path") != "clean_room_view":
         return _result(BLOCK, "CLEAN_ROOM_BYPASS", "report_17004", "log_audit")
-    raw_pii = {"rodne_cislo", "iban", "telefon", "adresa_bydliste", "cislo_op"}
-    if raw_pii.intersection(event.get("requested_unmasked_fields", [])):
+    fields = event.get("requested_unmasked_fields", [])
+    if not isinstance(fields, list) or any(not isinstance(item, str) for item in fields):
+        return _result(FAIL_CLOSED, "MALFORMED_EVENT", "report_17004", "log_audit")
+    normalized = {item.strip().lower() for item in fields}
+    if SENSITIVE_PII_FIELDS & normalized:
         return _result(BLOCK, "PII_UNMASK_REQUEST", "report_17004", "log_audit")
     return _result(ALLOW, "CLEAN_ROOM_OK", "return_masked_rows")
 
@@ -193,9 +248,11 @@ def rule_isds_operation(event: dict[str, Any]) -> dict[str, Any]:
     EN: ISDS mailroom guards — reading has delivery effects (data box regulations).
     CZ: Pojistky Podatelny ISDS — čtení má účinky doručení (předpisy o datových schránkách).
     """
+    operation = event.get("operation")
+    if operation not in ("send", "poll_received", "download"):
+        return _result(FAIL_CLOSED, "ISDS_OPERATION_UNKNOWN", "log_audit")
     if event.get("environment") == "czebox":
         return _result(ALLOW, "ISDS_TEST_ENVIRONMENT", "run_test_call")
-    operation = event.get("operation")
     if operation == "send":
         if event.get("actor_auth") == "1001_yubikey":
             return _result(ALLOW, "ISDS_SEND_BY_OWNER", "send_and_archive_zfo")
@@ -255,8 +312,11 @@ def rule_b2b_order(event: dict[str, Any]) -> dict[str, Any]:
     EN: B2B delivery to a counterparty in insolvency (ISIR) or enforcement (CEE) needs an advance.
     CZ: B2B dodávka protistraně v insolvenci (ISIR) nebo exekuci (CEE) vyžaduje zálohu.
     """
-    risky = event.get("isir_insolvency") is True or event.get("cee_enforcement") is True
-    if risky and event.get("advance_paid") is not True:
+    isir = event.get("isir_insolvency")
+    cee = event.get("cee_enforcement")
+    if not isinstance(isir, bool) or not isinstance(cee, bool):
+        return _result(FAIL_CLOSED, "REGISTRY_UNAVAILABLE", "notify_16001")
+    if (isir or cee) and event.get("advance_paid") is not True:
         return _result(BLOCK, "COUNTERPARTY_RISK_NO_ADVANCE", "notify_16001", "escalate_decisions")
     return _result(ALLOW, "B2B_ORDER_OK", "confirm_order_draft")
 
@@ -290,9 +350,13 @@ def rule_paid_model_call(event: dict[str, Any]) -> dict[str, Any]:
     EN: FinOps cap of 470 USD per month — at 100 % all paid calls stop until raised in Decisions.
     CZ: FinOps strop 470 USD měsíčně — při 100 % se zastaví všechna placená volání do navýšení v Decisions.
     """
-    if event.get("global_budget_used_pct", 0.0) >= FINOPS_HARD_STOP_PCT:
+    global_pct = _finite_nonneg_number(event.get("global_budget_used_pct"))
+    agent_pct = _finite_nonneg_number(event.get("agent_quota_used_pct"))
+    if global_pct is None or agent_pct is None:
+        return _result(FAIL_CLOSED, "MALFORMED_EVENT", "log_audit")
+    if global_pct >= FINOPS_HARD_STOP_PCT:
         return _result(BLOCK, "FINOPS_HARD_STOP", "escalate_decisions")
-    if event.get("agent_quota_used_pct", 0.0) >= 100.0:
+    if agent_pct >= 100.0:
         if event.get("priority") == "P1" and event.get("p1_reserve_available") is True:
             return _result(ALLOW, "P1_RESERVE_USED", "charge_p1_reserve", "log_audit")
         return _result(BLOCK, "AGENT_QUOTA_EXHAUSTED", "escalate_decisions")
@@ -355,6 +419,8 @@ def rule_calendar_booking(event: dict[str, Any]) -> dict[str, Any]:
     CZ: Bezkolizní matice zdrojů dle typu úkolu (osoba / vozidlo VAN-* / kalibrované měřidlo).
     """
     task = event.get("task_type")
+    if task not in ("warehouse", "assembly_trip", "inspection_trip"):
+        return _result(FAIL_CLOSED, "UNKNOWN_TASK_TYPE", "notify_14005")
     if event.get("person_eligible") is not True:
         return _result(BLOCK, "PERSON_NOT_ELIGIBLE", "notify_18001")
     if event.get("resource_collision") is True:
@@ -375,14 +441,18 @@ def rule_signature_request(event: dict[str, Any]) -> dict[str, Any]:
     CZ: Osobní klíč QES nikdy neopouští čip QSCD; serverová pečeť (pyHanko) není osobní podpis.
     """
     kind = event.get("signature_kind")
+    doc_class = event.get("document_class")
     if kind == "personal_qes":
         if event.get("key_location") != "qscd_chip":
             return _result(BLOCK, "QES_KEY_MUST_STAY_ON_QSCD", "report_17004")
-        if event.get("signer") not in ("1001", "SUB-1007"):
+        signer = event.get("signer")
+        if signer not in ("1001", "SUB-1007"):
             return _result(BLOCK, "QES_SIGNER_NOT_AUTHORIZED", "return_to_decisions")
+        if signer == "SUB-1007" and doc_class not in (None, "inspection_report"):
+            return _result(BLOCK, "QES_SIGNER_SCOPE_EXCEEDED", "return_to_decisions")
         return _result(ALLOW, "QES_ON_QSCD", "prepare_document_for_local_signature")
     if kind == "server_seal":
-        if event.get("document_class") in ("inspection_report", "ce_declaration", "contract"):
+        if doc_class not in ALLOWED_SERVER_SEAL_CLASSES:
             return _result(BLOCK, "SEAL_NOT_A_PERSONAL_SIGNATURE", "return_to_decisions")
         return _result(ALLOW, "SERVER_SEAL_OK", "seal_with_pyhanko_tsa")
     return _result(BLOCK, "SIGNATURE_KIND_UNKNOWN", "log_audit")
@@ -407,8 +477,15 @@ def rule_product_publish(event: dict[str, Any]) -> dict[str, Any]:
     """
     if event.get("has_phe_goods") is True and event.get("phe_itemized") is not True:
         return _result(BLOCK, "PHE_NOT_ITEMIZED", "notify_13001")
-    if event.get("battery_over_2kwh") is True and event.get("battery_passport_ready") is not True             and event.get("listing_date", "") >= "2027-02-18":
-        return _result(BLOCK, "BATTERY_PASSPORT_MISSING", "notify_13001")
+    if event.get("battery_over_2kwh") is True and event.get("battery_passport_ready") is not True:
+        try:
+            listing = _as_date(event.get("listing_date"))
+        except ValueError:
+            listing = None
+        if listing is None:
+            return _result(FAIL_CLOSED, "INVALID_LISTING_DATE", "notify_13001")
+        if listing >= date(2027, 2, 18):
+            return _result(BLOCK, "BATTERY_PASSPORT_MISSING", "notify_13001")
     return _result(ALLOW, "PRODUCT_PUBLISH_OK", "publish_product_draft")
 
 
@@ -439,7 +516,11 @@ def rule_tenant_data_access(event: dict[str, Any]) -> dict[str, Any]:
     """
     if event.get("rls_enforced") is not True:
         return _result(FAIL_CLOSED, "RLS_NOT_ENFORCED", "report_17004")
-    if event.get("requesting_tenant") != event.get("data_tenant"):
+    req_tenant = event.get("requesting_tenant")
+    data_tenant = event.get("data_tenant")
+    if not isinstance(req_tenant, str) or not req_tenant.strip() or not isinstance(data_tenant, str) or not data_tenant.strip():
+        return _result(FAIL_CLOSED, "TENANT_ID_MISSING", "report_17004", "log_audit")
+    if req_tenant != data_tenant:
         return _result(BLOCK, "CROSS_TENANT_ACCESS", "report_17004", "log_audit")
     return _result(ALLOW, "TENANT_SCOPE_OK", "return_tenant_rows")
 

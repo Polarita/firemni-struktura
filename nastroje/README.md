@@ -1,4 +1,4 @@
-# Nástroje návrhu: kanon, kontrola konzistence, jádro promptů a tisková PDF · Polarita s.r.o. (Verze 2.7)
+# Nástroje návrhu: kanon, kontrola konzistence, jádro promptů a tisková PDF · Polarita s.r.o. (Verze 2.8)
 
 Skripty v této složce udržují návrh vnitřně konzistentní a sestavují tisková PDF. Jsou to nástroje pro práci s dokumentací — nejsou součástí budoucího provozu firmy a nic nenasazují.
 
@@ -27,17 +27,17 @@ Skripty v této složce udržují návrh vnitřně konzistentní a sestavují ti
 
 Změna verze: `python nastroje/bump_version.py <nová verze>`, potom kroky 3 a 4.
 
-Instalace hooku (jednou): z kořene tohoto repozitáře `cp nastroje/pre-commit .git/hooks/pre-commit`. Hook funguje i tehdy, když návrh leží jako podsložka `polarita/firemni-struktura` většího repozitáře: pak se kopíruje do `.git/hooks/` toho repozitáře a u commitů, které se složky netýkají, nedělá nic.
+Instalace hooku (jednou): z kořene tohoto repozitáře `cp nastroje/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit`. Hook funguje i tehdy, když návrh leží jako podsložka `Polarita/firemni-struktura` (příp. `polarita/firemni-struktura`) většího repozitáře: pak se kopíruje do `.git/hooks/` toho repozitáře a u commitů, které se složky netýkají, nedělá nic.
 
 ## Co kontrola hlídá
 
-- **Verze:** každá zmínka o verzi musí odpovídat kanonu (výjimkou jsou soubory popisující historii uvedené v `version_allowlist_files`).
+- **Verze:** každá zmínka o verzi v dokumentech, skriptech i konfiguračních a kódových souborech balíčků musí odpovídat kanonu (výjimkou jsou soubory popisující historii uvedené v `version_allowlist_files`).
 - **Agenti:** číslo `ai` nesmí být spojeno s cizím systémovým ID nebo jménem; řádky katalogu v `README.md` a personální tabulky v `00` musí mít správné rozpočty; součet rozpočtů musí dát strop.
 - **Bez čísel předpisů a norem:** číslo zákona, vyhlášky nebo nařízení, paragraf, článek předpisu ani označení technické normy nesmí být v žádném dokumentu, balíčku ani generátoru PDF — předpisy a normy se načítají až po nasazení (viz [`06-REGISTR-OVERENI-PRAVA-A-NOREM.md`](../06-REGISTR-OVERENI-PRAVA-A-NOREM.md)).
 - **Názvy:** každá databáze `db_*`, každý kanál `#NN-…` a každá síťová zóna musí být v kanonu; počet doménových a servisních databází i jejich výčet musí odpovídat kanonu.
 - **Počty dokumentů:** počet souborů na disku musí odpovídat kanonu i číslům uvedeným v `README.md`, v knize `00` a v generátoru PDF.
-- **Společné jádro promptů:** znění ve všech 20 kartách musí přesně odpovídat zdroji.
-- **Zakázané výrazy:** chyby opravené při auditu (např. chybné označení centrálního skladu, starý název operace ISDS, chybné kódy autorizace ČKAIT, chybná licence knihovny `librosa` — viz registr `06`), zkratka `ai` psaná velkými písmeny v dokumentech jádra, příkazy pro `Docker` a jakékoli odkazy na jiné stroje nebo živý provoz — návrh je čistý koncept pro nový stroj a virtualizace je výhradně `Incus`.
+- **Společné jádro promptů:** znění ve všech 20 kartách musí přesně odpovídat zdroji (včetně personalizovaných eskalací pro `11001`, `15001`, `15002`, `17004`).
+- **Zakázané výrazy:** chyby opravené při auditu (např. chybné označení centrálního skladu, starý název operace ISDS, chybné kódy autorizace ČKAIT, chybná licence knihovny `librosa` — viz registr `06`), zkratka `ai` psaná velkými písmeny v celém repozitáři (mimo `GS1 AI` a `SCREAMING_SNAKE_CASE` konstant v kódu), únik osobních údajů jednatele, příkazy pro `Docker` a jakékoli odkazy na jiné stroje nebo živý provoz — návrh je čistý koncept pro nový stroj a virtualizace je výhradně `Incus`.
 - **Struktura Markdownu:** nefunkční relativní odkazy, tabulky s rozdílným počtem sloupců, neuzavřené bloky kódu, smíšené konce řádků.
 - **Upozornění (nezastaví commit):** počet řádků delších než 1 000 znaků v dokumentech jádra.
 

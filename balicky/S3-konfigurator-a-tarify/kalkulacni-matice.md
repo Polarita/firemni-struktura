@@ -1,4 +1,4 @@
-# Interní kalkulační a provizní matice (`N8`) · Verze 2.7
+# Interní kalkulační a provizní matice (`N8`) · Verze 2.8
 
 Interní pravidla pro `14002 rozpoctar`, `14005 zakazky`, `12001 marketing` a `16001 ucetni`. Čísla se neopisují — hodnoty jsou v [`cenik.json`](./cenik.json) a v generovaném [`prehled-cen.md`](./prehled-cen.md) (stav `SCHVÁLENO 1001`, 15. 11. 2026); výpočty provádí [`pricing.py`](./pricing.py).
 
@@ -27,7 +27,7 @@ Interní pravidla pro `14002 rozpoctar`, `14005 zakazky`, `12001 marketing` a `1
 ## 4. Provizní matice partnerů `Certified Partner SUB` (`N8`)
 
 1. Partner dostává **100 % sjednané ceny realizace** své dílčí objednávky.
-2. Navíc mu náleží **trvalá provize z uhrazeného měsíčního paušálu MRR** objektů, které přivedl — v pásmu `10–15 %`. Stupně uvnitř pásma podle počtu přivedených aktivních objektů jsou v `partner_commission.tiers` (návrh).
+2. Navíc mu náleží **trvalá provize z uhrazeného měsíčního paušálu MRR** objektů, které přivedl — v pásmu `10–15 %`. Stupně uvnitř pásma schválené jednatelem `1001` jsou v `partner_commission.tiers`.
 3. Provize se počítá funkcí `partner_commission` vždy z **uhrazeného** MRR daného měsíce; neuhrazený nebo dobropisovaný paušál provizi nezakládá.
 4. Výpočet zapisuje `16001 ucetni` do Partnerského provizního ledgeru; výplatu schvaluje `1001` v `Decisions` v měsíční uzávěrce.
 5. Provize zaniká ukončením paušální smlouvy objektu nebo ukončením partnerské smlouvy podle jejích podmínek (šablona `S1` č. 3).
@@ -38,4 +38,4 @@ Sezónní koeficienty (`seasonal_coefficients`) se používají **jen u balíčk
 
 ## 6. Změna hodnot
 
-Hodnoty se mění výhradně úpravou `cenik.json` přes `mutation_confirm` v `Decisions` → `python pricing.py --build` → `python -m unittest test_pricing`. Ruční úprava konfigurátoru nebo přehledu cen je zakázána (test ji odhalí).
+Hodnoty se mění výhradně úpravou `cenik.json` přes `mutation_confirm` v `Decisions` → `python pricing.py --build` → `python -m unittest test_pricing`. Příkaz `--build` vkládá do veřejného `konfigurator.html` výhradně veřejný výřez (`pricing.public_price_list` bez interních sazeb, marží a provizí). Ruční úprava konfigurátoru nebo přehledu cen je zakázána (test ji odhalí).

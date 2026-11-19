@@ -2,13 +2,13 @@
   "document": "08b-informacni-dolozka-zamestnance",
   "title": "Informační doložka o monitoringu firemních komunikačních prostředků a nahrávání hovorů",
   "draft_watermark": true,
-  "generated_utc": "2026-11-18 06:12 UTC",
+  "generated_utc": "2026-11-19 19:51 UTC",
   "variables": {
     "spis_id": "POL-2027-00001",
     "jmeno_zamestnance": "Jan Vzorový (VZOR)",
     "osobni_cislo": "9999",
     "druh_spoluprace": "pracovní poměr (VZOR)",
-    "pracovni_zarazeni": "elektromontér (VZOR)",
+    "pracovni_pozice": "elektromontér (VZOR)",
     "datum_nastupu": "1. 3. 2027",
     "cislo_smernice": "POL-2027-00001",
     "verze_smernice": "1.0",
@@ -20,9 +20,9 @@
     "dolozku_predal": "Václav Šercl, jednatel"
   },
   "sha256": {
-    "template": "d2663cb35423fa6ad80cd495ad0f7e950488ca660c3d85e7a9c344e5eb634af5",
-    "data": "0fc12831893ef12df35daa5e516d36cb9f6bac41de26ce3411518a03ef3f3d0a",
-    "pdf": "e4561900a161de895dee5228883af61e03d7b8d3beea0417375290de6bd534ab"
+    "template": "99f074ba132cfb26417a8701dad61a80a8c4dcae329d214f9caa18aef2770480",
+    "data": "74cb0e8035f2e62699a9ed3e9669fe0bb7e368105b2ed8b81bf48c947780ca26",
+    "pdf": "045e08b5d94fb83737bf55c7aab5f81cfd23f2f4c4c3432ad492943ff5ea0fe5"
   },
   "pages": 3
 }

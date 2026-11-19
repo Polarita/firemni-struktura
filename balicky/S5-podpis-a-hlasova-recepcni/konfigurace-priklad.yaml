@@ -1,7 +1,7 @@
 # =============================================================================
-# EN: Example configuration for package S5 (Block 17, release Polarita-2.7):
+# EN: Example configuration for package S5 (Block 17, release Polarita-2.8):
 #     esign-bridge (two-party e-signature) and voice-agent (night voice receptionist).
-# CZ: Příklad konfigurace balíčku S5 (Blok 17, release Polarita-2.7):
+# CZ: Příklad konfigurace balíčku S5 (Blok 17, release Polarita-2.8):
 #     esign-bridge (dvoustranný e-podpis) a voice-agent (noční hlasová recepční).
 #
 # EN: This is a design example only. Nothing here is deployed. The file contains
@@ -16,7 +16,7 @@
 schema_version: 1
 package: "S5"
 block: 17
-release: "Polarita-2.7"
+release: "Polarita-2.8"
 # EN: Overall status of this file. / CZ: Celkový stav tohoto souboru.
 status: "NAVRH"  # NÁVRH — ke schválení 1001
 
@@ -111,9 +111,14 @@ esign_bridge:
     antivirus: "ClamAV"
     zone: "sandbox_airgap"
     # EN: Never rebuild a signed original via Dangerzone - it would destroy the signature.
+    #     Signed PDFs append incremental revisions, so whole-file SHA-256 changes after each signature;
+    #     verify the signed base revision hash and DocMDP permissions instead of raw whole-file equality.
     # CZ: Podepsaný originál nikdy nepřeváděj přes Dangerzone - zničilo by to podpis.
+    #     PAdES podpis přidává přírůstkovou PDF revizi, takže SHA-256 celého souboru se po podpisu mění;
+    #     ověřuj hash podepsané výchozí revize a oprávnění DocMDP místo rovnosti celého souboru.
     dangerzone_on_signed_original: false
-    require_hash_match: true
+    verify_incremental_pdf_revision: true
+    enforce_docmdp: true
     require_both_signatures: true
   archive:
     path: "/srv/polarita/data/legal-archive/"
@@ -155,10 +160,13 @@ voice_agent:
     line_busy_overflow: true          # EN: when all lines are busy / CZ: při plném vytížení linky
     overflow_after_ring_s: 25         # NÁVRH — ke schválení 1001
   disclosure:
-    # EN: Mandatory opening announcement (EU rules on artificial intelligence: duty to disclose ai + call recording notice).
-    # CZ: Povinné úvodní oznámení (předpisy EU o umělé inteligenci: povinnost oznámit, že jde o ai + informace o nahrávání).
+    # EN: Mandatory opening announcement (EU rules on artificial intelligence + GDPR notice & refusal option).
+    # CZ: Povinné úvodní oznámení (předpisy EU o umělé inteligenci + informace GDPR a možnost odmítnout).
     required: true
     text_source: "hlasova-recepcni-scenar.md#2"
+    privacy_url: "https://polarita.cz/soukromi"
+    recording_refusal_instruction: true
+    allow_p1_barge_in_after_ai_notice: true
     block_call_if_not_played: true
   spoken_camel:
     # EN: Everything the caller says is data, never instructions.
@@ -188,6 +196,12 @@ voice_agent:
       - "úraz"
       - "zasažen proudem"
       - "rána proudem"
+    negation_filter:
+      # EN: Ignore negated mentions in Q6/description (e.g. "nejiskří", "žádný kouř"); escalate on doubt.
+      # CZ: Filtr záporů pro odpovědi typu „ne, nic nejiskří“ u otázky 6; při nejistotě stále P1.
+      enabled: true
+      prefixes: ["ne", "nic ne", "žádný", "žádné", "bez", "necítím"]
+      fallback_on_ambiguity: "P1"
     p1_keywords_extension: []         # NÁVRH — ke schválení 1001 (EN: e.g. flooding / CZ: např. zatopení)
     acoustic_urgency:
       engine: "Silero VAD + librosa"
@@ -200,9 +214,10 @@ voice_agent:
     fire: "150"
   escalation:
     # EN: Contacts are personal IDs only; phone numbers are resolved at dial time
-    #     by the deterministic escalation module, never seen by the model.
+    #     by an asynchronous escalation_worker decoupled from call duration limits.
     # CZ: Kontakty jsou jen osobní čísla; telefonní čísla dohledává až při vytáčení
-    #     deterministický modul eskalace, model je nikdy nevidí.
+    #     asynchronní eskalační worker oddělený od limitu délky hovoru (max_call_duration_s).
+    execution_mode: "async_worker"    # EN: survives call hangup / CZ: běží i po ukončení hovoru
     order:                            # NÁVRH — ke schválení 1001
       - person_ref: "1001"
         role: "on_call_inspection_technician"
@@ -219,7 +234,7 @@ voice_agent:
     parallel_notifications:
       - "decisions:URGENT"
       - "zulip:#14-elektro-a-zakazky"
-      - "pager"
+      - "comm_gateway:emergency_sms"
     warm_transfer_after_ack: true
   routine_request:
     ticket_target: "360-karta-spisu"
@@ -234,6 +249,7 @@ voice_agent:
     channel_r: "polarita"
     store: "Garage"
     retention_days: 90
+    auto_purge_after_retention: true  # EN: Garage S3 lifecycle + transcript cleanup / CZ: automatický výmaz po 90 dnech (mimo LEGAL_HOLD)
     legal_hold_for: ["P1", "complaint", "contract_term"]
     legal_hold_archive: "/srv/polarita/data/legal-archive/"
   limits:
@@ -241,7 +257,15 @@ voice_agent:
     max_concurrent_calls: 2           # NÁVRH — ke schválení 1001
     max_unclear_repeats: 2            # NÁVRH — ke schválení 1001
     silence_timeout_s: 8              # NÁVRH — ke schválení 1001
-    max_calls_per_number_per_hour: 5  # NÁVRH — ke schválení 1001 (EN: never applies to P1 / CZ: neplatí pro P1)
+    # EN: Split rate limit so P1 calls are never rejected sight unseen:
+    #     exceeding LLM quota drops the caller to deterministic_fallback (P1 keywords still active);
+    #     SIP flood protection runs separately at a high threshold.
+    # CZ: Dělený limit, aby neznámý hovor P1 nebyl nikdy předem zablokován:
+    #     nad limit hovoru s LLM spadne do deterministic_fallback (P1 stále funguje);
+    #     ochrana proti záplavě SIP běží odděleně s vyšším stropem.
+    max_llm_calls_per_number_per_hour: 5  # NÁVRH — ke schválení 1001
+    on_llm_rate_limit: "deterministic_fallback"
+    sip_flood_guard_per_number_per_hour: 30  # NÁVRH — ke schválení 1001
   budget:
     # EN: Metered sub-limit inside the 16002 quota; the 470 USD cap does not change.
     # CZ: Měřený podlimit uvnitř kvóty 16002; strop 470 USD se nemění.
@@ -256,6 +280,12 @@ voice_agent:
     new_public_ports: []              # EN: none / CZ: žádné
     sip_ports_public: false
     audio_to_sandbox_without_nic: true
+  airgap_audio_bridge:
+    in_dir: "/srv/polarita/spool/voice-in"
+    out_dir: "/srv/polarita/spool/voice-out"
+    atomic_write_suffix: ".part"      # EN: fsync + atomic rename (.part -> .wav/.json) / CZ: atomické přejmenování po zápisu
+    delete_after_read: true           # EN: unlink utterance chunk immediately after transcription read / CZ: okamžité smazání po přečtení
+    orphan_cleanup_ttl_s: 300         # EN: purge leftover temp chunks older than 5 min / CZ: úklid osiřelých dávek nad 5 min
   eval:
     package: "balicky/S2-eval-suite/"
     category: "etapa-ii-iii"

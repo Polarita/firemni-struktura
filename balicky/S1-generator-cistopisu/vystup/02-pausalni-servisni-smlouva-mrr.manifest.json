@@ -2,7 +2,7 @@
   "document": "02-pausalni-servisni-smlouva-mrr",
   "title": "Paušální servisní smlouva „Elektro Správa SVJ a Firem“",
   "draft_watermark": true,
-  "generated_utc": "2026-11-18 06:11 UTC",
+  "generated_utc": "2026-11-19 19:51 UTC",
   "variables": {
     "spis_id": "POL-2027-00002",
     "cislo_smlouvy": "MRR-2027-0001 (VZOR)",
@@ -60,9 +60,9 @@
     "misto_podpisu": "Praha"
   },
   "sha256": {
-    "template": "63f81fb5620604b1c83d5c86e6a10e77d6dacd0bcb8d40c5a59dfb64fe6991be",
+    "template": "9255f1630550edd6f3b01367cb31ace58eea072009f27cb7363db7acdf7a328c",
     "data": "8190becbcf39204c09a7bf994f0917ed969fc42b1d25d67f77ebcf396216661b",
-    "pdf": "499f2abddc6af24d1b1a912d0250abee4d6b5c52250f0e8e58fadcd1ed003f44"
+    "pdf": "9f35956607603737ab3fc5527dd7edbda57d97f07a222f4684c16aa21ed59b8b"
   },
   "pages": 6
 }

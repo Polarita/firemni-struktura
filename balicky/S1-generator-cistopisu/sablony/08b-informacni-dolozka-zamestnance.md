@@ -1,5 +1,5 @@
 # Informační doložka o monitoringu firemních komunikačních prostředků a nahrávání hovorů
-**Evidenční číslo:** {{spis_id}}
+**Spis:** {{spis_id}}
 
 Zaměstnavatel a správce osobních údajů: **Polarita s.r.o.**, se sídlem Na Folimance 2155/15, Vinohrady, 120 00 Praha 2, Česká republika, IČO 14180324, DIČ CZ14180324, zapsaná v obchodním rejstříku vedeném Městským soudem v Praze pod sp. zn. C 361683, datová schránka w9bbdva, zastoupená jednatelem Václavem Šerclem (dále jen „společnost“).
 
@@ -10,7 +10,7 @@ Zaměstnavatel a správce osobních údajů: **Polarita s.r.o.**, se sídlem Na 
 | Jméno a příjmení | {{jmeno_zamestnance}} |
 | Osobní číslo | {{osobni_cislo}} |
 | Druh spolupráce | {{druh_spoluprace}} |
-| Pracovní zařazení | {{pracovni_zarazeni}} |
+| Pracovní zařazení | {{pracovni_pozice}} |
 | Den nástupu | {{datum_nastupu}} |
 
 Touto doložkou vás společnost před přidělením firemních komunikačních prostředků přímo informuje o rozsahu kontroly a o způsobech jejího provádění podle pracovněprávních předpisů a o zpracování vašich osobních údajů podle GDPR. Doložka shrnuje Vnitřní směrnici o monitoringu firemních komunikačních prostředků a nahrávání hovorů, evidenční číslo {{cislo_smernice}}, verze {{verze_smernice}}.

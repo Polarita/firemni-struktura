@@ -1,6 +1,6 @@
-# Blok 18 · Balíček S6 — Samo-dokumentující E2E testy a 30min vývojová smyčka UI · Verze 2.7
+# Blok 18 · Balíček S6 — Samo-dokumentující E2E testy a 30min vývojová smyčka UI · Verze 2.8
 
-Tento dokument je řídicím dokumentem **`Bloku 18`** Rozvojové Etapy II společnosti **Polarita s.r.o.** (balíček `S6` ze zásobníku `03-NAVRHY-BALICKU-NA-POZDEJI.md`, release `Polarita-2.7`). Definuje dvě navazující věci: *(1)* **živou ilustrovanou příručku** — každý end-to-end test klíčového firemního procesu v **`Playwright`** pořizuje během běhu v `Gitea Actions` popsané snímky obrazovky a generátor **`manual-builder`** z nich po každém úspěšném běhu na hlavní větvi skládá vždy aktuální provozní příručku (`Markdown → PDF`) pro zaškolení montérů, skladníků a partnerů `SUB`; *(2)* **řízenou 30minutovou vývojovou smyčku** výhradně pro ne-normové UI a tiskové sestavy nad **`metadata-schema-kernel`**, ve které `17001 programator` (*Worker*) připraví úpravu v izolovaném stromu **`wt-worker`**, **`AigisCode`** + `17004 klicnik` (*Judge*) ji ověří v **`wt-judge`** a do **`Decisions`** dorazí náhled se screenshoty **`před → po`**. Blok 18 lze spustit až po `12/12 PASS` Go-Live Gate (`Blok 12`), nezávisí na `Blocích 13–17`, nezakládá žádného nového `ai` zaměstnance ani oddělení a celý běží uvnitř stropu **`470 USD / měsíc`**.
+Tento dokument je řídicím dokumentem **`Bloku 18`** Rozvojové Etapy II společnosti **Polarita s.r.o.** (balíček `S6` ze zásobníku `03-NAVRHY-BALICKU-NA-POZDEJI.md`, release `Polarita-2.8`). Definuje dvě navazující věci: *(1)* **živou ilustrovanou příručku** — každý end-to-end test klíčového firemního procesu v **`Playwright`** pořizuje během běhu v `Gitea Actions` popsané snímky obrazovky a generátor **`manual-builder`** z nich po každém úspěšném běhu na hlavní větvi skládá vždy aktuální provozní příručku (`Markdown → PDF`) pro zaškolení montérů, skladníků a partnerů `SUB`; *(2)* **řízenou 30minutovou vývojovou smyčku** výhradně pro ne-normové UI a tiskové sestavy nad **`metadata-schema-kernel`**, ve které `17001 programator` (*Worker*) připraví úpravu v izolovaném stromu **`wt-worker`**, **`AigisCode`** + `17004 klicnik` (*Judge*) ji ověří v **`wt-judge`** a do **`Decisions`** dorazí náhled se screenshoty **`před → po`**. Blok 18 lze spustit až po `12/12 PASS` Go-Live Gate (`Blok 12`), nezávisí na `Blocích 13–17`, nezakládá žádného nového `ai` zaměstnance ani oddělení a celý běží uvnitř stropu **`470 USD / měsíc`**.
 
 Soubory balíčku: tento `README.md`, vzorový test [`priklad/karta-spisu.spec.ts`](priklad/karta-spisu.spec.ts) a pravidla fronty [`fronta-30min-smycka.md`](fronta-30min-smycka.md).
 
@@ -23,7 +23,8 @@ Soubory balíčku: tento `README.md`, vzorový test [`priklad/karta-spisu.spec.t
 
 1. **Testy běží výhradně proti testovacímu prostředí se syntetickými daty — nikdy proti produkci:**
    * E2E testy se připojují pouze na adresu z proměnné prostředí `POLARITA_E2E_BASE_URL`; v repozitáři není žádná skutečná adresa. Testovací prostředí tvoří samostatné instance v `Incus` (`0× Docker`), jejichž databáze vznikají z migrací a syntetického seedu, nikdy z kopie produkčních dat.
-   * Ve screenshotech, manifestech ani v příručce nesmí být žádné osobní údaje (`0` PII): osoby, firmy, adresy i spisy `POL-RRRR-NNNNN` jsou smyšlené a zjevně označené jako vzorové; přihlašovací údaje testovacích účtů se čtou z `OpenBao`, nikdy z repozitáře ani z logu.
+   * Ve screenshotech, manifestech ani v příručce nesmí být žádné osobní údaje (`0` PII): osoby, firmy, adresy i spisy `POL-RRRR-NNNNN` jsou smyšlené a zjevně označené jako vzorové; přihlašovací údaje testovacích účtů se čtou z `OpenBao`, nikdy z repozitáře ani z logu. **Upozornění na screenshoty:** maskování prvků `[data-e2e-mask]` chrání jen výslovně označené uzly DOM a neochrání uniklé PII v hláškách nebo vstupních polích — základem ochrany je vždy čistě syntetický seed a následná kontrola snímků před publikací.
+   * Pro přihlášení přes `Keycloak` OIDC preferujte v reálné sadě oddělený *setup* projekt s `storageState` (`Playwright`), aby se zbytečně nefotilo přihlášení v každé kapitole a fungovaly i toky s `MFA` / `Passkey`.
    * Podání ISDS se testuje výhradně proti testovacímu prostředí `czebox.cz`; produkční endpoint `ws1.mojedatovaschranka.cz` ani schránka `w9bbdva` se v testech nepoužívají.
 2. **Každý krok testu má český popisek, který se stává textem příručky:**
    * Test nevolá `page.screenshot()` přímo, ale pomocnou funkci `krok(page, popisek)`. Popisek je celá česká věta psaná pro montéra nebo skladníka (co udělat a co uvidí), ne technická poznámka pro vývojáře.
@@ -36,6 +37,7 @@ Soubory balíčku: tento `README.md`, vzorový test [`priklad/karta-spisu.spec.t
    * Při neúspěšném běhu se příručka negeneruje a poslední platná verze zůstává beze změny; běhy u pull requestů příručku nikdy nepublikují.
 5. **30min smyčka je VÝHRADNĚ pro ne-normové UI a tiskové sestavy nad `metadata-schema-kernel`:**
    * `17001 programator` pracuje jako `Worker` v izolovaném worktree `wt-worker`; `AigisCode` + `17004 klicnik` pracují jako `Judge` ve `wt-judge` a ověřují úpravu E2E testy; výstupem je náhled se screenshoty `před → po` ve frontě `Decisions`, kde změnu potvrdí nebo zamítne `1001` (`mutation_confirm` / `mutation_cancel`).
+   * **`Worker` (`17001`)**, **`Judge` (`17004` + `AigisCode`)** a kontrola hlavní větve před sloučením zajišťují, že v diffu neslábnou E2E aserce (žádné mazání `expect` ani `.skip`), že `wt-worker` nemá nekontrolovaný rozchod proti `main` a že snímky `před → po` neobsahují PII.
    * **Výslovný zákaz:** smyčka nikdy nezasahuje do normového jádra ČSN `cad-urs-engine` ani do `Hard-Stop` zámků `db_hr_lide`; stejně tak ne do `Clean Room` pohledů, vendor schémat cizích aplikací, autorizace a tajemství. Úplný výčet je v `fronta-30min-smycka.md`.
 6. **Limit změn, časový box a zahození při neúspěchu:**
    * Jedna iterace = jeden požadavek = jeden formulář nebo jedna tisková sestava; platí limit rozsahu změny na iteraci (číselná hodnota je v `fronta-30min-smycka.md` vedena jako `NÁVRH — ke schválení 1001`) a kanonický limit nejvýše 2 samo-oprav.
@@ -100,7 +102,7 @@ Zaveď a provozuj 30minutovou vývojovou smyčku podle balicky/S6-ziva-prirucka-
    - Pořiď snímky stavu „po“ a předej Zadání, diff, výstup testů a snímky.
 3. Judge (AigisCode + 17004 klicnik):
    - Pracuj ve wt-judge na modelu jiného výrobce než Worker. Dostáváš výhradně Zadání, diff, výstup testů a snímky; úvahy tvůrce nečti.
-   - Ověř: 0 porušení v AigisCode a gitleaks, diff jen v povolených cestách, E2E testy dotčeného procesu prošly, snímky „před“ a „po“ odpovídají Zadání, žádné osobní údaje.
+   - Ověř: 0 porušení v AigisCode a gitleaks, diff jen v povolených cestách, E2E aserce nebyly oslabeny ani přeskočeny, E2E testy dotčeného procesu prošly proti aktuální hlavní větvi (bez rozchodu s main), snímky „před“ a „po“ odpovídají Zadání, žádné osobní údaje.
 4. Výsledek:
    - PASS: založ položku v Decisions s diffem a snímky „před -> po“; sloučit lze až po mutation_confirm od 1001.
    - FAIL, překročení limitu nebo času: změnu zahoď (smaž worktree, nic neslučuj), zapiš důvod a eskaluj člověku. Stejný požadavek nespouštěj znovu bez nového zadání.
@@ -120,7 +122,7 @@ Zaveď a provozuj 30minutovou vývojovou smyčku podle balicky/S6-ziva-prirucka-
 
 ---
 
-## 5. Stav ve Verzi 2.7
+## 5. Stav ve Verzi 2.8
 
 **Hotové v této složce (dokumentace a vzory):**
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Generator of clean PDF copies of contracts and protocols (package S1, Version 2.7).
-Generátor PDF čistopisů smluv a protokolů (balíček S1, Verze 2.7).
+Generator of clean PDF copies of contracts and protocols (package S1, Version 2.8).
+Generátor PDF čistopisů smluv a protokolů (balíček S1, Verze 2.8).
 
 EN: Fills Markdown templates from sablony/ with variables from data/<same-name>.json,
     renders them to print HTML (A4) and prints PDF through a headless Chromium browser
@@ -19,7 +19,7 @@ Usage / Použití:
     python generate_pdfs.py --check              # validate templates and data only / jen kontrola
     python generate_pdfs.py --only 07-predzalobni-vyzva --data-dir cesta/k/datum --final
 
-Requires / Vyžaduje: Python package "markdown" (see requirements.txt) and Chrome or Edge.
+Requires / Vyžaduje: Python packages "markdown" and "pypdf" (see requirements.txt) and Chrome or Edge.
 """
 
 from __future__ import annotations
@@ -44,9 +44,30 @@ DATA_DIR = HERE / "data"
 OUTPUT_DIR = HERE / "vystup"
 
 PLACEHOLDER = re.compile(r"\{\{\s*([a-z0-9_]+)\s*\}\}")
-ANY_BRACES = re.compile(r"\{\{.*?\}\}")
+ANY_BRACES = re.compile(r"\{\{.*?\}\}", re.DOTALL)
 REQUIRED_SETS = ("01", "02", "03", "04", "05", "06", "07", "08")  # eight sets of package S1 / osm sestav balíčku S1
 SHARED_VARIABLES = ("spis_id", "ico_klienta", "castka_bez_dph")    # variables named by the S1 definition of done
+
+_ESCAPE_MAP = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+    "|": "&#124;",
+    "\\": "&#92;",
+    "`": "&#96;",
+    "*": "&#42;",
+    "_": "&#95;",
+    "[": "&#91;",
+    "]": "&#93;",
+    "(": "&#40;",
+    ")": "&#41;",
+    "!": "&#33;",
+    "#": "&#35;",
+    "~": "&#126;",
+}
+_ESCAPE_RE = re.compile("|".join(re.escape(k) for k in _ESCAPE_MAP))
 
 BROWSER_CANDIDATES = (
     os.environ.get("POLARITA_PDF_BROWSER", ""),
@@ -84,9 +105,14 @@ def placeholders(text: str) -> set[str]:
 
 def fill(template: str, values: dict[str, str], name: str) -> str:
     """
-    EN: Replace variables; fails on a missing, unused or non-string value and on malformed braces.
-    CZ: Nahradí proměnné; selže při chybějící, nepoužité či neřetězcové hodnotě a při chybných závorkách.
+    EN: Replace variables; fails on a missing, unused or non-string value and on malformed or unclosed braces.
+    CZ: Nahradí proměnné; selže při chybějící, nepoužité či neřetězcové hodnotě a při chybných či neuzavřených závorkách.
     """
+    if not isinstance(values, dict):
+        raise GeneratorError(f"{name}: data must be a JSON object")
+    stripped = ANY_BRACES.sub("", template)
+    if "{{" in stripped or "}}" in stripped:
+        raise GeneratorError(f"{name}: unclosed placeholder braces")
     needed = placeholders(template)
     malformed = [m for m in ANY_BRACES.findall(template) if not PLACEHOLDER.fullmatch(m)]
     if malformed:
@@ -105,10 +131,11 @@ def fill(template: str, values: dict[str, str], name: str) -> str:
 
 def escape_value(value: str) -> str:
     """
-    EN: Make a data value inert before Markdown conversion: no HTML, no table break, no line break.
-    CZ: Zneškodní datovou hodnotu před převodem Markdownu: žádné HTML, žádné rozbití tabulky ani řádku.
+    EN: Make a data value inert before Markdown conversion: no HTML, no Markdown links/images/formatting, no line break.
+    CZ: Zneškodní datovou hodnotu před převodem Markdownu: žádné HTML, žádné Markdown odkazy/obrázky/formátování ani zalomení řádku.
     """
-    return html.escape(" ".join(value.split()), quote=False).replace("|", "&#124;")
+    collapsed = " ".join(value.split())
+    return _ESCAPE_RE.sub(lambda match: _ESCAPE_MAP[match.group(0)], collapsed)
 
 
 def to_html(markdown_text: str, title: str, draft: bool, footer: str) -> str:
@@ -157,9 +184,9 @@ def validate_pdf(pdf_path: Path) -> int:
     if not raw.startswith(b"%PDF-") or b"%%EOF" not in raw[-2048:]:
         raise GeneratorError(f"{pdf_path.name} is not a valid PDF")
     try:
-        from pypdf import PdfReader  # optional, improves validation / volitelné, zpřesní kontrolu
-    except ImportError:
-        return len(re.findall(rb"/Type\s*/Page[^s]", raw))
+        from pypdf import PdfReader
+    except ImportError as error:
+        raise GeneratorError("Python package 'pypdf' is not installed (pip install -r requirements.txt)") from error
     reader = PdfReader(str(pdf_path))
     text = "".join(page.extract_text() or "" for page in reader.pages)
     if "{{" in text or "}}" in text:
@@ -210,14 +237,17 @@ def generate(template_dir: Path, data_dir: Path, out_dir: Path, only: str | None
         if not check_only:
             title = template.splitlines()[0][2:].strip()
             stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-            footer = (f"{'VZOR s fiktivními daty — ' if draft else ''}Polarita s.r.o. · šablona {template_path.name} · "
-                      f"vygenerováno {stamp} · koncept ai podléhá kontrole 15001 a podpisu 1001")
-            html_path = out_dir / f"{name}.html"
+            if draft:
+                footer = (f"VZOR s fiktivními daty — Polarita s.r.o. · šablona {template_path.name} · "
+                          f"vygenerováno {stamp} · koncept ai podléhá kontrole 15001 a podpisu 1001")
+            else:
+                footer = f"Polarita s.r.o. · dokument {name} · vygenerováno {stamp}"
             pdf_path = out_dir / f"{name}.pdf"
-            html_path.write_text(to_html(filled, title, draft, footer), encoding="utf-8", newline="\n")
-            print_pdf(browser or "", html_path, pdf_path)
+            with tempfile.TemporaryDirectory() as tmp_html_dir:
+                html_path = Path(tmp_html_dir) / f"{name}.html"
+                html_path.write_text(to_html(filled, title, draft, footer), encoding="utf-8", newline="\n")
+                print_pdf(browser or "", html_path, pdf_path)
             pages = validate_pdf(pdf_path)
-            html_path.unlink()
             manifest = {
                 "document": name,
                 "title": title,
@@ -228,39 +258,38 @@ def generate(template_dir: Path, data_dir: Path, out_dir: Path, only: str | None
                 "pages": pages,
             }
             (out_dir / f"{name}.manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
-                                                             encoding="utf-8", newline="\n")
+                                                           encoding="utf-8", newline="\n")
             record.update({"pdf": pdf_path.name, "pages": pages})
         results.append(record)
     if not only:
-        absent = [variable for variable in SHARED_VARIABLES if variable not in shared_seen]
-        if absent:
-            raise GeneratorError(f"shared variables never used by any template: {absent}")
+        missing_shared = [var for var in SHARED_VARIABLES if var not in shared_seen]
+        if missing_shared:
+            raise GeneratorError(f"shared variables missing across templates: {missing_shared}")
     return results
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Polarita PDF generator of contracts and protocols (package S1)")
+    parser = argparse.ArgumentParser(description="Polarita clean-copy PDF generator (package S1)")
     parser.add_argument("--template-dir", type=Path, default=TEMPLATE_DIR)
     parser.add_argument("--data-dir", type=Path, default=DATA_DIR)
-    parser.add_argument("--out-dir", type=Path, default=OUTPUT_DIR)
-    parser.add_argument("--only", help="template name without extension, e.g. 07-predzalobni-vyzva")
-    parser.add_argument("--final", action="store_true", help="omit the VZOR watermark (real data approved in Decisions)")
-    parser.add_argument("--check", action="store_true", help="validate templates and data without printing PDF")
+    parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR)
+    parser.add_argument("--only", help="template stem without .md, e.g. 07-predzalobni-vyzva")
+    parser.add_argument("--final", action="store_true", help="omit the VZOR watermark (only after mutation_confirm)")
+    parser.add_argument("--check", action="store_true", help="check templates and data without printing PDF")
     args = parser.parse_args(argv)
-    for stream in (sys.stdout, sys.stderr):
-        if hasattr(stream, "reconfigure"):
-            stream.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     try:
-        results = generate(args.template_dir, args.data_dir, args.out_dir, args.only, not args.final, args.check)
-    except (GeneratorError, json.JSONDecodeError, OSError, subprocess.TimeoutExpired) as error:
+        results = generate(args.template_dir, args.data_dir, args.output_dir, args.only, not args.final, args.check)
+    except (GeneratorError, OSError, json.JSONDecodeError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
-    for record in results:
-        tail = f" -> {record['pdf']} ({record['pages']} s.)" if "pdf" in record else " (check only)"
-        print(f"OK {record['template']}: {record['variables']} variables{tail}")
-    print(f"{len(results)} documents {'validated' if args.check else 'generated'}")
+    for item in results:
+        suffix = f" -> {item['pdf']} ({item['pages']} pp.)" if "pdf" in item else f" ({item['variables']} vars OK)"
+        print(f"OK {item['template']}{suffix}")
+    print(f"VERIFIED_PASS: {len(results)}/{len(results)}")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

@@ -71,12 +71,14 @@
         <h2>Vaše konfigurace</h2>
         <dl>
           <dt>Měsíční paušál bez DPH</dt><dd id="monthly">—</dd>
+          <dt>Měsíční paušál orientačně s DPH</dt><dd class="small" id="monthlyVat">—</dd>
           <dt>Ročně bez DPH</dt><dd class="small" id="annual">—</dd>
           <dt>Balíčky na klíč bez DPH (od–do)</dt><dd class="small" id="pkgRange">—</dd>
+          <dt>Balíčky na klíč orientačně s DPH</dt><dd class="small" id="pkgRangeVat">—</dd>
           <dt>Servisní odezva (SLA)</dt><dd class="small" id="sla">—</dd>
         </dl>
         <ul class="includes" id="includes"></ul>
-        <p class="note">Kolik může stát zanedbaná revize? Spočítejte si to v <a href="/kalkulacka-svj">Kalkulačce rizik a úspor SVJ</a>.</p>
+        <p class="note">Kolik může stát zanedbaná revize? Spočítejte si to v <a href="https://polarita.cz/kalkulacka-svj" target="_blank" rel="noopener noreferrer">Kalkulačce rizik a úspor SVJ</a>.</p>
         <button class="cta" id="copy" type="button">Zkopírovat shrnutí poptávky</button>
         <p id="copied" role="status"></p>
         <p class="note">Konfigurátor nic neodesílá ani neukládá. Závaznou nabídku vždy připraví a potvrdí člověk.</p>
@@ -87,7 +89,7 @@
 <script>
 // Price list embedded at build time from cenik.json (python pricing.py --build).
 // Ceník vložený při sestavení z cenik.json (python pricing.py --build).
-const PRICE_LIST = {"meta": {"name": "cenik_polarita", "version": "2.0", "status": "SCHVALENO_1001", "approved": true, "approved_by": "1001", "approved_on": "2026-11-15", "valid_from": "2026-11-15", "currency": "CZK", "prices_exclude_vat": true, "note": "Výchozí ceník schválil jednatel 1001 dne 15. 11. 2026 ve znění návrhu, beze změn. Hodnoty nebyly porovnány s trhem ani s nákupními ceníky; při založení firmy se schválení zapíše do Decisions jako výchozí stav a každá další změna prochází mutation_confirm. Nejde o závaznou nabídku zákazníkovi."}, "mrr_tariffs": [{"code": "START_SVJ", "label": "Start SVJ", "audience": "SVJ a bytová družstva", "base_monthly_per_object": 1490, "extra_entrance_monthly": 490, "sla_response": "následující pracovní den", "labour_discount_pct": 0, "includes": ["48h digitální převzetí starých šanonů (N7)", "Hlídání všech lhůt v Centrálním Lhůtníku", "Digitální kniha objektu pod QR kódem na rozváděči", "Pravidelné revize společných prostor a hromosvodu LPS v ceně", "Neomezený počet členů výboru SVJ v portálu"]}, {"code": "STANDARD_OBJEKT", "label": "Standard Objekt", "audience": "SVJ, bytové domy a menší firmy", "base_monthly_per_object": 2990, "extra_entrance_monthly": 790, "sla_response": "do 8 pracovních hodin", "labour_discount_pct": 5, "includes": ["Vše z tarifu Start SVJ", "Termovizní diagnostika hlavních rozváděčů", "Prioritní servisní SLA odezva přes Helpdesk", "Vzdálený Read-Only dohled EV wallboxů (OCPP) a FVE střídačů", "Roční souhrnná zpráva pro pojišťovnu"]}, {"code": "MAXI_AREAL_B2B", "label": "Maxi Areál / B2B", "audience": "Areály, výrobní a logistické firmy", "base_monthly_per_object": 6900, "extra_entrance_monthly": 1490, "sla_response": "garantovaná pohotovost do 4 hodin", "labour_discount_pct": 10, "includes": ["Vše z tarifu Standard Objekt", "Garantovaná pohotovostní SLA lhůta", "Preventivní údržba trafostanic, kompenzací a nouzového osvětlení", "Zvýhodněná hodinová sazba montérů", "Prioritní koordinace u 14005 zakazky"]}], "turnkey_packages": [{"code": "EV_WALLBOX", "label": "Chytrý EV Wallbox pro garáž SVJ / rodinný dům", "unit": "ks", "price_from": 38000, "price_to": 95000, "includes": "Wallbox, jištění a chránič, dynamické řízení výkonu DLM, OCPP dohled, výchozí revize"}, {"code": "STOUPACKY_HER", "label": "Modernizace stoupaček a hlavního elektroměrového rozváděče SVJ", "unit": "vchod", "price_from": 180000, "price_to": 950000, "includes": "Projekt, nové stoupací vedení, elektroměrový rozváděč s Výrobním pasem CE podle platné normy pro rozváděče nízkého napětí, stavební přípomoce, výchozí revize"}, {"code": "FVE_BESS", "label": "Komunitní a firemní FVE + BESS", "unit": "instalace", "price_from": 450000, "price_to": 3500000, "includes": "Projekt, FVE a bateriové úložiště s datovou připraveností pasu baterie (předpisy EU o bateriích, povinné od 18. 2. 2027 pro LMT, EV a průmyslové baterie > 2 kWh), registrace EDC, bezpečná instalace podle předpisů o bezpečné instalaci výroben z obnovitelných zdrojů"}], "hourly_rates": {"electrotechnician": {"label": "Montér-elektrotechnik", "rate": 590}, "lead_electrotechnician": {"label": "Vedoucí elektrotechnik", "rate": 690}, "revision_technician": {"label": "Revizní technik (TIČR)", "rate": 990}, "designer": {"label": "Projektant elektro", "rate": 1190}}, "material_markup_pct": 15, "minimum_contribution_margin_pct": 22, "retention_pct": {"min": 5, "max": 10}, "partner_commission": {"note": "Trvalá provize Certified Partner SUB z uhrazeného měsíčního paušálu MRR přivedených objektů; pásmo 10–15 % je dáno návrhem firmy, stupně uvnitř pásma schválil 1001 dne 15. 11. 2026.", "tiers": [{"min_objects": 1, "pct": 10.0}, {"min_objects": 5, "pct": 12.5}, {"min_objects": 10, "pct": 15.0}]}, "seasonal_coefficients": [{"months": [1, 2], "coefficient": 0.95, "label": "Zimní útlum montáží"}, {"months": [3, 4, 5], "coefficient": 1.0, "label": "Jarní standard"}, {"months": [6, 7, 8, 9], "coefficient": 1.05, "label": "Hlavní sezóna FVE a EV"}, {"months": [10, 11, 12], "coefficient": 1.0, "label": "Podzimní revize"}], "indexation": "Roční indexace paušálu o průměrnou míru inflace vyhlášenou ČSÚ za předchozí kalendářní rok (dle paušální servisní smlouvy, sestava S1 č. 2)."};
+const PRICE_LIST = {"meta": {"name": "cenik_polarita", "version": "2.0", "status": "SCHVALENO_1001", "approved": true, "approved_by": "1001", "approved_on": "2026-11-15", "valid_from": "2026-11-15", "currency": "CZK", "prices_exclude_vat": true, "vat_rates": {"standard_pct": 21, "residential_reduced_pct": 12}}, "mrr_tariffs": [{"code": "START_SVJ", "label": "Start SVJ", "audience": "SVJ a bytová družstva", "base_monthly_per_object": 1490, "extra_entrance_monthly": 490, "sla_response": "následující pracovní den", "labour_discount_pct": 0, "includes": ["48h digitální převzetí starých šanonů (N7)", "Hlídání všech lhůt v Centrálním Lhůtníku", "Digitální kniha objektu pod QR kódem na rozváděči", "Pravidelné revize společných prostor a hromosvodu LPS v ceně", "Neomezený počet členů výboru SVJ v portálu"]}, {"code": "STANDARD_OBJEKT", "label": "Standard Objekt", "audience": "SVJ, bytové domy a menší firmy", "base_monthly_per_object": 2990, "extra_entrance_monthly": 790, "sla_response": "do 8 pracovních hodin", "labour_discount_pct": 5, "includes": ["Vše z tarifu Start SVJ", "Termovizní diagnostika hlavních rozváděčů", "Prioritní servisní SLA odezva přes Helpdesk", "Vzdálený Read-Only dohled EV wallboxů (OCPP) a FVE střídačů", "Roční souhrnná zpráva pro pojišťovnu", "Sleva 5 % na hodinovou sazbu montérů"]}, {"code": "MAXI_AREAL_B2B", "label": "Maxi Areál / B2B", "audience": "Areály, výrobní a logistické firmy", "base_monthly_per_object": 6900, "extra_entrance_monthly": 1490, "sla_response": "garantovaná pohotovost do 4 hodin", "labour_discount_pct": 10, "includes": ["Vše z tarifu Standard Objekt", "Garantovaná pohotovostní SLA lhůta", "Preventivní údržba trafostanic, kompenzací a nouzového osvětlení", "Zvýhodněná hodinová sazba montérů (sleva 10 %)", "Prioritní dispečink a koordinace zakázek"]}], "turnkey_packages": [{"code": "EV_WALLBOX", "label": "Chytrý EV Wallbox pro garáž SVJ / rodinný dům", "unit": "ks", "price_from": 38000, "price_to": 95000, "includes": "Wallbox, jištění a chránič, dynamické řízení výkonu DLM, OCPP dohled, výchozí revize"}, {"code": "STOUPACKY_HER", "label": "Modernizace stoupaček a hlavního elektroměrového rozváděče SVJ", "unit": "vchod", "price_from": 180000, "price_to": 950000, "includes": "Projekt, nové stoupací vedení, elektroměrový rozváděč s Výrobním pasem CE podle platné normy pro rozváděče nízkého napětí, stavební přípomoce, výchozí revize"}, {"code": "FVE_BESS", "label": "Komunitní a firemní FVE + BESS", "unit": "instalace", "price_from": 450000, "price_to": 3500000, "includes": "Projekt, FVE a bateriové úložiště s datovou připraveností pasu baterie (předpisy EU o bateriích, povinné od 18. 2. 2027 pro LMT, EV a průmyslové baterie > 2 kWh), registrace EDC, bezpečná instalace podle předpisů o bezpečné instalaci výroben z obnovitelných zdrojů"}], "seasonal_coefficients": [{"months": [1, 2], "coefficient": 0.95, "label": "Zimní útlum montáží"}, {"months": [3, 4, 5], "coefficient": 1.0, "label": "Jarní standard"}, {"months": [6, 7, 8, 9], "coefficient": 1.05, "label": "Hlavní sezóna FVE a EV"}, {"months": [10, 11, 12], "coefficient": 1.0, "label": "Podzimní revize"}], "indexation": "Roční indexace paušálu o průměrnou míru inflace vyhlášenou ČSÚ za předchozí kalendářní rok (dle paušální servisní smlouvy, sestava S1 č. 2)."};
 
 const state = { tariff: PRICE_LIST.mrr_tariffs[0].code, packages: {} };
 // Round to hellers first (removes binary float error), then to whole crowns half up - as pricing.py.
@@ -102,6 +104,8 @@ const clampInt = (input) => {
 
 // Same formulas as pricing.py (monthly_fee, package_range, seasonal_coefficient).
 // Stejné vzorce jako v pricing.py (monthly_fee, package_range, seasonal_coefficient).
+const roundHeller = (value) => Math.round(value * 100) / 100;
+const withVat = (value, pct) => roundHeller(value * (100 + pct) / 100);
 function monthlyFee(tariff, objects, extraEntrances) {
   return tariff.base_monthly_per_object * objects + tariff.extra_entrance_monthly * extraEntrances;
 }
@@ -111,7 +115,7 @@ function seasonalCoefficient(month) {
 }
 function packageRange(pkg, quantity, month) {
   const coefficient = seasonalCoefficient(month);
-  return [pkg.price_from * quantity * coefficient, pkg.price_to * quantity * coefficient];
+  return [roundHeller(pkg.price_from * quantity * coefficient), roundHeller(pkg.price_to * quantity * coefficient)];
 }
 
 function renderStatic() {
@@ -147,8 +151,9 @@ function renderStatic() {
     const detail = document.createElement("small"); detail.textContent = czk(pkg.price_from) + " – " + czk(pkg.price_to) + " / " + pkg.unit + " · " + pkg.includes;
     label.append(title, detail);
     const quantity = document.createElement("input"); quantity.type = "number"; quantity.min = "1"; quantity.max = "200"; quantity.value = "1";
+    quantity.disabled = true;
     quantity.setAttribute("aria-label", "Počet: " + pkg.label);
-    const sync = () => { state.packages[pkg.code] = check.checked ? clampInt(quantity) : 0; update(); };
+    const sync = () => { quantity.disabled = !check.checked; state.packages[pkg.code] = check.checked ? clampInt(quantity) : 0; update(); };
     check.addEventListener("change", sync); quantity.addEventListener("input", sync);
     row.append(check, label, quantity); packages.append(row);
   });
@@ -167,15 +172,20 @@ function compute() {
     const quantity = state.packages[pkg.code] || 0;
     if (quantity > 0) { const [a, b] = packageRange(pkg, quantity, month); from += a; to += b; chosen.push(quantity + "× " + pkg.label); }
   });
-  return { tariff, objects, entrances, month, monthly, annual: monthly * 12, from, to, chosen };
+  return { tariff, objects, entrances, month, monthly, annual: monthly * 12, from: roundHeller(from), to: roundHeller(to), chosen };
 }
 
 function update() {
   const result = compute();
+  const vat = PRICE_LIST.meta.vat_rates;
   document.querySelectorAll(".tariff").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.code === state.tariff)));
   byId("monthly").textContent = czk(result.monthly);
+  byId("monthlyVat").textContent = czk(withVat(result.monthly, vat.standard_pct)) + " (21 %) · " + czk(withVat(result.monthly, vat.residential_reduced_pct)) + " (12 % bydlení)";
   byId("annual").textContent = czk(result.annual);
   byId("pkgRange").textContent = result.chosen.length ? czk(result.from) + " – " + czk(result.to) : "nevybráno";
+  byId("pkgRangeVat").textContent = result.chosen.length
+    ? czk(withVat(result.from, vat.standard_pct)) + " – " + czk(withVat(result.to, vat.standard_pct)) + " (21 %) · " + czk(withVat(result.from, vat.residential_reduced_pct)) + " – " + czk(withVat(result.to, vat.residential_reduced_pct)) + " (12 %)"
+    : "nevybráno";
   byId("sla").textContent = result.tariff.sla_response;
   const list = byId("includes"); list.replaceChildren();
   result.tariff.includes.forEach((item) => { const li = document.createElement("li"); li.textContent = item; list.append(li); });
@@ -184,11 +194,12 @@ function update() {
 
 async function copySummary() {
   const result = compute();
+  const vat = PRICE_LIST.meta.vat_rates;
   const lines = [
     "Poptávka — Elektro Správa SVJ a Firem (orientační konfigurace, " + (PRICE_LIST.meta.approved ? "ceník " + PRICE_LIST.meta.version : "NÁVRH cen") + ")",
     "Tarif: " + result.tariff.label,
     "Objektů: " + result.objects + ", dalších vchodů: " + result.entrances,
-    "Měsíční paušál bez DPH: " + czk(result.monthly) + " (ročně " + czk(result.annual) + ")",
+    "Měsíční paušál bez DPH: " + czk(result.monthly) + " (orientačně " + czk(withVat(result.monthly, vat.standard_pct)) + " s 21 % DPH / " + czk(withVat(result.monthly, vat.residential_reduced_pct)) + " s 12 % DPH bydlení; ročně " + czk(result.annual) + " bez DPH)",
     "Balíčky na klíč: " + (result.chosen.length ? result.chosen.join(", ") + " — " + czk(result.from) + " až " + czk(result.to) + " bez DPH" : "žádné"),
   ];
   const status = byId("copied");

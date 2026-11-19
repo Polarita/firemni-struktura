@@ -78,7 +78,7 @@ Podléhá-li plnění režimu přenesení daňové povinnosti u stavebních a mo
 
 ## 9. Schválení
 
-Změnový list se schvaluje elektronicky v portálu zhotovitele (modul portal-spolupracovniku), kde se k němu ukládá záznam o osobě, datu a čase schválení, nebo vlastnoručním či elektronickým podpisem.
+Změnový list se schvaluje elektronicky v klientském portálu zhotovitele, kde se k němu ukládá záznam o osobě, datu a čase schválení, nebo vlastnoručním či elektronickým podpisem.
 
 **Způsob schválení:** {{zpusob_schvaleni}}
 

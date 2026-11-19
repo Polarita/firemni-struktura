@@ -10,7 +10,13 @@
 name: kontrola-navrhu
 on:
   push:
+    branches: [main, "release/**"]
   pull_request:
+    # EN: Because the runner runs in host mode inside a shared Incus container without per-job isolation,
+    #     run CI only on trusted internal branches or inside an ephemeral Incus runner container.
+    # CZ: Protože runner běží v režimu host ve sdíleném kontejneru Incus bez izolace mezi joby,
+    #     spouštěj CI jen na důvěryhodných interních větvích nebo v efemérním kontejneru runneru.
+    branches: [main]
 
 jobs:
   kontrola:
@@ -22,19 +28,19 @@ jobs:
     env:
       PYTHONDONTWRITEBYTECODE: "1"
     steps:
-      # EN: The runner container needs the packages git, nodejs (for the checkout action), python3 and
-      #     python3-venv, and Gitea needs a local mirror of the checkout action (no internet in the zone).
-      # CZ: Kontejner runneru potřebuje balíky git, nodejs (kvůli akci checkout), python3 a python3-venv
-      #     a Gitea místní zrcadlo akce checkout (zóna nemá přístup do internetu).
+      # EN: The runner container needs git, nodejs (for checkout), python3, python3-venv and a pre-staged
+      #     offline wheelhouse in /opt/polarita-wheels (built during Block 5 image setup because app_internal has no internet).
+      # CZ: Kontejner runneru potřebuje git, nodejs (kvůli akci checkout), python3, python3-venv a předem uložený
+      #     offline wheelhouse v /opt/polarita-wheels (připravený při stavbě obrazu v Bloku 5, zóna nemá internet).
       - uses: actions/checkout@v4
 
-      # EN: A virtual environment - a system-wide "pip install" is refused on current Ubuntu LTS.
-      # CZ: Virtuální prostředí - systémové "pip install" aktuální Ubuntu LTS odmítá.
-      - name: Python dependencies / Závislosti
+      # EN: Create the venv outside the checked-out workspace so it never pollutes git status or check_consistency.
+      # CZ: Vytvoř venv mimo kontrolovaný pracovní adresář, aby nezanášel git status ani kontrolu konzistence.
+      - name: Python dependencies (offline wheelhouse) / Závislosti (offline)
         run: |
-          python3 -m venv .venv
-          .venv/bin/pip install -r balicky/S1-generator-cistopisu/requirements.txt
-          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+          python3 -m venv /tmp/polarita-ci-venv
+          /tmp/polarita-ci-venv/bin/pip install --no-index --find-links=/opt/polarita-wheels -r balicky/S1-generator-cistopisu/requirements.txt
+          echo "/tmp/polarita-ci-venv/bin" >> "$GITHUB_PATH"
 
       - name: Consistency check against the canon / Kontrola konzistence proti kanonu
         working-directory: nastroje
@@ -43,15 +49,18 @@ jobs:
           python3 check_consistency.py
           python3 -m unittest test_check_consistency
 
-      - name: S2 Eval Suite 100+ (dry-run must be 100 %) / dry-run musí být 100 %
+      - name: S2 Eval Suite 100+ (dry-run policy check must be 100 %) / dry-run politiky musí být 100 %
         working-directory: balicky/S2-eval-suite
         run: |
           python3 -m unittest test_eval_suite
           python3 run_eval_suite.py --no-history
 
-      - name: S3 pricing kernel / Cenové jádro
+      - name: S3 pricing kernel & build sync / Cenové jádro a shoda sestavení
         working-directory: balicky/S3-konfigurator-a-tarify
-        run: python3 -m unittest test_pricing
+        run: |
+          python3 pricing.py --build
+          git diff --exit-code .
+          python3 -m unittest test_pricing
 
       - name: S1 templates and sample data / Šablony a vzorová data
         working-directory: balicky/S1-generator-cistopisu

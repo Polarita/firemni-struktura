@@ -1,4 +1,4 @@
-# Právní a normová báze: pravidla a registr otevřených bodů — Polarita s.r.o. (Verze 2.7)
+# Právní a normová báze: pravidla a registr otevřených bodů — Polarita s.r.o. (Verze 2.8)
 
 Tento dokument stanoví, **jak firma zachází s právními předpisy, technickými normami a smlouvami**, a eviduje technické údaje návrhu, které byly ověřeny nebo na ověření čekají. Návrh je teoretický koncept a návod pro čistý stroj; nic v něm nenahrazuje právní ani odborné posouzení.
 
@@ -8,7 +8,7 @@ Tento dokument stanoví, **jak firma zachází s právními předpisy, technick�
 
 1. **V celém návodu nejsou čísla zákonů, vyhlášek a nařízení, čísla paragrafů a článků ani označení a edice technických norem.** Návod popisuje jen oblasti (například „pracovněprávní předpisy“, „platná norma pro rozváděče nízkého napětí“) a postup. Nemůže předjímat, jaké předpisy, normy a smlouvy budou platit v době, kdy firma vznikne, ani později.
 2. **Předpisy, normy a smlouvy se stahují, studují a používají až po nasazení systému**, z úředních zdrojů a podle skutečné potřeby. Žádný `ai` agent ani člověk nesmí citovat předpis nebo normu zpaměti ani podle tohoto návodu — jen podle záznamu v bázi.
-3. **Lhůty, limity a částky uvedené v návodu jsou výchozí hodnoty** (například počet hodin u dohod, délka fikce doručení, doba platnosti zkoušek a oprávnění). Platnou hodnotu určuje báze: po jejím načtení se výchozí hodnoty porovnají a každý rozdíl se opraví v konfiguraci systému postupem podle kapitoly 5.
+3. **Lhůty, limity a částky uvedené v návodu jsou výchozí orientační hodnoty** (například počet hodin u dohod, délka fikce doručení, doba platnosti zkoušek a oprávnění nebo připravenost případné elektronické evidence tržeb, pokud ji česká legislativa zavede a stanoví datum účinnosti). Platnou hodnotu určuje živá báze ve `Vaultu` od `Bloku 8`: po jejím načtení se výchozí hodnoty porovnají a každý rozdíl se opraví v konfiguraci systému postupem podle kapitoly 5.
 4. Zásadu hlídá kontrola konzistence [`nastroje/check_consistency.py`](./nastroje/check_consistency.py): číslo předpisu, paragrafu nebo označení normy v dokumentu je chyba, která zastaví commit.
 
 ## 2. Co je právní a normová báze
@@ -63,6 +63,7 @@ Ostrý start (`Blok 12`, `Go-Live Gate`) je možný jen tehdy, když báze obsah
 | ID | Údaj | Stav | Zdroj a datum |
 | :--- | :--- | :--- | :--- |
 | `V-01` | Licence knihoven pro zpracování zvuku: `Silero VAD` = `MIT`, `librosa` = `ISC` | ověřeno a opraveno ve všech dokumentech | metadata balíků, 14. 11. 2026 |
+| `V-02` | Elektro autorizace `ČKAIT` mají kanonická označení `IE02` a `TE03` (opraveno proti původně mylně uváděným jednoznakovým kódům oboru) | ověřeno a opraveno ve všech dokumentech | přehled autorizací `ČKAIT`, 14. 11. 2026 |
 | `V-03` | Názvy operací webové služby ISDS pro výpis a stažení zpráv | ověřeno a opraveno | informace pro vývojáře ISDS, 14. 11. 2026 |
 | `V-04` | Produkční adresa webové služby ISDS | ověřeno a opraveno | informace pro vývojáře ISDS, 14. 11. 2026 |
 | `V-17` | Poštovní klient `Mozilla Thunderbird` nepodporuje protokol `JMAP`; ke `Stalwart Mail` se připojuje přes `IMAP IDLE` a `SMTP` | ověřeno a opraveno | plán vývoje klienta, 15. 11. 2026 |
@@ -74,8 +75,8 @@ Ostrý start (`Blok 12`, `Go-Live Gate`) je možný jen tehdy, když báze obsah
 | :--- | :--- | :--- | :--- |
 | `N-10` | Funkce, které návrh připisuje nástrojům z `V-22`, nejsou jejich veřejnými popisy potvrzeny (provoz nástroje `Nod` bez dalšího kontejnerového běhového prostředí a s vypnutou telemetrií; doménová pravidla v `aigiscode`; souhrn stropu rozpočtu napříč 20 `ai`; izolace pracovních stromů). Jde o vlastní nadstavbu návrhu, která musí vzniknout vlastním vývojem. | `software/07`, `software/10` | `17001 programator` před nasazením |
 | `N-15` | Rozsah, v jakém licence placeného přístupu k normám dovoluje ukládat výtahy do `Vault` a zpracovávat je jazykovým modelem | kapitola 3, karta `15002` | `15002 normovac` + `15001 pravni-specialista` |
-| `N-16` | Zda trezor `OpenBao` se statickou pečetí vydává při inicializaci záchranné klíče (`Recovery Keys`) dělené Shamirovým schématem — dokumentace projektu to pro tento typ pečeti výslovně neuvádí. Pokud je nevydává, je jedinou cestou obnovy PGP kopie statického pečetního klíče v obálce `Break-Glass` a zmínky o záchranných podílech se z návodu vypustí. Do ověření platí každá zmínka o záchranných podílech v návodu jen podmíněně; krok, který s nimi počítá, se při jejich nevydání vynechá se zápisem do protokolu. | `software/04`, `README`, kniha `00`, `oddeleni/11`, `oddeleni/17`, karta `17004`, šablona `06b-protokol-break-glass` balíčku `S1` | `17004 klicnik` + `17003 spravce-site` při stavbě `Bloku 4` |
-| `R-01` | Ceny, hodinové sazby, přirážky, minimální marže, stupně provize a sezónní koeficienty v [`cenik.json`](./balicky/S3-konfigurator-a-tarify/cenik.json) | balíček `S3` | **Rozhodnuto 15. 11. 2026:** jednatel `1001` schválil znění návrhu beze změn; porovnání s trhem a zápis do `Decisions` proběhne při založení firmy (`Blok 15`). |
+| `N-16` | Konfigurace statické pečeti `OpenBao` (`seal "static"`): vyžaduje povinný `current_key_id`, odebrání/odpojení surového pečetního klíče z běžícího kontejneru ihned po odemčení (jinak by kompromitace kontejneru či příkaz `SEAL` umožnily samo-odemčení při restartu) a ujasnění, zda `OpenBao` při `seal "static"` vydává i podíly `Shamir Recovery Keys` (jinak je jedinou cestou obnovy PGP kopie statického klíče v obálce `Break-Glass` a zmínky o podílech se z návodu vypustí). | `software/04`, `README`, kniha `00`, `oddeleni/11`, `oddeleni/17`, karta `17004`, šablona `06b-protokol-break-glass` balíčku `S1` | `17004 klicnik` + `17003 spravce-site` při stavbě `Bloku 4` |
+| `R-01` | Ceny, hodinové sazby, přirážky, minimální marže, stupně provize, sazby DPH (`21 %` / `12 %`) a sezónní koeficienty v [`cenik.json`](./balicky/S3-konfigurator-a-tarify/cenik.json); veřejný konfigurátor čte výhradně výřez `public_price_list` (bez interních sazeb, marží a provizí). | balíček `S3` | **Rozhodnuto 15. 11. 2026:** jednatel `1001` schválil znění návrhu beze změn; porovnání s trhem a zápis do `Decisions` proběhne při založení firmy (`Blok 15`). |
 | `R-02` | Ceník a kauce půjčovny měřidel | [`balicky/S4-dilensky-terminal-a-pujcovna/README.md`](./balicky/S4-dilensky-terminal-a-pujcovna/README.md) | jednatel `1001` |
 | `R-03` | Poskytovatel a úrovně elektronického podpisu; parametry eskalace hlasové recepční | [`balicky/S5-podpis-a-hlasova-recepcni/README.md`](./balicky/S5-podpis-a-hlasova-recepcni/README.md) | jednatel `1001` |
 | `R-04` | Kritéria a prahy brány `Go / No-Go`; ceny a limity tarifů SaaS | [`balicky/S7-polarita-elektro-cloud/README.md`](./balicky/S7-polarita-elektro-cloud/README.md) | jednatel `1001` |
