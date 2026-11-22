@@ -2,11 +2,11 @@
   "document": "04b-dohoda-svereni-sluzebniho-vozidla",
   "title": "Dohoda o svěření služebního vozidla a pravidla jeho užívání",
   "draft_watermark": true,
-  "generated_utc": "2026-11-19 19:51 UTC",
+  "generated_utc": "2026-11-22 19:31 UTC",
   "variables": {
     "spis_id": "POL-2027-00004",
     "jmeno_zamestnance": "Jan Vzorový",
-    "osobni_cislo": "1099",
+    "osobni_cislo": "1002",
     "pracovni_pozice": "elektromontér (vzorové zařazení)",
     "vozidlo_znacka_model": "Vzorová dodávka L2H2 (VZOR)",
     "vozidlo_spz": "0AA 0000",
@@ -29,9 +29,9 @@
     "datum_podpisu": "29. 1. 2027"
   },
   "sha256": {
-    "template": "b53cd75b15e8335d70d6aa6719376dc51f4e6b64a98d149a90cd6ef50426740d",
-    "data": "42a27e038fc6f75808e4545c192785991e0bebcb2bd7cfa7683187195af366e5",
-    "pdf": "a1e84a9e115d7d7561e3845c5dc1d18452e657c4272a0648cbf477346552ebfa"
+    "template": "adfef50f21270c9eaa2fe7fa468deee8de30d4ffd66f320566686e4096b548b7",
+    "data": "b2604e800b3c0183920975e856ba746bbac945d0ef23f8019c52f04e5d8b2373",
+    "pdf": "066d8f7ba7ffac7541ab0e1486c52464efa0868c383ff2e61e670c1737f62ae1"
   },
   "pages": 5
 }

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Generátor tiskových PDF výstupů organizační struktury Polarita s.r.o. (Verze 2.8):
+Generátor tiskových PDF výstupů organizační struktury Polarita s.r.o. (Verze 3.0):
   1) 01-ORGANIZACNI-MAPA-A3-2026.pdf (1 strana A3 na šířku 420×297 mm, čitelná sazba bez zmenšení)
   2) 00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf (souborná Modrá kniha A4: Část 0–VI, 0× file:// URI, 1:1 měřítko)
 Cesty jsou relativní k umístění skriptu (nastroje/ ve složce firemni-struktura/); HTML předlohy vznikají
@@ -487,7 +487,7 @@ def build_poster_html() -> str:
       <div class="u-title">1001 · Václav Šercl · člověk · <code>STAT-1001</code> · TIČR E2A</div>
       <ul class="u-list">
         <li>Pobočka <code>101</code> (Praha 2) · <code>Decisions</code> (<code>URGENT</code> vs. <code>07:30/16:30</code> diff <code>mutation_confirm</code>) + YubiKey · odpovědnost účetní jednotky (+ smluvní <code>ORG-UOL</code>)</li>
-        <li>Odborný garant elektro (10leté <code>Oprávnění</code> TIČR + 5leté <code>Osvědčení</code> RT), předseda <strong>3čl. zkušební komise</strong> + <code>Break-Glass</code> (<code>SUB-1007</code> pod vl. TIČR + zap. YubiKey č. 2)</li>
+        <li>Odborný garant elektro (10leté <code>Oprávnění</code> TIČR + 5leté <code>Osvědčení</code> RT), předseda <strong>3čl. zkušební komise</strong> + <code>Break-Glass</code> (<code>SUB-1007</code> pod vl. TIČR + vl. klíč zástupce; YubiKey č. 2 jen pro <code>1001</code>)</li>
         <li>Osobní kvalifikovaný podpis <code>QES</code> (<code>JSignPdf</code> na čipu <code>QSCD</code>) smluv, revizí, pasů rozváděčů dle platné normy, DSPS a odeslání z ISDS <code>w9bbdva</code></li>
       </ul>
     </div>
@@ -822,7 +822,7 @@ def build_poster_html() -> str:
     </div>
     <div class="b-rules">
       <h4>15 ŽELEZNÝCH BEZPEČNOSTNÍCH, KOMUNIKAČNÍCH, PRÁVNÍCH A INŽENÝRSKÝCH POJISTEK FIRMY (VERZE __VER__)</h4>
-      <p><strong>1. Decisions (<code>mutation_confirm</code>), ISDS (<code>06:50</code> jen ve službě, jinak <code>&lt; 10d PAUSED</code>) &amp; Break-Glass (<code>SUB-1007</code> pod vl. TIČR + zap. YubiKey č. 2)</strong> · <strong>2. Číselník 2/3/4/5 cifer + <code>ORG-*</code></strong> · <strong>3. OpenBao (raft) + osobní <code>QES</code> (<code>QSCD</code>) vs. pečeť <code>pyHanko</code></strong> · <strong>4. 3vrstvý CaMeL</strong> (<code>sandbox_airgap eth0 none</code> + <code>&lt;untrusted_inbound_comm&gt;</code> + ACL) · <strong>5. <code>cad-urs-engine</code> + <code>metadata-schema-kernel</code> (jen vlastní schémata)</strong> · <strong>6. Worker / Judge &amp; AigisCode</strong> · <strong>7. Hard-Stop <code>db_hr_lide</code>, přednástupní <code>JMHZ</code>, <code>DTM ČR</code> &amp; matice zdrojů</strong> · <strong>8. Anti-švarcsystém (10r Oprávnění / 5r Osvědčení TIČR) &amp; Partner SUB</strong> · <strong>9. Směny ≥ 14d EMP / ≥ 3d BRI, DPČ ≤ 1/2 doby &amp; obecná odpovědnost za vozidla</strong> · <strong>10. Odpovědnost <code>1001</code> za účetnictví + smluvní <code>ORG-UOL</code>, ADIS &amp; DB mutex</strong> · <strong>11. Tvrdý strop __BUDGET_TOTAL__ USD (85 % + 15 % P1, 100 % = stop) &amp; <code>PAUSED</code> ads</strong> · <strong>12. Acyklický Clean Room (bez <code>bytea</code>, 0 PII ve Vaultu), <code>Kanál R FAIL_CLOSED</code> &amp; <code>6+9 PG DB + PgBouncer</code></strong> · <strong>13. 0 titulů u <code>ai</code></strong> · <strong>14. Pas NN dle platné normy, negativní revize &amp; pasy baterií &gt; 2 kWh od 18. 2. 2027</strong> · <strong>15. Stage 1 &amp; 2 Eval 20/20 + týdenní &amp; čtvrtletní Full DR Drill</strong>.</p>
+      <p><strong>1. Decisions (<code>mutation_confirm</code>), ISDS (<code>06:50</code> jen ve službě, jinak <code>&lt; 10d PAUSED</code>) &amp; Break-Glass (<code>SUB-1007</code> pod vl. TIČR + vl. klíč zástupce; YubiKey č. 2 jen pro <code>1001</code>)</strong> · <strong>2. Číselník 2/3/4/5 cifer + <code>ORG-*</code></strong> · <strong>3. OpenBao (raft) + osobní <code>QES</code> (<code>QSCD</code>) vs. pečeť <code>pyHanko</code></strong> · <strong>4. 3vrstvý CaMeL</strong> (<code>sandbox_airgap eth0 none</code> + <code>&lt;untrusted_inbound_comm&gt;</code> + ACL) · <strong>5. <code>cad-urs-engine</code> + <code>metadata-schema-kernel</code> (jen vlastní schémata)</strong> · <strong>6. Worker / Judge &amp; AigisCode</strong> · <strong>7. Hard-Stop <code>db_hr_lide</code>, přednástupní <code>JMHZ</code>, <code>DTM ČR</code> &amp; matice zdrojů</strong> · <strong>8. Anti-švarcsystém (10r Oprávnění / 5r Osvědčení TIČR) &amp; Partner SUB</strong> · <strong>9. Směny ≥ 14d EMP / ≥ 3d BRI, DPČ ≤ 1/2 doby &amp; obecná odpovědnost za vozidla</strong> · <strong>10. Odpovědnost <code>1001</code> za účetnictví + smluvní <code>ORG-UOL</code>, ADIS &amp; DB mutex</strong> · <strong>11. Tvrdý strop __BUDGET_TOTAL__ USD (85 % + 15 % P1, 100 % = stop) &amp; <code>PAUSED</code> ads</strong> · <strong>12. Acyklický Clean Room (bez <code>bytea</code>, 0 PII ve Vaultu), <code>Kanál R FAIL_CLOSED</code> &amp; <code>6+9 PG DB + PgBouncer</code></strong> · <strong>13. 0 titulů u <code>ai</code></strong> · <strong>14. Pas NN dle platné normy, negativní revize &amp; pasy baterií &gt; 2 kWh od 18. 2. 2027</strong> · <strong>15. Stage 1 &amp; 2 Eval 20/20 + týdenní &amp; čtvrtletní Full DR Drill</strong>.</p>
     </div>
   </footer>
 
@@ -979,7 +979,7 @@ def build_book_html() -> str:
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<title>Polarita s.r.o. — Kompletní návrh čisté společnosti řízené lidmi (1001+) a 20 ai zaměstnanci · Verze 2.8</title>
+<title>Polarita s.r.o. — Kompletní návrh čisté společnosti řízené lidmi (1001+) a 20 ai zaměstnanci · Verze 3.0</title>
 <style>
   @page {{
     size: A4 portrait;
@@ -1288,7 +1288,7 @@ def build_book_html() -> str:
         Architektura od nuly · Server Ubuntu LTS (<code>polarita-hq</code> · <code>Incus + OpenTofu</code> · <code>6+9 DB PostgreSQL</code> · <code>0× MySQL</code> · <code>0× MongoDB</code>) ·
         Útvar <code>11</code> + 7 oddělení (<code>12–18</code>) · Živý tým fyzických osob <code>1001–9999</code> (<code>STAT / EMP / BRI / SUB</code>), registr dodavatelských firem <code>ORG-*</code> (<code>ORG-UOL</code>) a síť <code>Certified Partner SUB</code> (<code>100 % + 10–15 % MRR</code>) ·
         Softwarová ústředna <code>Asterisk</code> (<code>WebRTC + Linphone</code>, <code>0</code> veř. SIP portů, stereo <code>90d</code> vs. <code>LEGAL_HOLD 3–10 let</code>), lokální přepis <code>WhisperX</code> (<code>#t=MM:SS</code>),
-        komerčně neomezená urgence <code>Silero VAD + librosa</code> (<code>MIT / ISC</code>) výhradně nad <code>Kanálem L</code> (<code>Kanál R = FAIL_CLOSED</code> dle předpisů EU o ai &amp; pravidel pro sledování zaměstnanců), týmový hub <code>Zulip</code> + <code>LiveKit</code> (<code>Blok 7</code>),
+        komerčně neomezená urgence <code>Silero VAD + librosa</code> (<code>MIT / ISC</code>) výhradně nad <code>Kanálem L</code> (<code>Kanál R = FAIL_CLOSED</code> dle předpisů EU o ai &amp; pravidel pro sledování zaměstnanců), týmový hub <code>Zulip</code> (<code>Blok 7</code>),
         pošta <code>Stalwart Mail</code>, omnichannel <code>Chatwoot CE</code> (za <code>oauth2-proxy</code> + <code>Platform API</code>) a 8cestný router <code>comm-gateway</code> (3vrstvý <code>CaMeL</code>) ·
         Podatelna ISDS <code>{COMPANY['isds']}</code> (<code>06:50</code> jen při aktivní službě, jinak <code>PAUSED</code>, testy na <code>czebox.cz</code>) · přednástupní registrace ČSSZ / <code>JMHZ</code> ·
         platná norma pro rozváděče nízkého napětí, kladné i negativní revize, <code>QElectroTech</code> (+ pilot <code>CadCraft</code>), <code>Elektro WMS</code>, <code>Mapy.cz</code>, 3úrovňové <code>OCPP</code>, <code>Stage 1 &amp; 2 Eval Suite</code> a <strong>Master Playbook (Týdny 0–12)</strong>

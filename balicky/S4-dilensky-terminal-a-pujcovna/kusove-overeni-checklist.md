@@ -1,4 +1,4 @@
-# Checklist kusového ověření rozváděče · platná norma pro rozváděče nízkého napětí · Blok 16 · Verze 2.8
+# Checklist kusového ověření rozváděče · platná norma pro rozváděče nízkého napětí · Blok 16 · Verze 3.0
 
 Tento checklist je podklad pro povinný formulář kiosku `dilensky-terminal`. Je to **návrh k odbornému ověření**: záměrně neuvádí čísla článků normy ani mezní hodnoty. Ty se při každém ověření načítají z normové báze ve Vaultu (`03-Normy-a-Metodiky/`), kterou vede `15002 normovac`, a verze normové báze se uloží k záznamu. Kde je v tabulce napsáno „dle registru `15002`“, znamená to „dle platného znění normy v normové bázi ve Vaultu (`03-Normy-a-Metodiky/`), kterou spravuje `15002`“.
 
@@ -11,10 +11,10 @@ Kusové ověření se provádí na **každém** vyrobeném rozváděči a hledá
 | Spis | `{{case_id}}` (`POL-RRRR-NNNNN`) |
 | Rozváděč — typové označení | `{{type_designation}}` |
 | Výrobní číslo | `{{serial_number}}` (přiděluje `cz-sk-registry-kernel`) |
-| Výrobková část normy | `{{product_standard}}` (příslušná výrobková norma — dle registru `15002`) |
+| Výrobková část normy | `{{product_standard_ref}}` (příslušná výrobková norma — dle registru `15002`) |
 | Verze registru norem | `{{standards_register_ref}}` |
 | Ověření provedl | osobní číslo `{{verifier_person_no}}` |
-| Datum a místo | `{{performed_at}}`, `{{warehouse_code}}`, kiosk `{{station_code}}` |
+| Datum a místo | `{{opened_at}}`, `{{warehouse_code}}` (z karty rozváděče), kiosk `{{station_code}}` |
 
 ## A. Předpoklady (`Hard-Stop` — bez nich nelze ověření otevřít ani uzavřít)
 
@@ -46,7 +46,7 @@ Tyto řádky **nejsou body kusového ověření**. Jsou to zámky, které kiosk 
 | 8 | Dielektrické vlastnosti | Zkouška výdržným napětím; tam, kde to norma připouští, měření izolačního odporu — volbu postupu určuje registr `15002`; vždy kalibrovaným měřidlem | Zkušební napětí, doba zkoušky a mezní hodnota izolačního odporu dle registru `15002`; naměřená hodnota se zapisuje | ☐ VYHOVUJE ☐ NEVYHOVUJE ☐ NEPOUŽIJE SE |
 | 9 | Zapojení, pracovní charakteristiky a funkce | Kontrola zapojení proti schématu; kontrola úplnosti označení a dokumentace; funkční zkouška v rozsahu dle registru `15002` | Zapojení odpovídá schématu, označení a dokumentace jsou úplné, rozváděč plní předepsanou funkci | ☐ VYHOVUJE ☐ NEVYHOVUJE ☐ NEPOUŽIJE SE |
 
-U bodů 3 a 8 kiosk vyžaduje naskenování `QR měřidla`, zápis naměřené hodnoty s jednotkou a platnou kalibraci v den zkoušky. Výrok `NEPOUŽIJE SE` vyžaduje písemné zdůvodnění; výrok `NEVYHOVUJE` vyžaduje popis závady a doporučeně fotografii.
+U bodů 3 a 8 kiosk vyžaduje naskenování `QR měřidla`, zápis naměřené hodnoty s jednotkou a platnou kalibraci v den zkoušky; způsob bez měřidla u nich zvolit nelze. Stejné požadavky platí u kteréhokoli jiného bodu, pokud se u něj měří nebo zkouší přístrojem (například bod 2 při pochybnosti). Výrok `NEPOUŽIJE SE` kiosk nabídne jen u bodu, který registr `15002` pro daný typ výrobku označí jako nepoužitelný, a vždy vyžaduje písemné zdůvodnění; všech devět bodů takto uzavřít nelze. Výrok `NEVYHOVUJE` vyžaduje popis závady a doporučeně fotografii.
 
 ## D. Závěr
 
@@ -63,6 +63,8 @@ U bodů 3 a 8 kiosk vyžaduje naskenování `QR měřidla`, zápis naměřené h
 2. Po kontrole `15002 normovac` prohlášení v `Decisions` potvrdí a osobním kvalifikovaným podpisem podepíše `1001`. `ai` podpis nevytváří.
 3. Teprve potom kiosk odemkne tisk štítku CE s QR a podkladu `PHE` a `elektro-wms` uvolní expedici.
 4. Při `NEVYHOVUJE` se štítek netiskne a rozváděč se vrací do kompletace. Po opravě se zakládá nové ověření; původní záznam zůstává beze změny.
+5. Nedokončené ověření lze opustit jen se zapsaným důvodem; rozváděč se vrací do stavu po kompletaci a nové ověření je nový záznam.
+6. Uzavřené ověření může zneplatnit jen `1001` v `Decisions` s důvodem. Prohlášení o shodě se pak odvolá, pas a vytištěné štítky se zneplatní a rozváděč se vrací do ověření, i když už byl označen nebo uvolněn k expedici.
 
 ## Poznámky k návrhu
 

@@ -2,11 +2,11 @@
   "document": "04a-dohoda-odpovednost-sverene-hodnoty-van",
   "title": "Dohoda o odpovědnosti k ochraně hodnot svěřených zaměstnanci k vyúčtování — pojízdný sklad",
   "draft_watermark": true,
-  "generated_utc": "2026-11-19 19:51 UTC",
+  "generated_utc": "2026-11-22 19:31 UTC",
   "variables": {
     "spis_id": "POL-2027-00004",
     "jmeno_zamestnance": "Jan Vzorový",
-    "osobni_cislo": "1099",
+    "osobni_cislo": "1002",
     "pracovni_pozice": "elektromontér (vzorové zařazení)",
     "oznaceni_van": "VAN-101-01",
     "vozidlo_spz": "0AA 0000",
@@ -22,8 +22,8 @@
   },
   "sha256": {
     "template": "ad8cd3f24d9618caba159ef6a63f5d79412691e5c7ac3ade78a5ecfb5d30a6c5",
-    "data": "a70e2f8e131166586c26a4e3a44332d6bf92d1e84da631a5d21f168cd0d2fb17",
-    "pdf": "5ca9232039adecdb1f60bd3ce13971a5a9e08208110bc887f4a98f808c59d3fc"
+    "data": "dffbbe83ceeb1620c05935cf84b3c74dae60d0b3b12a50a7d6fda199d2501933",
+    "pdf": "0bcedbee46c4f98ef3d77ee1dca8bdcd166dcd062ea9e5f70ebbf36c1f1bf553"
   },
   "pages": 3
 }

@@ -1,4 +1,4 @@
-# Interní kalkulační a provizní matice (`N8`) · Verze 2.8
+# Interní kalkulační a provizní matice (`N8`) · Verze 3.0
 
 Interní pravidla pro `14002 rozpoctar`, `14005 zakazky`, `12001 marketing` a `16001 ucetni`. Čísla se neopisují — hodnoty jsou v [`cenik.json`](./cenik.json) a v generovaném [`prehled-cen.md`](./prehled-cen.md) (stav `SCHVÁLENO 1001`, 15. 11. 2026); výpočty provádí [`pricing.py`](./pricing.py).
 
@@ -14,10 +14,12 @@ Interní pravidla pro `14002 rozpoctar`, `14005 zakazky`, `12001 marketing` a `1
 
 ## 2. `Hard-Stop` pod minimální marží
 
-1. Ke každé nabídce se spočítá krycí příspěvek: `(cena bez DPH − přímé náklady) / cena bez DPH`.
-2. Je-li pod hodnotou `minimum_contribution_margin_pct`, funkce `margin_check` vrátí `hard_stop = true`.
-3. Taková nabídka se **neodešle**; `14002` ji předloží s rozpadem nákladů jednateli `1001` do `Decisions`. Odeslat ji lze jen po jeho výslovném podpisu výjimky.
-4. Pravidlo ověřuje scénář `MARGIN_HARD_STOP` v sadě balíčku `S2`.
+1. Krycí příspěvek se počítá **za celou nabídku** (práce + materiál dohromady), nikdy po jednotlivých řádcích: `(cena nabídky bez DPH − všechny přímé náklady práce i materiálu) / cena nabídky bez DPH`. Výpočet provádí funkce `offer_margin_check`; samotná přirážka na materiál (`material_markup_pct`) je záměrně nižší než minimální marže a dorovnává ji práce.
+2. Je-li výsledek pod hodnotou `minimum_contribution_margin_pct`, funkce vrátí `hard_stop = true`; tato hodnota se předává pojistce jako pole `below_minimum_margin`.
+3. **Čistě materiálová dodávka** (nabídka bez práce) se touto maticí nenaceňuje a `offer_margin_check` ji odmítne — prodej samotného materiálu jde přes ceník e-shopu.
+4. Závaznou nabídku lze počítat jen ze schváleného ceníku (`meta.approved`); nad neschváleným ceníkem `offer_margin_check` skončí chybou.
+5. Nabídka s `hard_stop = true` se **neodešle**; `14002` ji předloží s rozpadem nákladů jednateli `1001` do `Decisions`. Odeslat ji lze jen po jeho výslovném podpisu výjimky.
+6. Pravidlo ověřuje scénář `MARGIN_HARD_STOP` v sadě balíčku `S2`; závazná nabídka bez výsledku kontroly marže tam končí `FAIL_CLOSED`.
 
 ## 3. Zádržné a platební podmínky
 
@@ -38,4 +40,4 @@ Sezónní koeficienty (`seasonal_coefficients`) se používají **jen u balíčk
 
 ## 6. Změna hodnot
 
-Hodnoty se mění výhradně úpravou `cenik.json` přes `mutation_confirm` v `Decisions` → `python pricing.py --build` → `python -m unittest test_pricing`. Příkaz `--build` vkládá do veřejného `konfigurator.html` výhradně veřejný výřez (`pricing.public_price_list` bez interních sazeb, marží a provizí). Ruční úprava konfigurátoru nebo přehledu cen je zakázána (test ji odhalí).
+Hodnoty se mění výhradně úpravou `cenik.json` přes `mutation_confirm` v `Decisions` → `python pricing.py --build` → `python -m unittest test_pricing`. Ceník se při každém načtení validuje (záporná nebo nečíselná částka, procento mimo `0–100`, cena „od“ nad cenou „do“, měsíc bez sezónního koeficientu nebo se dvěma, nekonzistentní údaje o schválení) a s neplatným ceníkem skončí `pricing.py` chybou. Příkaz `--build` vkládá do veřejného `konfigurator.html` výhradně veřejný výřez (`pricing.public_price_list` bez interních sazeb, marží a provizí). Ruční úprava konfigurátoru nebo přehledu cen je zakázána (test ji odhalí).

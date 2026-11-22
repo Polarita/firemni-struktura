@@ -1,6 +1,6 @@
 # Auditní protokol Eval Suite — VERIFIED_PASS
 
-- Sada: `eval_suite_polarita_extended` verze `2.0` (výběr: `all`)
+- Sada: `eval_suite_polarita_extended`, verze sady `2.0` (výběr: `all`)
 - Režim: `dry-run`
 - Čas běhu (UTC): `2026-11-18T06:13:21Z`
 - Výsledek: **157 / 157** (`100.0 %`) · zvukové makety ověřeny: `ano`

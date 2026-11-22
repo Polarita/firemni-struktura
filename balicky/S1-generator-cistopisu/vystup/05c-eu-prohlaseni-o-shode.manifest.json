@@ -2,10 +2,10 @@
   "document": "05c-eu-prohlaseni-o-shode",
   "title": "EU prohlášení o shodě",
   "draft_watermark": true,
-  "generated_utc": "2026-11-19 19:51 UTC",
+  "generated_utc": "2026-11-22 19:31 UTC",
   "variables": {
     "spis_id": "POL-2027-00001",
-    "oznaceni_rozvadece": "+RH1 (hlavní domovní rozváděč)",
+    "oznaceni_rozvadece": "+RP2 (podružný rozváděč dobíjecích stanic)",
     "typ_rozvadece": "nástěnný oceloplechový rozváděč, jedno pole (VZOR)",
     "vyrobni_cislo": "RZ-2027-0001",
     "cislo_schematu": "POL-2027-00001-E-01, revize A (VZOR)",
@@ -15,27 +15,27 @@
     "stupen_kryti_ip": "IP 43",
     "cislo_pasu": "VP-2027-0001",
     "cislo_protokolu_kusoveho_overeni": "KO-2027-0001",
-    "datum_kusoveho_overeni": "12. 3. 2027",
+    "datum_kusoveho_overeni": "11. 2. 2027",
     "cislo_prohlaseni_o_shode": "EU-PS-2027-0001",
-    "datum_vyroby": "12. 3. 2027",
+    "datum_vyroby": "11. 2. 2027",
     "jmenovity_kmitocet": "50 Hz",
     "jmenovity_podmineny_zkratovy_proud_icc": "10 kA (VZOR)",
     "typ_site": "TN-C-S",
-    "urcene_pouziti": "rozvod elektrické energie v bytovém domě, vnitřní prostředí (VZOR)",
+    "urcene_pouziti": "napájení dobíjecích stanic pro elektromobily v podzemní garáži bytového domu, vnitřní prostředí (VZOR)",
     "harmonizacni_predpisy_eu": "označení harmonizačních předpisů Unie o dodávání elektrických zařízení nízkého napětí na trh a předpisů ČR doplní 15001 pravni-specialista z právní báze 04-Pravo-a-Smlouvy/ (VZOR)",
     "dalsi_harmonizacni_predpisy": "označení platných harmonizačních předpisů včetně předpisů o elektromagnetické kompatibilitě doplní 15001 pravni-specialista z právní báze (VZOR — relevanci posoudí 15002 normovac)",
     "zakladni_norma_rozvadecu": "označení platné základní normy pro rozváděče nízkého napětí doplní 15002 normovac z normové báze 03-Normy-a-Metodiky/ (VZOR)",
     "metodika_otepleni": "označení platné metodiky výpočtu oteplení doplní 15002 normovac z normové báze 03-Normy-a-Metodiky/ (VZOR)",
     "dalsi_pouzite_normy": "označení platných norem a specifikací doplní 15002 normovac z normové báze (VZOR)",
-    "datum_overeni_norem": "10. 3. 2027",
+    "datum_overeni_norem": "8. 2. 2027",
     "doplnujici_informace": "Bez dalších informací. (VZOR)",
     "misto_podpisu": "Praha",
-    "datum_podpisu": "15. 3. 2027"
+    "datum_podpisu": "15. 2. 2027"
   },
   "sha256": {
     "template": "61395f4a4ef53335be13e768abbd3dab893aa442633a9439d2a10a37821922cb",
-    "data": "f0c88a31ed7d36db1fc9b9e4f885576d4432dcbf170a204843d5b88c2604fc8e",
-    "pdf": "aa0e065f95e244ec96f0e110091ee58c5025d806f3dca55b0fac2f9f9c58caf2"
+    "data": "a171858e8c104218b7ca3651d41ff21fbe2dd7139a97ed522eb6b281eaeebe54",
+    "pdf": "63500d5bfb10c1fe2262164a25775aa7bc8f2f49115275114de3fa1a259017f1"
   },
   "pages": 3
 }

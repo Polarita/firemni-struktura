@@ -92,31 +92,44 @@
 const PRICE_LIST = /*__PRICE_LIST_JSON__*/;
 
 const state = { tariff: PRICE_LIST.mrr_tariffs[0].code, packages: {} };
-// Round to hellers first (removes binary float error), then to whole crowns half up - as pricing.py.
-// Nejprve na haléře (odstraní chybu dvojkové aritmetiky), potom na celé koruny nahoru - jako pricing.py.
-const czk = (value) => Math.round(Math.round(value * 100) / 100).toLocaleString("cs-CZ") + " Kč";
 const byId = (id) => document.getElementById(id);
-const clampInt = (input) => {
-  const min = Number(input.min), max = Number(input.max);
-  const value = Math.floor(Number(input.value));
+
+// KERNEL-START
+// Same formulas and the same rounding as pricing.py (monthly_fee, package_range, seasonal_coefficient,
+// with_vat, _czk). All amounts are whole hellers (integers), so there is no binary float error; the
+// functions between the KERNEL marks use no page element and are tested against pricing.py.
+// Stejné vzorce i stejné zaokrouhlení jako v pricing.py (monthly_fee, package_range, seasonal_coefficient,
+// with_vat, _czk). Všechny částky jsou celé haléře (celá čísla), takže nevzniká chyba dvojkové aritmetiky;
+// funkce mezi značkami KERNEL nepoužívají žádný prvek stránky a testují se proti pricing.py.
+const scaled = (value, digits) => Math.round(Number(String(value) + "e" + digits));
+const halfUp = (numerator, divisor) => Math.floor((numerator + divisor / 2) / divisor);
+const wholeCrowns = (hellers) => halfUp(hellers, 100);
+const withVat = (hellers, pct) => halfUp(hellers * (10000 + scaled(pct, 2)), 10000);
+const pctLabel = (pct) => String(pct).replace(".", ",") + " %";
+const clampValue = (raw, min, max) => {
+  const value = Math.floor(Number(raw));
   return Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : min;
 };
-
-// Same formulas as pricing.py (monthly_fee, package_range, seasonal_coefficient).
-// Stejné vzorce jako v pricing.py (monthly_fee, package_range, seasonal_coefficient).
-const roundHeller = (value) => Math.round(value * 100) / 100;
-const withVat = (value, pct) => roundHeller(value * (100 + pct) / 100);
 function monthlyFee(tariff, objects, extraEntrances) {
-  return tariff.base_monthly_per_object * objects + tariff.extra_entrance_monthly * extraEntrances;
+  return scaled(tariff.base_monthly_per_object, 2) * objects + scaled(tariff.extra_entrance_monthly, 2) * extraEntrances;
 }
-function seasonalCoefficient(month) {
-  const band = PRICE_LIST.seasonal_coefficients.find((item) => item.months.includes(month));
-  return band ? band.coefficient : 1;
+function seasonalCoefficient(priceList, month) {
+  const band = priceList.seasonal_coefficients.find((item) => item.months.includes(month));
+  if (!band) { throw new Error("no seasonal coefficient for month " + month); }
+  return scaled(band.coefficient, 4);
 }
-function packageRange(pkg, quantity, month) {
-  const coefficient = seasonalCoefficient(month);
-  return [roundHeller(pkg.price_from * quantity * coefficient), roundHeller(pkg.price_to * quantity * coefficient)];
+function packageRange(priceList, pkg, quantity, month) {
+  const coefficient = seasonalCoefficient(priceList, month);
+  return [halfUp(scaled(pkg.price_from, 2) * quantity * coefficient, 10000), halfUp(scaled(pkg.price_to, 2) * quantity * coefficient, 10000)];
 }
+// KERNEL-END
+
+const czk = (hellers) => wholeCrowns(hellers).toLocaleString("cs-CZ") + " Kč";
+const czkPrice = (crowns) => czk(scaled(crowns, 2));
+const clampInt = (input) => clampValue(input.value, Number(input.min), Number(input.max));
+// After leaving the field show the value that is really used in the calculation.
+// Po opuštění pole ukaž hodnotu, se kterou se opravdu počítá.
+const showClamped = (input) => input.addEventListener("change", () => { input.value = String(clampInt(input)); });
 
 function renderStatic() {
   const banner = byId("banner");
@@ -131,7 +144,7 @@ function renderStatic() {
     button.className = "tariff";
     button.dataset.code = tariff.code;
     const name = document.createElement("strong"); name.textContent = tariff.label;
-    const price = document.createElement("div"); price.className = "price"; price.textContent = czk(tariff.base_monthly_per_object) + " / měs.";
+    const price = document.createElement("div"); price.className = "price"; price.textContent = czkPrice(tariff.base_monthly_per_object) + " / měs.";
     const audience = document.createElement("small"); audience.textContent = tariff.audience + " · za objekt";
     button.append(name, price, audience);
     button.addEventListener("click", () => { state.tariff = tariff.code; update(); });
@@ -148,16 +161,17 @@ function renderStatic() {
     const check = document.createElement("input"); check.type = "checkbox"; check.id = "pkg-" + pkg.code;
     const label = document.createElement("label"); label.htmlFor = check.id; label.style.margin = "0";
     const title = document.createElement("span"); title.textContent = pkg.label;
-    const detail = document.createElement("small"); detail.textContent = czk(pkg.price_from) + " – " + czk(pkg.price_to) + " / " + pkg.unit + " · " + pkg.includes;
+    const detail = document.createElement("small"); detail.textContent = czkPrice(pkg.price_from) + " – " + czkPrice(pkg.price_to) + " / " + pkg.unit + " · " + pkg.includes;
     label.append(title, detail);
     const quantity = document.createElement("input"); quantity.type = "number"; quantity.min = "1"; quantity.max = "200"; quantity.value = "1";
     quantity.disabled = true;
     quantity.setAttribute("aria-label", "Počet: " + pkg.label);
     const sync = () => { quantity.disabled = !check.checked; state.packages[pkg.code] = check.checked ? clampInt(quantity) : 0; update(); };
-    check.addEventListener("change", sync); quantity.addEventListener("input", sync);
+    check.addEventListener("change", sync); quantity.addEventListener("input", sync); showClamped(quantity);
     row.append(check, label, quantity); packages.append(row);
   });
   ["objects", "entrances", "month"].forEach((id) => byId(id).addEventListener("input", update));
+  ["objects", "entrances"].forEach((id) => showClamped(byId(id)));
   byId("copy").addEventListener("click", copySummary);
 }
 
@@ -170,9 +184,9 @@ function compute() {
   let from = 0, to = 0; const chosen = [];
   PRICE_LIST.turnkey_packages.forEach((pkg) => {
     const quantity = state.packages[pkg.code] || 0;
-    if (quantity > 0) { const [a, b] = packageRange(pkg, quantity, month); from += a; to += b; chosen.push(quantity + "× " + pkg.label); }
+    if (quantity > 0) { const [a, b] = packageRange(PRICE_LIST, pkg, quantity, month); from += a; to += b; chosen.push(quantity + "× " + pkg.label); }
   });
-  return { tariff, objects, entrances, month, monthly, annual: monthly * 12, from: roundHeller(from), to: roundHeller(to), chosen };
+  return { tariff, objects, entrances, month, monthly, annual: monthly * 12, from, to, chosen };
 }
 
 function update() {
@@ -180,11 +194,12 @@ function update() {
   const vat = PRICE_LIST.meta.vat_rates;
   document.querySelectorAll(".tariff").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.code === state.tariff)));
   byId("monthly").textContent = czk(result.monthly);
-  byId("monthlyVat").textContent = czk(withVat(result.monthly, vat.standard_pct)) + " (21 %) · " + czk(withVat(result.monthly, vat.residential_reduced_pct)) + " (12 % bydlení)";
+  const standard = pctLabel(vat.standard_pct), reduced = pctLabel(vat.residential_reduced_pct);
+  byId("monthlyVat").textContent = czk(withVat(result.monthly, vat.standard_pct)) + " (" + standard + ") · " + czk(withVat(result.monthly, vat.residential_reduced_pct)) + " (" + reduced + " bydlení)";
   byId("annual").textContent = czk(result.annual);
   byId("pkgRange").textContent = result.chosen.length ? czk(result.from) + " – " + czk(result.to) : "nevybráno";
   byId("pkgRangeVat").textContent = result.chosen.length
-    ? czk(withVat(result.from, vat.standard_pct)) + " – " + czk(withVat(result.to, vat.standard_pct)) + " (21 %) · " + czk(withVat(result.from, vat.residential_reduced_pct)) + " – " + czk(withVat(result.to, vat.residential_reduced_pct)) + " (12 %)"
+    ? czk(withVat(result.from, vat.standard_pct)) + " – " + czk(withVat(result.to, vat.standard_pct)) + " (" + standard + ") · " + czk(withVat(result.from, vat.residential_reduced_pct)) + " – " + czk(withVat(result.to, vat.residential_reduced_pct)) + " (" + reduced + ")"
     : "nevybráno";
   byId("sla").textContent = result.tariff.sla_response;
   const list = byId("includes"); list.replaceChildren();
@@ -199,7 +214,7 @@ async function copySummary() {
     "Poptávka — Elektro Správa SVJ a Firem (orientační konfigurace, " + (PRICE_LIST.meta.approved ? "ceník " + PRICE_LIST.meta.version : "NÁVRH cen") + ")",
     "Tarif: " + result.tariff.label,
     "Objektů: " + result.objects + ", dalších vchodů: " + result.entrances,
-    "Měsíční paušál bez DPH: " + czk(result.monthly) + " (orientačně " + czk(withVat(result.monthly, vat.standard_pct)) + " s 21 % DPH / " + czk(withVat(result.monthly, vat.residential_reduced_pct)) + " s 12 % DPH bydlení; ročně " + czk(result.annual) + " bez DPH)",
+    "Měsíční paušál bez DPH: " + czk(result.monthly) + " (orientačně " + czk(withVat(result.monthly, vat.standard_pct)) + " s " + pctLabel(vat.standard_pct) + " DPH / " + czk(withVat(result.monthly, vat.residential_reduced_pct)) + " s " + pctLabel(vat.residential_reduced_pct) + " DPH bydlení; ročně " + czk(result.annual) + " bez DPH)",
     "Balíčky na klíč: " + (result.chosen.length ? result.chosen.join(", ") + " — " + czk(result.from) + " až " + czk(result.to) + " bez DPH" : "žádné"),
   ];
   const status = byId("copied");

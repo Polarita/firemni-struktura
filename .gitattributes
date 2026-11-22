@@ -13,6 +13,12 @@
 .gitignore text eol=lf
 .gitattributes text eol=lf
 nastroje/pre-commit text eol=lf
+# EN: The S1 manifests store SHA-256 of the template and data files; fixed line endings keep the hashes
+#     identical on every platform.
+# CZ: Manifesty S1 ukládají SHA-256 souborů šablon a dat; pevné konce řádků drží otisky shodné na každé
+#     platformě.
+balicky/S1-generator-cistopisu/sablony/*.md text eol=lf
+balicky/S1-generator-cistopisu/data/*.json text eol=lf
 *.pdf   binary
 *.wav   binary
 *.png   binary

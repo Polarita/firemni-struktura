@@ -1,8 +1,10 @@
-# Vzor digitálního předávacího protokolu půjčovny · Blok 16 · Verze 2.8
+# Vzor digitálního předávacího protokolu půjčovny · Blok 16 · Verze 3.0
 
 Vzor pro modul `pujcovna-meridel`. Protokol vzniká v PWA `portal-spolupracovniku`, sází se v `Typst` do PDF, opatří se serverovou pečetí `pyHanko` s časovým razítkem a uloží se ke spisu výpůjčky. Proměnné ve složených závorkách doplní systém; hodnoty bez schválení `1001` (ceník, výše kauce, minimální počet fotografií) jsou `NÁVRH — ke schválení 1001` a tento vzor žádné částky neobsahuje.
 
 Jména a kontakty podepisujících se doplní až do vysázeného PDF z registru kontaktů; ve schématu `pujcovna` se ukládá jen odkaz. Vysázený protokol se nikdy neukládá do Vaultu.
+
+Vzor popisuje **dva samostatné záznamy** entity `handover_protocol`: Část A (směr `HANDOVER`) se podepisuje a pečetí při předání, Část B (směr `RETURN`) při vrácení. Každý záznam má vlastní PDF, vlastní podpisy a vlastní pečeť; PDF vrácení obsahuje úvodní tabulky a Část A jen jako nezměněný opis pro porovnání. Oddíl „Vypořádání kauce“ není součástí žádného z pečetěných protokolů — je to samostatný podklad z deníku kaucí a rozhodnutí `1001` v `Decisions`.
 
 ---
 
@@ -40,7 +42,7 @@ Jména a kontakty podepisujících se doplní až do vysázeného PDF z registru
 | Údaj | Hodnota |
 | :--- | :--- |
 | Výše kauce | `{{kauce}}` `{{kauce_mena}}` |
-| Stav kauce při předání | `{{deposit_status}}` (přijata na účet / prominuta rozhodnutím `1001` č. `{{deposit_decisions_ref}}`) |
+| Stav kauce při předání | `{{deposit_status}}` (přijata na účet / nevybírá se podle rozhodnutí `1001` č. `{{deposit_waiver_decisions_ref}}`) |
 | Spárování s výpisem | `{{bank_match_ref}}` |
 
 ---
@@ -122,7 +124,9 @@ Podpis za nájemce: `{{renter_signature_return}}` · Podpis za Polaritu: `{{pola
 
 ---
 
-## Vypořádání kauce (vyplňuje se po vrácení)
+## Vypořádání kauce (samostatný podklad, vyplňuje se po vrácení)
+
+Pokud se kauce nevybírala (stav `WAIVED`), oddíl se nevyplňuje a případná škoda se řeší jen záznamem škody a fakturou.
 
 | Údaj | Hodnota |
 | :--- | :--- |
@@ -147,11 +151,12 @@ Návrh vypořádání připraví `16001 ucetni` jako `DRAFT`. Vrácení i zadrž
 
 ## Pravidla, která systém u protokolu vynucuje
 
-1. Bez přijaté kauce (nebo jejího prominutí rozhodnutím `1001`) a bez zapečetěné Části A zdroj nesmí opustit sklad.
+1. Bez přijaté kauce (nebo bez zapsaného rozhodnutí `1001` v `Decisions`, že se kauce nevybírá) a bez zapečetěné Části A zdroj nesmí opustit sklad.
 2. Kalibrace nebo revize musí podle Lhůtníku platit až do plánovaného vrácení; jinak předání nelze dokončit.
 3. Protokol nelze podepsat, dokud není odškrtnuto všechno příslušenství a nahrán minimální počet fotografií.
-4. Po zapečetění se protokol nemění; oprava je nový protokol s odkazem `supersedes_protocol_id` na původní (původní přechází do stavu `SUPERSEDED` a zůstává archivován).
+4. Po zapečetění se protokol nemění; oprava je nový protokol s odkazem `supersedes_protocol_id` na původní. Náhradní protokol se podepíše a zapečetí, dokud původní ještě platí, a teprve ve stejné transakci se zapečetěním náhrady přechází původní s potvrzením `1001` do stavu `SUPERSEDED` (zůstává archivován). Nezapečetěný protokol, který se nepoužije, se s důvodem označí jako `DISCARDED`.
 5. Po zapečetěné Části B jde zdroj do stavu kontroly po vrácení a zpět do nabídky se dostane až po přijetí skladem nebo po servisu.
+6. Pokud se zdroj nevrátí, Část B nevzniká: výpůjčka přejde s potvrzením `1001` do stavu `NOT_RETURNED`, ztráta se založí jako škoda bez vratného protokolu a vyúčtování proběhne bez Části B.
 
 ## Poznámka k návrhu
 

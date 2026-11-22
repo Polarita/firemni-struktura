@@ -6,6 +6,11 @@
 #     nebo je vezmi z vydání (Release) příslušné verze.
 /*.pdf
 /balicky/S1-generator-cistopisu/vystup/*.pdf
+# EN: Outputs of ordinary tool runs (S1 intermediate HTML, S2 local reports and generated audio fixtures).
+# CZ: Výstupy běžných běhů nástrojů (mezivýsledné HTML S1, místní reporty S2 a generované zvukové makety).
+/balicky/S1-generator-cistopisu/vystup/*.html
+/balicky/S2-eval-suite/output/behy/
+/balicky/S2-eval-suite/audio/*.wav
 __pycache__/
 *.py[cod]
 .pytest_cache/

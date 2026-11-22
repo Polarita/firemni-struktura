@@ -1,6 +1,6 @@
-# Tarify SaaS edice Polarita Elektro Cloud — struktura · Blok 19 (S7) · Verze 2.8
+# Tarify SaaS edice Polarita Elektro Cloud — struktura · Blok 19 (S7) · Verze 3.0
 
-Tento dokument popisuje **strukturu** tří tarifů (`Solo RT` / `Elektro Tým` / `Elektro Firma`). Doplňuje řídicí dokument [`README.md`](README.md) (kapitola 2, pravidlo 5). **Neobsahuje žádnou cenu ani číselný limit** — zadání balíčku `S7` je nestanoví, proto jsou všechny vedeny jako `NÁVRH — ke schválení 1001` a doplní je `1001` až po splnění brány `Go / No-Go`. Tarify nejsou zveřejněny ani nabízeny; Polarita Elektro Cloud ve Verzi 2.8 není spuštěn.
+Tento dokument popisuje **strukturu** tří tarifů (`Solo RT` / `Elektro Tým` / `Elektro Firma`). Doplňuje řídicí dokument [`README.md`](README.md) (kapitola 2, pravidlo 5). **Neobsahuje žádnou cenu ani číselný limit** — zadání balíčku `S7` je nestanoví, proto jsou všechny vedeny jako `NÁVRH — ke schválení 1001` a doplní je `1001` až po splnění brány `Go / No-Go`. Tarify nejsou zveřejněny ani nabízeny; Polarita Elektro Cloud ve Verzi 3.0 není spuštěn.
 
 ---
 
@@ -10,7 +10,7 @@ Tento dokument popisuje **strukturu** tří tarifů (`Solo RT` / `Elektro Tým` 
 2. **Měřený rozpočet tokenů s tvrdým stropem na tenant:** každý tarif obsahuje měsíční rozpočet tokenů pro `ai` funkce. Spotřeba se měří na tenant a zákazník ji vidí průběžně. Po dosažení stropu se zastaví **pouze `ai` funkce** daného tenanta; deterministické funkce (výpočty `cad-urs-engine`, Lhůtník, Digitální kniha objektu, stavební deník, registry) běží dál.
 3. **Žádné automatické přečerpání:** strop se sám nenavyšuje a nad strop se nic neúčtuje bez výslovné objednávky zákazníka. Způsob dokoupení rozpočtu je `NÁVRH — ke schválení 1001`.
 4. **Oddělení od interního provozu:** spotřeba tenantů se nikdy neúčtuje do interního stropu `470 USD / měsíc` společnosti Polarita s.r.o. a naopak.
-5. **Stejná izolace a stejný `Liability Firewall` ve všech tarifech:** sdílené schéma se složeným klíčem, `FORCE` a `AS RESTRICTIVE` `Row-Level Security`, vlastní klíč v `OpenBao`, vlastní `Clean Room` (`security_invoker = true`) a pravidlo „`ai` generuje jen `DRAFT`“ nejsou příplatkovou funkcí — platí od nejnižšího tarifu.
+5. **Stejná izolace a stejný `Liability Firewall` ve všech tarifech:** sdílené schéma se složeným klíčem, `FORCE` a `AS RESTRICTIVE` `Row-Level Security` (`TO PUBLIC`, kontext tenanta jen tokenem relace), vlastní klíč v `OpenBao`, vlastní `Clean Room` (`security_invoker = true`) a pravidlo „`ai` generuje jen `DRAFT`“ nejsou příplatkovou funkcí — platí od nejnižšího tarifu.
 6. **Odborná odpovědnost se tarifem nemění:** v žádném tarifu nepřebírá Polarita s.r.o. odpovědnost za vydanou revizní zprávu, Výrobní pas ani prohlášení o shodě (viz `licencni-podminky-osnova.md`).
 
 ---

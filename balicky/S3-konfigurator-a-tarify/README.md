@@ -1,4 +1,4 @@
-# Blok 15 · Balíček S3 — Interaktivní konfigurátor balíčků na klíč a GTM kniha tarifů MRR · Verze 2.8
+# Blok 15 · Balíček S3 — Interaktivní konfigurátor balíčků na klíč a GTM kniha tarifů MRR · Verze 3.0
 
 Tento dokument je řídicím dokumentem **`Bloku 15`** Rozvojové Etapy II společnosti **Polarita s.r.o.** Balíček rozšiřuje základní ceník z `Bloku 0` a `Bloku 9` o **jediný verzovaný zdroj cen** ([`cenik.json`](./cenik.json)), deterministické **cenové jádro** ([`pricing.py`](./pricing.py)), **interaktivní konfigurátor** paušálu „Elektro Správa SVJ a Firem“ ([`konfigurator.html`](./konfigurator.html)), obchodní **knihu tarifů MRR** ([`kniha-tarifu-mrr.md`](./kniha-tarifu-mrr.md)) a interní **kalkulační a provizní matici** ([`kalkulacni-matice.md`](./kalkulacni-matice.md)). Nepřidává žádného `ai` agenta ani databázi.
 
@@ -8,14 +8,14 @@ Tento dokument je řídicím dokumentem **`Bloku 15`** Rozvojové Etapy II spole
 
 ## 1. Seznam softwaru a modulů
 
-| Oblast | Soubor / modul | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 2.8) | Odpovědný `ai` / garant |
+| Oblast | Soubor / modul | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.0) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Jediný zdroj cen** | [`cenik.json`](./cenik.json) | verzováno v `Gitea`, změna jen přes `mutation_confirm` | 3 tarify MRR, 3 balíčky na klíč s cenou od–do, hodinové zúčtovací sazby, přirážka na materiál, minimální krycí příspěvek, stupně provize partnera a sezónní koeficienty. | `14002` `rozpoctar`, `16001` `ucetni` *(schvaluje `1001`)* |
 | **Cenové jádro** | [`pricing.py`](./pricing.py) | čistý `Python` (`Decimal`), bez závislostí | Výpočet měsíčního a ročního paušálu, rozsahu balíčků, ceny práce a materiálu, `Hard-Stop` marže a provize partnera; generuje konfigurátor a přehled cen. Žádný `ai` agent nepočítá ceny zpaměti. | `17001` `programator` *(Judge `16001`)* |
 | **Konfigurátor** | [`konfigurator.html`](./konfigurator.html) *(ze šablony [`konfigurator.template.html`](./konfigurator.template.html))* | statická stránka, nic neodesílá | Referenční implementace pro `polarita.cz`, `polarita.eu` a `akademie.polarita.cz`; odkazuje na Kalkulačku rizik a úspor SVJ (`/kalkulacka-svj`, `N6`). | `17002` `webmaster`, `12001` `marketing` |
 | **Kniha tarifů** | [`kniha-tarifu-mrr.md`](./kniha-tarifu-mrr.md) | obchodní dokument | Co který tarif obsahuje, pravidla prodeje, indexace a produktizované balíčky na klíč. | `12001` `marketing`, `12002` `obsah-geo` |
 | **Kalkulační a provizní matice** | [`kalkulacni-matice.md`](./kalkulacni-matice.md), [`prehled-cen.md`](./prehled-cen.md) *(generováno)* | interní | Pravidla nacenění pro `14002 rozpoctar` a `14005 zakazky`, `Hard-Stop` pod minimální marží a provizní matice `N8` pro `16001 ucetni`. | `14002` `rozpoctar`, `16001` `ucetni` |
-| **Testy** | [`test_pricing.py`](./test_pricing.py) | `python -m unittest` | 15 testů výpočtů, veřejného výřezu, mezních hodnot a shody konfigurátoru s ceníkem. | `17004` `klicnik` |
+| **Testy** | [`test_pricing.py`](./test_pricing.py) | `python -m unittest` | Testy výpočtů, validace ceníku, veřejného výřezu, mezních hodnot a shody konfigurátoru s ceníkem; javascriptové jádro konfigurátoru se porovnává s `pricing.py` v `Node.js` nebo v prohlížeči `Chromium` (bez obojího se tento jeden test přeskočí). | `17004` `klicnik` |
 
 ---
 
@@ -27,7 +27,8 @@ Tento dokument je řídicím dokumentem **`Bloku 15`** Rozvojové Etapy II spole
 2. **Férový firemní tarif bez trestu za růst:**
    * Paušál se počítá z počtu objektů a dalších vchodů. Neexistuje příplatek za člena výboru SVJ ani za uživatele portálu.
 3. **`Hard-Stop` pod minimální marží:**
-   * Nabídka s krycím příspěvkem pod minimem z ceníku se bez podpisu `1001` neodešle (`margin_check` vrací `hard_stop = true`; pravidlo `MARGIN_HARD_STOP` v sadě `S2`).
+   * Nabídka s krycím příspěvkem pod minimem z ceníku se bez podpisu `1001` neodešle (`offer_margin_check` vrací `hard_stop = true`; pravidlo `MARGIN_HARD_STOP` v sadě `S2`).
+   * Minimální marže se hodnotí **za celou nabídku** (práce + materiál dohromady), ne po řádcích. Čistě materiálová dodávka se touto maticí nenabízí — jde přes ceník e-shopu — a `offer_margin_check` ji odmítne.
 4. **Konfigurátor není nabídka:**
    * Stránka nic neodesílá ani neukládá, neobsahuje formulář s osobními údaji a výslovně uvádí, že závaznou nabídku připraví a potvrdí člověk. Závazná cenová nabídka jde vždy přes `Decisions`.
 5. **Vazba na ostatní balíčky a bloky:**
@@ -66,8 +67,8 @@ Nasaď konfigurátor paušálu Elektro Správa SVJ a Firem na weby Polarita s.r.
 ```text
 Zapoj cenové jádro do nacenění zakázek a výpočtu partnerských provizí:
 
-1. Při každé nabídce volej funkce pricing.py (labour_price, material_price, package_range, margin_check); žádnou cenu nepočítej zpaměti.
-2. Vrátí-li margin_check hard_stop = true, nabídku neodesílej a eskaluj ji jednateli 1001 do Decisions s rozpadem nákladů.
+1. Při každé nabídce volej funkce pricing.py (labour_price, material_price, package_range, offer_margin_check); žádnou cenu nepočítej zpaměti. Marži hodnoť funkcí offer_margin_check za celou nabídku (práce + materiál dohromady); čistě materiálovou dodávku touto maticí nenaceňuj, patří do ceníku e-shopu.
+2. Vrátí-li offer_margin_check hard_stop = true, nabídku neodesílej a eskaluj ji jednateli 1001 do Decisions s rozpadem nákladů.
 3. Jednou měsíčně spočítej funkcí partner_commission trvalou provizi každého Certified Partner SUB z uhrazeného měsíčního MRR přivedených objektů a zapiš ji do Partnerského provizního ledgeru ve finance-uol-marze-engine (výplata až po schválení v Decisions).
 4. Sezónní koeficienty používej jen u balíčků na klíč; paušály MRR se indexují jednou ročně dle smlouvy.
 5. Odchylku skutečné marže od kalkulace nad 10 % nahlas 11001 ceo a navrhni úpravu ceníku cestou Promptu 1.
@@ -85,11 +86,11 @@ Zapoj cenové jádro do nacenění zakázek a výpočtu partnerských provizí:
 
 ---
 
-## 5. Stav ve Verzi 2.8
+## 5. Stav ve Verzi 3.0
 
 **Hotovo v této složce a ověřeno spuštěním (14. 11. 2026):**
 
-- `cenik.json`, cenové jádro `pricing.py` a 15 testů — výsledek `OK`;
+- `cenik.json`, cenové jádro `pricing.py` a testy — všechny skončí `OK`;
 - vygenerovaný `konfigurator.html` a `prehled-cen.md`;
 - konfigurátor vyzkoušen v prohlížeči: Standard Objekt, 3 objekty, 4 vchody → `12 130 Kč` měsíčně a `145 560 Kč` ročně; 2× EV Wallbox v červenci → `79 800 – 199 500 Kč` (shodné s `pricing.py`); šířka `375 px` bez vodorovného posuvu.
 

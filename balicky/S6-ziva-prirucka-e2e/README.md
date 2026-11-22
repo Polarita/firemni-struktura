@@ -1,8 +1,8 @@
-# Blok 18 · Balíček S6 — Samo-dokumentující E2E testy a 30min vývojová smyčka UI · Verze 2.8
+# Blok 18 · Balíček S6 — Samo-dokumentující E2E testy a 30min vývojová smyčka UI · Verze 3.0
 
-Tento dokument je řídicím dokumentem **`Bloku 18`** Rozvojové Etapy II společnosti **Polarita s.r.o.** (balíček `S6` ze zásobníku `03-NAVRHY-BALICKU-NA-POZDEJI.md`, release `Polarita-2.8`). Definuje dvě navazující věci: *(1)* **živou ilustrovanou příručku** — každý end-to-end test klíčového firemního procesu v **`Playwright`** pořizuje během běhu v `Gitea Actions` popsané snímky obrazovky a generátor **`manual-builder`** z nich po každém úspěšném běhu na hlavní větvi skládá vždy aktuální provozní příručku (`Markdown → PDF`) pro zaškolení montérů, skladníků a partnerů `SUB`; *(2)* **řízenou 30minutovou vývojovou smyčku** výhradně pro ne-normové UI a tiskové sestavy nad **`metadata-schema-kernel`**, ve které `17001 programator` (*Worker*) připraví úpravu v izolovaném stromu **`wt-worker`**, **`AigisCode`** + `17004 klicnik` (*Judge*) ji ověří v **`wt-judge`** a do **`Decisions`** dorazí náhled se screenshoty **`před → po`**. Blok 18 lze spustit až po `12/12 PASS` Go-Live Gate (`Blok 12`), nezávisí na `Blocích 13–17`, nezakládá žádného nového `ai` zaměstnance ani oddělení a celý běží uvnitř stropu **`470 USD / měsíc`**.
+Tento dokument je řídicím dokumentem **`Bloku 18`** Rozvojové Etapy II společnosti **Polarita s.r.o.** (balíček `S6` ze zásobníku `03-NAVRHY-BALICKU-NA-POZDEJI.md`, release `Polarita-3.0`). Definuje dvě navazující věci: *(1)* **živou ilustrovanou příručku** — každý end-to-end test klíčového firemního procesu v **`Playwright`** pořizuje během běhu v `Gitea Actions` popsané snímky obrazovky a generátor **`manual-builder`** z nich po každém úspěšném běhu na hlavní větvi skládá vždy aktuální provozní příručku (`Markdown → PDF`) pro zaškolení montérů, skladníků a partnerů `SUB`; *(2)* **řízenou 30minutovou vývojovou smyčku** výhradně pro ne-normové UI a tiskové sestavy nad **`metadata-schema-kernel`**, ve které `17001 programator` (*Worker*) připraví úpravu v odděleném klonu **`wt-worker`**, **`AigisCode`** + `17004 klicnik` (*Judge*) ji ověří v **`wt-judge`** a do **`Decisions`** dorazí náhled se screenshoty **`před → po`**. Blok 18 lze spustit až po `12/12 PASS` Go-Live Gate (`Blok 12`), nezávisí na `Blocích 13–17`, nezakládá žádného nového `ai` zaměstnance ani oddělení a celý běží uvnitř stropu **`470 USD / měsíc`**.
 
-Soubory balíčku: tento `README.md`, vzorový test [`priklad/karta-spisu.spec.ts`](priklad/karta-spisu.spec.ts) a pravidla fronty [`fronta-30min-smycka.md`](fronta-30min-smycka.md).
+Soubory balíčku: tento `README.md`, vzorový test [`priklad/karta-spisu.spec.ts`](priklad/karta-spisu.spec.ts), sdílená pomocná funkce [`priklad/krok.ts`](priklad/krok.ts) a pravidla fronty [`fronta-30min-smycka.md`](fronta-30min-smycka.md).
 
 ---
 
@@ -10,10 +10,10 @@ Soubory balíčku: tento `README.md`, vzorový test [`priklad/karta-spisu.spec.t
 
 | Oblast | Vybraný software / modul | Kanál / Režim | Role a použití | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
-| **E2E testy klíčových procesů s popsanými screenshoty** | **`Playwright`** *(`TypeScript`, testovací běžec `@playwright/test`)* + pomocná funkce **`krok(page, popisek)`** | `latest` *(open-source; běh výhradně proti testovacímu prostředí se syntetickými daty)* | Automaticky prochází 6 pokrytých procesů (360° Karta spisu, `portal-spolupracovniku`, výdej z `Elektro WMS`, Elektronický stavební deník, `mutation_confirm` v `Decisions`, podání ISDS v Podatelně); každý krok má český popisek, pořídí snímek obrazovky a zapíše řádek do manifestu `JSON`. | `17001` `programator` / `17002` `webmaster` |
+| **E2E testy klíčových procesů s popsanými screenshoty** | **`Playwright`** *(`TypeScript`, testovací běžec `@playwright/test`)* + sdílená pomocná funkce **`krok(page, popisek)`** *(`priklad/krok.ts`; každý test si ji naváže na svou kapitolu voláním `vytvorKrok(kapitola)`)* | `latest` *(open-source; běh výhradně proti testovacímu prostředí se syntetickými daty)* | Automaticky prochází 6 pokrytých procesů (360° Karta spisu, `portal-spolupracovniku`, výdej z `Elektro WMS`, Elektronický stavební deník, `mutation_confirm` v `Decisions`, podání ISDS v Podatelně); každý krok má český popisek, pořídí snímek obrazovky a zapíše řádek do manifestu `JSON`. | `17001` `programator` / `17002` `webmaster` |
 | **Generátor živé příručky** | Vlastní modul **`manual-builder`** *(manifest `JSON` + screenshoty → `Markdown` → `PDF` sazbou `Typst`, která už je součástí sady)* | `latest` *(vlastní čistý kód v `Gitea`)* | Z manifestů a snímků složí kapitoly příručky (1 test = 1 kapitola, 1 krok = 1 odstavec + obrázek), uloží `Markdown` i `PDF` do Vaultu `/srv/polarita/vault/07-IT-a-Architektura/` a vystaví školicí kopii pro montéry, skladníky a partnery `SUB` (kanál distribuce kopie: `NÁVRH — ke schválení 1001`). | `17002` `webmaster` *(provoz `17005` `ai-provoz`)* |
-| **CI brána a plánovač běhů** | **`Gitea Actions`** *(lokální CI v `Gitea`)* | `latest` *(self-hosted za VPN `Headscale`)* | Spouští E2E testy u každého pull requestu a na hlavní větvi; příručku generuje a publikuje pouze po úspěšném běhu na hlavní větvi; neúspěšný běh nic nepřepisuje. | `17005` `ai-provoz` / `17003` `spravce-site` |
-| **Izolace tvůrce a kontrolora 30min smyčky** | Pracovní stromy **`wt-worker`** / **`wt-judge`** *(izolované `Git worktree`)* | `latest` *(vzor `Worker / Judge` z `Bloku 7`)* | `Worker` píše úpravu ve `wt-worker`; `Judge` běží ve `wt-judge` na modelu jiného výrobce a dostává výhradně Zadání, diff, výstup testů a screenshoty — nikdy úvahy tvůrce. | `17001` `programator` *(Worker)* / `17004` `klicnik` *(Judge)* |
+| **CI brána a plánovač běhů** | **`Gitea Actions`** *(lokální CI v `Gitea`; vyhrazená instance `gitea-runner` v `app_internal`, režim `host`, bez přístupu k produkčním tajemstvím)* | `latest` *(self-hosted za VPN `Headscale`; workflow soubory mění jen `1001` / `17004`)* | Spouští E2E testy u každého pull requestu a na hlavní větvi; příručku generuje a publikuje pouze po úspěšném běhu na hlavní větvi; neúspěšný běh nic nepřepisuje. | `17005` `ai-provoz` / `17003` `spravce-site` |
+| **Izolace tvůrce a kontrolora 30min smyčky** | **`wt-worker`** / **`wt-judge`** *(dva oddělené klony repozitáře, každý s vlastním `.git`, ne sdílené worktree)* | `latest` *(vzor `Worker / Judge` z `Bloku 7`)* | `Worker` píše úpravu ve `wt-worker`; `Judge` běží ve `wt-judge` na modelu jiného výrobce a dostává výhradně Zadání, diff, výstup testů a screenshoty — nikdy úvahy tvůrce. | `17001` `programator` *(Worker)* / `17004` `klicnik` *(Judge)* |
 | **Statický strážce hranic smyčky** | **`AigisCode`** *(`Draivix/aigiscode`, `MIT`)* + **`gitleaks`** | `latest` *(čistý open-source)* | Deterministicky odmítne diff, který sahá mimo povolené cesty smyčky (`cad-urs-engine`, `Hard-Stop` zámky `db_hr_lide`, `Clean Room`, vendor schémata, autorizace) nebo obsahuje tajemství. | `17004` `klicnik` / `17005` `ai-provoz` |
 | **Předmět a výstup smyčky** | **`metadata-schema-kernel`** *(formuláře a tiskové sestavy)* + fronta **`Decisions`** *(`mutation_confirm` / `mutation_cancel`)* | `latest` *(vlastní kód / `Paperclip`)* | Smyčka upravuje pouze prezentační vrstvu vlastních formulářů a interních tiskových sestav; výsledkem je položka v `Decisions` s diffem a screenshoty `před → po`, kterou potvrzuje `1001`. | `17001` `programator` / garant `1001` |
 
@@ -27,7 +27,7 @@ Soubory balíčku: tento `README.md`, vzorový test [`priklad/karta-spisu.spec.t
    * Pro přihlášení přes `Keycloak` OIDC preferujte v reálné sadě oddělený *setup* projekt s `storageState` (`Playwright`), aby se zbytečně nefotilo přihlášení v každé kapitole a fungovaly i toky s `MFA` / `Passkey`.
    * Podání ISDS se testuje výhradně proti testovacímu prostředí `czebox.cz`; produkční endpoint `ws1.mojedatovaschranka.cz` ani schránka `w9bbdva` se v testech nepoužívají.
 2. **Každý krok testu má český popisek, který se stává textem příručky:**
-   * Test nevolá `page.screenshot()` přímo, ale pomocnou funkci `krok(page, popisek)`. Popisek je celá česká věta psaná pro montéra nebo skladníka (co udělat a co uvidí), ne technická poznámka pro vývojáře.
+   * Test nevolá `page.screenshot()` přímo, ale pomocnou funkci `krok(page, popisek)`. Funkce je napsána jednou ve sdíleném souboru `krok.ts`; každý soubor testu si ji na začátku naváže na svou kapitolu (`const krok = vytvorKrok({ id, title })`), takže se kód kroku nekopíruje a kapitola nemůže zapisovat do manifestu jiné kapitoly. Popisek je celá česká věta psaná pro montéra nebo skladníka (co udělat a co uvidí), ne technická poznámka pro vývojáře.
    * Funkce zapíše pořadí kroku, popisek a název souboru snímku do manifestu `JSON`; manifest je jediným vstupem `manual-builder`, takže text příručky nelze změnit jinak než změnou testu (příručka a chování aplikace se nemohou rozejít).
 3. **Pokryté procesy (minimální rozsah příručky):**
    * *(1)* 360° Karta spisu `POL-RRRR-NNNNN`, *(2)* `portal-spolupracovniku`, *(3)* výdej z `Elektro WMS`, *(4)* zápis do Elektronického stavebního deníku, *(5)* schválení `mutation_confirm` v `Decisions`, *(6)* podání ISDS v Podatelně.
@@ -36,14 +36,14 @@ Soubory balíčku: tento `README.md`, vzorový test [`priklad/karta-spisu.spec.t
    * Po úspěšném běhu všech E2E testů na hlavní větvi `manual-builder` vygeneruje novou verzi příručky (`Markdown` + `PDF`), uloží ji do Vaultu `07-IT-a-Architektura` a vystaví školicí kopii; verze příručky nese identifikátor commitu, ze kterého vznikla.
    * Při neúspěšném běhu se příručka negeneruje a poslední platná verze zůstává beze změny; běhy u pull requestů příručku nikdy nepublikují.
 5. **30min smyčka je VÝHRADNĚ pro ne-normové UI a tiskové sestavy nad `metadata-schema-kernel`:**
-   * `17001 programator` pracuje jako `Worker` v izolovaném worktree `wt-worker`; `AigisCode` + `17004 klicnik` pracují jako `Judge` ve `wt-judge` a ověřují úpravu E2E testy; výstupem je náhled se screenshoty `před → po` ve frontě `Decisions`, kde změnu potvrdí nebo zamítne `1001` (`mutation_confirm` / `mutation_cancel`).
-   * **`Worker` (`17001`)**, **`Judge` (`17004` + `AigisCode`)** a kontrola hlavní větve před sloučením zajišťují, že v diffu neslábnou E2E aserce (žádné mazání `expect` ani `.skip`), že `wt-worker` nemá nekontrolovaný rozchod proti `main` a že snímky `před → po` neobsahují PII.
-   * **Výslovný zákaz:** smyčka nikdy nezasahuje do normového jádra ČSN `cad-urs-engine` ani do `Hard-Stop` zámků `db_hr_lide`; stejně tak ne do `Clean Room` pohledů, vendor schémat cizích aplikací, autorizace a tajemství. Úplný výčet je v `fronta-30min-smycka.md`.
+   * `17001 programator` pracuje jako `Worker` v odděleném klonu `wt-worker`; `AigisCode` + `17004 klicnik` pracují jako `Judge` ve `wt-judge` a ověřují úpravu E2E testy; výstupem je náhled se screenshoty `před → po` ve frontě `Decisions`, kde změnu potvrdí nebo zamítne `1001` (`mutation_confirm` / `mutation_cancel`).
+   * **`Worker` (`17001`)**, **`Judge` (`17004` + `AigisCode`)** a kontrola hlavní větve před sloučením zajišťují, že v diffu neslábnou E2E aserce (žádné mazání `expect` ani `.skip`), že `wt-worker` nemá nekontrolovaný rozchod proti `main` (po každém rebase se úprava vrací k `Judge`, do `Decisions` jde jen commit, který `Judge` skutečně posoudil) a že snímky `před → po` neobsahují PII.
+   * **Výslovný zákaz:** smyčka nikdy nezasahuje do normového jádra ČSN `cad-urs-engine` ani do `Hard-Stop` zámků `db_hr_lide`; stejně tak ne do `Clean Room` pohledů, vendor schémat cizích aplikací, autorizace a tajemství. Úplný výčet zakázaných oblastí i výčet povolených cest je v `fronta-30min-smycka.md` (kapitoly 2 a 3).
 6. **Limit změn, časový box a zahození při neúspěchu:**
    * Jedna iterace = jeden požadavek = jeden formulář nebo jedna tisková sestava; platí limit rozsahu změny na iteraci (číselná hodnota je v `fronta-30min-smycka.md` vedena jako `NÁVRH — ke schválení 1001`) a kanonický limit nejvýše 2 samo-oprav.
-   * Časový box je 30 minut od převzetí požadavku po položku v `Decisions`. Při překročení času, překročení limitu nebo neúspěchu kterékoliv kontroly se změna zahodí (worktree se smaže, nic se neslučuje) a požadavek se eskaluje člověku.
+   * Časový box je 30 minut od převzetí požadavku po položku v `Decisions`. Při překročení času, překročení limitu nebo neúspěchu kterékoliv kontroly se změna zahodí (klon `wt-worker` se smaže, nic se neslučuje) a požadavek se eskaluje člověku.
 7. **Vše uvnitř stropu `470 USD / měsíc`:**
-   * Blok 18 nezvyšuje žádný rozpočet: spotřeba smyčky se účtuje do stávajících alokací `17001`, `17002`, `17004` a `17005`; při vyčerpání kvóty se smyčka pozastaví (`PAUSED`) stejně jako ostatní nekritické úlohy. Samotné E2E testy a `manual-builder` jsou deterministické a nevolají žádné placené API.
+   * Blok 18 nezvyšuje žádný rozpočet: spotřeba 30min smyčky se účtuje do stávajících alokací `17001` (*Worker*), `17004` (*Judge*) a `17005` (třídění); příprava E2E testů a modulu `manual-builder` do alokací `17001` a `17002`. Při vyčerpání kvóty se smyčka pozastaví (`PAUSED`) stejně jako ostatní nekritické úlohy. Samotné E2E testy a `manual-builder` jsou deterministické a nevolají žádné placené API.
 
 ---
 
@@ -60,7 +60,7 @@ Jsi 17001 programator ve spolupráci s 17002 webmaster. Připrav v Bloku 18 sadu
    - Přihlašovací údaje testovacích účtů načítej z OpenBao do proměnných prostředí běhu; nikdy je nevypisuj do logu, manifestu ani screenshotu.
    - Před prvním krokem každého testu ověř, že stránka zobrazuje označení testovacího prostředí; pokud ne, test okamžitě ukonči (FAIL_CLOSED).
 2. Pomocná funkce krok(page, popisek):
-   - Vyjdi ze vzoru balicky/S6-ziva-prirucka-e2e/priklad/karta-spisu.spec.ts (vzor nebyl spuštěn, selektory přizpůsob skutečné aplikaci).
+   - Vyjdi ze vzoru balicky/S6-ziva-prirucka-e2e/priklad/karta-spisu.spec.ts a sdílené pomocné funkce priklad/krok.ts (vzory nebyly spuštěny, selektory přizpůsob skutečné aplikaci). Funkci krok nekopíruj do jednotlivých testů: každý soubor testu si ji naváže na svou kapitolu voláním vytvorKrok s jedinečným id kapitoly.
    - Každý krok pořídí snímek obrazovky a zapíše do manifestu JSON pořadí, český popisek a název souboru. Popisek piš jako celou českou větu pro montéra nebo skladníka.
 3. Pokryté procesy (každý jako samostatný soubor testu = jedna kapitola příručky):
    - 360° Karta spisu, portal-spolupracovniku, výdej z Elektro WMS, zápis do Elektronického stavebního deníku, schválení mutation_confirm v Decisions, podání ISDS v Podatelně.
@@ -97,15 +97,15 @@ Zaveď a provozuj 30minutovou vývojovou smyčku podle balicky/S6-ziva-prirucka-
    - Přijmi pouze požadavek ve vstupní šabloně, který se týká ne-normového UI nebo interní tiskové sestavy nad metadata-schema-kernel. Vše ostatní vrať zadavateli s odkazem na běžný vývojový postup.
    - Spusť časový box 30 minut.
 2. Worker (17001 programator):
-   - Pracuj výhradně v izolovaném worktree wt-worker. Před úpravou pořiď E2E testem snímky stavu „před“.
-   - Proveď jednu úpravu v povolených cestách a dodrž limit změn na iteraci. Nikdy nesahej do cad-urs-engine, Hard-Stop zámků db_hr_lide, Clean Room pohledů, vendor schémat ani autorizace.
+   - Pracuj výhradně v odděleném klonu wt-worker (vlastní .git, ne sdílený worktree). Před úpravou pořiď E2E testem snímky stavu „před“.
+   - Proveď jednu úpravu v povolených cestách (výčet v kapitole 2 pravidel fronty) a dodrž limit změn na iteraci. Nikdy nesahej do cad-urs-engine, Hard-Stop zámků db_hr_lide, Clean Room pohledů, vendor schémat ani autorizace.
    - Pořiď snímky stavu „po“ a předej Zadání, diff, výstup testů a snímky.
 3. Judge (AigisCode + 17004 klicnik):
-   - Pracuj ve wt-judge na modelu jiného výrobce než Worker. Dostáváš výhradně Zadání, diff, výstup testů a snímky; úvahy tvůrce nečti.
+   - Pracuj ve wt-judge (druhý oddělený klon) na modelu jiného výrobce než Worker. Dostáváš výhradně Zadání, diff, výstup testů a snímky; úvahy tvůrce nečti.
    - Ověř: 0 porušení v AigisCode a gitleaks, diff jen v povolených cestách, E2E aserce nebyly oslabeny ani přeskočeny, E2E testy dotčeného procesu prošly proti aktuální hlavní větvi (bez rozchodu s main), snímky „před“ a „po“ odpovídají Zadání, žádné osobní údaje.
 4. Výsledek:
-   - PASS: založ položku v Decisions s diffem a snímky „před -> po“; sloučit lze až po mutation_confirm od 1001.
-   - FAIL, překročení limitu nebo času: změnu zahoď (smaž worktree, nic neslučuj), zapiš důvod a eskaluj člověku. Stejný požadavek nespouštěj znovu bez nového zadání.
+   - PASS: založ položku v Decisions s diffem a snímky „před -> po“; sloučit lze až po mutation_confirm od 1001. Posunula-li se mezitím hlavní větev, Worker provede rebase, znovu pořídí snímky a úprava se vrací k Judge; do Decisions jde jen commit, který Judge posoudil.
+   - FAIL, překročení limitu nebo času: změnu zahoď (smaž klon wt-worker, nic neslučuj), zapiš důvod a eskaluj člověku. Stejný požadavek nespouštěj znovu bez nového zadání.
 ```
 
 ---
@@ -122,12 +122,13 @@ Zaveď a provozuj 30minutovou vývojovou smyčku podle balicky/S6-ziva-prirucka-
 
 ---
 
-## 5. Stav ve Verzi 2.8
+## 5. Stav ve Verzi 3.0
 
 **Hotové v této složce (dokumentace a vzory):**
 
 - `README.md` — řídicí dokument Bloku 18 (seznam softwaru, pravidla, tři prompty, podmínky dokončení).
-- `priklad/karta-spisu.spec.ts` — vzorový test `Playwright` s funkcí `krok(page, popisek)` a zápisem do manifestu `JSON`. **Vzor nebyl spuštěn** — testovaná aplikace ani testovací prostředí zatím neexistují; selektory a texty obrazovek jsou ilustrační.
+- `priklad/karta-spisu.spec.ts` — vzorový test `Playwright` jedné kapitoly příručky. **Vzor nebyl spuštěn** — testovaná aplikace ani testovací prostředí zatím neexistují; selektory a texty obrazovek jsou ilustrační.
+- `priklad/krok.ts` — sdílená pomocná funkce `krok(page, popisek)` se zápisem do manifestu `JSON`, kterou si každý test naváže na svou kapitolu (`vytvorKrok`). **Vzor nebyl spuštěn ani přeložen** kompilátorem `TypeScript`.
 - `fronta-30min-smycka.md` — pravidla fronty 30min smyčky (co smí a nesmí, vstupní šablona, kroky, kritéria přijetí, limity).
 
 **Vyžaduje živý server `polarita-hq` (připraveno k nasazení, neprovedeno):**

@@ -2,7 +2,7 @@
   "document": "02-pausalni-servisni-smlouva-mrr",
   "title": "Paušální servisní smlouva „Elektro Správa SVJ a Firem“",
   "draft_watermark": true,
-  "generated_utc": "2026-11-19 19:51 UTC",
+  "generated_utc": "2026-11-22 19:31 UTC",
   "variables": {
     "spis_id": "POL-2027-00002",
     "cislo_smlouvy": "MRR-2027-0001 (VZOR)",
@@ -16,7 +16,7 @@
     "nazev_objektu": "Bytový dům Vzorová 12 (VZOR)",
     "adresa_objektu": "Vzorová 12, 100 00 Praha 10 (fiktivní adresa)",
     "nazev_tarifu": "Standard Objekt",
-    "pocet_servisnich_hodin_mesicne": "2",
+    "sluzby_zahrnute_v_tarifu": "termovizní diagnostika hlavních rozváděčů; prioritní servisní odezva přes Helpdesk; vzdálený dohled EV wallboxů (OCPP) a FVE střídačů pouze pro čtení; roční souhrnná zpráva pro pojišťovnu; sleva 5 % na hodinovou sazbu montérů (rozsah tarifu Standard Objekt podle knihy tarifů)",
     "sleva_za_nedodrzeni_48h": "sleva 100 % z prvního měsíčního paušálu (vzorový údaj)",
     "lhuta_vraceni_sanonu_dni": "14",
     "predstih_upozorneni_dni": "60",
@@ -26,13 +26,13 @@
     "dobehovy_pristup_dni": "90",
     "servisni_telefon": "+420 000 000 000 (fiktivní)",
     "servisni_email": "servis@polarita.example",
-    "provozni_doba_helpdesku": "pracovní dny 7:00 až 17:00; stupeň P1 nepřetržitě (vzorový údaj)",
-    "sla_p1_reakce": "do 1 hodiny",
-    "sla_p1_zasah": "do 4 hodin",
+    "provozni_doba_helpdesku": "pracovní dny 7:00 až 17:00; garantovaná pohotovost mimo provozní dobu není součástí tarifu Standard Objekt (vzorový údaj)",
+    "sla_p1_reakce": "do 8 pracovních hodin",
+    "sla_p1_zasah": "nejbližší pracovní den; garantovaná pohotovostní lhůta do 4 hodin je součástí jen tarifu Maxi Areál / B2B",
     "sla_p2_reakce": "do 8 pracovních hodin",
-    "sla_p2_zasah": "do 2 pracovních dnů",
-    "sla_p3_reakce": "do 1 pracovního dne",
-    "sla_p3_zasah": "do 10 pracovních dnů",
+    "sla_p2_zasah": "do 2 pracovních dnů (vzorový údaj)",
+    "sla_p3_reakce": "do 8 pracovních hodin",
+    "sla_p3_zasah": "do 10 pracovních dnů (vzorový údaj)",
     "sla_sleva_procent": "5",
     "sla_sleva_strop_procent": "30",
     "castka_bez_dph": "2 990,00 Kč",
@@ -60,9 +60,9 @@
     "misto_podpisu": "Praha"
   },
   "sha256": {
-    "template": "9255f1630550edd6f3b01367cb31ace58eea072009f27cb7363db7acdf7a328c",
-    "data": "8190becbcf39204c09a7bf994f0917ed969fc42b1d25d67f77ebcf396216661b",
-    "pdf": "9f35956607603737ab3fc5527dd7edbda57d97f07a222f4684c16aa21ed59b8b"
+    "template": "db9c684e40be46f38c7917abd67f0ee5194bc53c1151f3b54e729ee9332eab30",
+    "data": "5a4ad56321829d133c27b48536e9906b49c74514071875a619754ad3f174102b",
+    "pdf": "109c871c29b1972a8ca060b567894f896edc6fa7cd7527ffeff56d5cfa59a10b"
   },
   "pages": 6
 }

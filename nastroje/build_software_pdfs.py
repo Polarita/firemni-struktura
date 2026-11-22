@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Generátor tiskových PDF výstupů softwarové architektury Polarita s.r.o. (Verze 2.8):
+Generátor tiskových PDF výstupů softwarové architektury Polarita s.r.o. (Verze 3.0):
   1) 05-SOFTWAROVA-MAPA-A3-2026.pdf (1 strana A3 na šířku 420×297 mm, čitelná sazba bez zmenšení)
   2) 04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf (souborná Modrá kniha A4, 0× file:// URI, 1:1 měřítko)
 Cesty jsou relativní k umístění skriptu (nastroje/ ve složce firemni-struktura/); HTML předlohy vznikají
@@ -646,7 +646,7 @@ def build_poster_html() -> str:
             <span class="mtag">20 ai</span>
           </div>
           <div class="mcard-role">Strop 470 USD (85+15 %), Claude/Gemini/Codex &amp; Zulip</div>
-          <div class="mcard-desc"><code>Paperclip</code> (<code>decisions.int.polarita.cz</code>, rozšíření <code>N-10</code>) + <code>Zulip + LiveKit</code> v <code>Bloku 7</code>, <code>wt-worker/judge</code> a stop při <code>100 %</code> stropu <code>470 USD</code>.</div>
+          <div class="mcard-desc"><code>Paperclip</code> (<code>decisions.int.polarita.cz</code>, rozšíření <code>N-10</code>) + <code>Zulip</code> v <code>Bloku 7</code>, <code>wt-worker/judge</code> a stop při <code>100 %</code> stropu <code>470 USD</code>.</div>
         </div>
         <div class="mcard custom">
           <div class="mcard-top">
@@ -1285,7 +1285,7 @@ def build_book_html() -> str:
         <code>6 doménových + 9 servisních databází PostgreSQL</code> (<code>0× MySQL</code>, <code>0× MongoDB</code>) s režimem <code>Clean Room</code> nad PII + Git/CI server <code>Gitea</code> ·
         Softwarová ústředna <code>Asterisk</code> (<code>WebRTC + Linphone</code>, <code>0</code> veř. SIP portů, stereo <code>90d</code> vs. <code>LEGAL_HOLD 3–10 let</code>),
         lokální přepis <code>WhisperX</code> (<code>#t=MM:SS</code>), komerčně neomezená urgence <code>Silero VAD + librosa</code> (<code>MIT / ISC</code>) výhradně nad <code>Kanálem L</code> (<code>Kanál R = FAIL_CLOSED</code>),
-        týmový hub <code>Zulip</code> + <code>LiveKit</code> (<code>Blok 7</code>), pošta <code>Stalwart Mail</code>, omnichannel <code>Chatwoot CE</code> (za <code>oauth2-proxy</code>) a 8cestný router <code>comm-gateway</code> ·
+        týmový hub <code>Zulip</code> (<code>Blok 7</code>), pošta <code>Stalwart Mail</code>, omnichannel <code>Chatwoot CE</code> (za <code>oauth2-proxy</code>) a 8cestný router <code>comm-gateway</code> ·
         <code>metadata-schema-kernel</code> (vlastní schémata), <code>Paperclip</code> (strop <code>470 USD</code> = 85 % + 15 % P1), <code>Stage 1 &amp; 2 Eval Suite</code>, <code>QElectroTech</code> (+ pilot <code>CadCraft</code>), <code>cad-urs-engine</code> (platná norma pro rozváděče nízkého napětí, negativní revize), <code>cz-sk-registry-kernel</code>, <code>ORG-UOL</code> a přednástupní <code>JMHZ</code>.
       </p>
     </div>
@@ -1353,7 +1353,7 @@ def build_book_html() -> str:
         <tr>
           <td><strong>ČÁST III · Rozvojové balíčky S1–S7</strong><br>(Bloky 13–19)</td>
           <td><a href="#{doc_slug('balicky/README.md')}">balicky/README.md</a> a <code>README.md</code> balíčků <code>S1</code> až <code>S7</code></td>
-          <td>Řídicí dokumenty Rozvojové Etapy II a Strategické Etapy III: <code>S1</code> generátor PDF čistopisů, <code>S2</code> <code>Eval Suite 100+</code> (157 scénářů, 24 testů), <code>S3</code> konfigurátor a tarify MRR (15 testů, výchozí ceny schválil <code>1001</code>), <code>S4</code> dílenský terminál a půjčovna, <code>S5</code> dvoustranný podpis a hlasová recepční, <code>S6</code> živá příručka z E2E testů a <code>S7</code> Polarita Elektro Cloud (brána <code>Go / No-Go</code>).</td>
+          <td>Řídicí dokumenty Rozvojové Etapy II a Strategické Etapy III: <code>S1</code> generátor PDF čistopisů, <code>S2</code> <code>Eval Suite 100+</code> (157 scénářů), <code>S3</code> konfigurátor a tarify MRR (výchozí ceny schválil <code>1001</code>), <code>S4</code> dílenský terminál a půjčovna, <code>S5</code> dvoustranný podpis a hlasová recepční, <code>S6</code> živá příručka z E2E testů a <code>S7</code> Polarita Elektro Cloud (brána <code>Go / No-Go</code>).</td>
         </tr>
       </tbody>
     </table>
@@ -1366,7 +1366,7 @@ def build_book_html() -> str:
       </div>
       <div class="zone-box app">
         <h4>2. Zóna app_internal (Storefronty, komunikační, ai a vývojová vrstva)</h4>
-        <p>Storefronty <code>Astro</code>, e-shop <code>MedusaJS + wms</code>, <code>Moodle LTS</code>, <code>Umami (+ odd. CMP)</code>, <code>Asterisk</code>, <code>Stalwart Mail</code>, <code>Zulip + LiveKit</code>, dělený <code>Chatwoot CE</code> (<code>/app/*</code> za <code>oauth2-proxy</code>), <code>Paperclip</code>, <code>SilverBullet (vault.int.polarita.cz)</code>, <code>Gitea</code>, <code>Paperless-ngx</code>, <code>pyHanko</code>, <code>Vikunja</code>, <code>Traccar (M2M VPN)</code> a <strong>10 modulů oddělení <code>17</code></strong> za <code>Headscale VPN + Keycloak SSO</code>.</p>
+        <p>Storefronty <code>Astro</code>, e-shop <code>MedusaJS + wms</code>, <code>Moodle LTS</code>, <code>Umami (+ odd. CMP)</code>, <code>Asterisk</code>, <code>Stalwart Mail</code>, <code>Zulip</code>, dělený <code>Chatwoot CE</code> (<code>/app/*</code> za <code>oauth2-proxy</code>), <code>Paperclip</code>, <code>SilverBullet (vault.int.polarita.cz)</code>, <code>Gitea</code>, <code>Paperless-ngx</code>, <code>pyHanko</code>, <code>Vikunja</code>, <code>Traccar (M2M VPN)</code> a <strong>10 modulů oddělení <code>17</code></strong> za <code>Headscale VPN + Keycloak SSO</code>.</p>
       </div>
       <div class="zone-box vault">
         <h4>3. Zóna data_vault (6+9 PG DB + PgBouncer, Clean Room, 90d Audio a WORM)</h4>

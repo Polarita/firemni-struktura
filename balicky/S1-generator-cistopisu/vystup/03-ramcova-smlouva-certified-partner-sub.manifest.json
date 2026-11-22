@@ -2,7 +2,7 @@
   "document": "03-ramcova-smlouva-certified-partner-sub",
   "title": "Rámcová smlouva o spolupráci — Certified Partner SUB",
   "draft_watermark": true,
-  "generated_utc": "2026-11-19 19:51 UTC",
+  "generated_utc": "2026-11-22 19:31 UTC",
   "variables": {
     "spis_id": "POL-2027-00003",
     "cislo_smlouvy": "RS-SUB-2027-0001 (VZOR)",
@@ -27,9 +27,9 @@
     "lhuta_foto_auditu_dni": "5",
     "koordinator_bozp": "Polarita s.r.o. (objednatel)",
     "splatnost_faktur_dni": "14",
-    "provize_mrr_procent": "10",
+    "provize_mrr_pasma": "10 % při 1 až 4 objektech, 12,5 % při 5 až 9 objektech a 15 % při 10 a více objektech",
     "lhuta_uzavreni_po_registraci_mesicu": "6",
-    "obdobi_vyuctovani_provize": "kalendářní čtvrtletí",
+    "obdobi_vyuctovani_provize": "kalendářní měsíc, v měsíční uzávěrce",
     "lhuta_vyuctovani_provize_dni": "15",
     "zarucni_doba_partnera_mesicu": "24",
     "lhuta_odstraneni_vad_partnera_dni": "5",
@@ -43,7 +43,7 @@
     "misto_podpisu": "Vzorov",
     "cislo_dilci_objednavky": "OBJ-SUB-2027-0001 (VZOR)",
     "spis_zakazky": "POL-2027-00001",
-    "vymezeni_dilciho_dila": "kompletní montáž a zapojení podružného rozváděče RP2 podle výkresu E.04 včetně popisů a fotodokumentace",
+    "vymezeni_dilciho_dila": "osazení a připojení podružného rozváděče dobíjecích stanic +RP2 v podzemní garáži podle výkresu E.04 včetně popisů a fotodokumentace",
     "misto_plneni": "bytový dům Vzorová 12, Praha 10 (fiktivní adresa); přístup v pracovní dny 8:00 až 16:00",
     "termin_dokonceni": "19. 2. 2027",
     "material_dodava": "objednatel (rozváděč a přístroje), partner (drobný spojovací materiál)",
@@ -52,9 +52,9 @@
     "castka_s_dph": "45 980,00 Kč"
   },
   "sha256": {
-    "template": "f215b5974c20b746f3942553c974f6c04335ca643be1a716533d2e9343c2846e",
-    "data": "1c55a9fa3c1048b8253301ef8f359966e7063e38160385955bdf3a9e27445312",
-    "pdf": "82423882458d3088e41434fb75c87dce8910914db7c9605d0388f5772168ffa8"
+    "template": "71be866d696a86b05acd1f4aa7eaaa53ca6a641633f89232eb8fdb20dad63a50",
+    "data": "4e86388134fc2c7ac9205b98c443e1638cc86b254e20458c54aef3ab05d35191",
+    "pdf": "2e91f7f3601514899401e190c553cd5d67b5fdeb6a4f60edb0568f162334dad2"
   },
   "pages": 6
 }

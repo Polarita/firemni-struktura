@@ -59,8 +59,8 @@ Společnost uchovává záznamy ve dvou vrstvách:
 
 | Vrstva | Co obsahuje | Doba uchování | Úložiště |
 | :--- | :--- | :--- | :--- |
-| Provozní | Zvukové záznamy všech nahraných hovorů | 90 dnů od pořízení; poté se zvuk vymaže a ve spisu zůstává jen textový zápis hovoru | šifrované úložiště Garage |
-| LEGAL_HOLD | Hovory, ve kterých se sjednávala smlouva, změna díla nebo vícepráce, hovory k reklamacím a hlášení havárií | 3 až 10 let podle délky promlčecí lhůty nároku, ke kterému se hovor vztahuje | neměnný archiv legal-archive |
+| Provozní | Zvukové záznamy a doslovné přepisy všech nahraných hovorů | 90 dnů od pořízení; poté se vymaže zvuk i doslovný přepis a ve spisu zůstává jen věcný záznam o hovoru (kdo volal, kdy a s jakým požadavkem) | šifrované úložiště Garage |
+| LEGAL_HOLD | Zvukové záznamy i doslovné přepisy hovorů přiřazených ke spisu, ve kterých se sjednávala smlouva, změna díla nebo vícepráce, hovorů k reklamacím a hlášení havárií | 3 až 10 let podle délky promlčecí lhůty nároku, ke kterému se hovor vztahuje | neměnný archiv legal-archive |
 
 Zařazení hovoru do vrstvy LEGAL_HOLD se zaznamenává u spisu spolu s důvodem. Písemná komunikace přiřazená ke spisu se uchovává po dobu uchování spisu.
 
@@ -85,7 +85,9 @@ Zařazení hovoru do vrstvy LEGAL_HOLD se zaznamenává u spisu spolu s důvodem
 
 1. Před spojením každého vnějšího hovoru zazní volajícímu tato hláška v doslovném znění:
 
-**„Dobrý den, dovolali jste se do společnosti Polarita. Hovor nahráváme, abychom správně vyřídili váš požadavek a mohli doložit, na čem jsme se dohodli. Podrobné informace o zpracování osobních údajů najdete na webu polarita.cz. Pokud si nahrávání nepřejete, hovor prosím ukončete a napište nám.“**
+**„Dobrý den, dovolali jste se do společnosti Polarita. Hovor nahráváme a přepisujeme, abychom správně vyřídili váš požadavek a mohli doložit, na čem jsme se dohodli. Mimo pracovní dobu nebo při obsazené lince může hovor přijmout digitální recepční — umělá inteligence, která se vám na začátku sama představí. Podrobné informace o zpracování osobních údajů najdete na webu polarita.cz. Pokud si nahrávání nepřejete, hovor prosím ukončete a napište nám.“**
+
+Přijme-li hovor digitální recepční, zazní místo této hlášky její vlastní úvodní oznámení stejného obsahu, ve kterém výslovně uvede, že je umělá inteligence. Odmítne-li volající nahrávání až během hovoru, záznam se zastaví a dosavadní zvuk i přepis tohoto hovoru se vymažou ihned; to neplatí u hlášení havárie, které je nutné vyřídit.
 
 2. U odchozích hovorů oznámí pracovník nahrávání volanému na začátku hovoru vlastními slovy stejného obsahu.
 3. Nepřeje-li si volající být nahráván, pracovník mu nabídne písemný kanál: {{kontakt_pro_pisemny_kanal}}

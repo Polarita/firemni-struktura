@@ -1,4 +1,4 @@
-# 02 — Virtualizace, kontejnerizace a izolace zón (Bez Dockeru na hostiteli) · Verze 2.8
+# 02 — Virtualizace, kontejnerizace a izolace zón (Bez Dockeru na hostiteli) · Verze 3.0
 
 Tento dokument stanovuje jednotnou virtualizační a kontejnerovou platformu na centrálním serveru `polarita-hq` (`Ubuntu Server — latest LTS`) pro provoz všech aplikací, databází, komunikační ústředny, bez-síťové karantény i testů obnovy společnosti **Polarita s.r.o.**
 
@@ -6,11 +6,11 @@ Tento dokument stanovuje jednotnou virtualizační a kontejnerovou platformu na 
 
 ## 1. Seznam vybraného softwaru
 
-| Komponenta | Vybraný software | Kanál / Zdroj | Role a použití v Polarita s.r.o. (Verze 2.8) | Odpovědný `ai` / garant |
+| Komponenta | Vybraný software | Kanál / Zdroj | Role a použití v Polarita s.r.o. (Verze 3.0) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Jednotný správce virtuálních strojů a kontejnerů** | **Incus** | `latest` *(oficiální podepsaný stabilní repozitář Zabbly)* | Spouští pod jedním nástrojem plné virtuální stroje (`KVM`), lehké systémové kontejnery (`LXC`) i hotové aplikační obrazy (`OCI` přímo z Docker Hubu / GHCR) — zcela bez nutnosti instalovat Docker na hostitele. | `17003` `spravce-site` *(kontrola `17004` `klicnik`)* |
 | **Hardwarová virtualizace plných VM** | **QEMU / KVM** *(s UEFI OVMF)* | `latest` *(ovládáno přímo přes `Incus`)* | Hardwarově oddělené virtuální stroje pro bez-síťový sandbox (`sandbox_airgap` — výkresy, přílohy `.zfo`, hlasové zprávy a přílohy z `Chatwoot CE / Stalwart Mail` i 48h převzetí šanonů `N7`), čtvrtletní *Full DR Drill* obnovy záloh a případnou izolovanou Windows VM pro oborový elektro software. | `17003` `spravce-site` |
-| **Deklarativní správa infrastruktury (IaC)** | **OpenTofu** + provider **`lxc/incus`** | `latest` *(oficiální podepsaný balíček a uzamčený provider)* | Veškeré sítě, profily, úložiště, kontejnery (vč. `Asterisk`, `WhisperX`, `Zulip`, `Stalwart Mail`, `Chatwoot CE`, `LiveKit`) i virtuální stroje vytváří a spravuje `ai` agent deklarativně v souborech `.tf` (auditovatelný plán před každou změnou, kontrola odchylek `drift`). | `17003` `spravce-site` *(revize `17004` `klicnik`)* |
+| **Deklarativní správa infrastruktury (IaC)** | **OpenTofu** + provider **`lxc/incus`** | `latest` *(oficiální podepsaný balíček a uzamčený provider)* | Veškeré sítě, profily, úložiště, kontejnery (vč. `Asterisk`, `WhisperX`, `Zulip`, `Stalwart Mail`, `Chatwoot CE`) i virtuální stroje vytváří a spravuje `ai` agent deklarativně v souborech `.tf` (auditovatelný plán před každou změnou, kontrola odchylek `drift`). | `17003` `spravce-site` *(revize `17004` `klicnik`)* |
 
 ---
 
@@ -25,21 +25,99 @@ Tento dokument stanovuje jednotnou virtualizační a kontejnerovou platformu na 
      1. `dmz_edge` — výhradně veřejná hrana (`Caddy` na `80/443`, `Headscale` `443` + `3478/udp` STUN a izolovaný příchozí MX relay `Stalwart Mail` na `25/tcp`; **žádné aplikační storefronty ani Node.js SSR, a `0` veřejných příchozích SIP portů**),
      2. `app_internal` — kompletní aplikační, storefrontová a komunikační vrstva webů (`polarita.cz`, storefront `polarita.eu`), e-shopu `MedusaJS`, Akademie `Moodle`, `portal-spolupracovniku`, `Keycloak`, `SilverBullet`, `Gitea`, ústředny `Asterisk`, `Zulip`, `Chatwoot CE`, `Stalwart Mail` jádra, `comm-gateway` a `ai` orchestrátoru `Paperclip`,
      3. `data_vault` — izolovaná databázová a trezorová komora **bez přístupu do internetu** (`PostgreSQL + PgBouncer`, `Valkey`, `Garage`, `OpenBao`, `Vaultwarden`),
-     4. `sandbox_airgap` — zcela odpojené prostředí **bez síťového rozhraní (`eth0` přepsáno na `type = "none"`, tj. `eth0 none` v profilu Incus)** pro bezpečné čtení nedůvěryhodných cizích souborů a hlasových zpráv přes předávací spool `/srv/polarita/data/airgap-spool` (`WhisperX` s `HF_HUB_OFFLINE=1`, `Silero VAD + librosa`, `ClamAV + Dangerzone` / `Poppler + QPDF`).
-   * **Orientační rozpočet RAM a CPU limitů v OpenTofu (`MVP 64 GB` vs. `Plný 128 GB + GPU`):** Hostitelské `OS + OpenZFS zfs_arc_max` čerpá `~10–14 GB` (`MVP`) / `~20–24 GB` (`Plný`), databázová komora `data_vault` (`PostgreSQL + PgBouncer + Valkey + Garage + OpenBao`) `14–22 GB` RAM / `4–6 vCPU`, komunikační a webová vrstva `app_internal` (`Zulip + Chatwoot + Moodle + Medusa + Paperclip + Caddy + Keycloak + Gitea`) `22–34 GB` RAM / `6–8 vCPU`, `sandbox_airgap` (`WhisperX` batch + `Dangerzone` sekvenčně `8–12 GB` RAM / `2–4 vCPU`; v Plném 128 GB profilu s dedikovanou GPU pro paralelní `WhisperX` a volitelnou VM `32+ GB`). Každou instanci uzamyká `limits.memory`, `limits.cpu` a `limits.processes`.
+     4. `sandbox_airgap` — zcela odpojené prostředí **bez síťového rozhraní (`eth0` přepsáno na `type = "none"`, tj. `eth0 none` v profilu Incus)** pro bezpečné čtení nedůvěryhodných cizích souborů a hlasových zpráv jediným tokem karanténa `/srv/polarita/workspace/karantena` → předávací spool `/srv/polarita/data/airgap-spool` → zpracování → výstup spoolu (`WhisperX` s `HF_HUB_OFFLINE=1`, `Silero VAD + librosa`, `ClamAV + Dangerzone` / `Poppler + QPDF`).
+   * **Rozpočet RAM a CPU limitů v OpenTofu (`MVP 64 GB` vs. `Plný 128 GB + GPU`):** V profilu `MVP` je součet limitů instancí nejvýše `52 GB` a hostitel (`OS + OpenZFS zfs_arc_max + Incus`) nejvýše `12 GB` — závazné výchozí hodnoty po instancích uvádí tabulka limitů níže (`dmz_edge` `2 GB`, `data_vault` `14 GB`, `app_internal` `27,5 GB`, `sandbox_airgap` `8 GB`); součet `limits.cpu` se drží na počtu jader hostitele. V `MVP` neběží Windows VM, GPU ani plný `WhisperX` (jen dávkově v noci na CPU). V Plném 128 GB profilu lze limity úměrně zvýšit (hostitel a `ARC` `~20–24 GB`, dedikovaná GPU pro `WhisperX`, volitelná VM `32+ GB`). Každou instanci uzamyká `limits.memory`, `limits.cpu` a `limits.processes`.
 3. **Nulová síťová expozice řídicího rozhraní:**
    * `Incus` naslouchá výhradně na lokálním Unix socketu hostitele (žádné otevřené TCP API ani webové rozhraní do sítě). `ai` správce sítě jej ovládá lokálně přes `OpenTofu (latest)` a CLI `incus` se striktním auditem.
 4. **Pravidlo krajní výjimky pro složité cizí balíky:**
    * Pokud by v budoucnu konkrétní nakoupený či open-source software vyžadoval vícekontejnerový `docker-compose` dodaný výrobcem, **nikdy se neinstaluje na hostitelský server `polarita-hq`**, ale spustí se výhradně uvnitř jedné vyhrazené, izolované instance v `Incus`.
 
+### Tabulka výchozích limitů RAM po instancích (profil `MVP 64 GB`)
+
+Hodnoty jsou výchozí a doladí se při přejímce; součet limitů instancí je nejvýše `52 GB` a hostitel s `ARC` nejvýše `12 GB` (dohromady nejvýše fyzická RAM `64 GB`). V profilu `MVP` neběží Windows VM, GPU ani plný `WhisperX` (přepis jen dávkově v noci na CPU). Dočasné instance (sestavovací instance, nedělní test obnovy) nemají vlastní řádek — běží mimo noční dávku `WhisperX` a sdílejí s ní její limit `4 GB`.
+
+| Zóna | Instance | `limits.memory` | Vzniká v bloku |
+| :--- | :--- | :---: | :---: |
+| `dmz_edge` | `Caddy` | `0,5 GB` | `Blok 3` |
+| `dmz_edge` | `CrowdSec` | `0,5 GB` | `Blok 3` |
+| `dmz_edge` | `Headscale` | `0,5 GB` | `Blok 3` |
+| `dmz_edge` | příchozí MX relay `Stalwart Mail` | `0,5 GB` | `Blok 3` |
+| `data_vault` | `PostgreSQL` | `10 GB` | `Blok 5` |
+| `data_vault` | `PgBouncer` | `0,25 GB` | `Blok 5` |
+| `data_vault` | `Valkey` | `1,5 GB` | `Blok 5` |
+| `data_vault` | `Garage` | `1,5 GB` | `Blok 5` |
+| `data_vault` | `OpenBao` | `0,5 GB` | `Blok 4` |
+| `data_vault` | `Vaultwarden` | `0,25 GB` | `Blok 4` |
+| `app_internal` | `Keycloak` | `1,5 GB` | `Blok 5` |
+| `app_internal` | `oauth2-proxy` | `0,25 GB` | `Blok 5` |
+| `app_internal` | `Gitea` | `1 GB` | `Blok 5` |
+| `app_internal` | `gitea-runner` | `1 GB` | `Blok 5` |
+| `app_internal` | `Checkmk` | `1,5 GB` | `Blok 6` |
+| `app_internal` | `Zulip` | `3,5 GB` | `Blok 7` |
+| `app_internal` | `Paperclip` + CLI modelů | `2,5 GB` | `Blok 7` |
+| `app_internal` | vlastní moduly Polarity (`metadata-schema-kernel` a další) | `2,5 GB` | `Bloky 7–11` |
+| `app_internal` | `Nod` | `1 GB` | `Blok 7` |
+| `app_internal` | `SilverBullet` | `0,25 GB` | `Blok 8` |
+| `app_internal` | `Paperless-ngx` | `1,5 GB` | `Blok 8` |
+| `app_internal` | `Vikunja` | `0,25 GB` | `Blok 8` |
+| `app_internal` | weby `Astro` | `1 GB` | `Blok 9` |
+| `app_internal` | `MedusaJS` | `1,5 GB` | `Blok 9` |
+| `app_internal` | `Moodle` | `1,5 GB` | `Blok 9` |
+| `app_internal` | `Umami` | `0,5 GB` | `Blok 9` |
+| `app_internal` | pečetní modul `pyHanko` | `0,25 GB` | `Blok 4` |
+| `app_internal` | stahování signatur `ClamAV` | `0,25 GB` | `Blok 4` |
+| `app_internal` | `Asterisk` | `1 GB` | `Blok 11` |
+| `app_internal` | poštovní jádro `Stalwart Mail` | `1 GB` | `Blok 11` |
+| `app_internal` | `Chatwoot CE` | `2,5 GB` | `Blok 11` |
+| `app_internal` | `Traccar` | `0,75 GB` | `Blok 11` |
+| `app_internal` | `comm-gateway` | `0,5 GB` | `Blok 11` |
+| `sandbox_airgap` | karanténa `ClamAV` + čtení CAD/PDF | `2 GB` | `Blok 4` |
+| `sandbox_airgap` | KVM VM `Dangerzone` | `2 GB` | `Blok 4` |
+| `sandbox_airgap` | noční dávka `WhisperX` + `Silero VAD + librosa` | `4 GB` | `Blok 11` |
+| **Součet instancí** | `dmz_edge` `2 GB` + `data_vault` `14 GB` + `app_internal` `27,5 GB` + `sandbox_airgap` `8 GB` | **`51,5 GB`** | — |
+| **Hostitel** | `Ubuntu Server` + `OpenZFS ARC` (`zfs_arc_max`) + `Incus` | **nejvýše `12 GB`** | `Blok 1` |
+
+### Matice povolených toků mezi zónami (zdroj → cíl → port)
+
+Co v tabulce není, je zakázáno (`nftables` `default drop`). Konkrétní čísla portů se zapisují do `OpenTofu` při nasazení služby; tabulka určuje, které toky smějí vzniknout.
+
+| Zdroj | Cíl | Port / protokol | Poznámka |
+| :--- | :--- | :--- | :--- |
+| internet | `Caddy` (`dmz_edge`) | `80/tcp`, `443/tcp+udp` | jediná veřejná HTTP/HTTPS služba (od `Bloku 3`) |
+| internet | příchozí MX relay (`dmz_edge`) | `25/tcp` | od `Bloku 3` |
+| internet | `Headscale` (`dmz_edge`) | `3478/udp` | STUN; řídicí bod `vpn.polarita.cz` jde přes `Caddy` (`443`) |
+| protistrany `SIP Trunku` | přesměrování v `dmz_edge` → `Asterisk` (`app_internal`) | výslovně vyjmenovaný UDP rozsah médií (RTP) | až od `Bloku 11`; `0` příchozích SIP portů |
+| IP whitelist M2M operátora | přesměrování v `dmz_edge` → `Traccar` (`app_internal`) | jeden TCP port zařízení | až od `Bloku 11`; nepoužije-li se M2M APN VPN |
+| uzly `Headscale VPN` | `Caddy` (`dmz_edge`, adresa VPN) | `443/tcp` | interní vhosty `*.int.polarita.cz`; `Caddy` je uzlem VPN a interní vhosty obsluhuje jen na adrese VPN, požadavek s hlavičkou `Host` `*.int` z internetu odmítá |
+| uzly `Headscale VPN` (správci) | hostitel `polarita-hq` | port `OpenSSH` | jen z VPN / LAN |
+| `Caddy` (`dmz_edge`) | aplikace v `app_internal` | explicitně povolené aplikační porty | publikace storefrontů a interních vhostů |
+| `Caddy` (`dmz_edge`) | `Vaultwarden` (`data_vault`) | port HTTP `Vaultwardenu` | výslovná výjimka: jen interní vhost dostupný z VPN |
+| příchozí MX relay (`dmz_edge`) | poštovní jádro `Stalwart Mail` (`app_internal`) | jeden port trasy (`smtp` / `lmtp`) | až od `Bloku 11` |
+| autorizované instance `app_internal` | `PostgreSQL` / `PgBouncer`, `Valkey`, `Garage` (`data_vault`) | porty těchto služeb | každá aplikace jen ke své databázi / koši |
+| `OpenBao Agent` každé instance (všechny síťové zóny) | `OpenBao` (`data_vault`) | port API `OpenBao` | výslovná výjimka: vlastní identita `AppRole` každé instance |
+| `Checkmk` (`app_internal`) | hostitel, `dmz_edge`, `app_internal`, `data_vault` | port čtecího agenta | `data_vault` sonduje jen čtecím agentem |
+| `Checkmk` (`app_internal`) | internet | odchozí `443/tcp` | jen `Telegram` a externí SMTP relay pro alerty |
+| zálohovací klient (`polarita-hq`) | záložní uzel přes `Headscale VPN` | port `Restic REST Server` | jen `append-only` přístup |
+| aplikace v `app_internal` | internet | odchozí `443/tcp` (a odchozí `SIPS/SRTP`, `25/tcp` pošty) | jen vyjmenované cíle (API modelů, rejstříky, `TSA`, `SIP Trunk`, kanály `Chatwoot`) |
+| dočasná sestavovací instance (`dmz_edge`) | internet | odchozí `80/443/tcp` | jen po dobu sestavení obrazu |
+| `data_vault` | internet | — | žádný odchozí provoz |
+| `sandbox_airgap` | cokoli | — | žádné síťové rozhraní; jen připojené adresáře (`airgap-spool`, a pouze pro čtení `airgap-models` a `clamav-db`) |
+
+### Sestavování obrazů pro zóny bez sítě a jediný tok do `sandbox_airgap`
+
+* **Obrazy:** Instance v `data_vault` a `sandbox_airgap` nemají odchozí síť, a proto se v nich nic neinstaluje ani nestahuje. Jejich obrazy (balíčky, rozšíření, modely, `Dangerzone`) se sestavují v dočasné sestavovací instanci v `dmz_edge` s odchozím přístupem jen po dobu sestavení; hotový obraz se publikuje do místního úložiště obrazů `Incus` a instance se spouštějí z něj. Aktualizace = nové sestavení obrazu a výměna instance (měsíčně a při bezpečnostní záplatě). Počet zón zůstává `4`.
+* **Jediný tok do `sandbox_airgap`:** karanténa `/srv/polarita/workspace/karantena` → `/srv/polarita/data/airgap-spool` (vstup) → zpracování → `/srv/polarita/data/airgap-spool` (výstup). Přesun provádí hostitelská jednotka `systemd`, ne aplikace. Modely (`/srv/polarita/data/airgap-models`) a signatury `ClamAV` (`/srv/polarita/data/clamav-db`) jsou do zóny připojeny pouze pro čtení.
+
 ---
 
 ## 3. Pokyny k instalaci a konfiguraci pro `ai` (Prompty)
 
-### Prompt 1 — Instalace a bezpečná inicializace `Incus (latest)` a `OpenTofu (latest)` (`pro 17003 spravce-site`)
+> **Role před vznikem agentů a schvalovací smyčka:** Do konce `Bloku 6` (a v `Bloku 7` do založení agentů) vykonávají prompty adresované `17003 spravce-site`, `17004 klicnik` a `17001 programator` subagenti Instalačního koordinátora (infrastrukturní / vývojový subagent) a „schválení v `Decisions`“ znamená písemné schválení jednatelem `1001`; od založení agentů v `Bloku 7` přebírají prompty jmenovaní agenti. Každý `Prompt` začíná čtecím průzkumem (preflight) a plánem, pak se ZASTAVÍ pro schválení `1001` a teprve potom provádí změny.
+
+### Prompt 1 — Průzkum, plán a po schválení instalace a bezpečná inicializace `Incus (latest)` a `OpenTofu (latest)` (`pro 17003 spravce-site`)
 
 ```text
-Jsi správce serveru (17003 spravce-site). Na čistém serveru polarita-hq s Ubuntu Server (latest LTS) připrav a po schválení v Decisions proveď instalaci jednotné virtualizační vrstvy Incus (latest) a OpenTofu (latest) — bez instalace Dockeru na hostitele:
+Jsi správce serveru (17003 spravce-site). Na čistém serveru polarita-hq s Ubuntu Server (latest LTS) připrav instalaci jednotné virtualizační vrstvy Incus (latest) a OpenTofu (latest) — bez instalace Dockeru na hostitele. Nejprve proveď jen krok 1 (Read-Only), předlož plán kroků 2–5 ke schválení 1001 (do spuštění fronty Decisions písemně) a ZASTAV se; kroky 2–5 proveď až po schválení:
 
 1. Preflight (Read-Only): Ověř, že v BIOS/UEFI je zapnutá hardwarová virtualizace (příznaky vmx nebo svm, přítomnost /dev/kvm; na náhradní variantě pronajatého virtuálního stroje ověř vnořenou virtualizaci — není-li dostupná, pokračuj pouze s kontejnery LXC a OCI a pro Dangerzone nastav bez-síťový LXC režim Poppler + QPDF). Dále ověř, že funguje nftables a na hostiteli neběží kolidující démon dockerd.
 2. Instalace z ověřených zdrojů:
@@ -57,26 +135,31 @@ Jsi správce serveru (17003 spravce-site). Na čistém serveru polarita-hq s Ubu
 ### Prompt 2 — Deklarativní vytvoření 4 bezpečnostních síťových zón v `OpenTofu` (`pro 17003 spravce-site` + `17004 klicnik`)
 
 ```text
+Postup: nejprve proveď čtecí průzkum (preflight) a sestav plán, pak se ZASTAV pro schválení 1001 (do spuštění fronty Decisions písemné schválení v relaci) a teprve po schválení proveď měnící kroky.
 Pomocí OpenTofu (latest) a provideru lxc/incus připrav ve složce /srv/polarita/infra/incus/zones/ deklarativní definici čtyř striktně oddělených prostředí na serveru polarita-hq:
 
 1. Zóna 1 — dmz_edge: izolovaná síť a profil výhradně pro reverzní proxy Caddy (porty 80/tcp a 443/tcp+udp), řídicí server Headscale (+ 3478/udp STUN) a izolovaný příchozí SMTP MX relay port 25/tcp pro Stalwart Mail chráněný CrowdSec (jediná zóna přijímající veřejný příchozí provoz; žádné veřejné storefronty ani aplikační backendy, 0 příchozích SIP portů a 0 správních portů).
 2. Zóna 2 — app_internal: interní aplikační a storefrontová síť (vč. všech storefrontů Astro, MedusaJS, Moodle, Keycloak, Zulip, Asterisk, Chatwoot CE, jádra Stalwart Mail, Paperclip, Gitea) s řízeným prostupem z dmz_edge pouze na explicitně povolené aplikační porty a s přísnými ACL pravidly (nftables).
-3. Zóna 3 — data_vault: uzavřená databázová a trezorová síť s NULOVÝM přístupem do internetu (žádný odchozí NAT/egress ven ze serveru, přístup povolen výhradně z autorizovaných aplikačních kontejnerů na konkrétní porty PostgreSQL/PgBouncer, Valkey, Garage a OpenBao).
-4. Zóna 4 — sandbox_airgap: profil pro bez-síťové kontejnery a KVM virtuální stroje s výslovně odebraným síťovým rozhraním (v OpenTofu / Incus přepiš zděděný device { name = "eth0", type = "none" }, tj. eth0 none — nikdy neponechávej ani výchozí incusbr0!) a s předáváním souborů výhradně přes lokální spool /srv/polarita/data/airgap-spool (vstupní podsložka jen pro čtení ro, oddělený výstupní adresář pro výsledky) pro sanitizaci hlasových příloh WhisperX (HF_HUB_OFFLINE=1 + předstažené offline modely), ClamAV/Dangerzone a čtení cizích .dwg, .dxf, .ifc, .pdf, .xc4, příloh .zfo i historických šanonů ze služby 48h převzetí šanonů dle architektury CaMeL.
-5. Ke každému profilu a instanci nastav v OpenTofu pevné limity paměti RAM (limits.memory), jader CPU (limits.cpu) a počtu procesů (limits.processes) v součtu bezpečně pod kapacitou zvoleného profilu (MVP 64 GB vs. Plný 128 GB + GPU při započtení zfs_arc_max), aby žádná zacyklená služba nemohla vyčerpat prostředky hostitelského serveru.
-6. Spusť tofu fmt, tofu validate a tofu plan, nech síťová ACL pravidla zkontrolovat u 17004 klicnik (VERIFIED_PASS) a předlož plán ke schválení do Decisions před spuštěním tofu apply.
+3. Zóna 3 — data_vault: uzavřená databázová a trezorová síť s NULOVÝM přístupem do internetu (žádný odchozí NAT/egress ven ze serveru, přístup povolen výhradně podle matice toků: z autorizovaných aplikačních kontejnerů na konkrétní porty PostgreSQL/PgBouncer, Valkey a Garage, z OpenBao Agenta každé instance na OpenBao, z Caddy na Vaultwarden jen pro interní vhost z VPN a z Checkmk jen na čtecího agenta).
+4. Zóna 4 — sandbox_airgap: profil pro bez-síťové kontejnery a KVM virtuální stroje s výslovně odebraným síťovým rozhraním (v OpenTofu / Incus přepiš zděděný device { name = "eth0", type = "none" }, tj. eth0 none — nikdy neponechávej ani výchozí incusbr0!) a s předáváním souborů výhradně jediným tokem karanténa /srv/polarita/workspace/karantena -> spool /srv/polarita/data/airgap-spool (vstupní podsložka jen pro čtení ro) -> zpracování -> oddělený výstupní adresář spoolu, přičemž přesun provádí hostitelská jednotka systemd, ne aplikace; modely /srv/polarita/data/airgap-models a signatury ClamAV /srv/polarita/data/clamav-db připoj pouze pro čtení pro sanitizaci hlasových příloh WhisperX (HF_HUB_OFFLINE=1 + předstažené offline modely), ClamAV/Dangerzone a čtení cizích .dwg, .dxf, .ifc, .pdf, .xc4, příloh .zfo i historických šanonů ze služby 48h převzetí šanonů dle architektury CaMeL.
+5. Ke každému profilu a instanci nastav v OpenTofu pevné limity paměti RAM (limits.memory), jader CPU (limits.cpu) a počtu procesů (limits.processes) podle tabulky výchozích limitů (v profilu MVP 64 GB součet limitů instancí nejvýše 52 GB a hostitel + zfs_arc_max nejvýše 12 GB; v Plném profilu 128 GB + GPU úměrně), aby žádná zacyklená služba nemohla vyčerpat prostředky hostitelského serveru.
+6. Zapiš do OpenTofu matici povolených toků mezi zónami (zdroj -> cíl -> port; co v ní není, zahazuj) včetně výslovných výjimek (Caddy -> Vaultwarden jen interní vhost z VPN, OpenBao Agent každé instance -> OpenBao, Checkmk -> data_vault jen čtecí agent, zálohovací klient -> záložní uzel přes VPN, Traccar a RTP Asterisk až v Bloku 11 přes přesměrování v dmz_edge).
+7. Připrav definici dočasné sestavovací instance v dmz_edge (odchozí přístup jen po dobu sestavení) a postup: sestavení obrazu -> publikace do místního úložiště obrazů Incus -> spuštění instance v data_vault / sandbox_airgap z tohoto obrazu -> zrušení sestavovací instance; aktualizace = nové sestavení obrazu a výměna instance (měsíčně a při bezpečnostní záplatě).
+8. Spusť tofu fmt, tofu validate a tofu plan, nech síťová ACL pravidla zkontrolovat u 17004 klicnik (VERIFIED_PASS) a předlož plán ke schválení do Decisions před spuštěním tofu apply.
 ```
 
 ### Prompt 3 — Přejímací zkouška všech 3 režimů (`LXC`, `OCI`, `KVM VM`) a čistý úklid (`pro 17003 spravce-site`)
 
 ```text
+Postup: nejprve proveď čtecí průzkum (preflight) a sestav plán, pak se ZASTAV pro schválení 1001 (do spuštění fronty Decisions písemné schválení v relaci) a teprve po schválení proveď měnící kroky.
 Proveď na serveru polarita-hq kompletní přejímací zkoušku virtualizační platformy Incus (latest) + OpenTofu (latest) ve všech třech režimech běhu:
 
 1. Test 1 (Systémový kontejner LXC): Přes OpenTofu vytvoř neprivilegovaný kontejner Ubuntu (latest LTS), ověř jeho start, síťovou izolaci dle zóny, pořízení snapshotu a nulový drift (tofu plan vrátí beze změn).
 2. Test 2 (Nativní OCI kontejner bez Dockeru): Ověř spuštění lehkého testovacího OCI obrazu přímo přes Incus OCI integraci bez přítomnosti démonu Docker na hostiteli.
 3. Test 3 (Plný virtuální stroj KVM): Přes OpenTofu vytvoř testovací KVM virtuální stroj s hardwarovou akcelerací (/dev/kvm), ověř uvnitř hosta systemd-detect-virt = kvm a funkčnost v izolovaném profilu.
-4. Povinný okamžitý úklid: Po úspěšném změření a zápisu protokolu zkoušky všechny tři cvičné instance čistě odstraň přes tofu destroy a ověř (incus list, incus storage volume list), že na serveru nezůstal žádný osiřelý testovací kontejner, virtuální stroj ani diskový svazek.
-5. Ulož protokol přejímací zkoušky do sdílené paměti (/srv/polarita/vault/07-IT-a-Architektura/).
+4. Test 4 (Obraz pro zónu bez sítě a matice toků): V dočasné sestavovací instanci v dmz_edge sestav zkušební obraz, publikuj jej do místního úložiště obrazů Incus, spusť z něj instanci v data_vault a ověř, že z ní nelze navázat žádné odchozí spojení; ověř záporným testem i alespoň jeden tok, který v matici toků není (musí být zahozen), a sečti limits.memory všech definovaných instancí (součet + hostitel a ARC nejvýše fyzická RAM).
+5. Povinný okamžitý úklid: Po úspěšném změření a zápisu protokolu zkoušky všechny cvičné instance včetně sestavovací čistě odstraň přes tofu destroy a ověř (incus list, incus storage volume list), že na serveru nezůstal žádný osiřelý testovací kontejner, virtuální stroj ani diskový svazek.
+6. Ulož protokol přejímací zkoušky do sdílené paměti (/srv/polarita/vault/07-IT-a-Architektura/).
 ```
 
 ---
@@ -87,4 +170,7 @@ Proveď na serveru polarita-hq kompletní přejímací zkoušku virtualizační 
 - [ ] Hardwarová akcelerace `KVM` (`/dev/kvm`) je aktivní a ověřená skutečným startem plného virtuálního stroje.
 - [ ] Fungují všechny tři režimy: systémové kontejnery (`LXC`), nativní aplikační obrazy (`OCI`) i plné virtuální stroje (`KVM`).
 - [ ] V `OpenTofu (latest)` jsou definovány a ověřeny všechny 4 bezpečnostní zóny (`dmz_edge`, `app_internal`, `data_vault`, `sandbox_airgap`) se striktními ACL v `nftables`; zóna `data_vault` je z internetu nedosažitelná a kontejner v `sandbox_airgap` nemá žádné síťové rozhraní (`ip link` ukáže pouze `lo`).
-- [ ] Po přejímacích testech nezůstaly v systému žádné dočasné ani nepojmenované instance.
+- [ ] Matice povolených toků mezi zónami je zapsána v `OpenTofu` včetně výslovných výjimek a záporný test toku mimo matici skončil zahozením.
+- [ ] Součet `limits.memory` všech definovaných instancí je v profilu `MVP` nejvýše `52 GB` a spolu s hostitelem a `ARC` (nejvýše `12 GB`) nepřesahuje fyzickou RAM.
+- [ ] Je ověřena cesta sestavení obrazu pro zóny bez sítě: obraz sestavený v dočasné sestavovací instanci v `dmz_edge` byl publikován do místního úložiště obrazů `Incus` a instance z něj spuštěná v `data_vault` nemá žádné odchozí spojení.
+- [ ] Po přejímacích testech nezůstaly v systému žádné dočasné ani nepojmenované instance (včetně sestavovací).

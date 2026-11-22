@@ -1,6 +1,6 @@
-# Brána `Go / No-Go` Strategické Etapy III — Polarita Elektro Cloud · Blok 19 (S7) · Verze 2.8
+# Brána `Go / No-Go` Strategické Etapy III — Polarita Elektro Cloud · Blok 19 (S7) · Verze 3.0
 
-Tento dokument stanoví objektivní spouštěč `Bloku 19`. Doplňuje řídicí dokument [`README.md`](README.md) (kapitola 2, pravidlo 1). Dokud protokol v kapitole 4 nenese verdikt `GO` a podpis `1001`, Blok 19 se nespouští. Brána ve Verzi 2.8 **nebyla měřena** — server `polarita-hq` zatím neexistuje, takže žádné z kritérií nelze splnit ani vyhodnotit.
+Tento dokument stanoví objektivní spouštěč `Bloku 19`. Doplňuje řídicí dokument [`README.md`](README.md) (kapitola 2, pravidlo 1). Dokud protokol v kapitole 4 nenese verdikt `GO` a podpis `1001`, Blok 19 se nespouští. Brána ve Verzi 3.0 **nebyla měřena** — server `polarita-hq` zatím neexistuje, takže žádné z kritérií nelze splnit ani vyhodnotit.
 
 ---
 
@@ -47,7 +47,7 @@ Zadání stanoví prahové hodnoty, ale ne přesné definice níže. Dokud je `1
 6. **Rozhodnutí patří výhradně `1001`:** `GO` nabývá platnosti až jeho podpisem protokolu (`mutation_confirm` v `Decisions` + podepsané PDF uložené v `legal-archive`). `1001` může rozhodnout `NO-GO` i při splnění všech kritérií (například z obchodních nebo kapacitních důvodů); opačně to neplatí — nesplněnou bránu nelze podpisem přehlasovat bez změny tohoto dokumentu.
 7. Při `NO-GO` se zapíše, co chybí; nové měření se spouští až na další pokyn `1001`.
 
-**Doplňkové podmínky připravenosti (`NÁVRH — ke schválení 1001`, nejsou součástí pěti závazných kritérií):** licenční podmínky a zpracovatelská smlouva po revizi advokátem, schválené tarify, pojistné krytí odpovídající poskytování softwaru třetím stranám a kapacita lidí pro zákaznickou podporu.
+**Doplňkové podmínky připravenosti (`NÁVRH — ke schválení 1001`, nejsou součástí pěti závazných kritérií a nepodmiňují verdikt `GO`):** do protokolu se zapisuje jen jejich stav — rozpracovanost konceptu (`DRAFT`) licenčních podmínek a zpracovatelské smlouvy, rozpracovanost návrhu tarifů, pojistné krytí odpovídající poskytování softwaru třetím stranám a kapacita lidí pro zákaznickou podporu. Revize podmínek advokátem a schválení tarifů `1001` následují až po podpisu `GO` (Prompt 3 v `README.md`) a jsou podmínkou založení pilotního tenanta, nikoli podmínkou `GO`; před `GO` se smějí jen udržovat koncepty v této složce.
 
 ---
 
@@ -77,7 +77,7 @@ Nezávislá kontrola měření:
   G3     — 15002 normovac:            SOUHLASÍ / NESOUHLASÍ   poznámka: ____________________
   G5     — 15001 pravni-specialista:  SOUHLASÍ / NESOUHLASÍ   poznámka: ____________________
 
-Doplňkové podmínky připravenosti (stav): ________________________________________
+Doplňkové podmínky připravenosti (jen stav, nepodmiňují GO): ____________________
 
 NÁVRH VERDIKTU (11001 ceo):   GO / NO-GO
 Chybí ke splnění (při NO-GO): ________________________________________

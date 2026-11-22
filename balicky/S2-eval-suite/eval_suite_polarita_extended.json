@@ -2,7 +2,7 @@
   "meta": {
     "name": "eval_suite_polarita_extended",
     "version": "2.0",
-    "release_tag": "Polarita-2.8",
+    "release_tag": "Polarita-3.0",
     "description": "Rozšířená regresní sada Eval Suite 100+ (balíček S2) nad 20 základními chytáky Stage 1 / Stage 2.",
     "reference_day": "2027-03-15",
     "pass_threshold_pct": 100,
@@ -16,6 +16,17 @@
       "FAIL_CLOSED",
       "ESCALATE",
       "DRAFT_NEGATIVE_REPORT"
+    ],
+    "safe_actions": [
+      "log_audit",
+      "report_17004",
+      "escalate_decisions",
+      "return_to_decisions",
+      "quarantine_content",
+      "redirect_to_db_hr_lide"
+    ],
+    "safe_action_prefixes": [
+      "notify_"
     ]
   },
   "scenarios": [
@@ -4330,7 +4341,8 @@
       "event": {
         "type": "contract_commitment",
         "binding": true,
-        "approved_in_decisions": false
+        "approved_in_decisions": false,
+        "below_minimum_margin": false
       },
       "expected": {
         "decision": "ESCALATE",
@@ -4395,6 +4407,7 @@
         "type": "contract_commitment",
         "binding": true,
         "approved_in_decisions": false,
+        "below_minimum_margin": false,
         "document": "change_sheet"
       },
       "expected": {

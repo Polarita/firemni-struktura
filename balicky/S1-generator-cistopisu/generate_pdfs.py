@@ -1,18 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-Generator of clean PDF copies of contracts and protocols (package S1, Version 2.8).
-Generátor PDF čistopisů smluv a protokolů (balíček S1, Verze 2.8).
+Generator of clean PDF copies of contracts and protocols (package S1, Version 3.0).
+Generátor PDF čistopisů smluv a protokolů (balíček S1, Verze 3.0).
 
 EN: Fills Markdown templates from sablony/ with variables from data/<same-name>.json,
     renders them to print HTML (A4) and prints PDF through a headless Chromium browser
     (Chrome / Edge). For every document it writes a manifest with the variables and SHA-256
     hashes of template, data and PDF — the input of the transactional diff "mutation_confirm".
     Exit code 0 is returned only when every template of all eight sets produced a valid PDF.
+    The PDF is printed into a temporary file and replaces the previous one only after it passed
+    validation (including the case number of the data), so a failed print never leaves or accepts
+    an old document. Templates must be plain Markdown: raw HTML and variables inside code are refused.
 CZ: Vyplní Markdown šablony ze sablony/ proměnnými z data/<stejný-název>.json, vysází je do
     tiskového HTML (A4) a vytiskne PDF přes headless prohlížeč Chromium (Chrome / Edge).
     Ke každému dokumentu zapíše manifest s proměnnými a SHA-256 otisky šablony, dat a PDF —
     vstup transakčního diffu „mutation_confirm“. Návratový kód 0 se vrací pouze tehdy, když
     každá šablona všech osmi sestav vytvořila platné PDF.
+    PDF se tiskne do dočasného souboru a předchozí nahradí až po úspěšné validaci (včetně čísla
+    spisu z dat), takže nepovedený tisk nikdy nezanechá ani nepřijme starý dokument. Šablony musí
+    být čistý Markdown: surové HTML a proměnné uvnitř kódu se odmítnou.
 
 Usage / Použití:
     python generate_pdfs.py                      # all templates with sample data, watermark VZOR
@@ -45,6 +51,13 @@ OUTPUT_DIR = HERE / "vystup"
 
 PLACEHOLDER = re.compile(r"\{\{\s*([a-z0-9_]+)\s*\}\}")
 ANY_BRACES = re.compile(r"\{\{.*?\}\}", re.DOTALL)
+RAW_HTML = re.compile(r"<[A-Za-z!/?][^>\n]*>|<(?:script|style|iframe|object|embed|img|svg|link|meta|base|form)\b", re.IGNORECASE)
+CODE_WITH_PLACEHOLDER = re.compile(r"`[^`\n]*\{\{[^`\n]*`")
+# EN: Markdown block markers at the start of a value (list, heading underline, rule, ordered list).
+# CZ: Blokové značky Markdownu na začátku hodnoty (seznam, podtržení nadpisu, čára, číslovaný seznam).
+LEADING_BLOCK_MARKER = re.compile(r"^(?:([-+=])|(\d{1,9})([.)]|&#41;))")
+_LEADING_ENTITY = {"-": "&#45;", "+": "&#43;", "=": "&#61;", ".": "&#46;", ")": "&#41;", "&#41;": "&#41;"}
+REQUIRE_BROWSER_ENV = "POLARITA_REQUIRE_BROWSER"
 REQUIRED_SETS = ("01", "02", "03", "04", "05", "06", "07", "08")  # eight sets of package S1 / osm sestav balíčku S1
 SHARED_VARIABLES = ("spis_id", "ico_klienta", "castka_bez_dph")    # variables named by the S1 definition of done
 
@@ -103,6 +116,26 @@ def placeholders(text: str) -> set[str]:
     return set(PLACEHOLDER.findall(text))
 
 
+def check_template(template: str, name: str) -> None:
+    """
+    EN: A template is plain Markdown. Raw HTML would be passed to the browser as is (script, iframe, remote
+        resources) and a variable inside a code span or code block would be printed with visible escapes.
+    CZ: Šablona je čistý Markdown. Surové HTML by prošlo do prohlížeče beze změny (skript, iframe, vzdálené
+        zdroje) a proměnná uvnitř kódu by se vytiskla s viditelnými escape sekvencemi.
+    """
+    fence = None
+    for number, line in enumerate(template.splitlines(), 1):
+        marker = re.match(r"^\s*(```|~~~)", line)
+        if marker:
+            fence = None if fence == marker.group(1) else (fence or marker.group(1))
+            continue
+        html_hit = RAW_HTML.search(line)
+        if html_hit:
+            raise GeneratorError(f"{name}: raw HTML is not allowed in a template (line {number}: {html_hit.group(0)[:40]})")
+        if (fence or line.startswith(("    ", "\t"))) and "{{" in line or CODE_WITH_PLACEHOLDER.search(line):
+            raise GeneratorError(f"{name}: placeholder inside code is not allowed (line {number})")
+
+
 def fill(template: str, values: dict[str, str], name: str) -> str:
     """
     EN: Replace variables; fails on a missing, unused or non-string value and on malformed or unclosed braces.
@@ -110,6 +143,7 @@ def fill(template: str, values: dict[str, str], name: str) -> str:
     """
     if not isinstance(values, dict):
         raise GeneratorError(f"{name}: data must be a JSON object")
+    check_template(template, name)
     stripped = ANY_BRACES.sub("", template)
     if "{{" in stripped or "}}" in stripped:
         raise GeneratorError(f"{name}: unclosed placeholder braces")
@@ -134,8 +168,19 @@ def escape_value(value: str) -> str:
     EN: Make a data value inert before Markdown conversion: no HTML, no Markdown links/images/formatting, no line break.
     CZ: Zneškodní datovou hodnotu před převodem Markdownu: žádné HTML, žádné Markdown odkazy/obrázky/formátování ani zalomení řádku.
     """
-    collapsed = " ".join(value.split())
-    return _ESCAPE_RE.sub(lambda match: _ESCAPE_MAP[match.group(0)], collapsed)
+    # EN: Collapse ordinary white space only; non-breaking spaces ("86 450,00 Kč") are typography and stay.
+    # CZ: Slučují se jen obyčejné bílé znaky; nezlomitelné mezery („86 450,00 Kč“) jsou typografie a zůstávají.
+    collapsed = re.sub(r"[ \t\r\n\f\v]+", " ", value).strip(" ")
+    escaped = _ESCAPE_RE.sub(lambda match: _ESCAPE_MAP[match.group(0)], collapsed)
+    # EN: A value alone on a line must not become a list item, a heading underline or a rule.
+    # CZ: Hodnota samotná na řádku se nesmí stát položkou seznamu, podtržením nadpisu ani čarou.
+    marker = LEADING_BLOCK_MARKER.match(escaped)
+    if marker:
+        if marker.group(1):
+            escaped = _LEADING_ENTITY[marker.group(1)] + escaped[1:]
+        else:
+            escaped = marker.group(2) + _LEADING_ENTITY[marker.group(3)] + escaped[marker.end():]
+    return escaped
 
 
 def to_html(markdown_text: str, title: str, draft: bool, footer: str) -> str:
@@ -146,7 +191,11 @@ def to_html(markdown_text: str, title: str, draft: bool, footer: str) -> str:
         raise GeneratorError("Python package 'markdown' is not installed (pip install -r requirements.txt)") from error
     body = markdown.markdown(markdown_text, extensions=["tables", "sane_lists"])
     watermark = '<div class="watermark">VZOR</div>' if draft else ""
-    return (f'<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8"><title>{html.escape(title)}</title>'
+    # EN: The policy forbids every load and every script; only the inline print style is allowed.
+    # CZ: Politika zakazuje každé načtení i každý skript; povolen je jen vložený tiskový styl.
+    policy = "default-src 'none'; style-src 'unsafe-inline'"
+    return (f'<!DOCTYPE html><html lang="cs"><head><meta charset="utf-8">'
+            f'<meta http-equiv="Content-Security-Policy" content="{policy}"><title>{html.escape(title)}</title>'
             f"<style>{PAGE_CSS}</style></head><body>{watermark}{body}"
             f'<div class="docfoot">{html.escape(footer)}</div></body></html>')
 
@@ -165,20 +214,32 @@ def find_browser() -> str:
 
 
 def print_pdf(browser: str, html_path: Path, pdf_path: Path) -> None:
-    """Print one HTML file to PDF without network access. / Vytiskne jeden HTML soubor do PDF bez přístupu k síti."""
+    """
+    EN: Print one HTML file to PDF without network access. pdf_path must not exist beforehand: the caller
+        prints into a fresh temporary file, so a browser that exits with 0 without writing is detected.
+    CZ: Vytiskne jeden HTML soubor do PDF bez přístupu k síti. pdf_path předem nesmí existovat: volající
+        tiskne do nového dočasného souboru, takže prohlížeč, který skončí kódem 0 a nic nezapíše, se odhalí.
+    """
+    if pdf_path.exists():
+        raise GeneratorError(f"internal error: print target {pdf_path.name} already exists")
     with tempfile.TemporaryDirectory() as profile:
         command = [browser, "--headless=new", "--disable-gpu", "--no-pdf-header-footer", "--disable-extensions",
                    "--host-resolver-rules=MAP * ~NOTFOUND", f"--user-data-dir={profile}",
                    f"--print-to-pdf={pdf_path}", html_path.as_uri()]
-        completed = subprocess.run(command, capture_output=True, text=True, timeout=120)
-    if completed.returncode != 0 or not pdf_path.is_file():
+        try:
+            completed = subprocess.run(command, capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired as error:
+            raise GeneratorError(f"browser timed out for {html_path.name}") from error
+    if completed.returncode != 0 or not pdf_path.is_file() or pdf_path.stat().st_size == 0:
         raise GeneratorError(f"browser failed for {html_path.name}: {completed.stderr.strip()[-300:]}")
 
 
-def validate_pdf(pdf_path: Path) -> int:
+def validate_pdf(pdf_path: Path, must_contain: str | None = None) -> int:
     """
-    EN: Check the PDF signature and that no placeholder survived; returns the page count.
-    CZ: Zkontroluje hlavičku PDF a že nezůstala žádná proměnná; vrátí počet stran.
+    EN: Check the PDF signature, that no placeholder survived and that the text contains must_contain
+        (the case number of the data - proof that this PDF was made from these data); returns the page count.
+    CZ: Zkontroluje hlavičku PDF, že nezůstala žádná proměnná a že text obsahuje must_contain (číslo
+        spisu z dat - důkaz, že toto PDF vzniklo z těchto dat); vrátí počet stran.
     """
     raw = pdf_path.read_bytes()
     if not raw.startswith(b"%PDF-") or b"%%EOF" not in raw[-2048:]:
@@ -187,12 +248,17 @@ def validate_pdf(pdf_path: Path) -> int:
         from pypdf import PdfReader
     except ImportError as error:
         raise GeneratorError("Python package 'pypdf' is not installed (pip install -r requirements.txt)") from error
-    reader = PdfReader(str(pdf_path))
-    text = "".join(page.extract_text() or "" for page in reader.pages)
+    try:
+        reader = PdfReader(str(pdf_path))
+        text = "".join(page.extract_text() or "" for page in reader.pages)
+    except Exception as error:  # pypdf raises several unrelated error types / pypdf vyhazuje více nesouvisejících typů chyb
+        raise GeneratorError(f"{pdf_path.name} cannot be read as PDF: {error}") from error
     if "{{" in text or "}}" in text:
         raise GeneratorError(f"{pdf_path.name} still contains an unfilled placeholder")
     if len(text.strip()) < 200:
         raise GeneratorError(f"{pdf_path.name} has almost no text")
+    if must_contain and "".join(must_contain.split()) not in "".join(text.split()):
+        raise GeneratorError(f"{pdf_path.name} does not contain the case number {must_contain} of its data")
     return len(reader.pages)
 
 
@@ -227,8 +293,11 @@ def generate(template_dir: Path, data_dir: Path, out_dir: Path, only: str | None
         data_path = data_dir / f"{name}.json"
         if not data_path.is_file():
             raise GeneratorError(f"{name}: data file {data_path.name} not found")
-        template = template_path.read_text(encoding="utf-8")
-        values = json.loads(data_path.read_text(encoding="utf-8"))
+        try:
+            template = template_path.read_text(encoding="utf-8")
+            values = json.loads(data_path.read_text(encoding="utf-8"))
+        except ValueError as error:  # invalid UTF-8 or invalid JSON / neplatné UTF-8 nebo neplatný JSON
+            raise GeneratorError(f"{name}: cannot read template or data: {error}") from error
         if not template.startswith("# "):
             raise GeneratorError(f"{name}: template must start with a level-1 heading")
         filled = fill(template, values, name)
@@ -243,11 +312,22 @@ def generate(template_dir: Path, data_dir: Path, out_dir: Path, only: str | None
             else:
                 footer = f"Polarita s.r.o. · dokument {name} · vygenerováno {stamp}"
             pdf_path = out_dir / f"{name}.pdf"
-            with tempfile.TemporaryDirectory() as tmp_html_dir:
-                html_path = Path(tmp_html_dir) / f"{name}.html"
+            manifest_path = out_dir / f"{name}.manifest.json"
+            with tempfile.TemporaryDirectory() as work_dir:
+                html_path = Path(work_dir) / f"{name}.html"
+                fresh_pdf = Path(work_dir) / f"{name}.pdf"
                 html_path.write_text(to_html(filled, title, draft, footer), encoding="utf-8", newline="\n")
-                print_pdf(browser or "", html_path, pdf_path)
-            pages = validate_pdf(pdf_path)
+                try:
+                    print_pdf(browser or "", html_path, fresh_pdf)
+                    case_number = values.get("spis_id")
+                    pages = validate_pdf(fresh_pdf, case_number if isinstance(case_number, str) else None)
+                except GeneratorError:
+                    # EN: Never leave an older PDF or manifest next to a failed run - they would look current.
+                    # CZ: Vedle nepovedeného běhu nikdy nenech starší PDF ani manifest - vypadaly by aktuálně.
+                    pdf_path.unlink(missing_ok=True)
+                    manifest_path.unlink(missing_ok=True)
+                    raise
+                shutil.move(str(fresh_pdf), str(pdf_path))
             manifest = {
                 "document": name,
                 "title": title,
@@ -257,7 +337,7 @@ def generate(template_dir: Path, data_dir: Path, out_dir: Path, only: str | None
                 "sha256": {"template": sha256(template_path), "data": sha256(data_path), "pdf": sha256(pdf_path)},
                 "pages": pages,
             }
-            (out_dir / f"{name}.manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+            manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
                                                            encoding="utf-8", newline="\n")
             record.update({"pdf": pdf_path.name, "pages": pages})
         results.append(record)
@@ -281,7 +361,7 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     try:
         results = generate(args.template_dir, args.data_dir, args.output_dir, args.only, not args.final, args.check)
-    except (GeneratorError, OSError, json.JSONDecodeError) as error:
+    except (GeneratorError, OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     for item in results:

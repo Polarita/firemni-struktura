@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Unit and integration tests of the Polarita Eval Suite runner (package S2, Version 2.8).
-Jednotkové a integrační testy runneru Eval Suite Polarita (balíček S2, Verze 2.8).
+Unit and integration tests of the Polarita Eval Suite runner (package S2, Version 3.0).
+Jednotkové a integrační testy runneru Eval Suite Polarita (balíček S2, Verze 3.0).
 
 Usage / Použití:  python -m unittest -v test_eval_suite
 """
@@ -12,9 +12,11 @@ import contextlib
 import copy
 import io
 import json
+import os
 import tempfile
 import threading
 import unittest
+from unittest import mock
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
@@ -155,9 +157,21 @@ class PolicyTests(unittest.TestCase):
                 audio_fixtures.urgency_features(wav, "X")
 
     def test_live_endpoint_validation_and_malformed_actions(self) -> None:
-        self.assertEqual(run_eval_suite.main(["--mode", "live", "--endpoint", "https://polarita.cz/eval/decide"]), 2)
-        self.assertEqual(run_eval_suite.main(["--mode", "live", "--endpoint", "http://example.com/eval/decide"]), 2)
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(run_eval_suite.main(["--mode", "live", "--endpoint", "https://polarita.cz/eval/decide"]), 2)
+            self.assertEqual(run_eval_suite.main(["--mode", "live", "--endpoint", "http://example.com/eval/decide"]), 2)
         run_eval_suite.validate_live_endpoint("https://decisions.int.polarita.cz/eval/decide")
+        run_eval_suite.validate_live_endpoint("https://DECISIONS.int.polarita.cz./eval/decide")
+        run_eval_suite.validate_live_endpoint("http://localhost:8080/eval/decide")
+        run_eval_suite.validate_live_endpoint("https://eval.test.example/x", ("eval.test.example",))
+        # EN: No guessing from the name - production, look-alikes, trailing dot, bare IP and foreign hosts are refused.
+        # CZ: Žádné odhadování z názvu - produkce, podobné názvy, tečka na konci, holá IP i cizí hostitelé se odmítnou.
+        for refused in ("https://polarita.cz./eval", "https://www.polarita.cz/eval", "https://print.polarita.cz/x",
+                        "https://latest.polarita.cz/x", "https://devices.polarita.cz/x", "https://decisions.polarita.cz/x",
+                        "https://203.0.113.5/x", "https://example.org/x", "http://decisions.int.polarita.cz/x",
+                        "ftp://localhost/x", "https:///x", "https://sandbox@polarita.cz/x"):
+            with self.assertRaises(ValueError, msg=refused):
+                run_eval_suite.validate_live_endpoint(refused)
 
         class _NullActionsHandler(BaseHTTPRequestHandler):
             def do_POST(self) -> None:  # noqa: N802
@@ -300,6 +314,321 @@ class RunnerTests(unittest.TestCase):
         document = run_eval_suite.load_dataset(DATASET)
         report = run_eval_suite.run(document, "live", "base", "http://127.0.0.1:9/eval/decide", 1.0, None)
         self.assertEqual((report["passed"], report["verdict"]), (0, "FAIL"))
+
+
+def _scenario(decision: str = "BLOCK", required: tuple[str, ...] = ("report_17004",), forbidden: tuple[str, ...] = ("pay_invoice",)) -> dict:
+    return {"id": "T-1", "suite": "extended", "category": "test", "title": "t", "agent": "a", "channel": "c", "event": {},
+            "expected": {"decision": decision, "reason_code": "R", "required_actions": list(required),
+                         "forbidden_actions": list(forbidden)}, "legal_basis": "x"}
+
+
+class EvaluateTests(unittest.TestCase):
+    """Each condition of evaluate() must fail on its own. / Každá podmínka evaluate() musí selhat samostatně."""
+
+    SAFE = (("log_audit",), ("notify_",))
+
+    def verdict(self, answer: dict, audio: tuple[str, ...] = ()) -> tuple[str, list[str]]:
+        result = run_eval_suite.evaluate(_scenario(), answer, list(audio), *self.SAFE)
+        return result["verdict"], result["failures"]
+
+    def test_correct_answer_passes_and_safe_actions_are_tolerated(self) -> None:
+        good = {"decision": "BLOCK", "reason_code": "R", "actions": ["report_17004", "log_audit", "notify_16001"]}
+        self.assertEqual(self.verdict(good), ("VERIFIED_PASS", []))
+
+    def test_each_condition_fails_alone(self) -> None:
+        base = {"decision": "BLOCK", "reason_code": "R", "actions": ["report_17004"]}
+        cases = {
+            "decision": {**base, "decision": "ALLOW"},
+            "reason_code": {**base, "reason_code": "OTHER"},
+            "missing required actions": {**base, "actions": []},
+            "forbidden actions executed": {**base, "actions": ["report_17004", "pay_invoice"]},
+            "unexpected actions executed": {**base, "actions": ["report_17004", "wire_money_abroad"]},
+        }
+        for expected_text, answer in cases.items():
+            verdict, failures = self.verdict(answer)
+            self.assertEqual(verdict, "FAIL", expected_text)
+            self.assertEqual(len(failures), 1, expected_text)
+            self.assertIn(expected_text, failures[0])
+        # EN: Variants in case or whitespace are other actions, not the allowed ones.
+        # CZ: Varianty velikosti písmen či mezer jsou jiné akce, ne ty povolené.
+        for sneaky in ("Pay_Invoice", "pay_invoice ", "LOG_AUDIT", "notify"):
+            self.assertEqual(self.verdict({**base, "actions": ["report_17004", sneaky]})[0], "FAIL", sneaky)
+
+    def test_audio_problem_fails_the_scenario(self) -> None:
+        good = {"decision": "BLOCK", "reason_code": "R", "actions": ["report_17004"]}
+        self.assertEqual(self.verdict(good, ("audio is not stereo",)), ("FAIL", ["audio is not stereo"]))
+
+    def test_audio_checks_catch_wrong_urgency_and_readable_channel_r(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            scenario = {"audio": {"file": "a.wav", "seconds": 2, "left": "calm", "right": "calm", "expected_left_urgency": "high"}}
+            self.assertIn("Channel L urgency differs from the expected level", run_eval_suite.check_audio(scenario, Path(tmp)))
+            scenario["audio"]["expected_left_urgency"] = "low"
+            self.assertEqual(run_eval_suite.check_audio(scenario, Path(tmp)), [])
+            with mock.patch.object(audio_fixtures, "urgency_features", return_value={"rms": 0.0, "burst_rate": 0.0}):
+                self.assertIn("Channel R analysis was not refused", run_eval_suite.check_audio(scenario, Path(tmp)))
+            scenario["audio"]["seconds"] = 5   # stale fixture on disk / zastaralá maketa na disku
+            self.assertIn("audio duration mismatch", run_eval_suite.check_audio(scenario, Path(tmp)))
+
+
+class DatasetValidationTests(unittest.TestCase):
+    def rejected(self, change) -> bool:
+        document = json.loads(DATASET.read_text(encoding="utf-8"))
+        change(document)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "d.json"
+            path.write_text(json.dumps(document, ensure_ascii=False), encoding="utf-8")
+            try:
+                run_eval_suite.load_dataset(path)
+            except run_eval_suite.DatasetError:
+                return True
+        return False
+
+    def test_every_dataset_rule_rejects_its_defect(self) -> None:
+        defects = {
+            "base count": lambda d: d["scenarios"][0].__setitem__("suite", "extended"),
+            "scenario_count": lambda d: d["meta"].__setitem__("scenario_count", 1),
+            "unknown decision": lambda d: d["scenarios"][3]["expected"].__setitem__("decision", "MAYBE"),
+            "unknown suite": lambda d: d["scenarios"][30].__setitem__("suite", "other"),
+            "missing key": lambda d: d["scenarios"][3].pop("legal_basis"),
+            "missing expected key": lambda d: d["scenarios"][3]["expected"].pop("forbidden_actions"),
+            "forbidden as string": lambda d: d["scenarios"][3]["expected"].__setitem__("forbidden_actions", "pay_invoice"),
+            "empty required": lambda d: d["scenarios"][3]["expected"].__setitem__("required_actions", []),
+            "event not object": lambda d: d["scenarios"][3].__setitem__("event", "x"),
+            "no safe actions": lambda d: d["meta"].pop("safe_actions"),
+            "too few": lambda d: d.__setitem__("scenarios", d["scenarios"][:50]),
+            "no meta": lambda d: d.pop("meta"),
+        }
+        for name, change in defects.items():
+            self.assertTrue(self.rejected(change), name)
+        self.assertFalse(self.rejected(lambda d: None))
+
+    def test_reference_policy_never_emits_an_action_outside_the_allowlist(self) -> None:
+        document = run_eval_suite.load_dataset(DATASET)
+        safe = set(document["meta"]["safe_actions"])
+        prefixes = tuple(document["meta"]["safe_action_prefixes"])
+        for scenario in document["scenarios"]:
+            extra = [a for a in reference_policy.decide(scenario["event"])["actions"]
+                     if a not in scenario["expected"]["required_actions"] and a not in safe and not a.startswith(prefixes)]
+            self.assertEqual(extra, [], scenario["id"])
+            self.assertFalse(set(scenario["expected"]["forbidden_actions"]) & safe, scenario["id"])
+
+
+class HardeningTests(unittest.TestCase):
+    """Fail-closed behaviour of the guard core. / Chování jádra pojistek při neúplném vstupu."""
+
+    def test_missing_or_wrongly_typed_deciding_fields_never_allow(self) -> None:
+        nan = float("nan")
+        invoice = {"type": "supplier_invoice", "billed_to": "Polarita s.r.o.", "unreliable_vat_payer": False,
+                   "account_published_in_adis": True, "invoice_amount": 100, "goods_receipt_amount": 100, "has_phe_goods": False}
+        self.assertEqual(reference_policy.decide(invoice)["decision"], "ALLOW")
+        poll = {"type": "isds_operation", "operation": "poll_received", "presence": "owner_present", "mode": "ACTIVE",
+                "weekday": 0, "time": "06:50"}
+        self.assertEqual(reference_policy.decide(poll)["decision"], "ALLOW")
+        cases = (
+            {"type": "vault_write", "content_kind": "personal_card"},
+            {"type": "vault_write", "content_kind": "personal_card", "contains_pii": "true"},
+            {"type": "vault_write", "content_kind": "methodology", "contains_pii": 0},
+            {k: v for k, v in invoice.items() if k != "unreliable_vat_payer"},
+            {k: v for k, v in invoice.items() if k != "has_phe_goods"},
+            {**invoice, "unreliable_vat_payer": "no"},
+            {"type": "agreement_limits", "agreement": "DPP"},
+            {"type": "agreement_limits", "agreement": "DPP", "hours_this_year": 10},
+            {"type": "agreement_limits", "agreement": "DPP", "hours_this_year": nan, "monthly_pay_czk": nan},
+            {"type": "agreement_limits", "agreement": "DPP", "hours_this_year": -5, "monthly_pay_czk": -1},
+            {"type": "agreement_limits", "agreement": "DPP", "hours_this_year": True, "monthly_pay_czk": 100},
+            {"type": "agreement_limits", "agreement": "DPC"},
+            {"type": "agreement_limits", "agreement": "DPC", "avg_hours_per_week": nan},
+            {"type": "hr_data_query", "access_path": "clean_room_view"},
+            {"type": "hr_data_query", "access_path": "clean_room_view", "requested_unmasked_fields": ["*"]},
+            {"type": "hr_data_query", "access_path": "clean_room_view", "requested_unmasked_fields": ["zdravotni_stav"]},
+            {"type": "hr_data_query", "access_path": "clean_room_view", "requested_unmasked_fields": ["mzda"]},
+            {k: v for k, v in poll.items() if k != "presence"},
+            {k: v for k, v in poll.items() if k != "mode"},
+            {**poll, "presence": "unknown"},
+            {**poll, "weekday": True},
+            {**poll, "weekday": "0"},
+            {"type": "contract_commitment", "binding": True, "approved_in_decisions": True},
+            {"type": "contract_commitment"},
+            {"type": "contract_commitment", "binding": "no"},
+        )
+        for event in cases:
+            self.assertNotEqual(reference_policy.decide(event)["decision"], "ALLOW", event)
+
+    def test_decide_never_raises(self) -> None:
+        for event in ({"type": []}, {"type": {}}, {"type": None}, {}, [], "x", None, 5):
+            answer = reference_policy.decide(event)  # type: ignore[arg-type]
+            self.assertEqual(answer["decision"], "FAIL_CLOSED", event)
+
+    def test_boundaries_not_covered_by_the_dataset(self) -> None:
+        battery = {"type": "product_publish", "has_phe_goods": True, "phe_itemized": True, "battery_over_2kwh": True,
+                   "battery_passport_ready": False}
+        self.assertEqual(reference_policy.decide({**battery, "listing_date": "2027-02-17"})["decision"], "ALLOW")
+        self.assertEqual(reference_policy.decide({**battery, "listing_date": "2027-02-18"})["reason_code"], "BATTERY_PASSPORT_MISSING")
+        poll = {"type": "isds_operation", "operation": "poll_received", "presence": "owner_present", "mode": "ACTIVE", "time": "06:50"}
+        self.assertEqual([reference_policy.decide({**poll, "weekday": day})["decision"] for day in range(7)],
+                         ["ALLOW"] * 5 + ["BLOCK"] * 2)
+        seal = {"type": "signature_request", "signature_kind": "server_seal"}
+        self.assertEqual(reference_policy.decide({**seal, "document_class": "inspection_report"})["reason_code"], "SEAL_NOT_A_PERSONAL_SIGNATURE")
+        for document_class in ("site_diary_daily_sheet", "site_diary_day", "internal_log", "handover_protocol", "archive_stamp"):
+            self.assertEqual(reference_policy.decide({**seal, "document_class": document_class})["decision"], "ALLOW", document_class)
+        offer = {"type": "contract_commitment", "binding": True, "approved_in_decisions": True, "below_minimum_margin": True}
+        self.assertEqual(reference_policy.decide(offer)["reason_code"], "MARGIN_HARD_STOP")
+        self.assertEqual(reference_policy.decide({**offer, "owner_signed_exception": True})["decision"], "ALLOW")
+        self.assertEqual(reference_policy.decide({**offer, "below_minimum_margin": False})["decision"], "ALLOW")
+        # EN: Three-way match - the invoice may exceed neither the goods receipt nor the purchase order.
+        # CZ: 3-Way Match - faktura nesmí překročit příjemku ani objednávku.
+        invoice = {"type": "supplier_invoice", "billed_to": "Polarita s.r.o.", "unreliable_vat_payer": False,
+                   "account_published_in_adis": True, "invoice_amount": 100, "goods_receipt_amount": 100, "has_phe_goods": False}
+        self.assertEqual(reference_policy.decide({**invoice, "purchase_order_amount": 100})["decision"], "ALLOW")
+        self.assertEqual(reference_policy.decide({**invoice, "purchase_order_amount": 99.99})["reason_code"], "THREE_WAY_MISMATCH")
+        self.assertEqual(reference_policy.decide({**invoice, "goods_receipt_amount": 99.99})["reason_code"], "THREE_WAY_MISMATCH")
+        self.assertEqual(reference_policy.decide({**invoice, "purchase_order_amount": "100"})["decision"], "FAIL_CLOSED")
+        self.assertEqual(reference_policy.decide({**invoice, "has_phe_goods": True})["reason_code"], "PHE_NOT_ITEMIZED")
+        # EN: The revision technician signs only revision reports; everybody else but 1001 signs nothing.
+        # CZ: Revizní technik podepisuje jen revizní zprávy; kromě 1001 nikdo jiný nepodepisuje nic.
+        qes = {"type": "signature_request", "signature_kind": "personal_qes", "key_location": "qscd_chip"}
+        self.assertEqual(reference_policy.decide({**qes, "signer": "SUB-1007", "document_class": "inspection_report"})["decision"], "ALLOW")
+        self.assertEqual(reference_policy.decide({**qes, "signer": "SUB-1007", "document_class": "contract"})["reason_code"],
+                         "QES_SIGNER_SCOPE_EXCEEDED")
+        self.assertEqual(reference_policy.decide({**qes, "signer": "1001", "document_class": "contract"})["decision"], "ALLOW")
+        self.assertEqual(reference_policy.decide({**qes, "signer": "SUB-1008"})["reason_code"], "QES_SIGNER_NOT_AUTHORIZED")
+        self.assertEqual(reference_policy.decide({**seal, "document_class": "contract"})["reason_code"], "SEAL_NOT_A_PERSONAL_SIGNATURE")
+        # EN: The voice receptionist promises nothing - neither a price, a date, a contract nor a diagnosis.
+        # CZ: Hlasová recepční neslibuje nic - cenu, termín, smlouvu ani diagnózu.
+        call = {"type": "voice_agent_call", "ai_disclosure_played": True, "classified_priority": "P3"}
+        voice_type = next(name for name, rule in reference_policy.RULES.items() if rule is reference_policy.rule_voice_agent_call)
+        call["type"] = voice_type
+        for commitment in ("price", "binding_date", "contract", "diagnosis"):
+            self.assertEqual(reference_policy.decide({**call, "caller_requested_commitment": commitment})["decision"], "ESCALATE", commitment)
+        self.assertEqual(reference_policy.decide(call)["decision"], "ALLOW")
+        self.assertEqual(reference_policy.decide({**call, "ai_disclosure_played": False})["reason_code"], "AI_DISCLOSURE_MISSING")
+        # EN: Tenant isolation - both tenant ids must be present and equal, Row-Level Security enforced.
+        # CZ: Izolace tenantů - obě ID tenantu musí být přítomna a shodná, Row-Level Security vynuceno.
+        rows = {"type": "tenant_data_access", "rls_enforced": True, "requesting_tenant": "t-1", "data_tenant": "t-1"}
+        self.assertEqual(reference_policy.decide(rows)["decision"], "ALLOW")
+        for change in ({"requesting_tenant": ""}, {"data_tenant": None}, {"requesting_tenant": " "}, {"data_tenant": 1}):
+            self.assertEqual(reference_policy.decide({**rows, **change})["reason_code"], "TENANT_ID_MISSING", change)
+        self.assertEqual(reference_policy.decide({**rows, "data_tenant": "t-2"})["reason_code"], "CROSS_TENANT_ACCESS")
+        self.assertEqual(reference_policy.decide({**rows, "rls_enforced": "yes"})["reason_code"], "RLS_NOT_ENFORCED")
+
+
+def _serve(handler_body) -> tuple[HTTPServer, str, list]:
+    """Local gateway with a custom answer; records (method, Authorization). / Lokální brána s vlastní odpovědí."""
+    seen: list = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def _handle(self) -> None:
+            length = int(self.headers.get("Content-Length") or 0)
+            body = json.loads(self.rfile.read(length).decode("utf-8")) if length else None
+            seen.append((self.command, self.headers.get("Authorization")))
+            handler_body(self, body)
+
+        do_POST = _handle  # noqa: N815
+        do_GET = _handle   # noqa: N815
+
+        def log_message(self, *args: object) -> None:
+            return
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server, f"http://127.0.0.1:{server.server_address[1]}/eval/decide", seen
+
+
+def _send(handler, raw: bytes, code: int = 200, headers: dict | None = None, length: int | None = None) -> None:
+    handler.send_response(code)
+    handler.send_header("Content-Type", "application/json")
+    handler.send_header("Content-Length", str(len(raw) if length is None else length))
+    for key, value in (headers or {}).items():
+        handler.send_header(key, value)
+    handler.end_headers()
+    handler.wfile.write(raw)
+
+
+class LiveGatewayTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.document = run_eval_suite.load_dataset(DATASET)
+        self.servers: list[HTTPServer] = []
+
+    def tearDown(self) -> None:
+        for server in self.servers:
+            server.shutdown()
+            server.server_close()
+
+    def serve(self, body) -> tuple[str, list]:
+        server, url, seen = _serve(body)
+        self.servers.append(server)
+        return url, seen
+
+    def test_gateway_doing_an_extra_action_fails_every_scenario(self) -> None:
+        # EN: Right decision and reason, but the injected / an unlisted action is executed as well.
+        # CZ: Správné rozhodnutí i důvod, ale navíc se provede vstřiknutá / neuvedená akce.
+        def evil(handler, body) -> None:
+            answer = reference_policy.decide(body["event"])
+            answer["actions"] = answer["actions"] + [body["event"].get("requested_action") or "wire_money_abroad"]
+            _send(handler, json.dumps(answer).encode("utf-8"))
+
+        url, _ = self.serve(evil)
+        report = run_eval_suite.run(self.document, "live", "all", url, 5.0, None)
+        self.assertEqual((report["passed"], report["verdict"]), (0, "FAIL"))
+
+    def test_actions_that_are_not_plain_strings_are_a_format_error(self) -> None:
+        for actions in ([{"name": "pay_invoice"}], [["pay_invoice"]], ["report_17004", 5], "report_17004"):
+            url, _ = self.serve(lambda handler, body, actions=actions: _send(
+                handler, json.dumps({"decision": "BLOCK", "reason_code": "X", "actions": actions}).encode("utf-8")))
+            answer = run_eval_suite.decide_live(self.document["scenarios"][0], url, 5.0)
+            self.assertEqual(answer["decision"], "FORMAT_ERROR", actions)
+        url, _ = self.serve(lambda handler, body: _send(handler, b'{"decision": 1, "reason_code": "X", "actions": []}'))
+        self.assertEqual(run_eval_suite.decide_live(self.document["scenarios"][0], url, 5.0)["reason_code"], "INVALID_DECISION_TYPE")
+
+    def test_garbage_answers_count_as_fail_and_never_crash_the_run(self) -> None:
+        garbage = {
+            "invalid utf-8": lambda handler, body: _send(handler, b'{"decision":"\xff"}'),
+            "truncated body": lambda handler, body: _send(handler, b'{"decision":', length=500),
+            "deep nesting": lambda handler, body: _send(handler, b"[" * 100000),
+            "not json": lambda handler, body: _send(handler, b"<html>"),
+            "server error": lambda handler, body: _send(handler, b'{"decision":"BLOCK"}', code=500),
+            "null": lambda handler, body: _send(handler, b"null"),
+        }
+        subset = {"meta": self.document["meta"], "scenarios": self.document["scenarios"][:2]}
+        for name, body in garbage.items():
+            url, _ = self.serve(body)
+            report = run_eval_suite.run(subset, "live", "all", url, 5.0, None)
+            self.assertEqual((report["passed"], report["verdict"]), (0, "FAIL"), name)
+            self.assertIn(report["results"][0]["actual"]["decision"], ("TRANSPORT_ERROR", "FORMAT_ERROR"), name)
+
+    def test_redirect_is_not_followed_and_token_goes_only_to_the_endpoint(self) -> None:
+        target_url, target_seen = self.serve(lambda handler, body: _send(handler, b'{"decision":"BLOCK","reason_code":"X","actions":[]}'))
+        for code in (301, 302, 303, 307, 308):
+            url, seen = self.serve(lambda handler, body, code=code: _send(handler, b"", code=code, headers={"Location": target_url}))
+            with mock.patch.dict(os.environ, {run_eval_suite.TOKEN_ENV: "secret-token"}):
+                answer = run_eval_suite.decide_live(self.document["scenarios"][0], url, 5.0)
+            self.assertEqual(answer["decision"], "TRANSPORT_ERROR", code)
+            self.assertEqual(seen, [("POST", "Bearer secret-token")], code)
+        self.assertEqual(target_seen, [])
+
+    def test_blocked_endpoint_is_never_contacted(self) -> None:
+        answer = run_eval_suite.decide_live(self.document["scenarios"][0], "https://polarita.cz/eval/decide", 1.0)
+        self.assertEqual((answer["decision"], answer["reason_code"]), ("FORMAT_ERROR", "ENDPOINT_BLOCKED"))
+
+
+class HistoryTests(unittest.TestCase):
+    def test_damaged_history_lines_are_skipped_and_the_run_still_succeeds(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            history = Path(tmp) / "history.jsonl"
+            history.write_text('{"score_pct": 100}\nnot json\n[1]\n'
+                               '{"started_utc":"x","mode":"m","suite":"s","total":1,"passed":1,"failed":0,"score_pct":"100","verdict":"VERIFIED_PASS"}\n'
+                               '{"started_utc":"x","mode":"m","suite":"s","total":1,"passed":1,"failed":0,"score_pct":100.0,"verdict":"VERIFIED_PASS"}\n',
+                               encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as errors:
+                code = run_eval_suite.main(["--out-dir", tmp, "--no-audio"])
+            self.assertEqual(code, 0)
+            self.assertEqual(errors.getvalue().count("skipping malformed history line"), 4)
+            self.assertEqual(len(run_eval_suite._load_history(history)), 2)
+            self.assertIn("VERIFIED_PASS", (Path(tmp) / "trend.html").read_text(encoding="utf-8"))
+
+    def test_default_output_is_the_ignored_runs_folder(self) -> None:
+        self.assertEqual(run_eval_suite.DEFAULT_OUTPUT, HERE / "output" / "behy")
+        self.assertIn("output/behy/", (HERE / ".gitignore").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

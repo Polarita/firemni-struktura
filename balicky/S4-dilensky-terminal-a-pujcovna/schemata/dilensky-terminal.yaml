@@ -1,6 +1,6 @@
 # =============================================================================
 # metadata-schema-kernel · declarative schema DRAFT / deklarativní schéma NÁVRH
-# Module / Modul: dilensky-terminal · Blok 16 · balíček S4 · Verze 2.8
+# Module / Modul: dilensky-terminal · Blok 16 · balíček S4 · Verze 3.0
 # EN: Touch workshop kiosk for switchboard assembly, routine verification and
 #     CE / PHE label printing. Nothing here is deployed; server polarita-hq
 #     does not exist yet (greenfield design).
@@ -18,7 +18,7 @@ schema:
   module: dilensky-terminal
   package: S4
   block: 16
-  release: Polarita-2.8
+  release: Polarita-3.0
   schema_version: 0.1.0-draft
   status: DRAFT                 # EN: proposal only / CZ: pouze návrh
   owner_ai: 17001               # EN: 17001 programator / CZ: 17001 programator
@@ -106,11 +106,31 @@ enums:
     - DIELECTRIC_PROPERTIES     # EN: dielectric properties (incl. insulation resistance where allowed) / CZ: dielektrické vlastnosti (vč. izolačního odporu, kde to norma připouští)
     - WIRING_FUNCTION           # EN: wiring, operational performance and function / CZ: zapojení, pracovní charakteristiky a funkce
   verification_method: [VISUAL, MECHANICAL_CHECK, MEASUREMENT, ELECTRICAL_TEST, FUNCTION_TEST]
-  declaration_status: [DRAFT, IN_DECISIONS, SIGNED, REJECTED]
+  # EN: REVOKED = withdrawn after the routine verification it relied on was voided.
+  # CZ: REVOKED = odvoláno poté, co bylo zneplatněno kusové ověření, o které se opíralo.
+  declaration_status: [DRAFT, IN_DECISIONS, SIGNED, REJECTED, REVOKED]
   label_type:
     - CE_NAMEPLATE              # EN: CE nameplate with QR / CZ: výrobní štítek CE s QR
     - PHE_BASIS                 # EN: basis for PHE recycling fee / CZ: podklad pro recyklační příspěvek PHE
   label_status: [BLOCKED, READY, PRINTED, REPRINT_REQUESTED, VOIDED]
+
+# EN: Points that always need a calibrated instrument. The kiosk does not let
+#     the worker choose a method that avoids the instrument at these points.
+# CZ: Body, které vždy vyžadují kalibrované měřidlo. Kiosk u nich nedovolí
+#     zvolit způsob, který měřidlo obchází.
+verification_point_rules:
+  instrument_required_points: [SHOCK_PROTECTION_PE, DIELECTRIC_PROPERTIES]
+  instrument_methods: [MEASUREMENT, ELECTRICAL_TEST]
+  # EN: NEPOUZIJE_SE is offered only where the standards register (15002) marks
+  #     the point as not applicable for the product type.
+  # CZ: NEPOUZIJE_SE se nabízí jen tam, kde registr norem (15002) označí bod
+  #     pro daný typ výrobku jako nepoužitelný.
+  not_applicable_source: registr-csn-15002
+
+# EN: Every state machine lists its terminal states (no outgoing transition);
+#     every other state must have at least one way out.
+# CZ: Každý stavový automat vyjmenovává koncové stavy (bez odchozího přechodu);
+#     každý jiný stav musí mít aspoň jeden výstup.
 
 entities:
 
@@ -136,25 +156,39 @@ entities:
       design_verification_ref: {type: external_ref, target: 'cad-urs-engine:design_verification', required: false, required_to_close: true}
       passport_ref: {type: external_ref, target: 'cad-urs-engine:passport', required: false, required_to_close: true}
       status: {type: enum, enum: unit_status, required: true, default: PLANNED}
-      released_at: {type: timestamptz, required: false}
+      released_at: {type: timestamptz, required: false, required_when: "status = 'RELEASED'"}
     state_machine:
       field: status
       initial: PLANNED
+      terminal: [CANCELLED]
+      # EN: Every entry into IN_VERIFICATION works with a NEW routine_verification
+      #     record; older records stay as history and are never rewritten.
+      # CZ: Každý vstup do IN_VERIFICATION pracuje s NOVÝM záznamem routine_verification;
+      #     starší záznamy zůstávají jako historie a nikdy se nepřepisují.
       transitions:
         - {from: PLANNED, to: IN_ASSEMBLY, action: start_assembly, guards: [bom_locked]}
         - {from: IN_ASSEMBLY, to: ASSEMBLED, action: finish_assembly, guards: [all_operations_done, all_serialized_components_scanned]}
         - {from: ASSEMBLED, to: IN_VERIFICATION, action: open_verification, guards: [design_verification_present]}
         - {from: IN_VERIFICATION, to: VERIFIED_PASS, action: close_verification_pass, guards: [verification_closed_pass]}
         - {from: IN_VERIFICATION, to: VERIFIED_FAIL, action: close_verification_fail, guards: [verification_closed_fail]}
+        # EN: Verification abandoned before closing (wrong unit, interrupted test).
+        # CZ: Ověření opuštěné před uzavřením (jiný rozváděč, přerušená zkouška).
+        - {from: IN_VERIFICATION, to: ASSEMBLED, action: abort_verification, guards: [verification_voided, reason_recorded]}
         - {from: VERIFIED_FAIL, to: IN_ASSEMBLY, action: rework, guards: [defects_recorded]}
-        - {from: VERIFIED_PASS, to: IN_VERIFICATION, action: reopen_after_void, guards: [verification_voided, mutation_confirm_1001]}
-        - {from: PASSPORT_ISSUED, to: IN_VERIFICATION, action: invalidate_passport_after_void, guards: [verification_voided, passport_revoked, mutation_confirm_1001]}
+        # EN: A closed verification was voided later: the unit goes back, whatever stage it reached.
+        # CZ: Uzavřené ověření bylo později zneplatněno: rozváděč se vrací, ať došel kamkoli.
+        - {from: VERIFIED_PASS, to: IN_VERIFICATION, action: reopen_after_void, guards: [verification_voided, declaration_revoked, new_verification_opened, mutation_confirm_1001]}
+        - {from: PASSPORT_ISSUED, to: IN_VERIFICATION, action: invalidate_passport_after_void, guards: [verification_voided, passport_revoked, declaration_revoked, labels_voided, new_verification_opened, mutation_confirm_1001]}
+        - {from: LABELLED, to: IN_VERIFICATION, action: invalidate_label_after_void, guards: [verification_voided, passport_revoked, declaration_revoked, labels_voided, new_verification_opened, mutation_confirm_1001]}
+        - {from: RELEASED, to: IN_VERIFICATION, action: recall_after_void, guards: [verification_voided, unit_back_in_workshop, wms_dispatch_block_restored, passport_revoked, declaration_revoked, labels_voided, new_verification_opened, mutation_confirm_1001]}
         - {from: VERIFIED_PASS, to: PASSPORT_ISSUED, action: issue_passport, guards: [serial_number_assigned, passport_present, declaration_signed_by_1001]}
         - {from: PASSPORT_ISSUED, to: LABELLED, action: confirm_label, guards: [ce_label_printed]}
         - {from: LABELLED, to: RELEASED, action: release_to_wms, guards: [phe_basis_printed]}
         - {from: PLANNED, to: CANCELLED, action: cancel, guards: [mutation_confirm_1001]}
         - {from: IN_ASSEMBLY, to: CANCELLED, action: cancel, guards: [mutation_confirm_1001]}
         - {from: ASSEMBLED, to: CANCELLED, action: cancel, guards: [mutation_confirm_1001]}
+        - {from: VERIFIED_FAIL, to: CANCELLED, action: cancel, guards: [reason_recorded, mutation_confirm_1001]}
+        - {from: VERIFIED_PASS, to: CANCELLED, action: cancel, guards: [declaration_revoked, reason_recorded, mutation_confirm_1001]}
     close_requirements:           # EN: needed to reach RELEASED / CZ: nutné pro stav RELEASED
       fields: [serial_number, design_verification_ref, passport_ref]
 
@@ -186,6 +220,7 @@ entities:
     state_machine:
       field: status
       initial: READY
+      terminal: [DONE, CANCELLED]
       transitions:
         - {from: READY, to: RUNNING, action: start, guards: [person_competent, unit_in_assembly]}
         - {from: RUNNING, to: PAUSED, action: pause, guards: []}
@@ -262,6 +297,11 @@ entities:
       # CZ: Verze registru norem (15002), ze které se berou kritéria.
       standards_register_ref: {type: external_ref, target: 'registr-csn-15002:version', required: true, required_to_close: true}
       design_verification_ref: {type: external_ref, target: 'cad-urs-engine:design_verification', required: true, required_to_close: true}
+      # EN: Product part of the standard, taken from the register, never typed by hand.
+      # CZ: Výrobková část normy, bere se z registru, nikdy se nepíše ručně.
+      product_standard_ref: {type: external_ref, target: 'registr-csn-15002:product_standard', required: false, required_to_close: true}
+      opened_at: {type: timestamptz, required: true}
+      station_code: {type: station_code, required: false, required_to_close: true}
       verifier_person_no: {type: person_no, required: true, required_to_close: true}
       # EN: Snapshot of the ZPUSOBILY gate from portal-spolupracovniku (Clean Room).
       # CZ: Otisk stavu ZPŮSOBILÝ z portal-spolupracovniku (Clean Room).
@@ -271,17 +311,33 @@ entities:
       overall_verdict: {type: enum, enum: overall_verdict, required: false, required_to_close: true}
       closed_at: {type: timestamptz, required: false, required_to_close: true}
       void_reason: {type: text, required: false, required_when: "status = 'VOIDED'"}
+    constraints:
+      # EN: At most one running verification per unit; a repeated verification is a new record.
+      # CZ: Nejvýše jedno běžící ověření na rozváděč; opakované ověření je nový záznam.
+      - {kind: unique_partial, columns: [unit_id], where: "status IN ('OPEN', 'IN_PROGRESS')"}
+      # EN: Hard-Stop in the database, not only in the guard: a closed record carries
+      #     competence = true and a verdict that matches the closing state.
+      # CZ: Hard-Stop i v databázi, nejen v zámku: uzavřený záznam nese způsobilost = true
+      #     a výrok odpovídající stavu uzavření.
+      - {kind: check, expression: "status NOT IN ('CLOSED_PASS', 'CLOSED_FAIL') OR verifier_competent IS TRUE"}
+      - {kind: check, expression: "status <> 'CLOSED_PASS' OR (overall_verdict IS NOT NULL AND overall_verdict = 'VYHOVUJE')"}
+      - {kind: check, expression: "status <> 'CLOSED_FAIL' OR (overall_verdict IS NOT NULL AND overall_verdict = 'NEVYHOVUJE')"}
     state_machine:
       field: status
       initial: OPEN
+      terminal: [VOIDED]
       transitions:
         - {from: OPEN, to: IN_PROGRESS, action: begin, guards: [person_competent, design_verification_present]}
-        - {from: IN_PROGRESS, to: CLOSED_PASS, action: close_pass, guards: [all_points_have_verdict, no_point_nevyhovuje, instruments_calibrated_on_test_day, person_competent, online_with_server]}
-        - {from: IN_PROGRESS, to: CLOSED_FAIL, action: close_fail, guards: [all_points_have_verdict, some_point_nevyhovuje, defects_recorded, instruments_calibrated_on_test_day, person_competent, online_with_server]}
+        - {from: IN_PROGRESS, to: CLOSED_PASS, action: close_pass, guards: [all_points_have_verdict, no_point_nevyhovuje, instrument_points_measured, not_applicable_allowed_by_register, instruments_calibrated_on_test_day, person_competent, online_with_server]}
+        - {from: IN_PROGRESS, to: CLOSED_FAIL, action: close_fail, guards: [all_points_have_verdict, some_point_nevyhovuje, defects_recorded, instrument_points_measured, not_applicable_allowed_by_register, instruments_calibrated_on_test_day, person_competent, online_with_server]}
+        # EN: Abandoning an unfinished verification needs only a reason; nothing was issued yet.
+        # CZ: Opuštění nedokončeného ověření vyžaduje jen důvod; nic ještě nebylo vydáno.
+        - {from: OPEN, to: VOIDED, action: abort, guards: [reason_recorded]}
+        - {from: IN_PROGRESS, to: VOIDED, action: abort, guards: [reason_recorded]}
         - {from: CLOSED_PASS, to: VOIDED, action: void, guards: [mutation_confirm_1001, reason_recorded]}
         - {from: CLOSED_FAIL, to: VOIDED, action: void, guards: [mutation_confirm_1001, reason_recorded]}
     close_requirements:           # EN: needed for CLOSED_PASS / CLOSED_FAIL / CZ: nutné pro CLOSED_PASS / CLOSED_FAIL
-      fields: [standards_register_ref, design_verification_ref, verifier_person_no, verifier_competent, competence_checked_at, overall_verdict, closed_at]
+      fields: [standards_register_ref, design_verification_ref, product_standard_ref, station_code, verifier_person_no, verifier_competent, competence_checked_at, overall_verdict, closed_at]
 
   # ---------------------------------------------------------------------------
   # EN: One point of the routine verification checklist.
@@ -299,18 +355,20 @@ entities:
       verdict: {type: enum, enum: verdict, required: false, required_to_close: true}
       # EN: Measured value as exact decimal; the limit comes from the register.
       # CZ: Naměřená hodnota jako přesné desetinné číslo; mez dává registr.
-      measured_value: {type: decimal, required: false, required_when: "method IN ('MEASUREMENT', 'ELECTRICAL_TEST')"}
-      measured_unit: {type: string, required: false, required_when: "method IN ('MEASUREMENT', 'ELECTRICAL_TEST')"}
+      measured_value: {type: decimal, required: false, required_when: "method IN ('MEASUREMENT', 'ELECTRICAL_TEST') AND verdict IN ('VYHOVUJE', 'NEVYHOVUJE')"}
+      measured_unit: {type: string, required: false, required_when: "method IN ('MEASUREMENT', 'ELECTRICAL_TEST') AND verdict IN ('VYHOVUJE', 'NEVYHOVUJE')"}
       criterion_ref: {type: external_ref, target: 'registr-csn-15002:criterion', required: false, required_to_close: true}
       # EN: Instrument from the Lhutnik calendar; mandatory for measurements.
       # CZ: Měřidlo z Lhůtníku; povinné u měření a elektrických zkoušek.
-      instrument_ref: {type: external_ref, target: 'centralni-lhutnik-a-objekty:asset', required: false, required_when: "method IN ('MEASUREMENT', 'ELECTRICAL_TEST')"}
-      calibration_valid_until: {type: date, required: false, required_when: "method IN ('MEASUREMENT', 'ELECTRICAL_TEST')"}
-      calibration_certificate_ref: {type: external_ref, target: 'centralni-lhutnik-a-objekty:calibration', required: false, required_when: "method IN ('MEASUREMENT', 'ELECTRICAL_TEST')"}
+      instrument_ref: {type: external_ref, target: 'centralni-lhutnik-a-objekty:asset', required: false, required_when: "method IN ('MEASUREMENT', 'ELECTRICAL_TEST') AND verdict IN ('VYHOVUJE', 'NEVYHOVUJE')"}
+      calibration_valid_until: {type: date, required: false, required_when: "method IN ('MEASUREMENT', 'ELECTRICAL_TEST') AND verdict IN ('VYHOVUJE', 'NEVYHOVUJE')"}
+      calibration_certificate_ref: {type: external_ref, target: 'centralni-lhutnik-a-objekty:calibration', required: false, required_when: "method IN ('MEASUREMENT', 'ELECTRICAL_TEST') AND verdict IN ('VYHOVUJE', 'NEVYHOVUJE')"}
       performed_by_person_no: {type: person_no, required: false, required_to_close: true}
       performed_at: {type: timestamptz, required: false, required_to_close: true}
-      # EN: Explicit Europe/Prague calendar date so the CHECK constraint stays IMMUTABLE in PostgreSQL.
-      # CZ: Explicitní datum v pásmu Europe/Prague, aby CHECK omezení zůstalo v PostgreSQL IMMUTABLE.
+      # EN: Explicit Europe/Prague calendar date so the CHECK constraint stays IMMUTABLE in PostgreSQL;
+      #     the server derives it from performed_at, the kiosk never sends it.
+      # CZ: Explicitní datum v pásmu Europe/Prague, aby CHECK omezení zůstalo v PostgreSQL IMMUTABLE;
+      #     odvozuje je server z performed_at, kiosk je nikdy neposílá.
       performed_on: {type: date, required: false, required_to_close: true}
       defect_note: {type: text, required: false, required_when: "verdict = 'NEVYHOVUJE'"}
       not_applicable_reason: {type: text, required: false, required_when: "verdict = 'NEPOUZIJE_SE'"}
@@ -319,7 +377,12 @@ entities:
       - {kind: unique, columns: [verification_id, point]}
       # EN: Hard-Stop: calibration must be valid on the day of the test (IMMUTABLE date check).
       # CZ: Hard-Stop: kalibrace musí platit v den zkoušky (IMMUTABLE kontrola data).
-      - {kind: check, expression: "calibration_valid_until IS NULL OR calibration_valid_until >= performed_on"}
+      # EN: A missing calibration date or test date does NOT pass.
+      # CZ: Chybějící datum kalibrace nebo datum zkoušky NEprojde.
+      - {kind: check, expression: "verdict IS NULL OR verdict = 'NEPOUZIJE_SE' OR method NOT IN ('MEASUREMENT', 'ELECTRICAL_TEST') OR (performed_on IS NOT NULL AND calibration_valid_until IS NOT NULL AND calibration_valid_until >= performed_on)"}
+      # EN: Points from verification_point_rules cannot be closed by a method without an instrument.
+      # CZ: Body z verification_point_rules nelze uzavřít způsobem bez měřidla.
+      - {kind: check, expression: "verdict IS NULL OR verdict = 'NEPOUZIJE_SE' OR point NOT IN ('SHOCK_PROTECTION_PE', 'DIELECTRIC_PROPERTIES') OR method IN ('MEASUREMENT', 'ELECTRICAL_TEST')"}
     close_requirements:           # EN: needed before the header can close / CZ: nutné před uzavřením hlavičky
       fields: [verdict, criterion_ref, performed_by_person_no, performed_at, performed_on]
 
@@ -332,7 +395,10 @@ entities:
     table: declaration_of_conformity
     fields:
       id: {type: uuid, primary_key: true}
-      unit_id: {type: ref, ref: switchboard_unit.id, required: true, unique: true}
+      unit_id: {type: ref, ref: switchboard_unit.id, required: true}
+      # EN: The verification this declaration relies on; a new verification needs a new declaration.
+      # CZ: Ověření, o které se prohlášení opírá; nové ověření vyžaduje nové prohlášení.
+      verification_id: {type: ref, ref: routine_verification.id, required: true}
       case_id: {type: case_id, required: true, indexed: true}
       draft_pdf_key: {type: object_key, required: true}  # EN: DRAFT from cad-urs-engine / CZ: DRAFT z cad-urs-engine
       status: {type: enum, enum: declaration_status, required: true, default: DRAFT}
@@ -343,14 +409,26 @@ entities:
       signed_at: {type: timestamptz, required: false, required_to_close: true}
       signed_pdf_key: {type: object_key, required: false, required_to_close: true}
       reject_reason: {type: text, required: false, required_when: "status = 'REJECTED'"}
+      revoke_reason: {type: text, required: false, required_when: "status = 'REVOKED'"}
+    constraints:
+      # EN: One live declaration per unit; revoked ones stay as history.
+      # CZ: Jedno živé prohlášení na rozváděč; odvolaná zůstávají jako historie.
+      - {kind: unique_partial, columns: [unit_id], where: "status <> 'REVOKED'"}
     state_machine:
       field: status
       initial: DRAFT
+      terminal: [REVOKED]
       transitions:
         - {from: DRAFT, to: IN_DECISIONS, action: submit, guards: [verification_closed_pass, judge_15002_pass]}
-        - {from: IN_DECISIONS, to: SIGNED, action: sign, guards: [mutation_confirm_1001, qes_signature_present]}
+        - {from: IN_DECISIONS, to: SIGNED, action: sign, guards: [verification_closed_pass, mutation_confirm_1001, qes_signature_present]}
         - {from: IN_DECISIONS, to: REJECTED, action: reject, guards: [reason_recorded]}
         - {from: REJECTED, to: DRAFT, action: redraft, guards: []}
+        # EN: The verification behind the declaration was voided: the declaration is revoked, never edited.
+        # CZ: Ověření, o které se prohlášení opírá, bylo zneplatněno: prohlášení se odvolá, nikdy neupravuje.
+        - {from: DRAFT, to: REVOKED, action: revoke, guards: [verification_voided, reason_recorded]}
+        - {from: IN_DECISIONS, to: REVOKED, action: revoke, guards: [verification_voided, reason_recorded]}
+        - {from: REJECTED, to: REVOKED, action: revoke, guards: [verification_voided, reason_recorded]}
+        - {from: SIGNED, to: REVOKED, action: revoke_signed, guards: [verification_voided, reason_recorded, mutation_confirm_1001]}
     close_requirements:           # EN: needed for SIGNED / CZ: nutné pro stav SIGNED
       fields: [decisions_ref, signed_by_person_no, signed_at, signed_pdf_key]
 
@@ -374,14 +452,25 @@ entities:
       station_code: {type: station_code, required: false, required_to_close: true}
       copies: {type: integer, required: false, default: 1}
       reprint_reason: {type: text, required: false, required_when: "status = 'REPRINT_REQUESTED'"}
+      void_reason: {type: text, required: false, required_when: "status = 'VOIDED'"}
+    constraints:
+      # EN: One live job per unit and label type; voided jobs stay as history.
+      # CZ: Jedna živá úloha na rozváděč a typ štítku; zneplatněné úlohy zůstávají jako historie.
+      - {kind: unique_partial, columns: [unit_id, label_type], where: "status <> 'VOIDED'"}
     state_machine:
       field: status
       initial: BLOCKED
+      terminal: [VOIDED]
       transitions:
         - {from: BLOCKED, to: READY, action: unlock, guards: [verification_closed_pass, passport_present, declaration_signed_by_1001]}
         - {from: READY, to: PRINTED, action: print, guards: [online_with_server]}
         - {from: PRINTED, to: REPRINT_REQUESTED, action: request_reprint, guards: [reason_recorded]}
         - {from: REPRINT_REQUESTED, to: READY, action: approve_reprint, guards: [mutation_confirm_1001]}
+        - {from: REPRINT_REQUESTED, to: PRINTED, action: reject_reprint, guards: [reason_recorded, mutation_confirm_1001]}
+        # EN: A printed label is voided when the verification or passport behind it falls.
+        # CZ: Vytištěný štítek se zneplatní, když padne ověření nebo pas, o které se opírá.
+        - {from: PRINTED, to: VOIDED, action: void_printed, guards: [reason_recorded, mutation_confirm_1001]}
+        - {from: REPRINT_REQUESTED, to: VOIDED, action: void_printed, guards: [reason_recorded, mutation_confirm_1001]}
         - {from: BLOCKED, to: VOIDED, action: void, guards: [reason_recorded]}
         - {from: READY, to: VOIDED, action: void, guards: [reason_recorded]}
     close_requirements:           # EN: needed for PRINTED / CZ: nutné pro stav PRINTED
@@ -399,21 +488,28 @@ guards:
   person_competent: "EN: portal-spolupracovniku returns ZPUSOBILY ANO for the person / CZ: portal-spolupracovniku vrací pro osobu ZPŮSOBILÝ: ANO"
   unit_in_assembly: "EN: unit status is IN_ASSEMBLY / CZ: rozváděč je ve stavu IN_ASSEMBLY"
   all_points_have_verdict: "EN: all nine points have a verdict / CZ: všech devět bodů má výrok"
+  instrument_points_measured: "EN: every point listed in verification_point_rules with a verdict other than NEPOUZIJE_SE uses MEASUREMENT or ELECTRICAL_TEST with a scanned instrument and a stored value / CZ: každý bod z verification_point_rules s jiným výrokem než NEPOUZIJE_SE používá MEASUREMENT nebo ELECTRICAL_TEST s naskenovaným měřidlem a zapsanou hodnotou"
+  not_applicable_allowed_by_register: "EN: every NEPOUZIJE_SE verdict is permitted for the product type by the standards register (15002) and has a written reason; all nine points can never be NEPOUZIJE_SE / CZ: každý výrok NEPOUZIJE_SE připouští pro daný typ výrobku registr norem (15002) a má písemné zdůvodnění; všech devět bodů nikdy nemůže být NEPOUZIJE_SE"
   no_point_nevyhovuje: "EN: no point has NEVYHOVUJE / CZ: žádný bod nemá NEVYHOVUJE"
   some_point_nevyhovuje: "EN: at least one point has NEVYHOVUJE / CZ: aspoň jeden bod má NEVYHOVUJE"
   defects_recorded: "EN: every failed point has a defect note / CZ: každý nevyhovující bod má popis závady"
   instruments_calibrated_on_test_day: "EN: every used instrument has a valid calibration in Lhutnik on the test day / CZ: každé použité měřidlo má v den zkoušky platnou kalibraci v Lhůtníku"
   online_with_server: "EN: no closing or printing from the offline queue / CZ: žádné uzavření ani tisk z offline fronty"
-  verification_closed_pass: "EN: latest routine_verification is CLOSED_PASS / CZ: poslední kusové ověření je CLOSED_PASS"
+  verification_closed_pass: "EN: latest routine_verification of the unit is CLOSED_PASS (not VOIDED) / CZ: poslední kusové ověření rozváděče je CLOSED_PASS (není VOIDED)"
   verification_closed_fail: "EN: latest routine_verification is CLOSED_FAIL / CZ: poslední kusové ověření je CLOSED_FAIL"
   verification_voided: "EN: referenced routine_verification transitioned to VOIDED / CZ: navázané kusové ověření přešlo do VOIDED"
-  passport_revoked: "EN: previously issued passport and CE label are revoked in registry and WMS / CZ: dříve vydaný pas a štítek CE jsou zneplatněny v registru i WMS"
+  new_verification_opened: "EN: a new routine_verification in OPEN exists for the unit / CZ: pro rozváděč existuje nový záznam kusového ověření ve stavu OPEN"
+  passport_revoked: "EN: previously issued passport is revoked in cad-urs-engine and in the registry / CZ: dříve vydaný pas je zneplatněn v cad-urs-engine i v registru"
+  declaration_revoked: "EN: no declaration_of_conformity of the unit is in a state other than REVOKED / CZ: žádné prohlášení o shodě rozváděče není v jiném stavu než REVOKED"
+  labels_voided: "EN: every label_print_job of the unit is VOIDED and the printed labels were physically removed (photo in the file) / CZ: každá tisková úloha rozváděče je VOIDED a vytištěné štítky byly fyzicky odstraněny (fotografie ve spisu)"
+  unit_back_in_workshop: "EN: the released unit is physically back in the workshop (elektro-wms receipt) / CZ: uvolněný rozváděč je fyzicky zpět na dílně (příjemka v elektro-wms)"
+  wms_dispatch_block_restored: "EN: dispatch block in elektro-wms is active again / CZ: blokace expedice v elektro-wms je znovu aktivní"
   serial_number_assigned: "EN: serial number assigned by cz-sk-registry-kernel / CZ: výrobní číslo přiděleno modulem cz-sk-registry-kernel"
   passport_present: "EN: passport generated by cad-urs-engine and sealed / CZ: pas vygenerován v cad-urs-engine a opatřen pečetí"
   judge_15002_pass: "EN: independent review by 15002 passed / CZ: nezávislá kontrola 15002 prošla"
-  declaration_signed_by_1001: "EN: declaration_of_conformity is SIGNED by person 1001 / CZ: prohlášení o shodě je SIGNED osobou 1001"
+  declaration_signed_by_1001: "EN: the live (not REVOKED) declaration_of_conformity relies on the latest CLOSED_PASS verification and is SIGNED by person 1001 / CZ: živé (ne REVOKED) prohlášení o shodě se opírá o poslední ověření CLOSED_PASS a je SIGNED osobou 1001"
   qes_signature_present: "EN: personal qualified signature is in the PDF / CZ: v PDF je osobní kvalifikovaný podpis"
-  ce_label_printed: "EN: label_print_job CE_NAMEPLATE is PRINTED / CZ: tisková úloha CE_NAMEPLATE je PRINTED"
-  phe_basis_printed: "EN: label_print_job PHE_BASIS is PRINTED / CZ: tisková úloha PHE_BASIS je PRINTED"
+  ce_label_printed: "EN: the live (not VOIDED) label_print_job CE_NAMEPLATE is PRINTED / CZ: živá (ne VOIDED) tisková úloha CE_NAMEPLATE je PRINTED"
+  phe_basis_printed: "EN: the live (not VOIDED) label_print_job PHE_BASIS is PRINTED / CZ: živá (ne VOIDED) tisková úloha PHE_BASIS je PRINTED"
   mutation_confirm_1001: "EN: confirmed by 1001 in Decisions / CZ: potvrzeno osobou 1001 v Decisions"
   reason_recorded: "EN: a written reason is stored / CZ: je uložen písemný důvod"

@@ -40,8 +40,8 @@ Společnost provádí montáže, revize a servis elektrických zařízení. Pot�
 
 ## 5. Jak dlouho se záznamy uchovávají
 
-1. Zvukové záznamy hovorů: 90 dnů, poté se zvuk vymaže a ve spisu zůstává textový zápis.
-2. Hovory, ve kterých se sjednávala smlouva nebo vícepráce, hovory k reklamacím a hlášení havárií: 3 až 10 let v režimu LEGAL_HOLD.
+1. Zvukové záznamy a doslovné přepisy hovorů: 90 dnů, poté se vymaže zvuk i doslovný přepis a ve spisu zůstává jen věcný záznam o hovoru (kdo volal, kdy a s jakým požadavkem).
+2. Hovory přiřazené ke spisu, ve kterých se sjednávala smlouva nebo vícepráce, hovory k reklamacím a hlášení havárií: zvuk i doslovný přepis 3 až 10 let v režimu LEGAL_HOLD.
 3. Písemná komunikace přiřazená ke spisu: po dobu uchování spisu.
 
 ## 6. Kdo má k záznamům přístup

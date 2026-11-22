@@ -11,20 +11,27 @@
 # EN: Works both when the blueprint is the repository root (its own repository) and when it lives in
 #     the subfolder Polarita/firemni-struktura (or polarita/firemni-struktura) of a larger repository.
 #     It does nothing for commits that do not touch the blueprint.
+#     The checks run on an export of the INDEX (exactly what is being committed) in a temporary folder,
+#     never on the working tree: an unstaged fix cannot hide a staged defect, and the hook leaves no
+#     files behind in the repository.
 # CZ: Funguje, když je návrh kořenem repozitáře (vlastní repozitář), i když leží v podsložce
 #     Polarita/firemni-struktura (nebo polarita/firemni-struktura) většího repozitáře.
 #     U commitů, které se návrhu netýkají, nedělá nic.
+#     Kontroly běží nad exportem INDEXU (přesně to, co se commituje) v dočasné složce, nikdy nad
+#     pracovním stromem: nepřipravená oprava nezakryje připravenou vadu a hook po sobě v repozitáři
+#     nenechá žádné soubory.
 
-ROOT="$(git rev-parse --show-toplevel)"
-if [ -f "$ROOT/nastroje/check_consistency.py" ]; then
+ROOT="$(git rev-parse --show-toplevel)" || exit 1
+cd "$ROOT" || exit 1
+if git ls-files --error-unmatch nastroje/check_consistency.py >/dev/null 2>&1 || [ -f "$ROOT/nastroje/check_consistency.py" ]; then
     FOLDER="."
     CHANGED="$(git diff --cached --name-only)"
 elif [ -d "$ROOT/Polarita/firemni-struktura/nastroje" ]; then
     FOLDER="Polarita/firemni-struktura"
-    CHANGED="$(git diff --cached --name-only | grep "^$FOLDER/" || true)"
+    CHANGED="$(git diff --cached --name-only -- "$FOLDER")"
 else
     FOLDER="polarita/firemni-struktura"
-    CHANGED="$(git diff --cached --name-only | grep "^$FOLDER/" || true)"
+    CHANGED="$(git diff --cached --name-only -- "$FOLDER")"
 fi
 
 [ -z "$CHANGED" ] && exit 0
@@ -45,20 +52,51 @@ PYTHON="$(find_python)" || {
     exit 1
 }
 
+EXPORT="$(mktemp -d 2>/dev/null || mktemp -d -t polarita-pre-commit)" || {
+    echo "pre-commit: nelze vytvořit dočasnou složku — commit zastaven." >&2
+    exit 1
+}
+trap 'rm -rf "$EXPORT"' EXIT
+trap 'exit 1' HUP INT TERM
+
+# EN: Export the staged state of the blueprint folder. / CZ: Export připraveného stavu složky návrhu.
+if ! git ls-files -z -- "$FOLDER" | git checkout-index --prefix="$EXPORT/" -z --stdin; then
+    echo "pre-commit: export indexu selhal — commit zastaven." >&2
+    exit 1
+fi
+STAGED="$EXPORT/$FOLDER"
+if [ ! -f "$STAGED/nastroje/check_consistency.py" ]; then
+    echo "pre-commit: v indexu chybí nastroje/check_consistency.py — commit zastaven." >&2
+    exit 1
+fi
+
+# EN: The export is not a Git checkout: the tools must not look at the repository the hook runs in.
+# CZ: Export není pracovní kopie Gitu: nástroje se nesmějí dívat do repozitáře, ve kterém hook běží.
+unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE GIT_PREFIX
+POLARITA_CHECK_NO_GIT=1
+PYTHONDONTWRITEBYTECODE=1
+export POLARITA_CHECK_NO_GIT PYTHONDONTWRITEBYTECODE
+
 # shellcheck disable=SC2086
-if ! (cd "$ROOT/$FOLDER/nastroje" && $PYTHON check_consistency.py && $PYTHON -m unittest test_check_consistency); then
-    echo "pre-commit: kontrola konzistence nebo její testy selhaly — commit zastaven (oprav nálezy nebo uprav nastroje/kanon.json)." >&2
+if ! (cd "$STAGED/nastroje" && $PYTHON check_consistency.py && $PYTHON -m unittest test_check_consistency); then
+    echo "pre-commit: kontrola konzistence nebo její testy selhaly — commit zastaven (oprav nálezy nebo uprav nastroje/kanon.json; kontroluje se stav připravený ke commitu, ne pracovní strom)." >&2
     exit 1
 fi
 
 # shellcheck disable=SC2086
-if ! (cd "$ROOT/$FOLDER/balicky/S1-generator-cistopisu" && $PYTHON generate_pdfs.py --check); then
+if ! (cd "$STAGED/balicky/S1-generator-cistopisu" && $PYTHON generate_pdfs.py --check); then
     echo "pre-commit: kontrola šablon a dat S1 selhala — commit zastaven." >&2
     exit 1
 fi
 
 # shellcheck disable=SC2086
-if ! (cd "$ROOT/$FOLDER/balicky/S3-konfigurator-a-tarify" && $PYTHON -m unittest test_pricing); then
+if ! (cd "$STAGED/balicky/S2-eval-suite" && $PYTHON run_eval_suite.py --no-history --no-audio --out-dir "$EXPORT/.eval-out" >/dev/null); then
+    echo "pre-commit: dry-run sady S2 neskončil VERIFIED_PASS — commit zastaven." >&2
+    exit 1
+fi
+
+# shellcheck disable=SC2086
+if ! (cd "$STAGED/balicky/S3-konfigurator-a-tarify" && $PYTHON -m unittest test_pricing); then
     echo "pre-commit: testy cenového jádra S3 selhaly — commit zastaven." >&2
     exit 1
 fi

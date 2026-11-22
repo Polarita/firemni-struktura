@@ -22,7 +22,7 @@ a
 ## Článek 2 — Tarif a rozsah služeb
 
 1. Klient si zvolil tarif **{{nazev_tarifu}}**. Podrobný rozsah zařízení objektu a služeb zahrnutých v tarifu určuje příloha č. 1.
-2. Měsíční paušál zahrnuje: a) založení a vedení Digitální knihy objektu podle článku 5; b) vedení kalendáře revizí, kontrol a dalších lhůt objektu v Centrálním Lhůtníku poskytovatele a upozorňování klienta na jejich blížící se uplynutí; c) provedení pravidelných revizí a kontrol v počtu a druzích uvedených v příloze č. 1; d) příjem a vyřizování servisních požadavků v Servisním Helpdesku ve stupních SLA podle článku 6; e) drobné servisní zásahy v rozsahu nejvýše {{pocet_servisnich_hodin_mesicne}} hodin práce technika měsíčně, přičemž nevyčerpané hodiny se nepřevádějí do dalšího měsíce; f) roční souhrnnou zprávu o stavu zařízení objektu pro statutární orgán klienta.
+2. Měsíční paušál zahrnuje: a) založení a vedení Digitální knihy objektu podle článku 5; b) vedení kalendáře revizí, kontrol a dalších lhůt objektu v Centrálním Lhůtníku poskytovatele a upozorňování klienta na jejich blížící se uplynutí; c) provedení pravidelných revizí a kontrol v počtu a druzích uvedených v příloze č. 1; d) příjem a vyřizování servisních požadavků v Servisním Helpdesku ve stupních SLA podle článku 6; e) další služby, které zvolený tarif zahrnuje podle knihy tarifů poskytovatele platné ke dni uzavření smlouvy: {{sluzby_zahrnute_v_tarifu}}. Službu, kterou zvolený tarif nezahrnuje, poskytovatel v rámci paušálu neposkytuje.
 3. Paušál nezahrnuje materiál, náhradní díly, odstranění závad zjištěných revizemi a práce nad rámec odstavce 2; ty se řídí článkem 8.
 
 ## Článek 3 — Garance 48hodinového digitálního převzetí dokumentace
@@ -52,7 +52,7 @@ a
 ## Článek 6 — Servisní Helpdesk a stupně SLA
 
 1. Servisní požadavky hlásí klient telefonicky na čísle {{servisni_telefon}}, e-mailem na adrese {{servisni_email}} nebo přes Digitální knihu objektu. Provozní doba Helpdesku: {{provozni_doba_helpdesku}}.
-2. Poskytovatel zařadí požadavek podle popisu do stupně naléhavosti a dodrží tyto lhůty:
+2. Poskytovatel zařadí požadavek podle popisu do stupně naléhavosti a dodrží lhůty, které odpovídají zvolenému tarifu podle knihy tarifů poskytovatele; garantovaná pohotovostní lhůta zásahu platí jen u tarifu, který ji zahrnuje:
 
 | Stupeň | Vymezení | Reakce na požadavek | Zahájení zásahu |
 | :--- | :--- | :--- | :--- |

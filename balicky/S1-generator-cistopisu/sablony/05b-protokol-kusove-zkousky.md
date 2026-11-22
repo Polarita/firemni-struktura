@@ -78,7 +78,7 @@ Rozváděč výrobního čísla {{vyrobni_cislo}} při kusovém ověření podle
 
 **{{zaver_zkousky}}**
 
-Při závěru NEVYHOVUJE nesmí být rozváděč expedován, nesmí k němu být vydáno EU prohlášení o shodě a nesmí být zahájena výchozí revize. Po odstranění závad se kusové ověření opakuje v plném rozsahu dotčených bodů a vystaví se nový protokol.
+Při závěru NEVYHOVUJE nesmí být rozváděč expedován, nesmí k němu být vydáno EU prohlášení o shodě a nesmí být zahájena výchozí revize. Po odstranění závad se kusové ověření opakuje v plném rozsahu všech devíti bodů jako nový záznam a vystaví se nový protokol; původní protokol zůstává beze změny.
 
 ## 9. Ověření provedl
 

@@ -1,7 +1,7 @@
 # =============================================================================
-# EN: Example configuration for package S5 (Block 17, release Polarita-2.8):
+# EN: Example configuration for package S5 (Block 17, release Polarita-3.0):
 #     esign-bridge (two-party e-signature) and voice-agent (night voice receptionist).
-# CZ: Příklad konfigurace balíčku S5 (Blok 17, release Polarita-2.8):
+# CZ: Příklad konfigurace balíčku S5 (Blok 17, release Polarita-3.0):
 #     esign-bridge (dvoustranný e-podpis) a voice-agent (noční hlasová recepční).
 #
 # EN: This is a design example only. Nothing here is deployed. The file contains
@@ -16,7 +16,7 @@
 schema_version: 1
 package: "S5"
 block: 17
-release: "Polarita-2.8"
+release: "Polarita-3.0"
 # EN: Overall status of this file. / CZ: Celkový stav tohoto souboru.
 status: "NAVRH"  # NÁVRH — ke schválení 1001
 
@@ -100,9 +100,34 @@ esign_bridge:
       invitation: "esign-invitation-v1"
       reminder: "esign-reminder-v1"
       final_copy: "esign-final-copy-v1"
+      client_signature_received: "esign-client-signed-v1"
+      rejected_or_withdrawn: "esign-rejected-v1"
+      expired: "esign-expired-v1"
+      delayed_break_glass: "esign-delayed-v1"
   envelope:
     states: ["DRAFT", "PENDING_APPROVAL", "SENT", "CLIENT_SIGNED", "COUNTERSIGNED_1001", "ARCHIVED", "REJECTED", "EXPIRED"]
     terminal_states: ["ARCHIVED", "REJECTED", "EXPIRED"]
+    # EN: Deadlines of non-terminal states (see podpisovy-workflow.md, chapter 4).
+    # CZ: Lhůty nekoncových stavů (viz podpisovy-workflow.md, kap. 4).
+    draft_max_age_days: 14            # NÁVRH — ke schválení 1001
+    approval_timeout_days: 7          # NÁVRH — ke schválení 1001
+    countersign_deadline_days: 5      # NÁVRH — ke schválení 1001
+    archive_retry_minutes: 15         # NÁVRH — ke schválení 1001
+    # EN: The final diff is confirmed by 1001 right before signing; archiving then needs no second confirmation.
+    # CZ: Závěrečný diff potvrzuje 1001 těsně před podpisem; archivace pak druhé potvrzení nevyžaduje.
+    final_diff_confirmed_before_countersign: true
+    archive_after_countersign_without_second_confirm: true
+    reject_after_countersign_allowed: false
+    withdraw_allowed_in_states: ["SENT"]   # EN: by 1001 via mutation_cancel / CZ: 1001 přes mutation_cancel
+    revoke_provider_link_on: ["REJECTED", "EXPIRED"]   # EN: verify provider support when building Blok 17 / CZ: podporu poskytovatele ověřit při stavbě Bloku 17
+    notify_client_on: ["CLIENT_SIGNED", "REJECTED", "EXPIRED", "PAUSED", "ARCHIVED"]
+    break_glass:
+      # EN: No one signs or approves "for 1001"; the envelope waits with a PAUSED flag.
+      # CZ: Nikdo nepodepisuje ani neschvaluje "za 1001"; obálka čeká s příznakem PAUSED.
+      pause_in_states: ["PENDING_APPROVAL", "CLIENT_SIGNED"]
+      deputy_may_confirm: false
+      deputy_may_sign: false
+      deadlines_run_while_paused: false
     link_validity_days: 14            # NÁVRH — ke schválení 1001
     max_reminders: 2                  # NÁVRH — ke schválení 1001
     reminder_days_before_expiry: 3    # NÁVRH — ke schválení 1001
@@ -139,7 +164,11 @@ voice_agent:
   zone: "app_internal"
   stack:
     call_control: "Asterisk ARI"
-    agent_framework: "LiveKit Agents"
+    agent_runtime: "own code (Python)"   # EN: no third-party agent framework / CZ: žádný agentní framework třetí strany
+    # EN: How ARI hands utterance audio to voice-agent must be verified against the official
+    #     documentation of the deployed Asterisk version when Blok 17 is built.
+    # CZ: Způsob předání zvuku promluv z ARI službě voice-agent ověřit proti oficiální
+    #     dokumentaci nasazené verze Asterisk při stavbě Bloku 17.
     version_policy: "latest"
     stt: "Faster-Whisper"                   # EN: local, in sandbox_airgap / CZ: lokálně, v sandbox_airgap
     tts: "undecided"                  # NÁVRH — ke schválení 1001 (EN: by availability / CZ: podle dostupnosti)
@@ -166,6 +195,21 @@ voice_agent:
     text_source: "hlasova-recepcni-scenar.md#2"
     privacy_url: "https://polarita.cz/soukromi"
     recording_refusal_instruction: true
+    # EN: Caller refuses recording: stop recording and transcription, purge what exists,
+    #     say the approved sentence, end the call. With a P1 signal the call and the
+    #     escalation continue (legal basis to be confirmed by 15001).
+    # CZ: Volající odmítne nahrávání: zastavit záznam i přepis, smazat dosavadní, říci
+    #     schválenou větu, ukončit hovor. Při znaku P1 hovor i eskalace pokračují
+    #     (právní základ potvrdí 15001).
+    on_recording_refusal:
+      stop_recording: true
+      stop_transcription: true
+      purge_existing_audio_and_transcript: "immediately"
+      sentence_source: "hlasova-recepcni-scenar.md#2"
+      end_call: true
+      ticket_field: "recording_consent"
+      ticket_keeps_only: ["call_id", "call_started_at", "call_ended_at", "caller_number", "recording_consent"]
+      when_p1_signal: "continue_and_escalate"   # NÁVRH — ke schválení 1001
     allow_p1_barge_in_after_ai_notice: true
     block_call_if_not_played: true
   spoken_camel:
@@ -174,7 +218,11 @@ voice_agent:
     wrap_transcript: true
     model_tools: ["write_own_ticket"]
     on_injection_attempt: "SECURITY_QUARANTINE"
-  required_fields: ["object_address", "contact_name", "callback_number", "problem_description"]
+  # EN: Questions 1-6 of the scenario. / CZ: Otázky 1–6 scénáře.
+  required_fields: ["object_address", "address_confirmed", "contact_name", "contact_role", "callback_number", "callback_confirmed", "problem_description", "p1_check_answer"]
+  # EN: P1 escalation starts with the caller number alone; the rest is added while it runs.
+  # CZ: Eskalace P1 se spouští jen s číslem volajícího; zbytek se doplňuje za běhu.
+  p1_minimum_fields: ["caller_number"]
   confirm_by_read_back: true
   classification:
     # EN: P1 is decided by deterministic rules; the model may only raise priority.
@@ -183,25 +231,56 @@ voice_agent:
     model_may_raise_priority: true
     model_may_lower_priority: false
     when_in_doubt: "P1"
-    p1_keywords:
-      - "jiskří"
-      - "jiskření"
-      - "hoří"
-      - "požár"
+    # EN: Word STEMS, not full forms: Czech inflects, so an exact match on "hoří" would
+    #     miss "hořelo" or "začalo hořet". A stem matches when it occurs inside a word of
+    #     the lower-cased transcript (diacritics kept). False alarms are accepted, misses are not.
+    # CZ: KMENY slov, ne celé tvary: čeština skloňuje a časuje, přesná shoda se slovem
+    #     „hoří“ by minula „hořelo“ nebo „začalo hořet“. Kmen platí, když se vyskytne uvnitř
+    #     slova přepisu převedeného na malá písmena (diakritika zůstává). Planý poplach
+    #     je přijatelný, přehlédnutí ne.
+    match_mode: "stem_substring_lowercase"
+    p1_keyword_stems:                 # NÁVRH — ke schválení 1001
+      - "jiskř"        # jiskří, jiskření, zajiskřilo
+      - "jiskr"        # jiskry, jiskra
+      - "hoř"          # hoří, hořelo, hoření, hořet, shořel
+      - "požár"        # požár, požáru
       - "oheň"
-      - "kouř"
-      - "kouří se"
-      - "zápach kouře"
-      - "spálenina"
+      - "ohn"          # ohně, ohni
+      - "plame"        # plamen, plameny
+      - "kouř"         # kouř, kouří se, kouře
+      - "dým"          # dým, dýmá
+      - "čoud"         # čoud, čoudí
+      - "spál"         # spálenina, spálené, spálilo
       - "úraz"
-      - "zasažen proudem"
-      - "rána proudem"
+      - "kopl"         # koplo, kopla ho elektřina
+      - "probíj"       # probíjí
+    # EN: Two stems that mean P1 only together, anywhere in one utterance.
+    # CZ: Dvojice kmenů, které znamenají P1 jen společně, kdekoli v jedné promluvě.
+    p1_stem_pairs:                    # NÁVRH — ke schválení 1001
+      - ["proud", "zasa"]             # zasažen proudem, zásah proudem
+      - ["proud", "zása"]
+      - ["proud", "rána"]             # rána proudem (EN: not "ráno" / CZ: ne „ráno“)
+      - ["proud", "ránu"]             # dostal ránu proudem
+      - ["elektři", "ránu"]           # dostal ránu od elektřiny
     negation_filter:
-      # EN: Ignore negated mentions in Q6/description (e.g. "nejiskří", "žádný kouř"); escalate on doubt.
-      # CZ: Filtr záporů pro odpovědi typu „ne, nic nejiskří“ u otázky 6; při nejistotě stále P1.
+      # EN: A negation counts only if it covers EVERY matched stem of the utterance
+      #     ("ne, nic nejiskří ani nehoří"). "Nejiskří, ale je cítit kouř" is P1. On doubt: P1.
+      # CZ: Zápor platí jen tehdy, když se týká VŠECH zachycených kmenů v promluvě
+      #     („ne, nic nejiskří ani nehoří“). „Nejiskří, ale je cítit kouř“ je P1. Při nejistotě P1.
       enabled: true
-      prefixes: ["ne", "nic ne", "žádný", "žádné", "bez", "necítím"]
+      negated_word_prefix: "ne"       # EN: glued to the matched word / CZ: přímo u zachyceného slova (nejiskří, nehoří)
+      negation_words_before_stem: ["žádný", "žádné", "žádná", "bez", "necítím", "nevidím", "není"]
+      must_cover_all_matched_stems: true
       fallback_on_ambiguity: "P1"
+    # EN: The stem list is accepted only together with a test set of inflected forms and negations.
+    # CZ: Seznam kmenů se přejímá jen spolu s testovací sadou skloněných tvarů a záporů.
+    test_set:
+      required: true
+      contents: ["inflected_and_colloquial_positive_forms_per_signal", "negated_sentences", "ambiguous_sentences"]
+      pass_rule: "every positive and ambiguous sentence => P1; purely negated => not P1"
+      rerun_on_stem_list_change: true
+      prepared_by: ["16002", "17001"]
+      approved_by: "1001"
     p1_keywords_extension: []         # NÁVRH — ke schválení 1001 (EN: e.g. flooding / CZ: např. zatopení)
     acoustic_urgency:
       engine: "Silero VAD + librosa"
@@ -218,6 +297,15 @@ voice_agent:
     # CZ: Kontakty jsou jen osobní čísla; telefonní čísla dohledává až při vytáčení
     #     asynchronní eskalační worker oddělený od limitu délky hovoru (max_call_duration_s).
     execution_mode: "async_worker"    # EN: survives call hangup / CZ: běží i po ukončení hovoru
+    # EN: Starts the moment P1 is granted, with the caller number from the PBX; it never
+    #     waits for the address. Data learned later is appended to the running escalation.
+    # CZ: Spouští se v okamžiku přiznání P1 s číslem volajícího z ústředny; nikdy nečeká
+    #     na adresu. Později zjištěné údaje se do běžící eskalace doplňují.
+    start_trigger: "p1_granted"
+    start_requires: ["caller_number"]
+    append_fields_while_running: true
+    on_caller_hangup: "continue"      # EN: P1 stays, escalation goes on / CZ: P1 zůstává, eskalace pokračuje
+    on_hidden_caller_number: "start_anyway_and_ask_callback_first"
     order:                            # NÁVRH — ke schválení 1001
       - person_ref: "1001"
         role: "on_call_inspection_technician"
@@ -231,6 +319,16 @@ voice_agent:
     ack_dtmf: "1"                     # NÁVRH — ke schválení 1001
     fallback_repeat_interval_min: 10  # NÁVRH — ke schválení 1001
     answered_without_ack_counts_as: "not_answered"
+    # EN: With the example values one full pass takes tens of minutes - longer than
+    #     limits.max_call_duration_s. No step may therefore depend on the caller being on the line.
+    # CZ: S příkladovými hodnotami trvá celé pořadí desítky minut - déle než
+    #     limits.max_call_duration_s. Žádný krok proto nesmí záviset na tom, že volající je na lince.
+    on_no_ack_after_max_rounds:
+      performed_by: "escalation_worker"
+      sms_to_caller_template: "p1-no-ack-caller-v1"   # NÁVRH — ke schválení 1001
+      raise_decisions_item: "URGENT_REPEAT"
+      keep_repeating: true
+      also_say_if_caller_on_line: "hlasova-recepcni-scenar.md#8.3"
     parallel_notifications:
       - "decisions:URGENT"
       - "zulip:#14-elektro-a-zakazky"
@@ -239,6 +337,8 @@ voice_agent:
   routine_request:
     ticket_target: "360-karta-spisu"
     due_time: "07:00"
+    due_day: "next_business_day"      # EN: skips weekends and CZ public holidays / CZ: přeskakuje víkendy a státní svátky
+    on_caller_hangup: "store_ticket_mark_unverified"
     assignee: "14005"
   forbidden_commitments: ["price", "binding_date", "contract", "diagnosis"]
   human_callback:
@@ -248,9 +348,19 @@ voice_agent:
     channel_l: "caller"
     channel_r: "polarita"
     store: "Garage"
+    # EN: After 90 days BOTH the audio and the verbatim transcript are deleted; only the
+    #     factual record of the call (the ticket) stays in the file.
+    # CZ: Po 90 dnech se maže zvuk I doslovný přepis; ve spisu zůstává jen věcný záznam
+    #     o hovoru (tiket).
     retention_days: 90
+    transcript_retention_days: 90
     auto_purge_after_retention: true  # EN: Garage S3 lifecycle + transcript cleanup / CZ: automatický výmaz po 90 dnech (mimo LEGAL_HOLD)
+    purge_scope: ["audio", "verbatim_transcript"]
+    kept_after_purge: ["ticket"]
+    # EN: Calls assigned to a case file: LEGAL_HOLD covers audio and transcript alike.
+    # CZ: Hovory přiřazené ke spisu: LEGAL_HOLD platí pro zvuk i přepis.
     legal_hold_for: ["P1", "complaint", "contract_term"]
+    legal_hold_scope: ["audio", "verbatim_transcript"]
     legal_hold_archive: "/srv/polarita/data/legal-archive/"
   limits:
     max_call_duration_s: 420          # NÁVRH — ke schválení 1001

@@ -1,6 +1,6 @@
-# 10 — Oborový elektro-inženýrský, CAD/BIM, výkopový (`DTM ČR`), rozpočtový a revizní software (`QElectroTech` + `LibreDWG / ezdxf / IfcOpenShell` + `cad-urs-engine` + volitelný pilot `CadCraft`) · Verze 2.8
+# 10 — Oborový elektro-inženýrský, CAD/BIM, výkopový (`DTM ČR`), rozpočtový a revizní software (`QElectroTech` + `LibreDWG / ezdxf / IfcOpenShell` + `cad-urs-engine` + volitelný pilot `CadCraft`) · Verze 3.0
 
-Tento dokument definuje inženýrskou, projekční, rozpočtovou, revizní a produkční softwarovou vrstvu společnosti **Polarita s.r.o.** (v souladu s **Verzí 2.8** firemní struktury — oddělení `14` — `14001 projektant`, `14002 rozpoctar`, `14003 revizak`, `14004 skolitel`, ve spolupráci s `17001 programator`, `15002 normovac` a kreativními týmy `12` a `13`).
+Tento dokument definuje inženýrskou, projekční, rozpočtovou, revizní a produkční softwarovou vrstvu společnosti **Polarita s.r.o.** (v souladu s **Verzí 3.0** firemní struktury — oddělení `14` — `14001 projektant`, `14002 rozpoctar`, `14003 revizak`, `14004 skolitel`, ve spolupráci s `17001 programator`, `15002 normovac` a kreativními týmy `12` a `13`).
 
 Architektura stojí na **produkčním průmyslovém open-source jádru `QElectroTech` (`.qet`) + `LibreDWG + ezdxf + IfcOpenShell + PyMuPDF` + `LibreCAD / FreeCAD / LibreOffice`** a **100% deterministickém elektrotechnickém, výkopovém (`DTM ČR`), výrobním (rozváděče nízkého napětí vč. výpočtu oteplení) a rozpočtovém jádru `cad-urs-engine`** (platné normy čte z normové báze vedené `15002 normovac`, tedy z registru platnosti norem, nikoli z tohoto návodu) napojeném na kontextová tlačítka **`„Pracuj“`** ve **360° Kartě spisu (`N2`)**, na **48h převzetí šanonů (`N7`)** i na **přepisy ústních víceprací z hovorů `Asterisk + WhisperX` (`#t=MM:SS` s příznakem `LEGAL_HOLD` přes `comm-gateway` — dopojení v `Bloku 11`)**, doplněném o samostatně ověřovanou pilotní AEC nadstavbu **`CadCraft` (`getcadcraft.com`, The Data Design Group, Inc., licence `Apache`)** — za `0 Kč` na licencích a plně funkční na **Windows**, **Linux**, **Apple macOS** i tabletech v terénu.
 
@@ -8,7 +8,7 @@ Architektura stojí na **produkčním průmyslovém open-source jádru `QElectro
 
 ## 1. Seznam vybraného softwaru a modulů
 
-| Oblast a agenda | Vybraný software / Stavební kámen | Kanál / Licence | Role a použití v Polarita s.r.o. (Verze 2.8) | Odpovědný `ai` / garant |
+| Oblast a agenda | Vybraný software / Stavební kámen | Kanál / Licence | Role a použití v Polarita s.r.o. (Verze 3.0) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Vícepólová a jednopólová elektro schémata rozváděčů (produkční základ)** | **QElectroTech** *(formát `.qet` XML na stanicích `1001+` + export `.dxf` / `.pdf`)* | `latest` *(čistý open-source GPL, desktop Windows / Linux / macOS)* | Primární produkční elektrotechnický editor provozovaný interaktivně výhradně na pracovních stanicích `1001+` (nikoliv v hlavním hostitelském OS serveru) se značkami podle platné normy pro grafické značky ve schématech a křížovými odkazy jističů, chráničů a stykačů podle platné normy pro referenční označování. Formát `.qet` je čisté XML — `14001 projektant` (`cad-urs-engine`) jej na serveru strojově generuje a člověk jej upraví na své stanici; případný headless převod `.qet -> PDF` na serveru běží jen v izolovaném kontejneru (`xvfb`), nikdy instalací GUI na hostiteli. | `14001` `projektant` *(kontrola Judge `15002` `normovac`)* |
 | **Průmyslový čtecí, konverzní a desktopový CAD/BIM motor (produkční jistota)** | **LibreDWG** + **ezdxf** + **IfcOpenShell** + **PyMuPDF** *(v `sandbox_airgap`)* + desktop **LibreCAD / FreeCAD** | `latest` *(čistý open-source)* | Produkční serverové čtení i generování složitých architektonických `.dwg`, `.dxf`, `.ifc` a vektorových `.pdf` (vč. mapových podkladů správců sítí `DTM ČR`) v bez-síťové karanténě a interaktivní desktopová editace výkresů na Windows, Linuxu i macOS. | `17001` `programator` / `14001` `projektant` |
@@ -23,7 +23,7 @@ Architektura stojí na **produkčním průmyslovém open-source jádru `QElectro
 1. **Čisté oddělení produkčního CAD jádra, pilotní sady `CadCraft` (`getcadcraft.com`) a kreativního `ArtCraft` (`getartcraft.com`) (`F14`):**
    * Produkční inženýrský provoz Polarity stojí na průmyslově prověřených otevřených nástrojích **`QElectroTech`** (desktopový editor `.qet` na stanicích `1001+` + serverové generování XML `.qet` v `cad-urs-engine`), **`LibreDWG + ezdxf + IfcOpenShell + PyMuPDF`**, **`LibreCAD / FreeCAD`** a **`LibreOffice`**.
    * Sada **`CadCraft` (`getcadcraft.com` — `CadCraft`, `BimCraft`, `TakeoffCraft`, `MarkupCraft` od The Data Design Group, Inc., licence `Apache`)** je vedena jako odděleně ověřovaná volitelná AEC nadstavba nad otevřenými soubory `.dxf`, `.ifc` a `.pdf` a výslovně se nesměšuje s kreativním nástrojem **`ArtCraft` (`getartcraft.com`)**.
-2. **Zákaz počítání elektrotechniky zpaměti, normová báze ve Vaultu (`F03`) a zákaz nočních samo-přepisů (Verze 2.8):**
+2. **Zákaz počítání elektrotechniky zpaměti, normová báze ve Vaultu (`F03`) a zákaz nočních samo-přepisů (Verze 3.0):**
    * Žádný `ai` agent nikdy neodhaduje průřez kabelu, zkratový proud, odstup inženýrských sítí, oteplení rozváděče ani součet rozpočtu v hlavě LLM — vždy volá deterministické funkce **`cad-urs-engine`**, jejichž výstup nezávisle přezkoumá v čistém kontextu **`Judge`** (`15002 normovac` / `14003 revizak`) na odlišné rodině modelu.
    * Nová výroba rozváděčů vychází z **platné normy pro rozváděče nízkého napětí** a výpočtu oteplení podle **platné metodiky**; `cad-urs-engine` je čte z normové báze, nikoli z návodu, a `15002 normovac` v ní udržuje přehled platnosti edic norem podle druhu výrobku, data a účelu (starší edice norem se použijí výhradně při posuzování historických rozváděčů podle data jejich uvedení do provozu). Žádný noční proces nesmí nikdy samočinně přepisovat výpočetní vzorce v `cad-urs-engine`.
 3. **Přesné rozlišení blokace neúplných vstupů (`FAIL_CLOSED`) a generování negativní revizní zprávy (`F04`, `F18`):**
@@ -40,6 +40,7 @@ Architektura stojí na **produkčním průmyslovém open-source jádru `QElectro
 ### Prompt 1 — Nasazení produkčního editoru `QElectroTech (latest)`, desktopového CAD základu a pilotního ověření `CadCraft` (`F14`) (`pro 17003 spravce-site` + `17001 programator`)
 
 ```text
+Postup: nejprve proveď čtecí průzkum (preflight) a sestav plán, pak se ZASTAV pro schválení 1001 v Decisions a teprve po schválení proveď měnící kroky.
 Jsi správce serveru (17003 spravce-site) ve spolupráci s hlavním vývojářem (17001 programator). Zprovozni pro inženýrský tým (oddělení 14) produkční elektrotechnický editor QElectroTech (latest) na pracovních stanicích 1001+, desktopové zálohy LibreCAD / FreeCAD / LibreOffice a oddělený pilotní kontejner pro sadu CadCraft (getcadcraft.com, Apache):
 
 1. Produkční elektrotechnická schémata QElectroTech (latest) na stanicích 1001+ a desktopový CAD základ:
@@ -53,10 +54,11 @@ Jsi správce serveru (17003 spravce-site) ve spolupráci s hlavním vývojářem
 ### Prompt 2 — Vývoj deterministického inženýrského, výkopového (`DTM ČR`) a rozpočtového jádra `cad-urs-engine` (normy z normové báze `15002 normovac` — `F03`) (`pro 17001`, `14001`, `14002` a Judge `15002`)
 
 ```text
+Postup: nejprve proveď čtecí průzkum (preflight) a sestav plán, pak se ZASTAV pro schválení 1001 v Decisions a teprve po schválení proveď měnící kroky.
 Jsi hlavní vývojář (17001 programator). Ve spolupráci s 14001 projektant, 14002 rozpoctar a pod kontrolou čistého kontextu Judge (15002 normovac) vyviň v jazyce Python (latest, Decimal) + Typst (latest) deterministický modul cad-urs-engine pokrytý jednotkovými testy (pytest):
 
 1. Bez-síťový čtecí a kreslicí modul CAD/BIM + výkopová brána DTM ČR:
-   - Integruj v sandbox_airgap (eth0 none) knihovny LibreDWG (latest), ezdxf (latest), IfcOpenShell (latest) a PyMuPDF (latest) s povinnou kalibrací měřítka PDF na min. 2 nezávislé známé kóty (jinak FAIL_CLOSED).
+   - Integruj v sandbox_airgap (eth0 none; knihovny jsou součástí obrazu sestaveného v dočasné sestavovací instanci podle Bloku 2 a výkresy vstupují jediným tokem karanténa -> airgap-spool) knihovny LibreDWG (latest), ezdxf (latest), IfcOpenShell (latest) a PyMuPDF (latest) s povinnou kalibrací měřítka PDF na min. 2 nezávislé známé kóty (jinak FAIL_CLOSED).
    - Generuj výkresy .dxf se standardizovanými hladinami (včetně hladiny EL_VYKOPY_DTM_SITE pro ochranná pásma inženýrských sítí z DTM ČR) a u každé zemní trasy automaticky ověřuj minimální krytí a prostorové odstupy křížení/souběhu podle platné normy pro prostorové uspořádání sítí technického vybavení a přítomnost platných vyjádření správců sítí ve spisu POL-RRRR-NNNNN (chybí-li, vrať FAIL_CLOSED!).
 2. Elektrotechnické výpočty nad normovou bází a Výrobní pas rozváděče (CE + QR):
    - Načítej normové konstanty z normové báze vedené 15002 normovac (řízený verzovaný registr platnosti norem podle druhu výrobku, data a účelu), nikoli z tohoto návodu, a naprogramuj deterministické výpočty: soudobý příkon, dimenzování vedení, úbytek napětí dU, impedanci smyčky Zs, zkratové proudy Ik, DLM bilanci nabíjení EV a analýzu rizika LPS.
@@ -68,6 +70,7 @@ Jsi hlavní vývojář (17001 programator). Ve spolupráci s 14001 projektant, 1
 ### Prompt 3 — Modul kompletace kladných i negativních revizních zpráv (`F04`, `F18`) a 3úrovňové diagnostiky `OCPP (latest)` (`F24`) (`pro 17001 programator` + `14003 revizak`)
 
 ```text
+Postup: nejprve proveď čtecí průzkum (preflight) a sestav plán, pak se ZASTAV pro schválení 1001 v Decisions a teprve po schválení proveď měnící kroky.
 Rozšiř inženýrské jádro cad-urs-engine o deterministický modul přípravy kladných i negativních revizních zpráv a vyhodnocení vzdálené diagnostiky pro 14003 revizak se sazbou v systému Typst (latest):
 
 1. Modulární import naměřených dat, 48h převzetí šanonů (N7), fotodokumentace a Read-Only OCPP telemetrie:

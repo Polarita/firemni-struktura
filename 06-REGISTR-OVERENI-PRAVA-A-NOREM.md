@@ -1,4 +1,4 @@
-# Právní a normová báze: pravidla a registr otevřených bodů — Polarita s.r.o. (Verze 2.8)
+# Právní a normová báze: pravidla a registr otevřených bodů — Polarita s.r.o. (Verze 3.0)
 
 Tento dokument stanoví, **jak firma zachází s právními předpisy, technickými normami a smlouvami**, a eviduje technické údaje návrhu, které byly ověřeny nebo na ověření čekají. Návrh je teoretický koncept a návod pro čistý stroj; nic v něm nenahrazuje právní ani odborné posouzení.
 
@@ -24,11 +24,11 @@ Každý záznam báze má povinně: úřední název a označení, **zdroj** (ú
 
 ## 3. Kdy a jak báze vzniká
 
-1. **Před nasazením se nestahuje nic.** V `Bloku 0` se pouze zřídí přístupy ke zdrojům (například předplatné norem) a člověk s advokátem připraví nezbytné smlouvy pro den založení firmy.
-2. **Prvotní načtení proběhne v `Bloku 8`**, jakmile běží `Vault`. `15001` a `15002` načtou jen to, co potřebuje první skutečná činnost firmy, a ke každému záznamu doplní zdroj a datum. Výchozí hodnoty z návodu porovnají s načteným zněním.
+1. **Před nasazením se nestahuje nic.** V `Bloku 0` se pouze zřídí přístupy ke zdrojům (například předplatné norem) a jednatel `1001` s advokátem připraví a nechá zrevidovat právní minimum Dne 1 (směrnice a doložky, základní vzory smluv a sazebník podle kanonické tabulky vstupů `Bloku 0` v [`README.md`](./README.md), kap. 3).
+2. **Prvotní načtení proběhne v `Bloku 8`**, jakmile běží `Vault`. `15001` a `15002` načtou jen to, co potřebuje první skutečná činnost firmy, a ke každému záznamu doplní zdroj a datum. Výchozí hodnoty z návodu porovnají s načteným zněním. Seznam činností prvního dne provozu, pro které se báze načítá, předem schválí `1001`. V tomtéž bloku `15001` ověří právní minimum Dne 1 proti bázi a advokát potvrdí výsledné znění (krok i položka `DoD` `Bloku 8`); tuto potvrzenou verzi lidé podepisují v `Bloku 12`.
 3. **Báze roste podle potřeby.** Nový druh zakázky, dokumentu nebo kontroly nejprve vyvolá doplnění báze. Chybí-li potřebný záznam, práce se zastaví ve stavu `VYŽADUJE NAČTENÍ DO BÁZE` a čeká na jeho pořízení a schválení; odhad ani citace zpaměti nejsou přípustné.
-4. **Zdroje jsou jen úřední nebo licencované:** úřední sbírka předpisů, úřední věstník pro normy, placený přístup k normám v rozsahu jeho licence, úřední databáze předpisů EU a registry státní správy. Rozsah, v jakém licence dovoluje výtahy z norem ukládat a zpracovávat, ověří `15002` s `15001` před prvním načtením.
-5. **Smlouvy:** šablony balíčku `S1` jsou ukázkové vzory generátoru bez odkazů na předpisy. Skutečné znění každé smlouvy a směrnice sestaví `15001` z báze a před prvním použitím je zreviduje advokát.
+4. **Zdroje jsou jen úřední nebo licencované:** úřední sbírka předpisů, úřední věstník pro normy, placený přístup k normám v rozsahu jeho licence, úřední databáze předpisů EU a registry státní správy. Rozsah, v jakém licence dovoluje výtahy z norem ukládat a zpracovávat, ověří `15002` s `15001` před prvním načtením (bod `N-15`, uzavírá se v `Bloku 8`).
+5. **Smlouvy:** šablony balíčku `S1` jsou ukázkové vzory generátoru bez odkazů na předpisy. `Blok 13` do nich jen převádí právní minimum potvrzené advokátem v `Bloku 8`; každé nové nebo změněné znění smlouvy a směrnice sestaví `15001` z báze a před prvním použitím je posoudí advokát (výstupy `15001` nikdy neposuzuje `15001` sám).
 
 ## 4. Pravidelné hlídání a aktualizace
 
@@ -71,15 +71,47 @@ Ostrý start (`Blok 12`, `Go-Live Gate`) je možný jen tehdy, když báze obsah
 
 ## 8. Otevřené body
 
-| ID | Bod | Kde se používá | Kdo rozhodne nebo ověří |
-| :--- | :--- | :--- | :--- |
-| `N-10` | Funkce, které návrh připisuje nástrojům z `V-22`, nejsou jejich veřejnými popisy potvrzeny (provoz nástroje `Nod` bez dalšího kontejnerového běhového prostředí a s vypnutou telemetrií; doménová pravidla v `aigiscode`; souhrn stropu rozpočtu napříč 20 `ai`; izolace pracovních stromů). Jde o vlastní nadstavbu návrhu, která musí vzniknout vlastním vývojem. | `software/07`, `software/10` | `17001 programator` před nasazením |
-| `N-15` | Rozsah, v jakém licence placeného přístupu k normám dovoluje ukládat výtahy do `Vault` a zpracovávat je jazykovým modelem | kapitola 3, karta `15002` | `15002 normovac` + `15001 pravni-specialista` |
-| `N-16` | Konfigurace statické pečeti `OpenBao` (`seal "static"`): vyžaduje povinný `current_key_id`, odebrání/odpojení surového pečetního klíče z běžícího kontejneru ihned po odemčení (jinak by kompromitace kontejneru či příkaz `SEAL` umožnily samo-odemčení při restartu) a ujasnění, zda `OpenBao` při `seal "static"` vydává i podíly `Shamir Recovery Keys` (jinak je jedinou cestou obnovy PGP kopie statického klíče v obálce `Break-Glass` a zmínky o podílech se z návodu vypustí). | `software/04`, `README`, kniha `00`, `oddeleni/11`, `oddeleni/17`, karta `17004`, šablona `06b-protokol-break-glass` balíčku `S1` | `17004 klicnik` + `17003 spravce-site` při stavbě `Bloku 4` |
-| `R-01` | Ceny, hodinové sazby, přirážky, minimální marže, stupně provize, sazby DPH (`21 %` / `12 %`) a sezónní koeficienty v [`cenik.json`](./balicky/S3-konfigurator-a-tarify/cenik.json); veřejný konfigurátor čte výhradně výřez `public_price_list` (bez interních sazeb, marží a provizí). | balíček `S3` | **Rozhodnuto 15. 11. 2026:** jednatel `1001` schválil znění návrhu beze změn; porovnání s trhem a zápis do `Decisions` proběhne při založení firmy (`Blok 15`). |
-| `R-02` | Ceník a kauce půjčovny měřidel | [`balicky/S4-dilensky-terminal-a-pujcovna/README.md`](./balicky/S4-dilensky-terminal-a-pujcovna/README.md) | jednatel `1001` |
-| `R-03` | Poskytovatel a úrovně elektronického podpisu; parametry eskalace hlasové recepční | [`balicky/S5-podpis-a-hlasova-recepcni/README.md`](./balicky/S5-podpis-a-hlasova-recepcni/README.md) | jednatel `1001` |
-| `R-04` | Kritéria a prahy brány `Go / No-Go`; ceny a limity tarifů SaaS | [`balicky/S7-polarita-elektro-cloud/README.md`](./balicky/S7-polarita-elektro-cloud/README.md) | jednatel `1001` |
-| `R-05` | Názvy kanálů `Zulip` `#12-marketing` až `#16-finance-a-kancelar` | `README`, `software/07` | jednatel `1001` |
+Každý otevřený bod má přiřazen **blok uzavření** (uzavření bodu je položkou `DoD` tohoto bloku, ne `Bloku 0`) a **vlastníka do vzniku agentů**: do založení `ai` agentů v `Bloku 7` jedná za jmenovaného agenta Instalační koordinátor se svými subagenty a rozhoduje `1001`. V `Bloku 0` se registr pouze projedná s `1001` a toto přiřazení se potvrdí.
+
+| ID | Bod | Kde se používá | Kdo rozhodne nebo ověří | Blok uzavření | Vlastník do vzniku agentů |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `N-10` | Funkce, které návrh připisuje nástrojům z `V-22`, nejsou jejich veřejnými popisy potvrzeny (provoz nástroje `Nod` bez dalšího kontejnerového běhového prostředí a s vypnutou telemetrií; doménová pravidla v `aigiscode`; souhrnná stopka rozpočtu se třemi prahy napříč 20 `ai`; izolace oddělených klonů `wt-worker` / `wt-judge`). Jde o vlastní nadstavbu návrhu, která musí vzniknout vlastním vývojem. | `software/07`, `software/10` | `17001 programator` před nasazením | `Blok 7` (položka `DoD`; část pro `software/10` před nasazením v `Bloku 10`) | Instalační koordinátor + `1001`, po založení agentů `17001` |
+| `N-15` | Rozsah, v jakém licence placeného přístupu k normám dovoluje ukládat výtahy do `Vault` a zpracovávat je jazykovým modelem | kapitola 3, karta `15002` | `15002 normovac` + `15001 pravni-specialista` | `Blok 8` (před prvním načtením norem; položka `DoD`) | Instalační koordinátor + `1001` |
+| `N-16` | Konfigurace statické pečeti `OpenBao` (`seal "static"`): vyžaduje povinný `current_key_id`, odebrání/odpojení surového pečetního klíče z běžícího kontejneru ihned po odemčení (jinak by kompromitace kontejneru či příkaz `SEAL` umožnily samo-odemčení při restartu) a ujasnění, zda `OpenBao` při `seal "static"` vydává i podíly `Shamir Recovery Keys` (jinak je jedinou cestou obnovy PGP kopie statického klíče v obálce `Break-Glass` a zmínky o podílech se z návodu vypustí). | `software/04`, `README`, kniha `00`, `oddeleni/11`, `oddeleni/17`, karta `17004`, šablona `06b-protokol-break-glass` balíčku `S1` | `17004 klicnik` + `17003 spravce-site` při stavbě `Bloku 4` | `Blok 4` (položka `DoD`) | Instalační koordinátor + `1001` |
+| `N-17` | Šifrování úložiště: postup nativního šifrování `OpenZFS` s klíčem zapečetěným v `TPM 2.0`, bezobslužné odemčení datového poolu při startu a obnova ze záložní kopie klíče — ověřit proti oficiální dokumentaci nasazené verze operačního systému a `OpenZFS`. | `software/01`, `README`, kniha `00` | `17003 spravce-site` + `17004 klicnik` při stavbě `Bloku 1` | `Blok 1` (položka `DoD`) | Instalační koordinátor + `1001` |
+| `N-18` | `Chatwoot CE`: přesný seznam veřejných cest (widget a webhooky kanálů) a interních cest za VPN + `oauth2-proxy` sestavit z tabulky rout nasazené verze a ověřit e2e testem widgetu i webhooku. | `software/11`, `README`, kniha `00` | `17003 spravce-site` + `17004 klicnik` při stavbě `Bloku 11` | `Blok 11` (položka `DoD`) | Instalační koordinátor + `1001` |
+| `N-19` | `Zulip` u vlastní instalace: limity mobilních push oznámení služby výrobce (a rozhodnutí, zda se použijí, nebo zda `URGENT` upozornění poběží jen náhradním kanálem) a požadavky `Zulipu` na vzdálenou `PostgreSQL` v zóně `data_vault`. | `software/07` | `17003 spravce-site` + `1001` při stavbě `Bloku 7` | `Blok 7` (položka `DoD`) | Instalační koordinátor + `1001` |
+| `N-20` | `Dangerzone`: balíček a plně offline režim v obrazu bez sítě (`sandbox_airgap`). | `software/04` | `17004 klicnik` + `17003 spravce-site` při stavbě `Bloku 4` | `Blok 4` (položka `DoD`) | Instalační koordinátor + `1001` |
+| `N-21` | `Garage`: podpora pravidel životního cyklu (expirace objektů) v nasazené verzi; jinak se `90denní` výmaz provádí plánovanou úlohou. | `software/05` | `17003 spravce-site` při stavbě `Bloku 5` | `Blok 5` (položka `DoD`) | Instalační koordinátor + `1001` |
+| `N-22` | Knihovna `libdatovka`: licence a dostupnost jejího Python rozhraní pro `isds-podatelna-bridge`. | `software/08` | `17001 programator` + `15001 pravni-specialista` při stavbě `Bloku 8` | `Blok 8` (položka `DoD`) | Instalační koordinátor + `1001` |
+| `N-23` | Podmínky strojového přístupu k rejstříku `CEE`. | `software/11` | `17001 programator` + `15001 pravni-specialista` při stavbě `Bloku 11` | `Blok 11` (položka `DoD`) | Instalační koordinátor + `1001` |
+| `N-24` | Plně offline běh všech dílčích modelů `WhisperX` / `pyannote` v zóně bez sítě. | `software/11` | `17001 programator` + `17004 klicnik` při stavbě `Bloku 11` | `Blok 11` (položka `DoD`) | Instalační koordinátor + `1001` |
+| `N-25` | `Paperclip`: podpora `OIDC` (jinak přihlášení přes `oauth2-proxy`) a provoz přes `PgBouncer` v režimu `transaction`. | `software/07` | `17001 programator` + `17003 spravce-site` při stavbě `Bloku 7` | `Blok 7` (položka `DoD`) | Instalační koordinátor + `1001` |
+| `N-26` | `Headscale`: registrace uzlu bez vypršení pro nouzový vstup do VPN nezávislý na SSO. | `software/03` | `17003 spravce-site` při stavbě `Bloku 3` | `Blok 3` (položka `DoD`) | Instalační koordinátor + `1001` |
+| `R-01` | Ceny, hodinové sazby, přirážky, minimální marže, stupně provize, sazby DPH (`21 %` / `12 %`) a sezónní koeficienty v [`cenik.json`](./balicky/S3-konfigurator-a-tarify/cenik.json); veřejný konfigurátor čte výhradně výřez `public_price_list` (bez interních sazeb, marží a provizí). | balíček `S3` | **Rozhodnuto 15. 11. 2026:** jednatel `1001` schválil znění návrhu beze změn; porovnání s trhem a zápis do `Decisions` proběhne při založení firmy (`Blok 15`). | `Blok 15` | `1001` |
+| `R-02` | Ceník a kauce půjčovny měřidel | [`balicky/S4-dilensky-terminal-a-pujcovna/README.md`](./balicky/S4-dilensky-terminal-a-pujcovna/README.md) | jednatel `1001` | `Blok 16` | `1001` |
+| `R-03` | Poskytovatel a úrovně elektronického podpisu; parametry eskalace hlasové recepční | [`balicky/S5-podpis-a-hlasova-recepcni/README.md`](./balicky/S5-podpis-a-hlasova-recepcni/README.md) | jednatel `1001` | `Blok 17` | `1001` |
+| `R-04` | Kritéria a prahy brány `Go / No-Go` (návrhové prahy počtu spravovaných objektů a vydaných revizí); ceny a limity tarifů SaaS | [`balicky/S7-polarita-elektro-cloud/README.md`](./balicky/S7-polarita-elektro-cloud/README.md) | jednatel `1001` | `Blok 19` | `1001` |
+| `R-05` | Názvy kanálů `Zulip` `#12-marketing` až `#16-finance-a-kancelar` | `README`, `software/07` | jednatel `1001` | před `Promptem 1` `Bloku 7` | `1001` |
 
 Právní a normové otázky (například platnost smluvních ujednání, režim pokut, harmonizace norem, počítání lhůt) se v tomto registru nevedou: vznikají a řeší se až nad bází na běžícím systému a rozhoduje o nich advokát nebo odborně způsobilá osoba.
+
+## 9. Externí služby a proprietární klienti
+
+Návrh staví na open-source jádru provozovaném na vlastním serveru (`0 Kč` za licence serverového softwaru). Tvrzení „vše open-source“ pro něj neplatí bez výhrady: následující externí služby a proprietární klienti jsou vědomou součástí návrhu, jejich podmínky se ověřují proti oficiální dokumentaci a smluvním podmínkám při stavbě uvedeného bloku a každá změna seznamu se zapisuje sem.
+
+| Služba nebo klient | Druh | K čemu slouží | Blok |
+| :--- | :--- | :--- | :--- |
+| API a CLI jazykových modelů (alespoň dvě rodiny) | placená externí služba + proprietární klient | běh `ai` agentů, stavitel `Worker` a oponent `Judge` | `Blok 1`, `Blok 7` |
+| Klienti `Tailscale` (k vlastnímu serveru `Headscale`) | klient třetí strany | připojení stanic a telefonů do VPN | `Blok 1`, `Blok 3` |
+| `Cloudflare` (DNS a ochranná vrstva před veřejným webem) | externí služba | správa zón, ACME DNS-01 | `Blok 3`, `Blok 12` |
+| `Telegram` a externí SMTP relay | externí služby | nouzové alerty nezávislé na serveru | `Blok 6` |
+| Kvalifikovaný poskytovatel certifikátů a časových razítek (`TSA`) | placená externí služba | osobní `QES`, organizační pečeť, razítka | `Blok 0`, `Blok 4` |
+| ISDS (`czebox.cz`, produkční schránka) | služba státu | Podatelna | `Blok 8`, `Blok 12` |
+| Bankovní API a účetní API `ORG-UOL` | externí služby (jen čtení) | párování plateb a účetnictví | `Blok 11` |
+| `Mapy.cz` API | placená externí služba | trasy a matice výjezdů | `Blok 8` |
+| Přístup k normám ČSN Online a licencovaná rozpočtová data | licencovaný obsah | normová báze, rozpočty | `Blok 8`, `Blok 10` |
+| `Ecomail`, reklamní platformy | externí služby | e-mailing a placená akvizice (samostatná karta / limit) | `Blok 9`, `Blok 12` |
+| `Balíkobot`, platební brána e-shopu | externí služby | expedice a platby | `Blok 9` |
+| `SIP Trunk`, `WhatsApp Business API`, SMS brána | externí služby | hlas a zprávy | `Blok 11` |
+| Proprietární mobilní a desktopové klienty a obchody s aplikacemi (včetně případné služby mobilních push oznámení `Zulipu`, bod `N-19`) | klienti a služby třetích stran | přístup lidí ke službám | `Blok 1`, `Blok 7` |

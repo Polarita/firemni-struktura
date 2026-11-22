@@ -27,20 +27,36 @@ jobs:
     runs-on: polarita-incus
     env:
       PYTHONDONTWRITEBYTECODE: "1"
+      # EN: A missing Chromium browser is a FAILURE here, not a skipped test (S1 print tests, S3 kernel test).
+      # CZ: Chybějící prohlížeč Chromium je zde SELHÁNÍ, ne přeskočený test (tiskové testy S1, test jádra S3).
+      POLARITA_REQUIRE_BROWSER: "1"
     steps:
-      # EN: The runner container needs git, nodejs (for checkout), python3, python3-venv and a pre-staged
-      #     offline wheelhouse in /opt/polarita-wheels (built during Block 5 image setup because app_internal has no internet).
-      # CZ: Kontejner runneru potřebuje git, nodejs (kvůli akci checkout), python3, python3-venv a předem uložený
-      #     offline wheelhouse v /opt/polarita-wheels (připravený při stavbě obrazu v Bloku 5, zóna nemá internet).
+      # EN: Runner rules: a dedicated gitea-runner instance in the zone app_internal, host mode (no Docker),
+      #     no access to production secrets (this workflow uses none - never add a secret or a live
+      #     endpoint here), workflow files are protected (only 1001 / 17004 change them).
+      #     The runner container needs git, nodejs (for checkout), python3 (3.10 or newer), python3-venv,
+      #     a Chromium browser and a pre-staged offline wheelhouse in /opt/polarita-wheels (built during
+      #     Block 5 image setup because app_internal has no internet).
+      # CZ: Pravidla runneru: vyhrazená instance gitea-runner v zóně app_internal, režim host (bez Dockeru),
+      #     bez přístupu k produkčním tajemstvím (tento workflow žádné nepoužívá - nikdy sem nepřidávej
+      #     tajemství ani živý endpoint), workflow soubory jsou chráněné (mění je jen 1001 / 17004).
+      #     Kontejner runneru potřebuje git, nodejs (kvůli akci checkout), python3 (3.10 nebo novější),
+      #     python3-venv, prohlížeč Chromium a předem uložený offline wheelhouse v /opt/polarita-wheels
+      #     (připravený při stavbě obrazu v Bloku 5, zóna nemá internet).
       - uses: actions/checkout@v4
 
-      # EN: Create the venv outside the checked-out workspace so it never pollutes git status or check_consistency.
-      # CZ: Vytvoř venv mimo kontrolovaný pracovní adresář, aby nezanášel git status ani kontrolu konzistence.
+      # EN: The venv and all run outputs live in a fresh temporary folder outside the checkout: no fixed
+      #     path that another job or user could prepare in advance, nothing that pollutes git status.
+      # CZ: Venv i všechny výstupy běhu žijí v nové dočasné složce mimo checkout: žádná pevná cesta, kterou
+      #     by mohl předem připravit jiný job či uživatel, nic, co by zanášelo git status.
       - name: Python dependencies (offline wheelhouse) / Závislosti (offline)
         run: |
-          python3 -m venv /tmp/polarita-ci-venv
-          /tmp/polarita-ci-venv/bin/pip install --no-index --find-links=/opt/polarita-wheels -r balicky/S1-generator-cistopisu/requirements.txt
-          echo "/tmp/polarita-ci-venv/bin" >> "$GITHUB_PATH"
+          WORK="$(mktemp -d)"
+          python3 -c "import sys; assert sys.version_info >= (3, 10), sys.version"
+          python3 -m venv "$WORK/venv"
+          "$WORK/venv/bin/pip" install --no-index --find-links=/opt/polarita-wheels -r balicky/S1-generator-cistopisu/requirements.txt
+          echo "POLARITA_CI_WORK=$WORK" >> "$GITHUB_ENV"
+          echo "$WORK/venv/bin" >> "$GITHUB_PATH"
 
       - name: Consistency check against the canon / Kontrola konzistence proti kanonu
         working-directory: nastroje
@@ -53,7 +69,7 @@ jobs:
         working-directory: balicky/S2-eval-suite
         run: |
           python3 -m unittest test_eval_suite
-          python3 run_eval_suite.py --no-history
+          python3 run_eval_suite.py --no-history --out-dir "$POLARITA_CI_WORK/eval-out"
 
       - name: S3 pricing kernel & build sync / Cenové jádro a shoda sestavení
         working-directory: balicky/S3-konfigurator-a-tarify
@@ -62,10 +78,21 @@ jobs:
           git diff --exit-code .
           python3 -m unittest test_pricing
 
-      - name: S1 templates and sample data / Šablony a vzorová data
+      - name: S1 templates, sample data and print / Šablony, vzorová data a tisk
         working-directory: balicky/S1-generator-cistopisu
-        # Printing PDF needs a Chromium browser on the runner; --check validates templates without it.
-        # Tisk PDF vyžaduje na runneru prohlížeč Chromium; --check ověří šablony i bez něj.
+        # EN: --check validates templates and data; the unit tests print real PDFs into a temporary folder.
+        # CZ: --check ověří šablony a data; jednotkové testy tisknou skutečná PDF do dočasné složky.
         run: |
           python3 generate_pdfs.py --check
           python3 -m unittest test_generate_pdfs
+
+      - name: Working tree must stay clean / Pracovní strom musí zůstat čistý
+        run: |
+          test -z "$(git status --porcelain)" || { git status --porcelain; exit 1; }
+
+      - name: Remove the temporary folder / Úklid dočasné složky
+        if: always()
+        run: |
+          case "$POLARITA_CI_WORK" in
+            /*) rm -rf -- "$POLARITA_CI_WORK" ;;
+          esac

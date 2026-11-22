@@ -1,6 +1,6 @@
 # =============================================================================
 # metadata-schema-kernel · declarative schema DRAFT / deklarativní schéma NÁVRH
-# Module / Modul: pujcovna-meridel · Blok 16 · balíček S4 · Verze 2.8
+# Module / Modul: pujcovna-meridel · Blok 16 · balíček S4 · Verze 3.0
 # EN: B2B rental of measuring instruments and temporary power sources as an
 #     extension of the collision-free resource calendar in
 #     centralni-lhutnik-a-objekty. Nothing here is deployed (greenfield design).
@@ -20,7 +20,7 @@ schema:
   module: pujcovna-meridel
   package: S4
   block: 16
-  release: Polarita-2.8
+  release: Polarita-3.0
   schema_version: 0.1.0-draft
   status: DRAFT                 # EN: proposal only / CZ: pouze návrh
   owner_ai: 17001               # EN: 17001 programator / CZ: 17001 programator
@@ -33,6 +33,17 @@ storage:
   rental:
     database: db_erp_lhutnik
     schema: pujcovna
+  # EN: Shared resource calendar. Same database, no new one. The table belongs to
+  #     centralni-lhutnik-a-objekty (Blok 8); the schema name is a PROPOSAL. If Blok 8
+  #     already created its calendar table, it is extended by a migration to the
+  #     columns and constraints below — a second calendar table is never created.
+  # CZ: Sdílený kalendář zdrojů. Stejná databáze, žádná nová. Tabulka patří modulu
+  #     centralni-lhutnik-a-objekty (Blok 8); název schématu je NÁVRH — ke schválení 1001.
+  #     Pokud Blok 8 tabulku kalendáře už založil, rozšíří se migrací o sloupce
+  #     a omezení níže — druhá tabulka kalendáře se nikdy nezakládá.
+  shared_calendar:
+    database: db_erp_lhutnik
+    schema: kalendar_zdroju
 
 conventions:
   optimistic_locking: version_etag
@@ -87,7 +98,7 @@ enums:
   renter_type:
     - CERTIFIED_PARTNER_SUB     # EN: verified partner subcontractor / CZ: prověřený partner Certified Partner SUB
     - B2B_CUSTOMER              # EN: business customer / CZ: B2B zákazník
-  renter_status: [PENDING_VERIFICATION, APPROVED, SUSPENDED]
+  renter_status: [PENDING_VERIFICATION, APPROVED, SUSPENDED, REJECTED]
   price_list_status:
     - DRAFT_PROPOSAL            # EN: PROPOSAL, not usable for confirmation / CZ: NÁVRH, nelze podle něj potvrzovat
     - APPROVED                  # EN: approved by 1001 / CZ: schváleno 1001
@@ -98,16 +109,21 @@ enums:
     - CONFIRMED                 # EN: confirmed by 1001 / CZ: potvrzeno 1001
     - HANDED_OVER               # EN: asset is with the renter / CZ: zdroj je u nájemce
     - RETURNED                  # EN: asset is back, not settled yet / CZ: zdroj vrácen, zatím nevyúčtováno
+    - NOT_RETURNED              # EN: asset lost or not returned, not settled yet / CZ: zdroj ztracen nebo nevrácen, zatím nevyúčtováno
     - CLOSED                    # EN: settled and invoiced / CZ: vyúčtováno a vyfakturováno
     - REJECTED                  # EN: refused / CZ: zamítnuto
     - PREEMPTED                 # EN: slot taken by an internal revision trip / CZ: termín obsadil interní revizní výjezd
     - CANCELLED                 # EN: cancelled / CZ: zrušeno
+  # EN: WAIVED = no deposit is collected (zero deposit in the approved price list or a
+  #     waiver by 1001 in Decisions); there is nothing to settle afterwards.
+  # CZ: WAIVED = kauce se nevybírá (nulová kauce ve schváleném ceníku nebo prominutí
+  #     rozhodnutím 1001 v Decisions); po vrácení pak není co vypořádat.
   deposit_status: [NOT_SET, REQUESTED, RECEIVED, WAIVED, SETTLED]
   deposit_kind: [REQUESTED, RECEIVED, REFUNDED, WITHHELD]
   protocol_direction:
     - HANDOVER                  # EN: handover to the renter / CZ: předání nájemci
     - RETURN                    # EN: return to Polarita / CZ: vrácení Polaritě
-  protocol_status: [DRAFT, SIGNED, SEALED, SUPERSEDED]
+  protocol_status: [DRAFT, SIGNED, SEALED, SUPERSEDED, DISCARDED]
   condition_grade:
     - OK                        # EN: without defects / CZ: bez závad
     - WEAR                      # EN: normal wear / CZ: běžné opotřebení
@@ -116,8 +132,82 @@ enums:
     - NOT_WORKING               # EN: not working / CZ: nefunkční
   damage_status: [OPEN, ESTIMATED, APPROVED, SETTLED, DISMISSED]
   invoice_request_status: [DRAFT, IN_DECISIONS, APPROVED, HANDED_TO_FINANCE]
+  booking_kind:
+    - INTERNAL_REVISION         # EN: internal revision trip (has priority) / CZ: interní revizní výjezd (má přednost)
+    - INTERNAL_JOB              # EN: other internal job / CZ: jiný interní výjezd
+    - RENTAL                    # EN: rental reservation / CZ: půjčovní rezervace
+    - SERVICE                   # EN: repair or calibration window / CZ: okno opravy nebo kalibrace
+  booking_status:
+    - HELD                      # EN: slot held, not confirmed yet / CZ: termín držen, zatím nepotvrzen
+    - CONFIRMED                 # EN: slot confirmed / CZ: termín potvrzen
+    - RELEASED                  # EN: slot freed / CZ: termín uvolněn
+
+# EN: Every state machine lists its terminal states (no outgoing transition);
+#     every other state must have at least one way out.
+# CZ: Každý stavový automat vyjmenovává koncové stavy (bez odchozího přechodu);
+#     každý jiný stav musí mít aspoň jeden výstup.
 
 entities:
+
+  # ---------------------------------------------------------------------------
+  # EN: One row per booking of one asset for one period — internal trips, rentals
+  #     and service windows together. The no-overlap rule lives ONLY here, as a
+  #     database exclusion constraint, so no module can bypass it.
+  # CZ: Jeden řádek na rezervaci jednoho zdroje na jedno období — interní výjezdy,
+  #     výpůjčky i servisní okna dohromady. Pravidlo bez překryvu žije JEN zde jako
+  #     databázové vylučovací omezení, takže je žádný modul neobejde.
+  # ---------------------------------------------------------------------------
+  resource_booking:
+    storage: shared_calendar
+    table: resource_booking
+    fields:
+      id: {type: uuid, primary_key: true}
+      # EN: Same asset identifier for internal and rental use (master record in Lhutnik).
+      # CZ: Stejný identifikátor zdroje pro interní i půjčovní použití (hlavní záznam v Lhůtníku).
+      asset_ref: {type: external_ref, target: 'centralni-lhutnik-a-objekty:asset', required: true, indexed: true}
+      booking_kind: {type: enum, enum: booking_kind, required: true}
+      case_id: {type: case_id, required: true, indexed: true}
+      period_from: {type: timestamptz, required: true}
+      period_to: {type: timestamptz, required: true}
+      # EN: Link in one direction only (booking -> reservation), so there is no cyclic foreign key.
+      # CZ: Vazba jen jedním směrem (rezervace kalendáře -> výpůjčka), takže nevzniká cyklický cizí klíč.
+      rental_reservation_id: {type: ref, ref: rental_reservation.id, required: false, required_when: "booking_kind = 'RENTAL'"}
+      status: {type: enum, enum: booking_status, required: true, default: HELD}
+      released_reason: {type: text, required: false, required_when: "status = 'RELEASED'"}
+    constraints:
+      - {kind: check, expression: "period_to > period_from"}
+      - {kind: check, expression: "(booking_kind = 'RENTAL') = (rental_reservation_id IS NOT NULL)"}
+      # EN: One live booking per rental reservation.
+      # CZ: Jedna živá rezervace kalendáře na jednu výpůjčku.
+      - {kind: unique_partial, columns: [rental_reservation_id], where: "rental_reservation_id IS NOT NULL AND status <> 'RELEASED'"}
+      # EN: No two live bookings of the same asset may overlap. Half-open range:
+      #     a booking ending at 12:00 does not collide with one starting at 12:00.
+      #     Intended PostgreSQL form:
+      #       EXCLUDE USING gist (asset_ref WITH =, tstzrange(period_from, period_to, '[)') WITH &&)
+      #       WHERE (status IN ('HELD', 'CONFIRMED'))
+      #     Equality on a scalar column inside a GiST exclusion needs the btree_gist
+      #     extension; verify against the official documentation of the deployed
+      #     PostgreSQL version when Blok 16 is built.
+      # CZ: Žádné dvě živé rezervace téhož zdroje se nesmí překrýt. Polootevřený interval:
+      #     rezervace končící ve 12:00 nekoliduje s rezervací začínající ve 12:00.
+      #     Zamýšlený tvar v PostgreSQL je uveden výše. Rovnost na skalárním sloupci
+      #     uvnitř vylučovacího omezení GiST vyžaduje rozšíření btree_gist; ověřit proti
+      #     oficiální dokumentaci nasazené verze PostgreSQL při stavbě Bloku 16.
+      - kind: exclude
+        using: gist
+        elements:
+          - "asset_ref WITH ="
+          - "tstzrange(period_from, period_to, '[)') WITH &&"
+        where: "status IN ('HELD', 'CONFIRMED')"
+        requires_extension: btree_gist
+    state_machine:
+      field: status
+      initial: HELD
+      terminal: [RELEASED]
+      transitions:
+        - {from: HELD, to: CONFIRMED, action: confirm, guards: [booking_owner_confirmed]}
+        - {from: HELD, to: RELEASED, action: release, guards: [reason_recorded]}
+        - {from: CONFIRMED, to: RELEASED, action: release, guards: [reason_recorded, booking_owner_finished_or_cancelled]}
 
   # ---------------------------------------------------------------------------
   # EN: A rentable asset; the master record stays in centralni-lhutnik-a-objekty.
@@ -143,11 +233,22 @@ entities:
     state_machine:
       field: status
       initial: IN_STOCK
+      terminal: [RETIRED]
       transitions:
-        - {from: IN_STOCK, to: OUT_INTERNAL, action: issue_internal, guards: [compliance_valid_today]}
-        - {from: OUT_INTERNAL, to: IN_STOCK, action: return_internal, guards: []}
-        - {from: IN_STOCK, to: OUT_RENTAL, action: hand_over, guards: [handover_protocol_sealed, compliance_valid_whole_period]}
+        # EN: An internal trip needs its own confirmed booking, so it cannot take an asset promised to a renter.
+        # CZ: Interní výjezd potřebuje vlastní potvrzenou rezervaci, takže nemůže vzít zdroj slíbený nájemci.
+        - {from: IN_STOCK, to: OUT_INTERNAL, action: issue_internal, guards: [compliance_valid_today, internal_booking_confirmed]}
+        - {from: OUT_INTERNAL, to: IN_STOCK, action: return_internal, guards: [compliance_valid_today]}
+        - {from: OUT_INTERNAL, to: IN_SERVICE, action: send_to_service, guards: [reason_recorded]}
+        - {from: OUT_INTERNAL, to: BLOCKED, action: block_expired, guards: [compliance_expired]}
+        - {from: IN_STOCK, to: OUT_RENTAL, action: hand_over, guards: [reservation_confirmed, handover_protocol_sealed, compliance_valid_whole_period]}
         - {from: OUT_RENTAL, to: RETURN_INSPECTION, action: take_back, guards: [return_protocol_sealed]}
+        # EN: Lost or never returned: written off only with a loss claim and a decision of 1001.
+        # CZ: Ztráta nebo nevrácení: vyřazení jen se založenou škodou (ztráta) a rozhodnutím 1001.
+        - {from: OUT_RENTAL, to: RETIRED, action: write_off_lost, guards: [loss_claim_opened, mutation_confirm_1001]}
+        # EN: Planned calibration or repair straight from stock; the service window blocks the calendar.
+        # CZ: Plánovaná kalibrace nebo oprava přímo ze skladu; servisní okno zablokuje kalendář.
+        - {from: IN_STOCK, to: IN_SERVICE, action: send_to_service, guards: [reason_recorded, service_booking_held]}
         - {from: RETURN_INSPECTION, to: IN_STOCK, action: accept, guards: [condition_ok_or_wear, compliance_valid_today]}
         - {from: RETURN_INSPECTION, to: IN_SERVICE, action: send_to_service, guards: [reason_recorded]}
         - {from: RETURN_INSPECTION, to: BLOCKED, action: block_expired, guards: [compliance_expired]}
@@ -176,13 +277,17 @@ entities:
       status: {type: enum, enum: renter_status, required: true, default: PENDING_VERIFICATION}
       approved_decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_to_close: true}
       suspend_reason: {type: text, required: false, required_when: "status = 'SUSPENDED'"}
+      reject_reason: {type: text, required: false, required_when: "status = 'REJECTED'"}
     constraints:
       - {kind: check, expression: "(renter_type = 'B2B_CUSTOMER' AND org_code IS NOT NULL) OR (renter_type = 'CERTIFIED_PARTNER_SUB' AND sub_person_no IS NOT NULL)"}
     state_machine:
       field: status
       initial: PENDING_VERIFICATION
+      terminal: []                # EN: a rejected renter may apply again / CZ: zamítnutý nájemce může požádat znovu
       transitions:
         - {from: PENDING_VERIFICATION, to: APPROVED, action: approve, guards: [framework_contract_signed, decisions_ref_recorded, mutation_confirm_1001]}
+        - {from: PENDING_VERIFICATION, to: REJECTED, action: reject, guards: [reason_recorded, mutation_confirm_1001]}
+        - {from: REJECTED, to: PENDING_VERIFICATION, action: reapply, guards: [reason_recorded]}
         - {from: APPROVED, to: SUSPENDED, action: suspend, guards: [reason_recorded]}
         - {from: SUSPENDED, to: APPROVED, action: reinstate, guards: [decisions_ref_recorded, mutation_confirm_1001]}
     close_requirements:           # EN: needed for APPROVED / CZ: nutné pro stav APPROVED
@@ -205,8 +310,10 @@ entities:
     state_machine:
       field: status
       initial: DRAFT_PROPOSAL
+      terminal: [RETIRED]
       transitions:
         - {from: DRAFT_PROPOSAL, to: APPROVED, action: approve, guards: [all_lines_priced, mutation_confirm_1001]}
+        - {from: DRAFT_PROPOSAL, to: RETIRED, action: withdraw, guards: [reason_recorded]}
         - {from: APPROVED, to: RETIRED, action: retire, guards: [mutation_confirm_1001]}
     close_requirements:           # EN: needed for APPROVED / CZ: nutné pro stav APPROVED
       fields: [valid_from, approved_decisions_ref]
@@ -240,54 +347,68 @@ entities:
       case_id: {type: case_id, required: true, indexed: true}
       asset_id: {type: ref, ref: rental_asset.id, required: true}
       renter_id: {type: ref, ref: renter.id, required: true}
-      # EN: Booking in the shared resource calendar; one table for internal
-      #     and rental bookings keeps the no-overlap rule in one place.
-      # CZ: Rezervace ve sdíleném kalendáři zdrojů; jedna tabulka pro interní
-      #     i půjčovní rezervace drží pravidlo bez překryvu na jednom místě.
-      calendar_booking_ref: {type: external_ref, target: 'centralni-lhutnik-a-objekty:resource_booking', required: false, required_to_close: true}
+      # EN: The slot is held by a resource_booking row (kind RENTAL) that points to this
+      #     reservation; it is created at request, so the slot cannot be taken between
+      #     request and confirmation. Period here and in the booking must be identical.
+      # CZ: Termín drží řádek resource_booking (druh RENTAL), který odkazuje na tuto
+      #     výpůjčku; vzniká už při žádosti, takže termín nelze mezi žádostí a potvrzením
+      #     obsadit. Období zde a v rezervaci kalendáře musí být shodné.
       period_from: {type: timestamptz, required: true}
       period_to: {type: timestamptz, required: true}
       price_list_id: {type: ref, ref: rental_price_list.id, required: false, required_to_close: true}
       deposit_amount: {type: decimal, required: false, required_to_close: true}
       deposit_currency: {type: currency, required: false, required_to_close: true}
       deposit_status: {type: enum, enum: deposit_status, required: true, default: NOT_SET}
+      # EN: Decision of 1001 that no deposit is collected, or the approved price list with a zero deposit.
+      # CZ: Rozhodnutí 1001, že se kauce nevybírá, nebo schválený ceník s nulovou kaucí.
+      deposit_waiver_decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_when: "deposit_status = 'WAIVED'"}
       confirmed_decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_to_close: true}
       # EN: Child protocols and invoice requests reference reservation_id (avoids cyclic FK).
       # CZ: Podřízené protokoly a podklady fakturace odkazují na reservation_id (bez cyklického FK).
       status: {type: enum, enum: reservation_status, required: true, default: DRAFT}
-      status_reason: {type: text, required: false, required_when: "status IN ('REJECTED', 'PREEMPTED', 'CANCELLED')"}
+      status_reason: {type: text, required: false, required_when: "status IN ('REJECTED', 'PREEMPTED', 'CANCELLED', 'NOT_RETURNED')"}
     constraints:
       - {kind: check, expression: "period_to > period_from"}
       - {kind: check, expression: "deposit_amount IS NULL OR deposit_amount >= 0"}
-      # EN: No overlap of the same asset; enforced in the shared calendar table
-      #     for internal and rental bookings together.
-      # CZ: Žádný překryv téhož zdroje; vynucuje sdílená tabulka kalendáře pro
-      #     interní i půjčovní rezervace dohromady.
-      - {kind: exclusion_via, target: 'centralni-lhutnik-a-objekty:resource_booking', columns: [asset_id, period_from, period_to]}
+      # EN: No overlap of the same asset: enforced by the exclusion constraint of
+      #     resource_booking (entity above) for internal and rental bookings together.
+      # CZ: Žádný překryv téhož zdroje: vynucuje vylučovací omezení entity
+      #     resource_booking (výše) pro interní i půjčovní rezervace dohromady.
+      - {kind: exclusion_via, entity: resource_booking, columns: [asset_id, period_from, period_to]}
     state_machine:
       field: status
       initial: DRAFT
+      terminal: [CLOSED, REJECTED, PREEMPTED, CANCELLED]
       transitions:
-        - {from: DRAFT, to: REQUESTED, action: request, guards: [renter_approved, asset_rentable, slot_free_in_calendar, compliance_valid_whole_period]}
-        - {from: REQUESTED, to: CONFIRMED, action: confirm, guards: [renter_approved, asset_rentable, price_list_approved, slot_free_in_calendar, compliance_valid_whole_period, deposit_terms_set, confirmed_in_decisions, mutation_confirm_1001]}
-        - {from: REQUESTED, to: REJECTED, action: reject, guards: [reason_recorded]}
-        - {from: REQUESTED, to: PREEMPTED, action: preempt_by_internal_revision, guards: [internal_revision_booking_exists, reason_recorded]}
+        - {from: DRAFT, to: REQUESTED, action: request, guards: [renter_approved, asset_rentable, booking_held, compliance_valid_whole_period]}
+        - {from: REQUESTED, to: CONFIRMED, action: confirm, guards: [renter_approved, asset_rentable, price_list_approved, booking_confirmed, compliance_valid_whole_period, deposit_terms_set, confirmed_in_decisions, mutation_confirm_1001]}
+        - {from: REQUESTED, to: REJECTED, action: reject, guards: [reason_recorded, booking_released]}
+        # EN: The held rental booking is released and the internal booking inserted in ONE transaction.
+        # CZ: Držená půjčovní rezervace se uvolní a interní rezervace se vloží v JEDNÉ transakci.
+        - {from: REQUESTED, to: PREEMPTED, action: preempt_by_internal_revision, guards: [internal_revision_request_approved, reason_recorded, booking_released]}
         - {from: CONFIRMED, to: HANDED_OVER, action: hand_over, guards: [deposit_received, handover_protocol_sealed, compliance_valid_whole_period]}
         - {from: HANDED_OVER, to: RETURNED, action: take_back, guards: [return_protocol_sealed]}
-        - {from: RETURNED, to: CLOSED, action: close, guards: [deposit_settled, damage_claims_resolved, invoice_request_handed_to_finance]}
+        # EN: Asset lost or not returned: no return protocol exists, the loss goes to 1001.
+        # CZ: Zdroj ztracen nebo nevrácen: vratný protokol neexistuje, ztráta jde k 1001.
+        - {from: HANDED_OVER, to: NOT_RETURNED, action: declare_loss, guards: [loss_claim_opened, reason_recorded, mutation_confirm_1001]}
+        - {from: NOT_RETURNED, to: RETURNED, action: take_back_late, guards: [return_protocol_sealed]}
+        - {from: RETURNED, to: CLOSED, action: close, guards: [deposit_settled, damage_claims_resolved, invoice_request_handed_to_finance, booking_released]}
+        - {from: NOT_RETURNED, to: CLOSED, action: close_after_loss, guards: [deposit_settled, damage_claims_resolved, invoice_request_handed_to_finance, booking_released]}
         - {from: DRAFT, to: CANCELLED, action: cancel, guards: [reason_recorded]}
-        - {from: REQUESTED, to: CANCELLED, action: cancel, guards: [reason_recorded]}
+        - {from: REQUESTED, to: CANCELLED, action: cancel, guards: [reason_recorded, booking_released]}
         # EN: A confirmed rental is never cancelled automatically; a clash with
         #     an internal revision trip goes to 1001 in Decisions.
         # CZ: Potvrzená výpůjčka se nikdy neruší automaticky; střet s interním
         #     revizním výjezdem jde k 1001 do Decisions.
-        - {from: CONFIRMED, to: CANCELLED, action: cancel_confirmed, guards: [reason_recorded, mutation_confirm_1001]}
+        - {from: CONFIRMED, to: CANCELLED, action: cancel_confirmed, guards: [reason_recorded, booking_released, protocols_discarded, mutation_confirm_1001]}
     close_requirements:           # EN: needed for CLOSED / CZ: nutné pro stav CLOSED
-      fields: [calendar_booking_ref, price_list_id, deposit_amount, deposit_currency, confirmed_decisions_ref]
+      fields: [price_list_id, deposit_amount, deposit_currency, confirmed_decisions_ref]
 
   # ---------------------------------------------------------------------------
-  # EN: Digital handover / return protocol with photo documentation.
-  # CZ: Digitální předávací / vratný protokol s fotodokumentací.
+  # EN: Digital handover / return protocol with photo documentation. Handover
+  #     (Part A) and return (Part B) are TWO records, each signed and sealed on its own.
+  # CZ: Digitální předávací / vratný protokol s fotodokumentací. Předání (Část A)
+  #     a vrácení (Část B) jsou DVA záznamy, každý se podepisuje a pečetí samostatně.
   # ---------------------------------------------------------------------------
   handover_protocol:
     storage: rental
@@ -325,18 +446,36 @@ entities:
       pdf_key: {type: object_key, required: false, required_to_close: true}
       seal_ref: {type: string, required: false, required_to_close: true}          # EN: pyHanko seal + TSA / CZ: pečeť pyHanko + TSA
       supersedes_protocol_id: {type: ref, ref: handover_protocol.id, required: false}
-      superseded_reason: {type: text, required: false, required_when: "status = 'SUPERSEDED'"}
+      superseded_reason: {type: text, required: false, required_when: "status IN ('SUPERSEDED', 'DISCARDED')"}
       status: {type: enum, enum: protocol_status, required: true, default: DRAFT}
     constraints:
-      - {kind: unique_partial, columns: [reservation_id, direction], where: "status <> 'SUPERSEDED'"}
-      - {kind: check, expression: "direction <> 'HANDOVER' OR safety_briefing_confirmed = true"}
+      # EN: One ORIGINAL protocol per reservation and direction, and one replacement per
+      #     protocol. A replacement (supersedes_protocol_id set) may therefore be drafted,
+      #     signed and sealed while the original is still SEALED — no deadlock.
+      # CZ: Jeden PŮVODNÍ protokol na výpůjčku a směr a jedna náhrada na protokol. Náhradu
+      #     (má supersedes_protocol_id) lze proto rozpracovat, podepsat a zapečetit, dokud je
+      #     původní protokol ještě SEALED — bez zablokování.
+      - {kind: unique_partial, columns: [reservation_id, direction], where: "supersedes_protocol_id IS NULL AND status <> 'DISCARDED'"}
+      - {kind: unique_partial, columns: [supersedes_protocol_id], where: "supersedes_protocol_id IS NOT NULL AND status <> 'DISCARDED'"}
+      # EN: A draft may exist before the briefing; signing a handover without it is impossible.
+      # CZ: Rozpracovaný protokol smí existovat před poučením; podepsat předání bez něj nelze.
+      - {kind: check, expression: "status IN ('DRAFT', 'DISCARDED') OR direction <> 'HANDOVER' OR safety_briefing_confirmed IS TRUE"}
     state_machine:
       field: status
       initial: DRAFT
+      terminal: [SUPERSEDED, DISCARDED]
       transitions:
         - {from: DRAFT, to: SIGNED, action: sign, guards: [photos_minimum_met, accessories_checked, safety_briefing_if_handover, both_signatures_present]}
         - {from: SIGNED, to: SEALED, action: seal, guards: [pdf_rendered, server_seal_applied]}
+        # EN: Runs in the same transaction as the seal of the replacement, so exactly one
+        #     protocol per reservation and direction is valid at any moment.
+        # CZ: Běží ve stejné transakci jako zapečetění náhrady, takže v každém okamžiku platí
+        #     právě jeden protokol na výpůjčku a směr.
         - {from: SEALED, to: SUPERSEDED, action: supersede, guards: [replacement_protocol_sealed, reason_recorded, mutation_confirm_1001]}
+        # EN: An unsealed protocol that will not be used (cancelled rental, wrong asset).
+        # CZ: Nezapečetěný protokol, který se nepoužije (zrušená výpůjčka, jiný zdroj).
+        - {from: DRAFT, to: DISCARDED, action: discard, guards: [reason_recorded]}
+        - {from: SIGNED, to: DISCARDED, action: discard, guards: [reason_recorded]}
     close_requirements:           # EN: needed for SEALED / CZ: nutné pro stav SEALED
       fields: [performed_at, place, polarita_person_no, renter_signer_ref, condition, accessories_check, photo_keys, compliance_valid_until, compliance_document_ref, polarita_signature_key, renter_signature_key, pdf_key, seal_ref]
 
@@ -365,8 +504,8 @@ entities:
       - {kind: check, expression: "amount > 0"}
 
   # ---------------------------------------------------------------------------
-  # EN: Damage or loss found on return.
-  # CZ: Škoda nebo ztráta zjištěná při vrácení.
+  # EN: Damage found on return, or loss of an asset that was never returned.
+  # CZ: Škoda zjištěná při vrácení, nebo ztráta zdroje, který se nevrátil.
   # ---------------------------------------------------------------------------
   damage_claim:
     storage: rental
@@ -375,7 +514,10 @@ entities:
       id: {type: uuid, primary_key: true}
       reservation_id: {type: ref, ref: rental_reservation.id, required: true}
       case_id: {type: case_id, required: true, indexed: true}
-      return_protocol_id: {type: ref, ref: handover_protocol.id, required: true}
+      # EN: loss = true: the asset did not come back, so there is no return protocol.
+      # CZ: loss = true: zdroj se nevrátil, vratný protokol proto neexistuje.
+      loss: {type: boolean, required: true, default: false}
+      return_protocol_id: {type: ref, ref: handover_protocol.id, required: false, required_when: "loss = false"}
       description: {type: text, required: true}
       photo_keys: {type: json, required: true}
       estimate_amount: {type: decimal, required: false, required_to_close: true}
@@ -385,6 +527,7 @@ entities:
     state_machine:
       field: status
       initial: OPEN
+      terminal: [SETTLED, DISMISSED]
       transitions:
         - {from: OPEN, to: ESTIMATED, action: estimate, guards: [estimate_recorded]}
         - {from: ESTIMATED, to: APPROVED, action: approve, guards: [mutation_confirm_1001]}
@@ -421,8 +564,11 @@ entities:
     state_machine:
       field: status
       initial: DRAFT
+      terminal: [HANDED_TO_FINANCE]
       transitions:
-        - {from: DRAFT, to: IN_DECISIONS, action: submit, guards: [price_list_approved, return_protocol_sealed]}
+        # EN: Billing uses the price list fixed at confirmation, even if it was retired since.
+        # CZ: Fakturuje se podle ceníku zafixovaného při potvrzení, i když byl mezitím stažen.
+        - {from: DRAFT, to: IN_DECISIONS, action: submit, guards: [price_list_matches_reservation, return_protocol_sealed_or_loss_declared]}
         - {from: IN_DECISIONS, to: APPROVED, action: approve, guards: [mutation_confirm_1001]}
         - {from: IN_DECISIONS, to: DRAFT, action: send_back, guards: [reason_recorded]}
         - {from: APPROVED, to: HANDED_TO_FINANCE, action: hand_to_finance, guards: [finance_draft_created]}
@@ -438,18 +584,29 @@ guards:
   condition_ok_or_wear: "EN: return protocol condition is OK or WEAR / CZ: stav ve vratném protokolu je OK nebo WEAR"
   handover_protocol_sealed: "EN: HANDOVER protocol is SEALED / CZ: protokol HANDOVER je SEALED"
   return_protocol_sealed: "EN: RETURN protocol is SEALED / CZ: protokol RETURN je SEALED"
+  return_protocol_sealed_or_loss_declared: "EN: RETURN protocol is SEALED, or the reservation is NOT_RETURNED / CZ: protokol RETURN je SEALED, nebo je výpůjčka ve stavu NOT_RETURNED"
+  loss_claim_opened: "EN: a damage_claim with loss = true exists for the reservation / CZ: k výpůjčce existuje záznam damage_claim s loss = true"
+  reservation_confirmed: "EN: a CONFIRMED rental_reservation of this asset covers today / CZ: dnešní den pokrývá výpůjčka tohoto zdroje ve stavu CONFIRMED"
+  internal_booking_confirmed: "EN: a CONFIRMED resource_booking of kind INTERNAL_REVISION or INTERNAL_JOB covers the whole trip / CZ: celý výjezd pokrývá rezervace kalendáře druhu INTERNAL_REVISION nebo INTERNAL_JOB ve stavu CONFIRMED"
+  service_booking_held: "EN: a resource_booking of kind SERVICE was inserted for the service window / CZ: pro servisní okno byla vložena rezervace kalendáře druhu SERVICE"
+  protocols_discarded: "EN: no protocol of the reservation is in DRAFT or SIGNED, and none is SEALED (asset never left the store) / CZ: žádný protokol výpůjčky není DRAFT ani SIGNED a žádný není SEALED (zdroj sklad neopustil)"
+  booking_held: "EN: a resource_booking row (kind RENTAL, same asset and period) was inserted for the reservation without violating the exclusion constraint / CZ: k výpůjčce byl vložen řádek resource_booking (druh RENTAL, stejný zdroj a období), aniž porušil vylučovací omezení"
+  booking_confirmed: "EN: the resource_booking of the reservation is switched to CONFIRMED in the same transaction / CZ: rezervace kalendáře této výpůjčky se ve stejné transakci přepíná do CONFIRMED"
+  booking_released: "EN: the resource_booking of the reservation is switched to RELEASED in the same transaction / CZ: rezervace kalendáře této výpůjčky se ve stejné transakci přepíná do RELEASED"
+  booking_owner_confirmed: "EN: the owning record (rental reservation, internal trip, service order) is confirmed / CZ: vlastnický záznam (výpůjčka, interní výjezd, servisní zakázka) je potvrzen"
+  booking_owner_finished_or_cancelled: "EN: the owning record is closed, cancelled or preempted / CZ: vlastnický záznam je uzavřen, zrušen nebo vytlačen"
   framework_contract_signed: "EN: rental terms signed by both parties are in the file / CZ: oboustranně podepsané podmínky půjčovny jsou ve spisu"
   decisions_ref_recorded: "EN: approved_decisions_ref is populated / CZ: approved_decisions_ref je vyplněno"
   all_lines_priced: "EN: every price line has a rate and a deposit / CZ: každý řádek ceníku má sazbu i kauci"
   renter_approved: "EN: renter status is APPROVED / CZ: nájemce je ve stavu APPROVED"
   asset_rentable: "EN: asset has rentable = true and is not BLOCKED or RETIRED / CZ: zdroj má rentable = true a není BLOCKED ani RETIRED"
-  slot_free_in_calendar: "EN: no internal or rental booking overlaps the period / CZ: období se nekryje s žádnou interní ani půjčovní rezervací"
-  internal_revision_booking_exists: "EN: an internal revision trip needs the asset in the period / CZ: zdroj v období potřebuje interní revizní výjezd"
+  internal_revision_request_approved: "EN: an internal revision trip that needs the asset in the period is approved by 14005 with a file number / CZ: interní revizní výjezd, který zdroj v období potřebuje, schválil 14005 pod číslem spisu"
   price_list_approved: "EN: price list status is APPROVED / CZ: ceník je ve stavu APPROVED"
+  price_list_matches_reservation: "EN: price_list_id equals the price list of the reservation, which was APPROVED when the reservation was confirmed (it may be RETIRED now) / CZ: price_list_id je ceník výpůjčky, který byl při jejím potvrzení APPROVED (nyní může být RETIRED)"
   deposit_terms_set: "EN: price_list_id, deposit_amount and deposit_currency are set / CZ: price_list_id, deposit_amount a deposit_currency jsou nastaveny"
-  confirmed_in_decisions: "EN: confirmed_decisions_ref and calendar_booking_ref are recorded / CZ: confirmed_decisions_ref a calendar_booking_ref jsou zapsány"
-  deposit_received: "EN: deposit_status is RECEIVED or WAIVED (matched on bank statement or waived by 1001) / CZ: deposit_status je RECEIVED nebo WAIVED (kauce spárována na výpisu nebo ji 1001 prominul)"
-  deposit_settled: "EN: deposit_status is SETTLED (refunded or withheld with 1001 confirmation) / CZ: deposit_status je SETTLED (kauce vrácena nebo zadržena s potvrzením 1001)"
+  confirmed_in_decisions: "EN: confirmed_decisions_ref is recorded / CZ: confirmed_decisions_ref je zapsáno"
+  deposit_received: "EN: deposit_status is RECEIVED (matched on the bank statement) or WAIVED (deposit_waiver_decisions_ref recorded) / CZ: deposit_status je RECEIVED (kauce spárována na výpisu) nebo WAIVED (zapsáno deposit_waiver_decisions_ref)"
+  deposit_settled: "EN: deposit_status is SETTLED (refunded or withheld with 1001 confirmation), or WAIVED (no deposit was collected, nothing to settle) / CZ: deposit_status je SETTLED (kauce vrácena nebo zadržena s potvrzením 1001), nebo WAIVED (kauce se nevybírala, není co vypořádat)"
   damage_claims_resolved: "EN: every damage_claim is SETTLED or DISMISSED / CZ: každá škoda je SETTLED nebo DISMISSED"
   invoice_request_handed_to_finance: "EN: rental_invoice_request is HANDED_TO_FINANCE / CZ: podklad k fakturaci je HANDED_TO_FINANCE"
   photos_minimum_met: "EN: photo count meets the PROPOSED minimum set by 1001 / CZ: počet fotografií splňuje minimum (NÁVRH — ke schválení 1001)"
@@ -458,7 +615,7 @@ guards:
   both_signatures_present: "EN: both parties signed on the device / CZ: obě strany podepsaly na zařízení"
   pdf_rendered: "EN: protocol PDF rendered by Typst / CZ: PDF protokolu vysázeno v Typst"
   server_seal_applied: "EN: server seal with timestamp applied / CZ: připojena serverová pečeť s časovým razítkem"
-  replacement_protocol_sealed: "EN: replacement protocol referencing supersedes_protocol_id is SEALED / CZ: náhradní protokol s odkazem supersedes_protocol_id je ve stavu SEALED"
+  replacement_protocol_sealed: "EN: the replacement protocol whose supersedes_protocol_id points to this one is SEALED / CZ: náhradní protokol, jehož supersedes_protocol_id míří na tento, je ve stavu SEALED"
   estimate_recorded: "EN: repair estimate is stored / CZ: je uložen odhad opravy"
   finance_draft_created: "EN: invoice DRAFT exists in finance-uol-marze-engine / CZ: v finance-uol-marze-engine existuje DRAFT faktury"
   mutation_confirm_1001: "EN: confirmed by 1001 in Decisions / CZ: potvrzeno osobou 1001 v Decisions"

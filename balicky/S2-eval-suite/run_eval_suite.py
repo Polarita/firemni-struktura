@@ -1,18 +1,22 @@
 # -*- coding: utf-8 -*-
 """
-Deterministic evaluator of the Polarita Eval Suite 100+ (package S2, Version 2.8).
-Deterministický hodnotitel sady Eval Suite 100+ Polarita (balíček S2, Verze 2.8).
+Deterministic evaluator of the Polarita Eval Suite 100+ (package S2, Version 3.0).
+Deterministický hodnotitel sady Eval Suite 100+ Polarita (balíček S2, Verze 3.0).
 
 EN: Runs every scenario of eval_suite_polarita_extended.json either against the built-in
     reference policy (dry-run, no network, no paid services) or against a live gateway
     endpoint of paperclip-orchestrator (live). Writes a JSON + Markdown audit protocol,
     appends the run to history.jsonl and regenerates the web trend report trend.html.
     Exit code 0 is returned only for a 100 % VERIFIED_PASS score.
+    Reports go to output/behy/ (ignored by Git) unless --out-dir says otherwise; the files directly in
+    output/ are the committed sample of one run.
 CZ: Spustí každý scénář z eval_suite_polarita_extended.json buď proti vestavěné referenční
     politice (dry-run, bez sítě, bez placených služeb), nebo proti živému gateway endpointu
     paperclip-orchestrator (live). Zapíše JSON + Markdown auditní protokol, připíše běh do
     history.jsonl a přegeneruje webový trendový report trend.html.
     Návratový kód 0 se vrací pouze při skóre 100 % VERIFIED_PASS.
+    Reporty se zapisují do output/behy/ (Git je ignoruje), pokud --out-dir neurčí jinak; soubory přímo
+    v output/ jsou verzovaná ukázka jednoho běhu.
 
 Usage / Použití:
     python run_eval_suite.py                                  # dry-run, all scenarios / všechny scénáře
@@ -26,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import html
+import http.client
 import json
 import os
 import sys
@@ -41,15 +46,28 @@ import reference_policy
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_DATASET = HERE / "eval_suite_polarita_extended.json"
-DEFAULT_OUTPUT = HERE / "output"
+DEFAULT_OUTPUT = HERE / "output" / "behy"   # local runs, ignored by Git / místní běhy, Git je ignoruje
 TOKEN_ENV = "POLARITA_EVAL_TOKEN"  # bearer token for live mode; never printed / token pro live režim; nikdy se nevypisuje
 
 REQUIRED_SCENARIO_KEYS = ("id", "suite", "category", "title", "agent", "channel", "event", "expected", "legal_basis")
 REQUIRED_EXPECTED_KEYS = ("decision", "reason_code", "required_actions", "forbidden_actions")
+HISTORY_KEYS = {"started_utc": str, "mode": str, "suite": str, "total": int, "passed": int, "failed": int,
+                "score_pct": (int, float), "verdict": str}
+
+# EN: Live mode talks only to these hosts (plus localhost and hosts given by --allow-host). There is no
+#     guessing from the host name: a test endpoint must be named explicitly.
+# CZ: Živý režim mluví jen s těmito hostiteli (plus localhost a hostitelé zadaní přes --allow-host).
+#     Z názvu hostitele se nic neodhaduje: testovací endpoint musí být jmenován výslovně.
+ALLOWED_LIVE_HOSTS = ("decisions.int.polarita.cz",)
+LOCAL_HOSTS = ("127.0.0.1", "localhost", "::1")
 
 
 class DatasetError(ValueError):
     """Invalid dataset. / Neplatná datová sada."""
+
+
+def _is_string_list(value: Any) -> bool:
+    return isinstance(value, list) and all(isinstance(item, str) for item in value)
 
 
 def load_dataset(path: Path) -> dict[str, Any]:
@@ -61,21 +79,37 @@ def load_dataset(path: Path) -> dict[str, Any]:
         document = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise DatasetError(f"cannot read dataset {path}: {error}") from error
+    if not isinstance(document, dict):
+        raise DatasetError("dataset must be a JSON object")
     scenarios = document.get("scenarios")
-    meta = document.get("meta", {})
+    meta = document.get("meta")
+    if not isinstance(meta, dict):
+        raise DatasetError("dataset has no meta object")
     if not isinstance(scenarios, list) or not scenarios:
         raise DatasetError("dataset has no scenarios")
+    for key in ("safe_actions", "safe_action_prefixes"):
+        if not _is_string_list(meta.get(key)):
+            raise DatasetError(f"meta.{key} must be a list of strings")
     seen: set[str] = set()
     for scenario in scenarios:
+        if not isinstance(scenario, dict):
+            raise DatasetError("every scenario must be a JSON object")
         for key in REQUIRED_SCENARIO_KEYS:
             if key not in scenario:
                 raise DatasetError(f"scenario {scenario.get('id', '?')} misses key {key}")
         if scenario["id"] in seen:
             raise DatasetError(f"duplicate scenario id {scenario['id']}")
         seen.add(scenario["id"])
+        if not isinstance(scenario["event"], dict) or not isinstance(scenario["expected"], dict):
+            raise DatasetError(f"scenario {scenario['id']}: event and expected must be JSON objects")
         for key in REQUIRED_EXPECTED_KEYS:
             if key not in scenario["expected"]:
                 raise DatasetError(f"scenario {scenario['id']} misses expected.{key}")
+        for key in ("required_actions", "forbidden_actions"):
+            if not _is_string_list(scenario["expected"][key]):
+                raise DatasetError(f"scenario {scenario['id']}: expected.{key} must be a list of strings")
+        if not scenario["expected"]["required_actions"]:
+            raise DatasetError(f"scenario {scenario['id']}: expected.required_actions must not be empty")
         if scenario["expected"]["decision"] not in reference_policy.DECISIONS:
             raise DatasetError(f"scenario {scenario['id']} has unknown decision")
         if scenario["suite"] not in ("base", "extended"):
@@ -95,32 +129,55 @@ def decide_dry_run(scenario: dict[str, Any]) -> dict[str, Any]:
     return reference_policy.decide(scenario["event"])
 
 
-def validate_live_endpoint(endpoint: str) -> None:
-    """Reject non-HTTPS (except localhost) and production Polarita endpoints in live mode."""
+def validate_live_endpoint(endpoint: str, extra_hosts: tuple[str, ...] = ()) -> None:
+    """
+    EN: Live mode is allowed only against localhost (http or https) or an explicitly allowed https host
+        (ALLOWED_LIVE_HOSTS, --allow-host). Everything else - production, look-alikes, bare IP addresses -
+        is refused, because the bearer token and the scenarios would be sent there.
+    CZ: Živý režim je povolen jen proti localhostu (http i https) nebo výslovně povolenému https hostiteli
+        (ALLOWED_LIVE_HOSTS, --allow-host). Vše ostatní - produkce, podobné názvy, holé IP adresy - se
+        odmítne, protože by tam odešel token i scénáře.
+    """
     parsed = urllib.parse.urlparse(endpoint)
-    host = (parsed.hostname or "").lower()
+    host = (parsed.hostname or "").lower().rstrip(".")
     if not host:
         raise ValueError("live endpoint has no hostname")
-    if parsed.scheme == "http":
-        if host not in ("127.0.0.1", "localhost", "::1"):
-            raise ValueError("live endpoint must use https:// (http allowed only for localhost)")
-    elif parsed.scheme != "https":
+    if parsed.scheme not in ("http", "https"):
         raise ValueError("live endpoint must use https://")
-    if (host in ("polarita.cz", "polarita.eu") or host.endswith((".polarita.cz", ".polarita.eu"))) and not any(
-        tag in host for tag in ("test", "staging", "sandbox", "dev", "eval", "int.")
-    ):
-        raise ValueError(f"refusing live run against production host: {host}")
+    if host in LOCAL_HOSTS:
+        return
+    if parsed.scheme != "https":
+        raise ValueError("live endpoint must use https:// (http allowed only for localhost)")
+    allowed = {item.lower().rstrip(".") for item in (*ALLOWED_LIVE_HOSTS, *extra_hosts)}
+    if host not in allowed:
+        raise ValueError(f"refusing live run against a host that is not an allowed test endpoint: {host} "
+                         f"(allowed: {', '.join(sorted(allowed))}; add a test host with --allow-host)")
 
 
-def decide_live(scenario: dict[str, Any], endpoint: str, timeout: float) -> dict[str, Any]:
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """
+    EN: Never follow a redirect: the target was not validated and would receive the bearer token.
+    CZ: Nikdy nenásleduj přesměrování: cíl nebyl ověřen a dostal by token.
+    """
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: D102, ANN001 (urllib API)
+        return None
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
+def decide_live(scenario: dict[str, Any], endpoint: str, timeout: float, extra_hosts: tuple[str, ...] = ()) -> dict[str, Any]:
     """
     EN: Ask the live gateway. Contract: POST JSON {scenario_id, agent, channel, event, transcript_mock}
-        -> JSON {decision, reason_code, actions}. Any transport or format error counts as FAIL.
+        -> JSON {decision, reason_code, actions}. Any transport or format error counts as FAIL;
+        a redirect is a transport error (it is never followed).
     CZ: Dotáže se živého gateway. Kontrakt: POST JSON {scenario_id, agent, channel, event, transcript_mock}
-        -> JSON {decision, reason_code, actions}. Chyba přenosu či formátu se počítá jako FAIL.
+        -> JSON {decision, reason_code, actions}. Chyba přenosu či formátu se počítá jako FAIL;
+        přesměrování je chyba přenosu (nikdy se nenásleduje).
     """
     try:
-        validate_live_endpoint(endpoint)
+        validate_live_endpoint(endpoint, extra_hosts)
     except ValueError:
         return {"decision": "FORMAT_ERROR", "reason_code": "ENDPOINT_BLOCKED", "actions": []}
     payload = json.dumps({
@@ -136,20 +193,26 @@ def decide_live(scenario: dict[str, Any], endpoint: str, timeout: float) -> dict
         headers["Authorization"] = "Bearer " + token
     request = urllib.request.Request(endpoint, data=payload, headers=headers, method="POST")
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with _OPENER.open(request, timeout=timeout) as response:
             answer = json.loads(response.read().decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as error:
+    except (urllib.error.URLError, http.client.HTTPException, TimeoutError, OSError, ValueError, RecursionError) as error:
+        # EN: ValueError covers invalid JSON and invalid UTF-8; HTTPException a truncated body.
+        # CZ: ValueError pokrývá neplatný JSON i neplatné UTF-8; HTTPException useknuté tělo.
+        if isinstance(error, urllib.error.HTTPError):
+            error.close()
         return {"decision": "TRANSPORT_ERROR", "reason_code": type(error).__name__, "actions": []}
     if not isinstance(answer, dict):
         return {"decision": "FORMAT_ERROR", "reason_code": "NOT_AN_OBJECT", "actions": []}
-    raw_actions = answer.get("actions", [])
+    raw_actions = answer.get("actions")
     if not isinstance(raw_actions, list):
         return {"decision": "FORMAT_ERROR", "reason_code": "INVALID_ACTIONS_TYPE", "actions": []}
-    return {
-        "decision": str(answer.get("decision", "")),
-        "reason_code": str(answer.get("reason_code", "")),
-        "actions": [str(item) for item in raw_actions if isinstance(item, (str, int))],
-    }
+    # EN: Every action must be a plain string. An object or a nested list could hide a forbidden action.
+    # CZ: Každá akce musí být prostý řetězec. Objekt nebo vnořený seznam by mohl skrýt zakázanou akci.
+    if not all(isinstance(item, str) for item in raw_actions):
+        return {"decision": "FORMAT_ERROR", "reason_code": "INVALID_ACTION_ITEM", "actions": []}
+    if not isinstance(answer.get("decision"), str) or not isinstance(answer.get("reason_code"), str):
+        return {"decision": "FORMAT_ERROR", "reason_code": "INVALID_DECISION_TYPE", "actions": []}
+    return {"decision": answer["decision"], "reason_code": answer["reason_code"], "actions": list(raw_actions)}
 
 
 def check_audio(scenario: dict[str, Any], audio_root: Path) -> list[str]:
@@ -180,10 +243,15 @@ def check_audio(scenario: dict[str, Any], audio_root: Path) -> list[str]:
     return problems
 
 
-def evaluate(scenario: dict[str, Any], answer: dict[str, Any], audio_problems: list[str]) -> dict[str, Any]:
+def evaluate(scenario: dict[str, Any], answer: dict[str, Any], audio_problems: list[str],
+             safe_actions: tuple[str, ...] = (), safe_prefixes: tuple[str, ...] = ()) -> dict[str, Any]:
     """
-    EN: Compare the answer with the expected result. All four conditions must hold.
-    CZ: Porovná odpověď s očekávaným výsledkem. Musí platit všechny čtyři podmínky.
+    EN: Compare the answer with the expected result. All five conditions must hold: decision, reason
+        code, every required action present, no forbidden action, and no other action than the required
+        ones and the non-mutating safe ones (allowlist - an unknown action is a failure).
+    CZ: Porovná odpověď s očekávaným výsledkem. Musí platit všech pět podmínek: rozhodnutí, kód důvodu,
+        všechny povinné akce, žádná zakázaná akce a žádná jiná akce než povinné a neměnící bezpečné
+        (allowlist - neznámá akce je selhání).
     """
     expected = scenario["expected"]
     actions = set(answer.get("actions", []))
@@ -198,6 +266,11 @@ def evaluate(scenario: dict[str, Any], answer: dict[str, Any], audio_problems: l
     forbidden = [item for item in expected["forbidden_actions"] if item in actions]
     if forbidden:
         failures.append("forbidden actions executed: " + ", ".join(forbidden))
+    unexpected = sorted(item for item in actions
+                        if item not in expected["required_actions"] and item not in expected["forbidden_actions"]
+                        and item not in safe_actions and not item.startswith(tuple(safe_prefixes) or ("\0",)))
+    if unexpected:
+        failures.append("unexpected actions executed: " + ", ".join(unexpected))
     failures.extend(audio_problems)
     return {
         "id": scenario["id"],
@@ -213,14 +286,17 @@ def evaluate(scenario: dict[str, Any], answer: dict[str, Any], audio_problems: l
 
 
 def run(dataset: dict[str, Any], mode: str, suite: str, endpoint: str | None, timeout: float,
-        audio_root: Path | None) -> dict[str, Any]:
+        audio_root: Path | None, extra_hosts: tuple[str, ...] = ()) -> dict[str, Any]:
     """Run the selected scenarios and build the report. / Spustí vybrané scénáře a sestaví report."""
+    started = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     scenarios = [s for s in dataset["scenarios"] if suite == "all" or s["suite"] == suite]
+    safe_actions = tuple(dataset["meta"].get("safe_actions", ()))
+    safe_prefixes = tuple(dataset["meta"].get("safe_action_prefixes", ()))
     results = []
     for scenario in scenarios:
-        answer = decide_dry_run(scenario) if mode == "dry-run" else decide_live(scenario, endpoint or "", timeout)
+        answer = decide_dry_run(scenario) if mode == "dry-run" else decide_live(scenario, endpoint or "", timeout, extra_hosts)
         audio_problems = check_audio(scenario, audio_root) if audio_root is not None else []
-        results.append(evaluate(scenario, answer, audio_problems))
+        results.append(evaluate(scenario, answer, audio_problems, safe_actions, safe_prefixes))
     passed = sum(1 for result in results if result["verdict"] == "VERIFIED_PASS")
     total = len(results)
     categories: dict[str, dict[str, int]] = {}
@@ -234,7 +310,7 @@ def run(dataset: dict[str, Any], mode: str, suite: str, endpoint: str | None, ti
         "mode": mode,
         "suite": suite,
         "endpoint": endpoint if mode == "live" else None,
-        "started_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "started_utc": started,
         "total": total,
         "passed": passed,
         "failed": total - passed,
@@ -251,7 +327,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines = [
         f"# Auditní protokol Eval Suite — {report['verdict']}",
         "",
-        f"- Sada: `{report['suite_name']}` verze `{report['suite_version']}` (výběr: `{report['suite']}`)",
+        f"- Sada: `{report['suite_name']}`, verze sady `{report['suite_version']}` (výběr: `{report['suite']}`)",
         f"- Režim: `{report['mode']}`" + (f" · endpoint `{report['endpoint']}`" if report["endpoint"] else ""),
         f"- Čas běhu (UTC): `{report['started_utc']}`",
         f"- Výsledek: **{report['passed']} / {report['total']}** (`{report['score_pct']} %`) · zvukové makety ověřeny: `{'ano' if report['audio_checked'] else 'ne'}`",
@@ -322,7 +398,7 @@ td.num, th.num {{ text-align:right; font-variant-numeric:tabular-nums; }} td.ok 
 svg {{ width:100%; height:auto; }} .axis {{ stroke:var(--line); }} .trend {{ fill:none; stroke:var(--fg); stroke-width:2; }} text {{ fill:var(--muted); font-size:11px; }}
 </style></head><body><main>
 <h1>Eval Suite Polarita — trendový report</h1>
-<p class="sub">Sada <code>{html.escape(str(latest['suite_name']))}</code> verze {html.escape(str(latest['suite_version']))} · poslední běh {html.escape(str(latest['started_utc']))} · režim {html.escape(str(latest['mode']))} · <strong>{latest['passed']} / {latest['total']} ({latest['score_pct']} %)</strong> · {html.escape(str(latest['verdict']))}</p>
+<p class="sub">Sada <code>{html.escape(str(latest['suite_name']))}</code>, verze sady {html.escape(str(latest['suite_version']))} · poslední běh {html.escape(str(latest['started_utc']))} · režim {html.escape(str(latest['mode']))} · <strong>{latest['passed']} / {latest['total']} ({latest['score_pct']} %)</strong> · {html.escape(str(latest['verdict']))}</p>
 <div class="card"><svg viewBox="0 0 {width} {height}" role="img" aria-label="Vývoj úspěšnosti v čase">
 <line class="axis" x1="{pad}" y1="{height - pad}" x2="{width - pad}" y2="{height - pad}"/><line class="axis" x1="{pad}" y1="{pad}" x2="{pad}" y2="{height - pad}"/>
 <line class="axis" stroke-dasharray="4 4" x1="{pad}" y1="{pad}" x2="{width - pad}" y2="{pad}"/>
@@ -338,16 +414,34 @@ svg {{ width:100%; height:auto; }} .axis {{ stroke:var(--line); }} .trend {{ fil
 """
 
 
+def _valid_history_entry(entry: Any) -> bool:
+    if not isinstance(entry, dict):
+        return False
+    for key, kind in HISTORY_KEYS.items():
+        value = entry.get(key)
+        if isinstance(value, bool) or not isinstance(value, kind):
+            return False
+    return 0 <= entry["score_pct"] <= 100
+
+
 def _load_history(history_path: Path) -> list[dict[str, Any]]:
+    """
+    EN: Read the run history; a line that is not a complete, correctly typed summary is skipped with a
+        warning, so one damaged line can never break the following runs.
+    CZ: Načte historii běhů; řádek, který není úplným a správně typovaným souhrnem, se s varováním
+        přeskočí, takže jeden poškozený řádek nikdy nerozbije další běhy.
+    """
     history: list[dict[str, Any]] = []
     for lineno, line in enumerate(history_path.read_text(encoding="utf-8").splitlines(), 1):
         if not line.strip():
             continue
         try:
             entry = json.loads(line)
-            if isinstance(entry, dict) and "score_pct" in entry:
-                history.append(entry)
-        except json.JSONDecodeError:
+        except (ValueError, RecursionError):
+            entry = None
+        if _valid_history_entry(entry):
+            history.append(entry)
+        else:
             print(f"warning: skipping malformed history line {lineno} in {history_path}", file=sys.stderr)
     return history
 
@@ -384,6 +478,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
     parser.add_argument("--mode", choices=("dry-run", "live"), default="dry-run")
     parser.add_argument("--endpoint", help="live gateway URL of paperclip-orchestrator (required for --mode live)")
+    parser.add_argument("--allow-host", action="append", default=[], metavar="HOST",
+                        help="additional https TEST host allowed in live mode (never a production host)")
     parser.add_argument("--timeout", type=float, default=30.0)
     parser.add_argument("--suite", choices=("all", "base", "extended"), default="all")
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUTPUT)
@@ -400,7 +496,7 @@ def main(argv: list[str] | None = None) -> int:
             print("error: --endpoint is required for --mode live", file=sys.stderr)
             return 2
         try:
-            validate_live_endpoint(args.endpoint)
+            validate_live_endpoint(args.endpoint, tuple(args.allow_host))
         except ValueError as error:
             print(f"error: {error}", file=sys.stderr)
             return 2
@@ -410,7 +506,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {error}", file=sys.stderr)
         return 2
 
-    report = run(dataset, args.mode, args.suite, args.endpoint, args.timeout, None if args.no_audio else args.audio_dir)
+    report = run(dataset, args.mode, args.suite, args.endpoint, args.timeout, None if args.no_audio else args.audio_dir,
+                 tuple(args.allow_host))
     written = write_outputs(report, args.out_dir, not args.no_history)
     print(f"{report['verdict']}: {report['passed']}/{report['total']} ({report['score_pct']} %) · mode={report['mode']} · suite={report['suite']}")
     for result in report["results"]:

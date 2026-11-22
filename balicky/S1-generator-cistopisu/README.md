@@ -1,14 +1,14 @@
-# Blok 13 · Balíček S1 — Automatizovaný generátor PDF čistopisů smluv a protokolů · Verze 2.8
+# Blok 13 · Balíček S1 — Automatizovaný generátor PDF čistopisů smluv a protokolů · Verze 3.0
 
-Tento dokument je řídicím dokumentem **`Bloku 13`** Rozvojové Etapy II společnosti **Polarita s.r.o.** Balíček povyšuje právní a provozní minimum připravené v `Bloku 0` a `Bloku 8` na **šablonovaný generátor tiskových PDF čistopisů**: 15 šablon v 8 sestavách s jednotnými proměnnými, vzorová data, generátor [`generate_pdfs.py`](./generate_pdfs.py) a manifest každého dokumentu pro transakční diff `mutation_confirm`. Šablony vyplňují agenti `15001 pravni-specialista`, `14005 zakazky`, `13001 eshop`, `16002 tajemnik` a `18001 personalista`. Balíček nepřidává žádného `ai` agenta ani databázi.
+Tento dokument je řídicím dokumentem **`Bloku 13`** Rozvojové Etapy II společnosti **Polarita s.r.o.** Balíček povyšuje právní a provozní minimum připravené s advokátem v `Bloku 0` a potvrzené advokátem v `Bloku 8` na **šablonovaný generátor tiskových PDF čistopisů**: 15 šablon v 8 sestavách s jednotnými proměnnými, vzorová data, generátor [`generate_pdfs.py`](./generate_pdfs.py) a manifest každého dokumentu pro transakční diff `mutation_confirm`. Šablony vyplňují agenti `15001 pravni-specialista`, `14005 zakazky`, `13001 eshop`, `16002 tajemnik` a `18001 personalista`. Balíček nepřidává žádného `ai` agenta ani databázi.
 
-> **Právní upozornění:** Šablony jsou ukázkové pracovní vzory připravené `ai` bez odkazů na konkrétní právní předpisy a normy; skutečné znění sestaví `15001 pravni-specialista` až po nasazení systému z aktuální právní báze a před prvním ostrým použitím je zkontrolují `15001` a **advokát** (technické sestavy `15002 normovac`). Podpis je vždy úkon člověka (`1001`, u revizí RT). Hodnoty, které návrh firmy nestanoví (smluvní pokuty, záruky, výše paušálu), jsou proměnné, ne pevná čísla.
+> **Právní upozornění:** Šablony jsou ukázkové pracovní vzory připravené `ai` bez odkazů na konkrétní právní předpisy a normy. Závazné znění do nich vzniká v `Bloku 13` převodem právního minima, které `1001` připravil s advokátem v `Bloku 0` a advokát potvrdil v `Bloku 8`; nová znění, která v potvrzeném minimu nejsou, posoudí `15001 pravni-specialista` a před prvním ostrým použitím potvrdí **advokát** (technické sestavy `15002 normovac`). Podpis je vždy úkon člověka (`1001`, u revizí RT). Hodnoty, které návrh firmy nestanoví (smluvní pokuty, záruky, výše paušálu), jsou proměnné, ne pevná čísla.
 
 ---
 
 ## 1. Seznam softwaru a modulů
 
-| Oblast | Soubor / modul | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 2.8) | Odpovědný `ai` / garant |
+| Oblast | Soubor / modul | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.0) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Šablony** | [`sablony/`](./sablony/) (15× `.md`) | verzováno v `Gitea`, cílově `/srv/polarita/vault/04-Pravo-a-Smlouvy/` | Čistopisy v Markdownu s proměnnými `{{snake_case}}`; první řádek nadpis, druhý řádek `**Spis:** {{spis_id}}`. | `15001` `pravni-specialista` *(technické sestavy `15002` `normovac`)* |
 | **Vzorová data** | [`data/`](./data/) (15× `.json`) | fiktivní hodnoty | Ke každé šabloně plochý JSON se všemi proměnnými — slouží k testu a jako vzor vstupu. Žádné skutečné osobní údaje. | `15001` `pravni-specialista` |
@@ -38,23 +38,23 @@ Tento dokument je řídicím dokumentem **`Bloku 13`** Rozvojové Etapy II spole
    * Společné názvy napříč šablonami: `{{spis_id}}`, `{{ico_klienta}}`, `{{castka_bez_dph}}`, dále `{{nazev_klienta}}`, `{{sidlo_klienta}}`, `{{datum_podpisu}}`, `{{pracovni_pozice}}` a další. Generátor selže, pokud kterákoli proměnná chybí, přebývá nebo je prázdná.
    * Tabulky s pevným počtem řádků ve vzorových šablonách (`01a`, `04c`, `05a`, `05b`, `06b`) slouží jako pevný demonstrátor struktury; před ostrým nasazením v `Bloku 13` se pro zakázky s proměnným počtem položek rozšíří o generované opakovatelné bloky řádků nad polem vstupních dat.
    * Osobní údaje zaměstnanců se do pracovních konceptů nedostávají — dohody pracují s osobním číslem (`1001+`) a jménem (u finálního podpisového originálu plné moci `06a` se doplňují identifikační údaje zmocněnce); rodná čísla a adresy zůstávají v `db_hr_lide`.
-4. **`ai` připravuje, člověk podepisuje:**
+3. **`ai` připravuje, člověk podepisuje:**
    * Výchozí běh tiskne vodoznak `VZOR` i evidenční patičku konceptu. Přepínač `--final` (bez vodoznaku a bez interní ai patičky) se používá až po kontrole `15001` a schválení v `Decisions`.
    * Generátor nikdy nepodepisuje ani neodesílá. EU prohlášení o shodě a revizní dokumenty podepisuje výhradně oprávněná fyzická osoba.
-5. **Sazba `Typst` × `HTML → PDF`:**
+4. **Sazba `Typst` × `HTML → PDF`:**
    * Zadání připouští obě cesty. Tento balíček používá `HTML → PDF` (headless Chromium, tisk bez sítě), protože běží bez instalace dalšího sázecího nástroje. Na `polarita-hq` poběží tisk v bez-síťové zóně `sandbox_airgap`; přechod na `Typst` je možný beze změny šablon a dat.
 
 ---
 
 ## 3. Pokyny k instalaci a konfiguraci pro `ai` (Prompty)
 
-### Prompt 1 — Právní a normová revize šablon (`pro 15001 pravni-specialista` + `15002 normovac`)
+### Prompt 1 — Převod potvrzeného právního minima do šablon a jejich kontrola (`pro 15001 pravni-specialista` + `15002 normovac`)
 
 ```text
-Proveď nezávislou kontrolu šablon balíčku S1 společnosti Polarita s.r.o. před prvním ostrým použitím:
+Zkontroluj převod právního minima potvrzeného advokátem v Bloku 8 do šablon balíčku S1 společnosti Polarita s.r.o. před prvním ostrým použitím. Šablony sám nepíšeš ani neměníš; tvé nálezy a každé nové znění, které v potvrzeném minimu není, potvrzuje advokát:
 
 1. Přečti všech 15 šablon ve složce balicky/S1-generator-cistopisu/sablony a ověř každý věcný odkaz na právní předpisy a normy proti aktuálnímu znění v právní a normové bázi ve Vaultu (občanské právo, pracovněprávní předpisy, předpisy o bezpečnosti provozu vyhrazených technických zařízení, o odborné způsobilosti v elektrotechnice a o posuzování shody elektrických zařízení nízkého napětí, předžalobní výzva, GDPR, předpisy EU o umělé inteligenci; normy v 03-Normy-a-Metodiky/).
-2. U každé šablony sepiš nález: věcná chyba, chybějící ustanovení, riziko pro Polaritu, doporučená úprava. Nic v šablonách sám neměň.
+2. U každé šablony porovnej text s potvrzeným právním minimem a sepiš nález: odchylka od potvrzeného znění, věcná chyba, chybějící ustanovení, riziko pro Polaritu, doporučená úprava. Nic v šablonách sám neměň.
 3. Technické sestavy č. 5 (pas rozváděče, kusové ověření, prohlášení o shodě) posoudí 15002 normovac proti platné normě pro rozváděče nízkého napětí a příslušné výrobkové normě.
 4. Výsledek předej jako verdikt VERIFIED_PASS / REJECTED do Decisions a označ šablony, které musí před použitím vidět advokát.
 ```
@@ -89,19 +89,19 @@ Připrav koncept dokumentu ke konkrétnímu spisu:
 
 - [ ] `python generate_pdfs.py` vrátí kód `0` a všech 8 sestav (15 šablon) vytvoří platné PDF bez nevyplněné proměnné.
 - [ ] Proměnné `{{spis_id}}`, `{{ico_klienta}}` a `{{castka_bez_dph}}` jsou v šablonách použity jednotně a každý dokument má manifest pro diff `mutation_confirm`.
-- [ ] Šablony prošly kontrolou `15001` (právo), `15002` (sestava č. 5) a advokáta; nálezy jsou zapracovány a šablony odpovídají dokumentu `00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.md`.
+- [ ] Do šablon je převedeno právní minimum potvrzené advokátem v `Bloku 8`; převod zkontroloval `15001` (právo) a `15002` (sestava č. 5), nová znění potvrdil advokát, nálezy jsou zapracovány a šablony odpovídají dokumentu `00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.md`.
 - [ ] Tisk na `polarita-hq` běží v `sandbox_airgap` bez sítě a běh `--final` je možný jen po `mutation_confirm`.
 - [ ] Podepsaný dokument je v `legal-archive` a jeho otisk ve spisu `POL-RRRR-NNNNN`.
 
 ---
 
-## 5. Stav ve Verzi 2.8
+## 5. Stav ve Verzi 3.0
 
-Stav ověřovacího běhu (počet vygenerovaných PDF, počet stran, výsledky testů) je zapsán v souboru [`vystup/OVERENI.md`](./vystup/OVERENI.md).
+Balíček je spustitelný a ověřený spuštěním; čeká převod potvrzeného právního minima do šablon. Stav ověřovacího běhu (počet vygenerovaných PDF, počet stran, výsledky testů) je zapsán v souboru [`vystup/OVERENI.md`](./vystup/OVERENI.md).
 
 **Vyžaduje rozhodnutí, odbornou revizi nebo živý server:**
 
-- právní revize všech šablon (`15001` + advokát) a normová revize sestavy č. 5 (`15002`) — do té doby jde o pracovní vzory;
+- převod právního minima potvrzeného advokátem v `Bloku 8` do šablon (nová znění posoudí `15001` a potvrdí advokát) a normová revize sestavy č. 5 (`15002`) — do té doby jde o pracovní vzory;
 - nasazení generátoru do `sandbox_airgap`, MCP nástroj `generate_document` a napojení na `Decisions` a `legal-archive`.
 
 Spuštění: `pip install -r requirements.txt` · `python generate_pdfs.py --check` · `python generate_pdfs.py` · `python -m unittest -v test_generate_pdfs`.

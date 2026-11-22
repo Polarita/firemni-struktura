@@ -1,17 +1,26 @@
 # -*- coding: utf-8 -*-
 """
-Tests of the PDF generator of package S1 (Version 2.8).
-Testy generátoru PDF balíčku S1 (Verze 2.8).
+Tests of the PDF generator of package S1 (Version 3.0).
+Testy generátoru PDF balíčku S1 (Verze 3.0).
 
 Usage / Použití:  python -m unittest -v test_generate_pdfs
+
+EN: The two print tests need a Chromium browser. Without one they are skipped - unless the variable
+    POLARITA_REQUIRE_BROWSER=1 is set (CI), then a missing browser is a failure.
+CZ: Dva tiskové testy potřebují prohlížeč Chromium. Bez něj se přeskočí - pokud není nastavena
+    proměnná POLARITA_REQUIRE_BROWSER=1 (CI), pak je chybějící prohlížeč selháním.
 """
 
 from __future__ import annotations
 
 import json
+import os
+import stat
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from pypdf import PdfReader
 
@@ -38,6 +47,115 @@ class FillTests(unittest.TestCase):
             gen.fill("{{spis_id}}", ["not", "a", "dict"], "t")  # type: ignore[arg-type]
 
 
+def _minimal_pdf(text: str) -> bytes:
+    """Hand-made one-page PDF with the given ASCII text. / Ručně složené jednostránkové PDF s daným ASCII textem."""
+    stream = ("BT /F1 8 Tf 20 800 Td (" + text + ") Tj ET").encode("ascii")
+    objects = [b"<< /Type /Catalog /Pages 2 0 R >>", b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+               b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 3000 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+               b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream",
+               b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"]
+    out = b"%PDF-1.4\n"
+    offsets = []
+    for index, body in enumerate(objects, 1):
+        offsets.append(len(out))
+        out += b"%d 0 obj\n" % index + body + b"\nendobj\n"
+    xref = len(out)
+    out += b"xref\n0 6\n0000000000 65535 f \n" + b"".join(b"%010d 00000 n \n" % offset for offset in offsets)
+    return out + b"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % xref
+
+
+def _fake_browser(folder: Path, mode: str) -> str:
+    """
+    EN: Stand-in for the browser (a Python script): "noop" exits 0 without writing, "fail" exits 1,
+        "old" writes a PDF of another case, "good" writes a PDF that names the case number of the sample data.
+    CZ: Maketa prohlížeče (skript v Pythonu): "noop" skončí 0 a nic nezapíše, "fail" skončí 1, "old"
+        zapíše PDF jiného spisu, "good" zapíše PDF s číslem spisu ze vzorových dat.
+    """
+    pdf = folder / f"{mode}.pdf"
+    pdf.write_bytes(_minimal_pdf(("Dokument ke spisu POL-2027-00001 . " if mode == "good" else "Stary dokument POL-1999-99999 . ") * 8))
+    script = folder / f"browser_{mode}.py"
+    script.write_text(
+        "import shutil, sys\n"
+        f"mode, source = {mode!r}, {str(pdf)!r}\n"
+        "target = next(a.split('=', 1)[1] for a in sys.argv if a.startswith('--print-to-pdf='))\n"
+        "if mode in ('good', 'old'):\n    shutil.copyfile(source, target)\n"
+        "sys.exit(1 if mode == 'fail' else 0)\n", encoding="utf-8")
+    if os.name == "nt":
+        launcher = folder / f"browser_{mode}.cmd"
+        launcher.write_text(f'@"{sys.executable}" "{script}" %*\r\n', encoding="utf-8")
+    else:
+        launcher = folder / f"browser_{mode}.sh"
+        launcher.write_text(f'#!/bin/sh\nexec "{sys.executable}" "{script}" "$@"\n', encoding="utf-8")
+        launcher.chmod(launcher.stat().st_mode | stat.S_IXUSR)
+    return str(launcher)
+
+
+class PrintPathTests(unittest.TestCase):
+    """The print path with a stand-in browser - runs everywhere. / Tisková cesta s maketou prohlížeče - běží všude."""
+
+    NAME = "07-predzalobni-vyzva"
+
+    def run_with(self, mode: str, out: Path) -> list:
+        with tempfile.TemporaryDirectory() as tools:
+            with mock.patch.object(gen, "BROWSER_CANDIDATES", (_fake_browser(Path(tools), mode),)):
+                return gen.generate(gen.TEMPLATE_DIR, gen.DATA_DIR, out, self.NAME, True, False)
+
+    def test_good_print_writes_pdf_and_manifest_with_matching_hashes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(len(self.run_with("good", Path(tmp))), 1)
+            manifest = json.loads((Path(tmp) / f"{self.NAME}.manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["sha256"]["pdf"], gen.sha256(Path(tmp) / f"{self.NAME}.pdf"))
+            self.assertEqual(manifest["sha256"]["template"], gen.sha256(gen.TEMPLATE_DIR / f"{self.NAME}.md"))
+            self.assertEqual(manifest["sha256"]["data"], gen.sha256(gen.DATA_DIR / f"{self.NAME}.json"))
+            self.assertEqual(manifest["variables"], json.loads((gen.DATA_DIR / f"{self.NAME}.json").read_text(encoding="utf-8")))
+
+    def test_failed_print_never_accepts_or_keeps_an_older_pdf(self) -> None:
+        # EN: A browser that exits 0 without writing, fails, or produces a PDF of another case.
+        # CZ: Prohlížeč, který skončí 0 a nic nezapíše, selže, nebo vyrobí PDF jiného spisu.
+        for mode in ("noop", "fail", "old"):
+            with tempfile.TemporaryDirectory() as tmp:
+                out = Path(tmp)
+                self.run_with("good", out)   # a previous successful run / předchozí úspěšný běh
+                with self.assertRaises(gen.GeneratorError, msg=mode):
+                    self.run_with(mode, out)
+                self.assertEqual(sorted(p.name for p in out.iterdir()), [], mode)
+
+    def test_main_returns_one_when_the_browser_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as tools:
+            with mock.patch.object(gen, "BROWSER_CANDIDATES", (_fake_browser(Path(tools), "noop"),)), \
+                    mock.patch("sys.stderr"):
+                self.assertEqual(gen.main(["--only", self.NAME, "--output-dir", tmp]), 1)
+            with mock.patch.object(gen, "BROWSER_CANDIDATES", (_fake_browser(Path(tools), "good"),)), \
+                    mock.patch("sys.stdout"):
+                self.assertEqual(gen.main(["--only", self.NAME, "--output-dir", tmp]), 0)
+
+    def test_printed_page_forbids_scripts_and_remote_loads(self) -> None:
+        page = gen.to_html("# Doc\nText", "Doc", True, "footer")
+        self.assertIn("Content-Security-Policy", page)
+        self.assertIn("default-src 'none'", page)
+
+
+class TemplateRuleTests(unittest.TestCase):
+    def test_raw_html_and_placeholder_in_code_are_refused(self) -> None:
+        for bad in ('<IMG src="file:///etc/passwd">', '<iframe src="x"></iframe>', "<object data=x>", "<style>*{display:none}</style>",
+                    "<svg onload=alert(1)>", '<a href="http://10.0.0.1/">x</a>', "<link rel=stylesheet href=x>", "<Script>x</Script>",
+                    "<!-- komentář -->", "<br>", "<script", "`{{spis_id}}`", "```\n{{spis_id}}\n```"):
+            with self.assertRaises(gen.GeneratorError, msg=bad):
+                gen.fill("# T\n" + bad + "\n{{spis_id}}\n", {"spis_id": "POL-2027-00001"}, "t")
+        self.assertIn("POL-2027-00001", gen.fill("# T\nméně než < 30 min a `kód`\n{{spis_id}}\n", {"spis_id": "POL-2027-00001"}, "t"))
+
+    def test_value_cannot_start_a_markdown_block(self) -> None:
+        import markdown
+        for value in ("===", "---", "- bod", "+ bod", "1. bod", "12) bod", "= x"):
+            for template in ("# T\n\nOdstavec.\n{{x}}\n\nDalší.\n", "# T\n\n{{x}}\n"):
+                rendered = markdown.markdown(gen.fill(template, {"x": value}, "t"), extensions=["tables", "sane_lists"])
+                self.assertEqual(rendered.count("<h1>"), 1, value)
+                for tag in ("<h2", "<ul", "<ol", "<hr", "<li"):
+                    self.assertNotIn(tag, rendered, value)
+        self.assertEqual(gen.escape_value("86\u00a0450,00\u00a0Kč"), "86\u00a0450,00\u00a0Kč")
+        self.assertEqual(gen.escape_value("  a \n b\t c "), "a b c")
+
+
 class RepositoryTemplatesTests(unittest.TestCase):
     def test_all_eight_sets_have_templates_and_matching_sample_data(self) -> None:
         results = gen.generate(gen.TEMPLATE_DIR, gen.DATA_DIR, Path(tempfile.gettempdir()), None, True, True)
@@ -47,7 +165,7 @@ class RepositoryTemplatesTests(unittest.TestCase):
     def test_templates_contain_no_html_and_no_personal_identifiers(self) -> None:
         for path in sorted(gen.TEMPLATE_DIR.glob("*.md")):
             text = path.read_text(encoding="utf-8")
-            self.assertNotRegex(text, r"<(div|span|table|br|img|script)\b", path.name)
+            gen.check_template(text, path.name)   # no raw HTML, no placeholder inside code / žádné surové HTML ani proměnná v kódu
             self.assertNotIn("{{rodne_cislo}}", text, path.name)
             self.assertTrue(text.splitlines()[1 if text.splitlines()[1].strip() else 2].startswith("**Spis:**"), path.name)
 
@@ -73,12 +191,18 @@ class RepositoryTemplatesTests(unittest.TestCase):
             self.assertTrue(all(isinstance(v, str) and v.strip() for v in values.values()), path.name)
 
 
+def _real_browser_or_skip(test: unittest.TestCase) -> None:
+    try:
+        gen.find_browser()
+    except gen.GeneratorError:
+        if os.environ.get(gen.REQUIRE_BROWSER_ENV) == "1":
+            test.fail(f"{gen.REQUIRE_BROWSER_ENV}=1 and no Chromium browser found (set POLARITA_PDF_BROWSER)")
+        test.skipTest("no Chromium browser available / není dostupný prohlížeč Chromium")
+
+
 class PdfTests(unittest.TestCase):
     def test_single_document_prints_a_valid_pdf_with_manifest(self) -> None:
-        try:
-            gen.find_browser()
-        except gen.GeneratorError:
-            self.skipTest("no Chromium browser available / není dostupný prohlížeč Chromium")
+        _real_browser_or_skip(self)
         with tempfile.TemporaryDirectory() as tmp:
             results = gen.generate(gen.TEMPLATE_DIR, gen.DATA_DIR, Path(tmp), "07-predzalobni-vyzva", True, False)
             self.assertEqual(len(results), 1)
@@ -89,10 +213,7 @@ class PdfTests(unittest.TestCase):
             self.assertGreaterEqual(manifest["pages"], 1)
 
     def test_final_mode_omits_watermark_and_internal_ai_footer(self) -> None:
-        try:
-            gen.find_browser()
-        except gen.GeneratorError:
-            self.skipTest("no Chromium browser available / není dostupný prohlížeč Chromium")
+        _real_browser_or_skip(self)
         with tempfile.TemporaryDirectory() as tmp:
             gen.generate(gen.TEMPLATE_DIR, gen.DATA_DIR, Path(tmp), "07-predzalobni-vyzva", False, False)
             pdf = Path(tmp) / "07-predzalobni-vyzva.pdf"
@@ -103,6 +224,7 @@ class PdfTests(unittest.TestCase):
             self.assertNotIn("1001", text)
             self.assertIn("SPD*1.0*", text)
             self.assertNotIn("&#42;", text)
+            self.assertIn("POL-2027-00001", "".join(text.split()))
             html_final = gen.to_html("# Doc\nText", "Doc", False, "Polarita s.r.o.")
             self.assertNotIn('<div class="watermark">', html_final)
 

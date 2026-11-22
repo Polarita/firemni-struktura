@@ -28,14 +28,28 @@ Zástupce potvrzuje, že se seznámil s rozsahem i omezeními nouzové plné moc
 
 | Č. | Prostředek | Identifikace | Stav při předání | Datum a čas předání |
 | :--- | :--- | :--- | :--- | :--- |
-| 1 | Záložní YubiKey č. 2 | {{yubikey_2_identifikace}} | {{yubikey_2_stav_predani}} | {{yubikey_2_cas_predani}} |
-| 2 | Zapečetěná obálka Break-Glass | pečeť č. {{cislo_peceti_obalky}} | {{stav_peceti_pri_predani}} | {{obalka_cas_predani}} |
-| 3 | Originál nouzové plné moci | č. {{cislo_plne_moci}} | {{plna_moc_stav_predani}} | {{plna_moc_cas_predani}} |
-| 4 | Další předané prostředky | {{dalsi_predane_prostredky}} | {{dalsi_prostredky_stav_predani}} | {{dalsi_prostredky_cas_predani}} |
+| 1 | Zapečetěná obálka Break-Glass | pečeť č. {{cislo_peceti_obalky}} | {{stav_peceti_pri_predani}} | {{obalka_cas_predani}} |
+| 2 | Originál nouzové plné moci | č. {{cislo_plne_moci}} | {{plna_moc_stav_predani}} | {{plna_moc_cas_predani}} |
+| 3 | Další předané prostředky | {{dalsi_predane_prostredky}} | {{dalsi_prostredky_stav_predani}} | {{dalsi_prostredky_cas_predani}} |
 
 Obálka byla otevřena: {{obalka_otevrena}}. Důvod otevření a rozsah použitého obsahu: {{duvod_otevreni_obalky}}
 
-Hlavní YubiKey jednatele, jeho osobní kvalifikovaný elektronický podpis a jeho přístupové údaje se zástupci nepředávají.
+**Záložní YubiKey č. 2 se nepředává.** Je výhradně osobní náhradou jednatele a zůstává v samostatné zapečetěné obálce v trezoru. Protokol eviduje pouze kontrolu neporušenosti její pečeti:
+
+| Položka | Údaj |
+| :--- | :--- |
+| Pečeť obálky se záložním YubiKey č. 2 | č. {{cislo_peceti_obalky_yubikey_2}} |
+| Stav pečeti při aktivaci | {{stav_peceti_obalky_yubikey_2}} |
+| Datum a čas kontroly | {{kontrola_peceti_yubikey_2_cas}} |
+
+Zástupce se ve schvalovací frontě Decisions přihlašuje vlastním účtem a vlastním hardwarovým klíčem; oprávnění k potvrzování je aktivní jen po dobu režimu a jen pro třídy úkonů vyjmenované v plné moci.
+
+| Položka | Údaj |
+| :--- | :--- |
+| Vlastní hardwarový klíč zástupce | {{vlastni_hardwarovy_klic}} |
+| Aktivace oprávnění k potvrzování v Decisions | {{aktivace_opravneni_decisions}} |
+
+Hlavní YubiKey jednatele, záložní YubiKey č. 2, osobní kvalifikovaný elektronický podpis jednatele a jeho přístupové údaje se zástupci nepředávají.
 
 ## Část C — Stav Podatelny ISDS (datová schránka w9bbdva)
 
@@ -59,11 +73,13 @@ Přehled zpráv dodaných do datové schránky v průběhu režimu:
 | 2 | {{isds_zprava_2_dodano}} | {{isds_zprava_2_odesilatel}} | {{isds_zprava_2_fikce}} | {{isds_zprava_2_stav}} | {{isds_zprava_2_spis}} |
 | 3 | {{isds_zprava_3_dodano}} | {{isds_zprava_3_odesilatel}} | {{isds_zprava_3_fikce}} | {{isds_zprava_3_stav}} | {{isds_zprava_3_spis}} |
 
-Z datové schránky nebyla po dobu režimu odeslána žádná datová zpráva; odesílání je vyhrazeno jednateli.
+Datové zprávy odeslané po dobu režimu: {{odeslane_datove_zpravy}}
+
+Odeslat datovou zprávu smí v režimu Break-Glass výhradně jmenovaný bankovní zmocněnec nebo prokurista, a to vlastním přístupem pověřené osoby s oprávněním odesílat, po kladném posouzení podání právní specialistkou (15001) a po potvrzení vlastním hardwarovým klíčem v Decisions. Zástupný revizní technik datové zprávy neodesílá. Mimo režim Break-Glass odesílá jen jednatel.
 
 ## Část D — Seznam provedených úkonů
 
-Zapisuje se každý úkon učiněný za společnost, a to bez zbytečného odkladu po jeho provedení.
+Zapisuje se každý úkon učiněný za společnost, a to bez zbytečného odkladu po jeho provedení. Každé vyzvednutí datové zprávy uvedené v části C je samostatným úkonem; u úkonu potvrzeného v Decisions se uvede i třída potvrzení.
 
 | Č. | Datum a čas | Úkon | Spis | Opora v plné moci | Provedl |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -71,8 +87,12 @@ Zapisuje se každý úkon učiněný za společnost, a to bez zbytečného odkla
 | 2 | {{ukon_2_cas}} | {{ukon_2_popis}} | {{ukon_2_spis}} | {{ukon_2_opora}} | {{ukon_2_provedl}} |
 | 3 | {{ukon_3_cas}} | {{ukon_3_popis}} | {{ukon_3_spis}} | {{ukon_3_opora}} | {{ukon_3_provedl}} |
 | 4 | {{ukon_4_cas}} | {{ukon_4_popis}} | {{ukon_4_spis}} | {{ukon_4_opora}} | {{ukon_4_provedl}} |
+| 5 | {{ukon_5_cas}} | {{ukon_5_popis}} | {{ukon_5_spis}} | {{ukon_5_opora}} | {{ukon_5_provedl}} |
+| 6 | {{ukon_6_cas}} | {{ukon_6_popis}} | {{ukon_6_spis}} | {{ukon_6_opora}} | {{ukon_6_provedl}} |
 
 Úkony, které zástupce odmítl provést, protože přesahovaly rozsah plné moci, a způsob jejich odložení: {{odmitnute_ukony}}
+
+Položky schvalovací fronty Decisions, které nepatří do tříd úkonů povolených plnou mocí, zůstaly po dobu režimu pozastaveny a čekají na jednatele: {{pozastavene_polozky_decisions}}
 
 ## Část E — Ukončení režimu
 
@@ -88,10 +108,10 @@ Zapisuje se každý úkon učiněný za společnost, a to bez zbytečného odkla
 
 | Č. | Krok | Výsledek | Datum a čas |
 | :--- | :--- | :--- | :--- |
-| 1 | Vrácení záložního YubiKey č. 2 do trezoru | {{vraceni_yubikey_2}} | {{vraceni_yubikey_2_cas}} |
+| 1 | Kontrola neporušenosti pečeti obálky se záložním YubiKey č. 2 (klíč se nepředával) | {{kontrola_peceti_yubikey_2_ukonceni}} | {{kontrola_peceti_yubikey_2_ukonceni_cas}} |
 | 2 | Kontrola a nové zapečetění obálky Break-Glass (nová pečeť č. {{cislo_nove_peceti}}) | {{nove_zapeceteni_obalky}} | {{nove_zapeceteni_cas}} |
 | 3 | Rotace tajemství a přístupových klíčů dotčených režimem v trezoru OpenBao | {{rotace_tajemstvi}} | {{rotace_tajemstvi_cas}} |
-| 4 | Zneplatnění dočasných přístupů a relací zástupce | {{zneplatneni_pristupu}} | {{zneplatneni_pristupu_cas}} |
+| 4 | Zneplatnění dočasných přístupů a relací zástupce a vypnutí jeho oprávnění k potvrzování v Decisions | {{zneplatneni_pristupu}} | {{zneplatneni_pristupu_cas}} |
 | 5 | Zrušení pověření zástupce v datové schránce w9bbdva | {{zruseni_povereni_isds}} | {{zruseni_povereni_isds_cas}} |
 | 6 | Obnovení běžného provozu Podatelny ISDS | {{obnoveni_podatelny_isds}} | {{obnoveni_podatelny_isds_cas}} |
 

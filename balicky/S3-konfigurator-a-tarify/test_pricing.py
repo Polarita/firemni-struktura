@@ -1,17 +1,34 @@
 # -*- coding: utf-8 -*-
 """
-Tests of the pricing kernel of package S3 (Version 2.8).
-Testy cenového jádra balíčku S3 (Verze 2.8).
+Tests of the pricing kernel of package S3 (Version 3.0).
+Testy cenového jádra balíčku S3 (Verze 3.0).
 
 Usage / Použití:  python -m unittest -v test_pricing
+
+EN: The test of the JavaScript kernel of the configurator runs it in Node.js or, if Node.js is missing,
+    in a headless Chromium browser (variable POLARITA_PDF_BROWSER or a browser on the PATH). Without
+    both it is skipped - unless POLARITA_REQUIRE_BROWSER=1 is set (CI), then it fails.
+CZ: Test javascriptového jádra konfigurátoru je spouští v Node.js, nebo - chybí-li Node.js - v bezhlavém
+    prohlížeči Chromium (proměnná POLARITA_PDF_BROWSER nebo prohlížeč na PATH). Bez obojího se přeskočí -
+    pokud není nastaveno POLARITA_REQUIRE_BROWSER=1 (CI), pak selže.
 """
 
 from __future__ import annotations
 
+import contextlib
+import copy
+import html
+import io
 import json
+import os
 import re
+import shutil
+import subprocess
+import tempfile
 import unittest
 from decimal import Decimal
+from pathlib import Path
+from unittest import mock
 
 import pricing
 
@@ -39,7 +56,8 @@ class PricingTests(unittest.TestCase):
         self.assertEqual(pricing._czk(Decimal("1416.5")), "1 417 Kč")
         self.assertEqual(pricing._czk(Decimal("1415.49")), "1 415 Kč")
         template = pricing.TEMPLATE_PATH.read_text(encoding="utf-8")
-        self.assertIn("Math.round(Math.round(value * 100) / 100)", template)
+        self.assertIn("const halfUp = (numerator, divisor) => Math.floor((numerator + divisor / 2) / divisor);", template)
+        self.assertIn("const wholeCrowns = (hellers) => halfUp(hellers, 100);", template)
 
     def test_three_tariffs_and_three_turnkey_packages(self) -> None:
         self.assertEqual([t["code"] for t in self.price_list["mrr_tariffs"]], ["START_SVJ", "STANDARD_OBJEKT", "MAXI_AREAL_B2B"])
@@ -105,6 +123,131 @@ class PricingTests(unittest.TestCase):
         self.assertNotIn("note", pub["meta"])
         self.assertIn("vat_rates", pub["meta"])
 
+    def test_public_price_list_is_an_allowlist_on_every_level(self) -> None:
+        # EN: A field added later to a tariff, package, season or the VAT block must not leak to the public page.
+        # CZ: Pole později přidané k tarifu, balíčku, sezóně nebo bloku DPH nesmí uniknout na veřejnou stránku.
+        tampered = copy.deepcopy(self.price_list)
+        tampered["mrr_tariffs"][0]["internal_cost_monthly"] = 777123
+        tampered["turnkey_packages"][0]["purchase_cost"] = 777124
+        tampered["seasonal_coefficients"][0]["internal_note"] = "tajne-777125"
+        tampered["meta"]["vat_rates"]["internal"] = 777126
+        tampered["secret_block"] = {"x": 777127}
+        public = json.dumps(pricing.public_price_list(tampered), ensure_ascii=False)
+        for leaked in ("777123", "777124", "777125", "777126", "777127", "internal", "purchase_cost"):
+            self.assertNotIn(leaked, public)
+        self.assertEqual(pricing.public_price_list(tampered), pricing.public_price_list(self.price_list))
+
+    def test_embedded_json_cannot_break_out_of_the_script_element(self) -> None:
+        for text in ("</script><script>alert(1)</script>", "<!--<script>", "a & b > c", "x\u2028y\u2029z"):
+            embedded = pricing.embed_json({"label": text})
+            for char in ("<", ">", "&", "\u2028", "\u2029"):
+                self.assertNotIn(char, embedded, text)
+            self.assertEqual(json.loads(embedded), {"label": text})
+
+    def test_invalid_price_list_is_rejected_when_loaded(self) -> None:
+        def broken(change) -> bool:
+            document = copy.deepcopy(self.price_list)
+            change(document)
+            try:
+                pricing.validate_price_list(document)
+            except pricing.PricingError:
+                return True
+            return False
+
+        defects = {
+            "negative base": lambda d: d["mrr_tariffs"][0].__setitem__("base_monthly_per_object", -1490),
+            "text price": lambda d: d["mrr_tariffs"][0].__setitem__("base_monthly_per_object", "1490"),
+            "bool price": lambda d: d["mrr_tariffs"][0].__setitem__("extra_entrance_monthly", True),
+            "discount 150": lambda d: d["mrr_tariffs"][1].__setitem__("labour_discount_pct", 150),
+            "discount negative": lambda d: d["mrr_tariffs"][1].__setitem__("labour_discount_pct", -5),
+            "duplicate tariff": lambda d: d["mrr_tariffs"][1].__setitem__("code", "START_SVJ"),
+            "no tariffs": lambda d: d.__setitem__("mrr_tariffs", []),
+            "from above to": lambda d: d["turnkey_packages"][0].__setitem__("price_from", 96000),
+            "zero package": lambda d: d["turnkey_packages"][0].__setitem__("price_from", 0),
+            "three decimals": lambda d: d["turnkey_packages"][0].__setitem__("price_to", 95000.005),
+            "month twice": lambda d: d["seasonal_coefficients"][1]["months"].append(1),
+            "month missing": lambda d: d["seasonal_coefficients"][0]["months"].remove(2),
+            "month 13": lambda d: d["seasonal_coefficients"][3]["months"].append(13),
+            "zero coefficient": lambda d: d["seasonal_coefficients"][0].__setitem__("coefficient", 0),
+            "negative coefficient": lambda d: d["seasonal_coefficients"][0].__setitem__("coefficient", -1.0),
+            "nan coefficient": lambda d: d["seasonal_coefficients"][0].__setitem__("coefficient", float("nan")),
+            "negative rate": lambda d: d["hourly_rates"]["designer"].__setitem__("rate", -1),
+            "negative markup": lambda d: d.__setitem__("material_markup_pct", -15),
+            "margin 122": lambda d: d.__setitem__("minimum_contribution_margin_pct", 122),
+            "margin missing": lambda d: d.pop("minimum_contribution_margin_pct"),
+            "retention swapped": lambda d: d.__setitem__("retention_pct", {"min": 10, "max": 5}),
+            "tiers out of order": lambda d: d["partner_commission"]["tiers"].reverse(),
+            "tier pct falls": lambda d: d["partner_commission"]["tiers"][2].__setitem__("pct", 5.0),
+            "vat 121": lambda d: d["meta"]["vat_rates"].__setitem__("standard_pct", 121),
+            "vat missing": lambda d: d["meta"]["vat_rates"].pop("residential_reduced_pct"),
+            "approved without approver": lambda d: d["meta"].__setitem__("approved_by", None),
+            "approved as text": lambda d: d["meta"].__setitem__("approved", "true"),
+            "proposal with approver": lambda d: d["meta"].update(approved=False, status="NAVRH_KE_SCHVALENI_1001"),
+            "prices with vat": lambda d: d["meta"].__setitem__("prices_exclude_vat", False),
+            "not an object": lambda d: d.clear(),
+        }
+        for name, change in defects.items():
+            self.assertTrue(broken(change), name)
+        self.assertFalse(broken(lambda d: None))
+        self.assertFalse(broken(lambda d: d["meta"].update(approved=False, status="NAVRH_KE_SCHVALENI_1001", approved_by=None,
+                                                           approved_on=None, valid_from=None)))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "cenik.json"
+            path.write_text("{", encoding="utf-8")
+            with self.assertRaises(pricing.PricingError):
+                pricing.load_price_list(path)
+            document = copy.deepcopy(self.price_list)
+            document["material_markup_pct"] = -1
+            path.write_text(json.dumps(document), encoding="utf-8")
+            with self.assertRaises(pricing.PricingError):
+                pricing.load_price_list(path)
+            with mock.patch.object(pricing, "PRICE_LIST_PATH", path), contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(pricing.main(["--overview"]), 1)
+
+    def test_fractional_values_are_exact_decimals(self) -> None:
+        # EN: 22.1 as a binary float is 22.10000000000000142...; the limit must be exactly 22.1.
+        # CZ: 22.1 jako dvojkové číslo je 22,10000000000000142...; mez musí být přesně 22,1.
+        document = copy.deepcopy(self.price_list)
+        document["minimum_contribution_margin_pct"] = 22.1
+        document["material_markup_pct"] = 15.5
+        document["meta"]["vat_rates"]["standard_pct"] = 21.5
+        document["mrr_tariffs"][0]["base_monthly_per_object"] = 1490.1
+        document["hourly_rates"]["designer"]["rate"] = 1190.1
+        pricing.validate_price_list(document)
+        at_limit = pricing.margin_check(document, 1000, 779)
+        self.assertEqual((at_limit["minimum_pct"], at_limit["hard_stop"]), (Decimal("22.1"), False))
+        self.assertTrue(pricing.margin_check(document, 100000, Decimal("77900.01"))["hard_stop"])
+        self.assertEqual(pricing.material_price(document, 1000), Decimal("1155.00"))
+        self.assertEqual(pricing.with_vat(document, 1000), Decimal("1215.00"))
+        self.assertEqual(pricing.monthly_fee(document, "START_SVJ", 3), Decimal("4470.30"))
+        self.assertEqual(pricing.labour_price(document, {"designer": 3}), Decimal("3570.30"))
+
+    def test_offer_margin_is_checked_for_the_whole_offer(self) -> None:
+        # EN: Labour 10 000 + material 11 500 (cost 10 000, markup 15 %), labour cost 5 000: the material
+        #     line alone is below the minimum, the offer as a whole is above it.
+        # CZ: Práce 10 000 + materiál 11 500 (nákup 10 000, přirážka 15 %), náklad práce 5 000: materiálový
+        #     řádek sám je pod minimem, nabídka jako celek nad ním.
+        material = pricing.material_price(self.price_list, 10_000)
+        self.assertTrue(pricing.margin_check(self.price_list, material, 10_000)["hard_stop"])
+        whole = pricing.offer_margin_check(self.price_list, 10_000, material, 15_000)
+        self.assertEqual((whole["hard_stop"], whole["price_without_vat"], whole["contribution_margin_pct"]),
+                         (False, Decimal("21500.00"), Decimal("30.23")))
+        self.assertTrue(pricing.offer_margin_check(self.price_list, 2_000, material, 11_000)["hard_stop"])
+        # EN: A pure material delivery is not priced by this matrix (e-shop price list).
+        # CZ: Čistě materiálová dodávka se touto maticí nenaceňuje (ceník e-shopu).
+        with self.assertRaises(pricing.PricingError):
+            pricing.offer_margin_check(self.price_list, 0, material, 10_000)
+
+    def test_binding_offer_requires_an_approved_price_list(self) -> None:
+        pricing.require_approved(self.price_list)
+        proposal = copy.deepcopy(self.price_list)
+        proposal["meta"].update(approved=False, status="NAVRH_KE_SCHVALENI_1001", approved_by=None, approved_on=None, valid_from=None)
+        pricing.validate_price_list(proposal)
+        with self.assertRaises(pricing.PricingError):
+            pricing.require_approved(proposal)
+        with self.assertRaises(pricing.PricingError):
+            pricing.offer_margin_check(proposal, 10_000, 0, 5_000)
+
     def test_with_vat_rates(self) -> None:
         self.assertEqual(pricing.with_vat(self.price_list, 1000), Decimal("1210.00"))
         self.assertEqual(pricing.with_vat(self.price_list, 1000, reduced_residential=True), Decimal("1120.00"))
@@ -131,14 +274,128 @@ class PricingTests(unittest.TestCase):
         # konfigurator.html se musí přegenerovat po každé změně cenik.json a smí obsahovat jen public_price_list.
         page = pricing.CONFIGURATOR_PATH.read_text(encoding="utf-8")
         pub = pricing.public_price_list(self.price_list)
-        expected_embedded = json.dumps(pub, ensure_ascii=False).replace("</", "<\\/")
+        expected_embedded = pricing.embed_json(pub)
         self.assertEqual(page, pricing.TEMPLATE_PATH.read_text(encoding="utf-8").replace("/*__PRICE_LIST_JSON__*/", expected_embedded))
         match = re.search(r"const PRICE_LIST = (\{.*?\});\n", page, flags=re.DOTALL)
         self.assertIsNotNone(match)
-        self.assertEqual(json.loads(match.group(1).replace("<\\/", "</")), pub)
+        self.assertEqual(json.loads(match.group(1)), pub)
+        self.assertEqual(page.count("<script"), 1)
         for forbidden in ("hourly_rates", "material_markup_pct", "minimum_contribution_margin_pct", "retention_pct", "partner_commission", "14005"):
             self.assertNotIn(forbidden, page)
         self.assertEqual(pricing.OVERVIEW_PATH.read_text(encoding="utf-8"), pricing.render_overview(self.price_list))
+
+
+def _run_javascript(script: str) -> str | None:
+    """
+    EN: Run a script that ends by calling emit(text) and return the text; None when neither Node.js nor
+        a Chromium browser is available.
+    CZ: Spustí skript, který končí voláním emit(text), a vrátí ten text; None, když není k dispozici
+        Node.js ani prohlížeč Chromium.
+    """
+    node = shutil.which("node") or shutil.which("nodejs")
+    with tempfile.TemporaryDirectory() as tmp:
+        if node:
+            path = Path(tmp) / "kernel.js"
+            path.write_text("const emit = (text) => console.log(text);\n" + script, encoding="utf-8")
+            return subprocess.run([node, str(path)], capture_output=True, text=True, timeout=60, check=True).stdout.strip()
+        candidates = [os.environ.get("POLARITA_PDF_BROWSER", ""), "chromium", "chromium-browser", "google-chrome",
+                      "google-chrome-stable", "chrome", "msedge", "microsoft-edge"]
+        browser = next((found for found in (shutil.which(name) for name in candidates if name) if found), None)
+        if not browser:
+            return None
+        page = Path(tmp) / "kernel.html"
+        page.write_text('<!DOCTYPE html><meta charset="utf-8"><pre id="out"></pre><script>\n'
+                        'const emit = (text) => { document.getElementById("out").textContent = text; };\n'
+                        + script + "\n</script>", encoding="utf-8")
+        command = [browser, "--headless=new", "--disable-gpu", "--disable-extensions", "--host-resolver-rules=MAP * ~NOTFOUND",
+                   f"--user-data-dir={Path(tmp) / 'profile'}", "--dump-dom", page.as_uri()]
+        dom = subprocess.run(command, capture_output=True, text=True, timeout=120, check=True).stdout
+        match = re.search(r'<pre id="out">(.*?)</pre>', dom, flags=re.DOTALL)
+        return html.unescape(match.group(1)) if match else ""
+
+
+class ConfiguratorKernelTests(unittest.TestCase):
+    """The JavaScript of the public page must compute exactly like pricing.py. / JavaScript veřejné stránky musí počítat přesně jako pricing.py."""
+
+    def setUp(self) -> None:
+        self.price_list = pricing.load_price_list()
+        self.template = pricing.TEMPLATE_PATH.read_text(encoding="utf-8")
+
+    def kernel(self) -> str:
+        match = re.search(r"// KERNEL-START\n(.*?)// KERNEL-END", self.template, flags=re.DOTALL)
+        self.assertIsNotNone(match)
+        return match.group(1)
+
+    def test_kernel_is_free_of_page_access_and_fixed_rates(self) -> None:
+        kernel = self.kernel()
+        for forbidden in ("document", "byId(", "PRICE_LIST", "window", "fetch"):
+            self.assertNotIn(forbidden, kernel)
+        # EN: VAT labels come from vat_rates; no rate is written into the page by hand.
+        # CZ: Popisky DPH vycházejí z vat_rates; žádná sazba není do stránky vepsána ručně.
+        script = self.template[self.template.index("<script>"):]
+        self.assertNotRegex(script, r"\d\s*%")
+        self.assertNotRegex(self.template, r"\d\s*%\s*(?:DPH|\))")
+        self.assertEqual(self.template.count("pctLabel(vat."), 4)
+        # EN: The value used in the calculation is written back to the field; nothing is sent anywhere.
+        # CZ: Hodnota použitá ve výpočtu se zapisuje zpět do pole; nic se nikam neodesílá.
+        self.assertIn("input.value = String(clampInt(input))", self.template)
+        for forbidden in ("fetch(", "XMLHttpRequest", "sendBeacon", "<form", "localStorage", "innerHTML", "eval("):
+            self.assertNotIn(forbidden, self.template)
+
+    def test_kernel_computes_like_pricing_py(self) -> None:
+        document = copy.deepcopy(self.price_list)
+        # EN: Values that expose float arithmetic (1003.50 x 1.21 = 1214.235) and fractional rates.
+        # CZ: Hodnoty, které odhalí dvojkovou aritmetiku (1003,50 x 1,21 = 1214,235) i desetinné sazby.
+        document["mrr_tariffs"][0].update(base_monthly_per_object=1003.5, extra_entrance_monthly=0.07)
+        document["turnkey_packages"][0].update(price_from=38000.33, price_to=95000.55)
+        document["seasonal_coefficients"][0]["coefficient"] = 0.9333
+        document["meta"]["vat_rates"].update(standard_pct=21, residential_reduced_pct=12.5)
+        pricing.validate_price_list(document)
+        public = pricing.public_price_list(document)
+        fee_cases = [(code, objects, entrances) for code in ("START_SVJ", "STANDARD_OBJEKT", "MAXI_AREAL_B2B")
+                     for objects, entrances in ((1, 0), (3, 4), (7, 13), (200, 500))]
+        package_cases = [(code, quantity, month) for code in ("EV_WALLBOX", "STOUPACKY_HER", "FVE_BESS")
+                         for quantity in (1, 3, 200) for month in (1, 2, 5, 7, 12)]
+        vat_amounts = ["1003.50", "0.01", "0.05", "1415.50", "33.33", "999999.99", "12130.00", "1.15", "2.675", "1214.235"]
+        clamp_cases = [["5", 1, 200], ["0", 1, 200], ["-3", 0, 500], ["999", 1, 200], ["2.9", 1, 200], ["", 1, 200], ["abc", 0, 500],
+                       ["1e3", 1, 200], ["Infinity", 1, 200]]
+
+        expected = {
+            "fees": [str(int(pricing.monthly_fee(document, *case) * 100)) for case in fee_cases],
+            "packages": [[str(int(v * 100)) for v in pricing.package_range(document, code, quantity, month)]
+                         for code, quantity, month in package_cases],
+            "vat": [[str(int(pricing.with_vat(document, Decimal(amount).quantize(Decimal("0.01"), rounding=pricing.ROUND_HALF_UP),
+                                              reduced_residential=reduced) * 100)) for reduced in (False, True)]
+                    for amount in vat_amounts],
+            "crowns": [pricing._czk(Decimal(amount)).replace(" Kč", "").replace(" ", "") for amount in vat_amounts],
+            "clamp": [5, 1, 0, 200, 2, 1, 0, 200, 1],
+            "labels": ["21 %", "12,5 %"],
+            "missing_month": "error",
+        }
+        script = (
+            f"const P = {json.dumps(public)};\n" + self.kernel() +
+            f"const feeCases = {json.dumps(fee_cases)}, packageCases = {json.dumps(package_cases)};\n"
+            f"const amounts = {json.dumps(vat_amounts)}, clampCases = {json.dumps(clamp_cases)};\n"
+            "const tariff = (code) => P.mrr_tariffs.find((t) => t.code === code);\n"
+            "const pkg = (code) => P.turnkey_packages.find((t) => t.code === code);\n"
+            "const hellers = (text) => halfUp(scaled(text, 4), 100);\n"
+            "let missing = 'ok'; try { seasonalCoefficient({seasonal_coefficients: []}, 3); } catch (e) { missing = 'error'; }\n"
+            "emit(JSON.stringify({\n"
+            "  fees: feeCases.map(([c, o, e]) => String(monthlyFee(tariff(c), o, e))),\n"
+            "  packages: packageCases.map(([c, q, m]) => packageRange(P, pkg(c), q, m).map(String)),\n"
+            "  vat: amounts.map((a) => [String(withVat(hellers(a), P.meta.vat_rates.standard_pct)),"
+            " String(withVat(hellers(a), P.meta.vat_rates.residential_reduced_pct))]),\n"
+            "  crowns: amounts.map((a) => String(wholeCrowns(hellers(a)))),\n"
+            "  clamp: clampCases.map(([raw, min, max]) => clampValue(raw, min, max)),\n"
+            "  labels: [pctLabel(P.meta.vat_rates.standard_pct), pctLabel(P.meta.vat_rates.residential_reduced_pct)],\n"
+            "  missing_month: missing,\n"
+            "}));\n")
+        output = _run_javascript(script)
+        if output is None:
+            if os.environ.get("POLARITA_REQUIRE_BROWSER") == "1":
+                self.fail("POLARITA_REQUIRE_BROWSER=1 and neither Node.js nor a Chromium browser found")
+            self.skipTest("neither Node.js nor a Chromium browser available / není dostupný Node.js ani prohlížeč Chromium")
+        self.assertEqual(json.loads(output), expected)
 
 
 if __name__ == "__main__":

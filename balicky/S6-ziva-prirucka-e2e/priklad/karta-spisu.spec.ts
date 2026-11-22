@@ -1,11 +1,11 @@
 /**
  * EN: SAMPLE ONLY — NOT EXECUTED. This spec is a pattern for Block 18 (package S6,
- *     Polarita-2.8). It has never been run: the application under test and the test
+ *     Polarita-3.0). It has never been run: the application under test and the test
  *     environment do not exist yet (greenfield design, server `polarita-hq` is not
  *     built). All selectors, screen texts and the seed record are illustrative and
  *     must be adapted to the real application before the first run.
  * CZ: POUZE VZOR — NEBYL SPUŠTĚN. Tento test je vzorem pro Blok 18 (balíček S6,
- *     Polarita-2.8). Nikdy neběžel: testovaná aplikace ani testovací prostředí zatím
+ *     Polarita-3.0). Nikdy neběžel: testovaná aplikace ani testovací prostředí zatím
  *     neexistují (greenfield návrh, server `polarita-hq` není postaven). Všechny
  *     selektory, texty obrazovek a záznam ze seedu jsou ilustrační a před prvním
  *     během se musí přizpůsobit skutečné aplikaci.
@@ -14,24 +14,21 @@
  *     1. The target URL comes only from POLARITA_E2E_BASE_URL — no real address in the repo.
  *     2. Tests run only against a test environment with synthetic data (0 PII).
  *     3. Every step has a Czech caption that becomes the text of the living manual.
+ *     4. The step helper is shared (./krok.ts) and bound to the chapter of this file.
  * CZ: Pravidla vynucená tímto vzorem (viz ../README.md, kapitola 2):
  *     1. Cílová adresa pochází pouze z POLARITA_E2E_BASE_URL — v repozitáři není žádná skutečná adresa.
  *     2. Testy běží pouze proti testovacímu prostředí se syntetickými daty (0 PII).
  *     3. Každý krok má český popisek, který se stává textem živé příručky.
+ *     4. Pomocná funkce kroku je sdílená (./krok.ts) a navázaná na kapitolu tohoto souboru.
  */
 
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import path from 'node:path';
+import { expect, test } from '@playwright/test';
 
-import { expect, test, type Page } from '@playwright/test';
+import { vytvorKrok } from './krok';
 
 // EN: Base URL of the TEST environment; injected by the CI job, never hard-coded.
 // CZ: Základní adresa TESTOVACÍHO prostředí; dodává ji úloha CI, nikdy není v kódu.
 const BASE_URL = process.env.POLARITA_E2E_BASE_URL;
-
-// EN: Output directory for screenshots and manifests consumed by `manual-builder`.
-// CZ: Výstupní složka pro snímky a manifesty, které čte `manual-builder`.
-const MANUAL_DIR = process.env.POLARITA_E2E_MANUAL_DIR ?? 'manual-out';
 
 // EN: Test account credentials are read from the environment (filled from OpenBao by CI).
 // CZ: Přihlašovací údaje testovacího účtu se čtou z prostředí (v CI je plní OpenBao).
@@ -49,95 +46,9 @@ const CHAPTER = {
   title: '360° Karta spisu — otevření spisu a práce s tlačítkem „Pracuj“',
 };
 
-interface ManifestStep {
-  order: number; // EN: step order within the chapter / CZ: pořadí kroku v kapitole
-  caption: string; // EN: Czech caption = manual text / CZ: český popisek = text příručky
-  screenshot: string; // EN: file name relative to MANUAL_DIR / CZ: název souboru vůči MANUAL_DIR
-  path: string; // EN: URL path only, never the host / CZ: pouze cesta URL, nikdy hostitel
-}
-
-interface Manifest {
-  chapterId: string;
-  chapterTitle: string;
-  specFile: string;
-  steps: ManifestStep[];
-}
-
-// EN: Per-test + per-retry step counter so retries start cleanly from step 1.
-// CZ: Počítadlo kroků na test a pokus (retry), takže opakovaný pokus vždy začíná od kroku 1.
-const stepCounters = new Map<string, number>();
-
-/**
- * EN: Turns a Czech title into a safe ASCII file name part.
- * CZ: Převede český název na bezpečnou ASCII část názvu souboru.
- */
-function slugify(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-/**
- * EN: Documented step. Takes a captioned screenshot and appends one record to the
- *     per-test chapter manifest (JSON). Note: [data-e2e-mask] covers annotated DOM
- *     nodes only — all test fixtures must strictly use synthetic 0-PII seeds.
- * CZ: Dokumentovaný krok. Pořídí popsaný snímek obrazovky a připíše jeden záznam do
- *     manifestu testu (JSON). Upozornění: maskování [data-e2e-mask] zakryje jen
- *     označené prvky DOM — testovací prostředí smí obsahovat výhradně syntetická data (0 PII).
- */
-export async function krok(page: Page, popisek: string): Promise<void> {
-  const info = test.info();
-
-  await test.step(popisek, async () => {
-    const counterKey = `${info.testId}#retry-${info.retry}`;
-    const order = (stepCounters.get(counterKey) ?? 0) + 1;
-    stepCounters.set(counterKey, order);
-
-    const safeTestKey = info.testId.replace(/[^a-zA-Z0-9_-]+/g, '_');
-    const screenshotName = `${CHAPTER.id}-${safeTestKey.slice(-12)}-${String(order).padStart(2, '0')}-${slugify(popisek).slice(0, 48)}.png`;
-    const screenshotDir = path.join(MANUAL_DIR, 'screenshots');
-    const manifestDir = path.join(MANUAL_DIR, 'manifest');
-    const manifestFile = path.join(manifestDir, `${CHAPTER.id}-${safeTestKey}.json`);
-
-    await mkdir(screenshotDir, { recursive: true });
-    await mkdir(manifestDir, { recursive: true });
-
-    // EN: Stable screenshots: no animations, no caret; elements marked with
-    //     data-e2e-mask are masked as a second safety net against personal data.
-    // CZ: Stabilní snímky: bez animací a bez kurzoru; prvky označené
-    //     data-e2e-mask se začerní jako druhá pojistka proti osobním údajům.
-    await page.screenshot({
-      path: path.join(screenshotDir, screenshotName),
-      animations: 'disabled',
-      caret: 'hide',
-      mask: [page.locator('[data-e2e-mask]')],
-    });
-
-    // EN: The first step starts a fresh manifest (also on a retry of the test).
-    // CZ: První krok zakládá nový manifest (i při opakování testu).
-    let manifest: Manifest = {
-      chapterId: CHAPTER.id,
-      chapterTitle: CHAPTER.title,
-      specFile: path.basename(info.file),
-      steps: [],
-    };
-    if (order > 1) {
-      manifest = JSON.parse(await readFile(manifestFile, 'utf8')) as Manifest;
-    }
-
-    manifest.steps.push({
-      order,
-      caption: popisek,
-      screenshot: path.posix.join('screenshots', screenshotName),
-      path: new URL(page.url()).pathname,
-    });
-
-    await writeFile(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
-  });
-}
+// EN: Documented step bound to this chapter; the shared helper lives in ./krok.ts.
+// CZ: Dokumentovaný krok navázaný na tuto kapitolu; sdílená pomocná funkce je v ./krok.ts.
+const krok = vytvorKrok(CHAPTER);
 
 function requireBaseUrl(): string {
   if (!BASE_URL) {
