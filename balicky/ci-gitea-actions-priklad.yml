@@ -78,6 +78,16 @@ jobs:
           python3 check_consistency.py
           python3 -m unittest test_check_consistency
 
+      # EN: Stage 1 in Gitea CI = this deterministic run WITHOUT any model call: a dry-run of the S2 set
+      #     (the 20 base scenarios and the extended ones) against the reference policy. It checks the
+      #     safeguards of the policy against the expectations of the set - not the behaviour of a language
+      #     model or of a changed system prompt. Promptfoo and every run with a model are NOT part of CI:
+      #     17005 starts them outside the runner (the runner has no outbound traffic and no model keys).
+      # CZ: Stage 1 v Gitea CI = tento deterministický běh BEZ volání modelu: dry-run sady S2
+      #     (20 základních scénářů i rozšířené) proti referenční politice. Ověřuje pojistky politiky
+      #     proti očekáváním sady - ne chování jazykového modelu ani změněného systémového promptu.
+      #     Promptfoo ani žádný běh s modelem NEJSOU součástí CI: spouští je 17005 mimo runner
+      #     (runner nemá odchozí provoz ani klíče k API modelů).
       - name: S2 Eval Suite 100+ (dry-run policy check must be 100 %) / dry-run politiky musí být 100 %
         working-directory: balicky/S2-eval-suite
         run: |

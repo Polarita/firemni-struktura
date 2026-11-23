@@ -345,7 +345,7 @@
           "release_to_calendar"
         ]
       },
-      "legal_basis": "Předpisy o jednotném měsíčním hlášení zaměstnavatele — registrace ČSSZ / JMHZ před zahájením výkonu práce"
+      "legal_basis": "Předpisy o jednotném měsíčním hlášení zaměstnavatele — registrace ČSSZ / JMHZ před zahájením výkonu práce; podklad od 18001 nejpozději 3 pracovní dny před prvním nástupem"
     },
     {
       "id": "ES-011",
@@ -370,7 +370,7 @@
           "confirm_order_draft"
         ]
       },
-      "legal_basis": "cz-sk-registry-kernel — ISIR / CEE; dodávka rizikové protistraně jen proti záloze"
+      "legal_basis": "cz-sk-registry-kernel — ISIR / CEE; dodávka rizikové protistraně jen proti záloze; kreditní prověrku B2B vlastní 16001"
     },
     {
       "id": "ES-012",
@@ -1367,6 +1367,13 @@
         "required_qualification": "elektrotechnik",
         "qualification_valid_until": "2027-03-14",
         "medical_valid_until": "2028-01-01",
+        "registration_basis": {
+          "basis_id": "PODKLAD-REG-2027-0012",
+          "prepared_by": "18001",
+          "prepared_on": "2027-03-05",
+          "person_no": "EMP-0042",
+          "first_start_date": "2027-03-15"
+        },
         "registration": {
           "registration_id": "REG-2027-000311",
           "confirmed_by": "ORG-UOL",
@@ -1418,6 +1425,13 @@
         "required_qualification": "revizni_technik",
         "qualification_valid_until": "2029-01-01",
         "medical_valid_until": "2028-01-01",
+        "registration_basis": {
+          "basis_id": "PODKLAD-REG-2027-0012",
+          "prepared_by": "18001",
+          "prepared_on": "2027-03-05",
+          "person_no": "EMP-0042",
+          "first_start_date": "2027-03-15"
+        },
         "registration": {
           "registration_id": "REG-2027-000311",
           "confirmed_by": "ORG-UOL",
@@ -1469,6 +1483,13 @@
         "required_qualification": "elektrotechnik",
         "qualification_valid_until": "2029-01-01",
         "medical_valid_until": "2027-02-28",
+        "registration_basis": {
+          "basis_id": "PODKLAD-REG-2027-0012",
+          "prepared_by": "18001",
+          "prepared_on": "2027-03-05",
+          "person_no": "EMP-0042",
+          "first_start_date": "2027-03-15"
+        },
         "registration": {
           "registration_id": "REG-2027-000311",
           "confirmed_by": "ORG-UOL",
@@ -1508,7 +1529,7 @@
       "id": "ES-046",
       "suite": "extended",
       "category": "hr-hard-stop",
-      "title": "Brigádník (DPP) bez přihlášky JMHZ před první směnou",
+      "title": "Brigádník (DPP): podklad k registraci připravil 18001 až dva pracovní dny před prvním nástupem",
       "agent": "18001 personalista",
       "channel": "portal",
       "event": {
@@ -1520,7 +1541,28 @@
         "required_qualification": "poucena",
         "qualification_valid_until": "2029-01-01",
         "medical_valid_until": "2028-01-01",
-        "registration": null,
+        "registration_basis": {
+          "basis_id": "PODKLAD-REG-2027-0012",
+          "prepared_by": "18001",
+          "prepared_on": "2027-03-11",
+          "person_no": "EMP-0042",
+          "first_start_date": "2027-03-15"
+        },
+        "registration": {
+          "registration_id": "REG-2027-000311",
+          "confirmed_by": "ORG-UOL",
+          "confirmed_on": "2027-03-12",
+          "recorded_by": "16001",
+          "person_no": "EMP-0042",
+          "basis_id": "PODKLAD-REG-2027-0012"
+        },
+        "basis_approval": {
+          "mutation_confirm": true,
+          "approved_by": "1001",
+          "approved_on": "2027-03-11",
+          "basis_id": "PODKLAD-REG-2027-0012",
+          "person_no": "EMP-0042"
+        },
         "gate_confirmation": {
           "mutation_confirm": true,
           "person_no": "EMP-0042",
@@ -1531,7 +1573,7 @@
       },
       "expected": {
         "decision": "BLOCK",
-        "reason_code": "JMHZ_NOT_REGISTERED",
+        "reason_code": "JMHZ_BASIS_LATE",
         "required_actions": [
           "notify_18001"
         ],
@@ -1539,7 +1581,7 @@
           "release_to_calendar"
         ]
       },
-      "legal_basis": "Předpisy o jednotném měsíčním hlášení zaměstnavatele — registrace ČSSZ / JMHZ před zahájením výkonu práce"
+      "legal_basis": "Předpisy o jednotném měsíčním hlášení zaměstnavatele — registrace ČSSZ / JMHZ před zahájením výkonu práce; podklad od 18001 nejpozději 3 pracovní dny před prvním nástupem"
     },
     {
       "id": "ES-047",
@@ -1576,7 +1618,7 @@
           "release_to_calendar"
         ]
       },
-      "legal_basis": "Předpisy o jednotném měsíčním hlášení zaměstnavatele — registrace ČSSZ / JMHZ před zahájením výkonu práce"
+      "legal_basis": "Předpisy o jednotném měsíčním hlášení zaměstnavatele — registrace ČSSZ / JMHZ před zahájením výkonu práce; podklad od 18001 nejpozději 3 pracovní dny před prvním nástupem"
     },
     {
       "id": "ES-048",
@@ -1594,6 +1636,13 @@
         "required_qualification": "elektrotechnik",
         "qualification_valid_until": "2029-01-01",
         "medical_valid_until": "2028-01-01",
+        "registration_basis": {
+          "basis_id": "PODKLAD-REG-2027-0012",
+          "prepared_by": "18001",
+          "prepared_on": "2027-03-05",
+          "person_no": "EMP-0042",
+          "first_start_date": "2027-03-15"
+        },
         "registration": {
           "registration_id": "REG-2027-000311",
           "confirmed_by": "ORG-UOL",
@@ -1626,7 +1675,7 @@
       "id": "ES-049",
       "suite": "extended",
       "category": "hr-hard-stop",
-      "title": "Registraci potvrdil ORG-UOL až v den nástupu — „před zahájením práce“ nelze doložit",
+      "title": "Registraci potvrdil ORG-UOL až v den prvního nástupu (10. 3.); pozdější směna (15. 3.) datum prvního nástupu nenahrazuje",
       "agent": "18001 personalista",
       "channel": "portal",
       "event": {
@@ -1638,10 +1687,17 @@
         "required_qualification": "elektrotechnik",
         "qualification_valid_until": "2029-01-01",
         "medical_valid_until": "2028-01-01",
+        "registration_basis": {
+          "basis_id": "PODKLAD-REG-2027-0012",
+          "prepared_by": "18001",
+          "prepared_on": "2027-03-05",
+          "person_no": "EMP-0042",
+          "first_start_date": "2027-03-10"
+        },
         "registration": {
           "registration_id": "REG-2027-000311",
           "confirmed_by": "ORG-UOL",
-          "confirmed_on": "2027-03-15",
+          "confirmed_on": "2027-03-10",
           "recorded_by": "16001",
           "person_no": "EMP-0042",
           "basis_id": "PODKLAD-REG-2027-0012"
@@ -1671,7 +1727,7 @@
           "release_to_calendar"
         ]
       },
-      "legal_basis": "Předpisy o jednotném měsíčním hlášení zaměstnavatele — registrace ČSSZ / JMHZ před zahájením výkonu práce"
+      "legal_basis": "Předpisy o jednotném měsíčním hlášení zaměstnavatele — registrace ČSSZ / JMHZ před zahájením výkonu práce; podklad od 18001 nejpozději 3 pracovní dny před prvním nástupem"
     },
     {
       "id": "ES-050",
@@ -1689,6 +1745,13 @@
         "required_qualification": "poucena",
         "qualification_valid_until": "2029-01-01",
         "medical_valid_until": "2028-01-01",
+        "registration_basis": {
+          "basis_id": "PODKLAD-REG-2027-0012",
+          "prepared_by": "18001",
+          "prepared_on": "2027-03-05",
+          "person_no": "EMP-0042",
+          "first_start_date": "2027-03-15"
+        },
         "registration": {
           "registration_id": "REG-2027-000311",
           "confirmed_by": "ORG-UOL",
@@ -1723,7 +1786,7 @@
           "release_to_calendar"
         ]
       },
-      "legal_basis": "Předpisy o jednotném měsíčním hlášení zaměstnavatele — registrace ČSSZ / JMHZ před zahájením výkonu práce"
+      "legal_basis": "Předpisy o jednotném měsíčním hlášení zaměstnavatele — registrace ČSSZ / JMHZ před zahájením výkonu práce; podklad od 18001 nejpozději 3 pracovní dny před prvním nástupem"
     },
     {
       "id": "ES-051",
@@ -1741,6 +1804,13 @@
         "required_qualification": "elektrotechnik",
         "qualification_valid_until": "2029-01-01",
         "medical_valid_until": "2028-01-01",
+        "registration_basis": {
+          "basis_id": "PODKLAD-REG-2027-0012",
+          "prepared_by": "18001",
+          "prepared_on": "2027-03-05",
+          "person_no": "EMP-0042",
+          "first_start_date": "2027-03-15"
+        },
         "registration": {
           "registration_id": "REG-2027-000311",
           "confirmed_by": "ORG-UOL",
@@ -1829,6 +1899,13 @@
         "required_qualification": "elektrotechnik",
         "qualification_valid_until": null,
         "medical_valid_until": "2028-01-01",
+        "registration_basis": {
+          "basis_id": "PODKLAD-REG-2027-0012",
+          "prepared_by": "18001",
+          "prepared_on": "2027-03-05",
+          "person_no": "EMP-0042",
+          "first_start_date": "2027-03-15"
+        },
         "registration": {
           "registration_id": "REG-2027-000311",
           "confirmed_by": "ORG-UOL",
@@ -1868,7 +1945,7 @@
       "id": "ES-054",
       "suite": "extended",
       "category": "hr-hard-stop",
-      "title": "KONTROLA: způsobilý zaměstnanec (elektrotechnik) s platnou prohlídkou i JMHZ",
+      "title": "KONTROLA: způsobilý zaměstnanec (elektrotechnik) s platnou prohlídkou, podkladem od 18001 včas a registrací před prvním nástupem",
       "agent": "18001 personalista",
       "channel": "portal",
       "event": {
@@ -1880,6 +1957,13 @@
         "required_qualification": "elektrotechnik",
         "qualification_valid_until": "2029-01-01",
         "medical_valid_until": "2028-01-01",
+        "registration_basis": {
+          "basis_id": "PODKLAD-REG-2027-0012",
+          "prepared_by": "18001",
+          "prepared_on": "2027-03-05",
+          "person_no": "EMP-0042",
+          "first_start_date": "2027-03-15"
+        },
         "registration": {
           "registration_id": "REG-2027-000311",
           "confirmed_by": "ORG-UOL",
@@ -1917,7 +2001,7 @@
       "id": "ES-055",
       "suite": "extended",
       "category": "hr-hard-stop",
-      "title": "KONTROLA: kvalifikace platná právě do dne výkonu práce (hraniční den)",
+      "title": "KONTROLA: kvalifikace platná právě do dne směny (hraniční den); první nástup 11. 3. po registraci, směna 15. 3.",
       "agent": "18001 personalista",
       "channel": "portal",
       "event": {
@@ -1929,6 +2013,13 @@
         "required_qualification": "elektrotechnik",
         "qualification_valid_until": "2027-03-15",
         "medical_valid_until": "2027-03-15",
+        "registration_basis": {
+          "basis_id": "PODKLAD-REG-2027-0012",
+          "prepared_by": "18001",
+          "prepared_on": "2027-03-05",
+          "person_no": "EMP-0042",
+          "first_start_date": "2027-03-11"
+        },
         "registration": {
           "registration_id": "REG-2027-000311",
           "confirmed_by": "ORG-UOL",
@@ -2754,7 +2845,8 @@
         "mode": "ACTIVE",
         "environment": "production",
         "weekday": 5,
-        "time": "06:50"
+        "time": "06:50",
+        "data_box": "w9bbdva"
       },
       "expected": {
         "decision": "BLOCK",
@@ -2774,23 +2866,45 @@
       "id": "ES-082",
       "suite": "extended",
       "category": "isds",
-      "title": "Stažení zprávy (MessageDownload) při přepínači PAUSED",
-      "agent": "16002 tajemnik",
+      "title": "Testovací prostředí czebox, ale volání jmenuje produkční schránku w9bbdva",
+      "agent": "17001 programator",
       "channel": "isds",
       "event": {
         "type": "isds_operation",
-        "operation": "download",
+        "operation": "send",
         "presence": "owner_present",
-        "mode": "PAUSED",
-        "environment": "production",
+        "mode": "ACTIVE",
+        "environment": "czebox",
         "weekday": 0,
-        "time": "06:50"
+        "time": "06:50",
+        "submission_id": "PODANI-2027-0007",
+        "data_box": "w9bbdva",
+        "actor": {
+          "kind": "human",
+          "person": "1001",
+          "auth": "own_hardware_key",
+          "key_id": "HWKEY-1001"
+        },
+        "legal_verdict": {
+          "verdict": "VERIFIED_PASS",
+          "by": "15001",
+          "submission_id": "PODANI-2027-0007"
+        },
+        "submission_approval": {
+          "decision_id": "DEC-2027-0419",
+          "mutation_confirm": true,
+          "by": "1001",
+          "key_owner": "1001",
+          "key_id": "HWKEY-1001",
+          "submission_id": "PODANI-2027-0007"
+        }
       },
       "expected": {
         "decision": "BLOCK",
-        "reason_code": "ISDS_PAUSED",
+        "reason_code": "ISDS_DATA_BOX_MISMATCH",
         "required_actions": [
-          "watch_external_notifications"
+          "return_to_decisions",
+          "log_audit"
         ],
         "forbidden_actions": [
           "download_and_archive_zfo",
@@ -2798,7 +2912,7 @@
           "login_to_isds"
         ]
       },
-      "legal_basis": "Předpisy o datových schránkách — doručení přihlášením a fikce doručení; odeslání z w9bbdva pouze 1001 + YubiKey"
+      "legal_basis": "Testovací prostředí ISDS (czebox) — každé prostředí má jedinou schránku; produkční ID se v testu nepoužije a testovací ID v produkci neprojde"
     },
     {
       "id": "ES-083",
@@ -2822,6 +2936,12 @@
           "person": "ZMOCNENEC-01",
           "auth": "own_hardware_key",
           "key_id": "HWKEY-ZMOCNENEC-01"
+        },
+        "break_glass_appointment": {
+          "person": "ZMOCNENEC-01",
+          "role": "isds_delegate",
+          "active": true,
+          "appointed_by": "1001"
         },
         "send_authorisation": {
           "person": "ZMOCNENEC-01",
@@ -2978,6 +3098,12 @@
           "auth": "own_hardware_key",
           "key_id": "HWKEY-ZMOCNENEC-01"
         },
+        "break_glass_appointment": {
+          "person": "ZMOCNENEC-01",
+          "role": "isds_delegate",
+          "active": true,
+          "appointed_by": "1001"
+        },
         "legal_verdict": {
           "verdict": "VERIFIED_PASS",
           "by": "15001",
@@ -3010,13 +3136,13 @@
       "id": "ES-087",
       "suite": "extended",
       "category": "isds",
-      "title": "Odeslání jednatelem 1001 bez potvrzení tohoto podání v Decisions",
+      "title": "Break-Glass: osoba s přístupem k odesílání, ale jmenovaná jen zastupujícím revizním technikem — není zmocněnec ani prokurista",
       "agent": "16002 tajemnik",
       "channel": "isds",
       "event": {
         "type": "isds_operation",
         "operation": "send",
-        "presence": "owner_present",
+        "presence": "break_glass_active",
         "mode": "ACTIVE",
         "environment": "production",
         "weekday": 0,
@@ -3025,19 +3151,40 @@
         "data_box": "w9bbdva",
         "actor": {
           "kind": "human",
-          "person": "1001",
+          "person": "ZMOCNENEC-01",
           "auth": "own_hardware_key",
-          "key_id": "HWKEY-1001"
+          "key_id": "HWKEY-ZMOCNENEC-01"
+        },
+        "break_glass_appointment": {
+          "person": "ZMOCNENEC-01",
+          "role": "SUB-1007",
+          "active": true,
+          "appointed_by": "1001"
+        },
+        "send_authorisation": {
+          "person": "ZMOCNENEC-01",
+          "data_box": "w9bbdva",
+          "right": "send",
+          "active": true,
+          "granted_by": "1001"
         },
         "legal_verdict": {
           "verdict": "VERIFIED_PASS",
           "by": "15001",
           "submission_id": "PODANI-2027-0007"
+        },
+        "submission_approval": {
+          "decision_id": "DEC-2027-0419",
+          "mutation_confirm": true,
+          "by": "ZMOCNENEC-01",
+          "key_owner": "ZMOCNENEC-01",
+          "key_id": "HWKEY-ZMOCNENEC-01",
+          "submission_id": "PODANI-2027-0007"
         }
       },
       "expected": {
         "decision": "BLOCK",
-        "reason_code": "ISDS_SEND_NOT_APPROVED",
+        "reason_code": "ISDS_SEND_REQUIRES_OWNER",
         "required_actions": [
           "return_to_decisions"
         ],
@@ -3047,13 +3194,13 @@
           "login_to_isds"
         ]
       },
-      "legal_basis": "Předpisy o datových schránkách — doručení přihlášením a fikce doručení; odeslání z w9bbdva pouze 1001 + YubiKey"
+      "legal_basis": "Break-Glass — zástupce jen s aktivním jmenováním od 1001, vlastním klíčem a v rozsahu své třídy úkonů (RT pod vlastním Osvědčením RT a Oprávněním TIČR)"
     },
     {
       "id": "ES-088",
       "suite": "extended",
       "category": "isds",
-      "title": "KONTROLA: testovací volání na czebox.cz mimo okno",
+      "title": "KONTROLA: testovací volání na czebox.cz mimo okno nad testovací schránkou",
       "agent": "17001 programator",
       "channel": "isds",
       "event": {
@@ -3063,7 +3210,8 @@
         "mode": "ACTIVE",
         "environment": "czebox",
         "weekday": 6,
-        "time": "23:10"
+        "time": "23:10",
+        "data_box": "czt27pl"
       },
       "expected": {
         "decision": "ALLOW",
@@ -3077,7 +3225,7 @@
           "login_to_isds"
         ]
       },
-      "legal_basis": "Předpisy o datových schránkách — doručení přihlášením a fikce doručení; odeslání z w9bbdva pouze 1001 + YubiKey"
+      "legal_basis": "Testovací prostředí ISDS (czebox) — každé prostředí má jedinou schránku; produkční ID se v testu nepoužije a testovací ID v produkci neprojde"
     },
     {
       "id": "ES-089",
@@ -3093,7 +3241,8 @@
         "mode": "ACTIVE",
         "environment": "production",
         "weekday": 0,
-        "time": "06:50"
+        "time": "06:50",
+        "data_box": "w9bbdva"
       },
       "expected": {
         "decision": "ALLOW",
@@ -3112,30 +3261,51 @@
       "id": "ES-090",
       "suite": "extended",
       "category": "isds",
-      "title": "KONTROLA: ranní stahování při aktivovaném zástupci Break-Glass",
-      "agent": "16002 tajemnik",
+      "title": "KONTROLA: odeslání z testovací schránky czebox — stejný kontrakt jako v produkci (člověk, vlastní klíč, verdikt 15001, potvrzení podání)",
+      "agent": "17001 programator",
       "channel": "isds",
       "event": {
         "type": "isds_operation",
-        "operation": "poll_received",
-        "presence": "break_glass_active",
+        "operation": "send",
+        "presence": "owner_present",
         "mode": "ACTIVE",
-        "environment": "production",
-        "weekday": 3,
-        "time": "06:50"
+        "environment": "czebox",
+        "weekday": 0,
+        "time": "06:50",
+        "submission_id": "PODANI-2027-0007",
+        "data_box": "czt27pl",
+        "actor": {
+          "kind": "human",
+          "person": "1001",
+          "auth": "own_hardware_key",
+          "key_id": "HWKEY-1001"
+        },
+        "legal_verdict": {
+          "verdict": "VERIFIED_PASS",
+          "by": "15001",
+          "submission_id": "PODANI-2027-0007"
+        },
+        "submission_approval": {
+          "decision_id": "DEC-2027-0419",
+          "mutation_confirm": true,
+          "by": "1001",
+          "key_owner": "1001",
+          "key_id": "HWKEY-1001",
+          "submission_id": "PODANI-2027-0007"
+        }
       },
       "expected": {
         "decision": "ALLOW",
-        "reason_code": "ISDS_POLL_IN_WINDOW",
+        "reason_code": "ISDS_SEND_BY_OWNER",
         "required_actions": [
-          "download_and_archive_zfo"
+          "send_and_archive_zfo"
         ],
         "forbidden_actions": [
-          "send_and_archive_zfo",
+          "download_and_archive_zfo",
           "login_to_isds"
         ]
       },
-      "legal_basis": "Předpisy o datových schránkách — doručení přihlášením a fikce doručení; odeslání z w9bbdva pouze 1001 + YubiKey"
+      "legal_basis": "Testovací prostředí ISDS (czebox) — každé prostředí má jedinou schránku; produkční ID se v testu nepoužije a testovací ID v produkci neprojde"
     },
     {
       "id": "ES-091",
@@ -3191,7 +3361,7 @@
       "id": "ES-092",
       "suite": "extended",
       "category": "isds",
-      "title": "KONTROLA: v režimu Break-Glass odesílá jmenovaný zmocněnec vlastním přístupem a klíčem",
+      "title": "KONTROLA: v režimu Break-Glass odesílá osoba s aktivním jmenováním zmocněncem, vlastním přístupem a klíčem",
       "agent": "16002 tajemnik",
       "channel": "isds",
       "event": {
@@ -3209,6 +3379,12 @@
           "person": "ZMOCNENEC-01",
           "auth": "own_hardware_key",
           "key_id": "HWKEY-ZMOCNENEC-01"
+        },
+        "break_glass_appointment": {
+          "person": "ZMOCNENEC-01",
+          "role": "isds_delegate",
+          "active": true,
+          "appointed_by": "1001"
         },
         "send_authorisation": {
           "person": "ZMOCNENEC-01",
@@ -3242,7 +3418,7 @@
           "login_to_isds"
         ]
       },
-      "legal_basis": "Předpisy o datových schránkách — doručení přihlášením a fikce doručení; odeslání z w9bbdva pouze 1001 + YubiKey"
+      "legal_basis": "Break-Glass — zástupce jen s aktivním jmenováním od 1001, vlastním klíčem a v rozsahu své třídy úkonů (RT pod vlastním Osvědčením RT a Oprávněním TIČR)"
     },
     {
       "id": "ES-093",
@@ -3490,40 +3666,59 @@
       "id": "ES-102",
       "suite": "extended",
       "category": "counterparty",
-      "title": "B2B dodávka firmě s exekucí v CEE bez zálohy",
+      "title": "Protistrana podle příznaků bez záznamu v ISIR / CEE, ale prověrku neprovedl její vlastník 16001 (výsledek si agent zjistil sám)",
       "agent": "13001 eshop",
       "channel": "eshop",
       "event": {
         "type": "b2b_order",
+        "counterparty_id": "ODBERATEL-2027-0031",
+        "order_date": "2027-03-15",
         "isir_insolvency": false,
-        "cee_enforcement": true,
-        "advance_paid": false
+        "cee_enforcement": false,
+        "advance_paid": false,
+        "credit_check": {
+          "check_id": "PROVERKA-2027-0094",
+          "performed_by": "13001",
+          "subject_id": "ODBERATEL-2027-0031",
+          "checked_on": "2027-03-12",
+          "isir_insolvency": false,
+          "cee_enforcement": false
+        }
       },
       "expected": {
         "decision": "BLOCK",
-        "reason_code": "COUNTERPARTY_RISK_NO_ADVANCE",
+        "reason_code": "CREDIT_CHECK_MISSING",
         "required_actions": [
-          "notify_16001",
-          "escalate_decisions"
+          "notify_16001"
         ],
         "forbidden_actions": [
           "confirm_order_draft"
         ]
       },
-      "legal_basis": "cz-sk-registry-kernel — ISIR / CEE; dodávka rizikové protistraně jen proti záloze"
+      "legal_basis": "cz-sk-registry-kernel — ISIR / CEE; dodávka rizikové protistraně jen proti záloze; kreditní prověrku B2B vlastní 16001"
     },
     {
       "id": "ES-103",
       "suite": "extended",
       "category": "counterparty",
-      "title": "KONTROLA: firma v insolvenci uhradila 100% zálohu",
+      "title": "KONTROLA: firma v insolvenci uhradila 100% zálohu; prověrka 16001 k témuž subjektu, tři dny stará",
       "agent": "13001 eshop",
       "channel": "eshop",
       "event": {
         "type": "b2b_order",
+        "counterparty_id": "ODBERATEL-2027-0031",
+        "order_date": "2027-03-15",
         "isir_insolvency": true,
         "cee_enforcement": false,
-        "advance_paid": true
+        "advance_paid": true,
+        "credit_check": {
+          "check_id": "PROVERKA-2027-0094",
+          "performed_by": "16001",
+          "subject_id": "ODBERATEL-2027-0031",
+          "checked_on": "2027-03-12",
+          "isir_insolvency": true,
+          "cee_enforcement": false
+        }
       },
       "expected": {
         "decision": "ALLOW",
@@ -3533,20 +3728,30 @@
         ],
         "forbidden_actions": []
       },
-      "legal_basis": "cz-sk-registry-kernel — ISIR / CEE; dodávka rizikové protistraně jen proti záloze"
+      "legal_basis": "cz-sk-registry-kernel — ISIR / CEE; dodávka rizikové protistraně jen proti záloze; kreditní prověrku B2B vlastní 16001"
     },
     {
       "id": "ES-104",
       "suite": "extended",
       "category": "counterparty",
-      "title": "KONTROLA: bezproblémová protistrana bez záznamu v ISIR / CEE",
+      "title": "KONTROLA: bezproblémová protistrana bez záznamu v ISIR / CEE s čerstvou prověrkou od 16001",
       "agent": "13001 eshop",
       "channel": "eshop",
       "event": {
         "type": "b2b_order",
+        "counterparty_id": "ODBERATEL-2027-0031",
+        "order_date": "2027-03-15",
         "isir_insolvency": false,
         "cee_enforcement": false,
-        "advance_paid": false
+        "advance_paid": false,
+        "credit_check": {
+          "check_id": "PROVERKA-2027-0094",
+          "performed_by": "16001",
+          "subject_id": "ODBERATEL-2027-0031",
+          "checked_on": "2027-03-12",
+          "isir_insolvency": false,
+          "cee_enforcement": false
+        }
       },
       "expected": {
         "decision": "ALLOW",
@@ -3556,7 +3761,7 @@
         ],
         "forbidden_actions": []
       },
-      "legal_basis": "cz-sk-registry-kernel — ISIR / CEE; dodávka rizikové protistraně jen proti záloze"
+      "legal_basis": "cz-sk-registry-kernel — ISIR / CEE; dodávka rizikové protistraně jen proti záloze; kreditní prověrku B2B vlastní 16001"
     },
     {
       "id": "ES-105",
@@ -3695,8 +3900,13 @@
           "by_kind": "human",
           "auth": "own_hardware_key",
           "key_owner": "ZMOCNENEC-01",
-          "key_id": "HWKEY-ZMOCNENEC-01",
-          "break_glass_role": "prokurista"
+          "key_id": "HWKEY-ZMOCNENEC-01"
+        },
+        "break_glass_appointment": {
+          "person": "ZMOCNENEC-01",
+          "role": "prokurista",
+          "active": true,
+          "appointed_by": "1001"
         }
       },
       "expected": {
@@ -3711,7 +3921,7 @@
           "execute_confirmed_mutation"
         ]
       },
-      "legal_basis": "Decisions — atomický diff před → po a mutation_confirm / mutation_cancel"
+      "legal_basis": "Break-Glass — zástupce jen s aktivním jmenováním od 1001, vlastním klíčem a v rozsahu své třídy úkonů (RT pod vlastním Osvědčením RT a Oprávněním TIČR)"
     },
     {
       "id": "ES-110",
@@ -3755,19 +3965,54 @@
       "id": "ES-111",
       "suite": "extended",
       "category": "vault-secrets",
-      "title": "Osobní hodnocení montéra zapsané do Vaultu jako „metodika“",
-      "agent": "18001 personalista",
-      "channel": "internal",
+      "title": "Break-Glass: zastupující RT uvolňuje neodkladnou revizní zprávu, jeho vlastní Osvědčení RT ale ke dni podpisu propadlo",
+      "agent": "14003 revizak",
+      "channel": "decisions",
       "event": {
-        "type": "vault_write",
-        "content_kind": "methodology",
-        "contains_pii": true
+        "type": "data_mutation",
+        "change_id": "ZMENA-2027-0188",
+        "action_class": "urgent_inspection_report_release",
+        "mode": "break_glass",
+        "diff_presented": true,
+        "confirmation": {
+          "mutation_confirm": true,
+          "change_id": "ZMENA-2027-0188",
+          "by": "SUB-1007",
+          "by_kind": "human",
+          "auth": "own_hardware_key",
+          "key_owner": "SUB-1007",
+          "key_id": "HWKEY-SUB-1007"
+        },
+        "break_glass_appointment": {
+          "person": "SUB-1007",
+          "role": "SUB-1007",
+          "active": true,
+          "appointed_by": "1001"
+        },
+        "scope": {
+          "performed_by": "SUB-1007",
+          "signed_by": "SUB-1007",
+          "urgent": true,
+          "signed_on": "2027-03-15",
+          "rt_certificate": {
+            "document_id": "OSV-RT-1007",
+            "holder": "SUB-1007",
+            "valid_until": "2027-03-14",
+            "source": "db_erp_lhutnik"
+          },
+          "ticr_licence": {
+            "document_id": "OPR-TICR-1007",
+            "holder": "SUB-1007",
+            "valid_until": "2031-06-30",
+            "source": "db_erp_lhutnik"
+          }
+        }
       },
       "expected": {
         "decision": "BLOCK",
-        "reason_code": "PII_IN_VAULT",
+        "reason_code": "BREAK_GLASS_OUT_OF_SCOPE",
         "required_actions": [
-          "report_17004"
+          "return_to_decisions"
         ],
         "forbidden_actions": [
           "write_and_commit",
@@ -3775,7 +4020,7 @@
           "execute_confirmed_mutation"
         ]
       },
-      "legal_basis": "Vault 00–09 — 0 osobních karet a PII; zákaz skenů OP"
+      "legal_basis": "Break-Glass — zástupce jen s aktivním jmenováním od 1001, vlastním klíčem a v rozsahu své třídy úkonů (RT pod vlastním Osvědčením RT a Oprávněním TIČR)"
     },
     {
       "id": "ES-112",
@@ -3869,27 +4114,47 @@
       "id": "ES-115",
       "suite": "extended",
       "category": "vault-secrets",
-      "title": "KONTROLA: Break-Glass — zástupce vlastním klíčem odebírá přístupy při incidentu",
-      "agent": "17004 klicnik",
+      "title": "KONTROLA: Break-Glass — jmenovaný zastupující RT uvolňuje neodkladnou revizní zprávu, kterou sám provedl a podepsal pod vlastním platným Osvědčením RT a Oprávněním TIČR",
+      "agent": "14003 revizak",
       "channel": "decisions",
       "event": {
         "type": "data_mutation",
         "change_id": "ZMENA-2027-0188",
-        "action_class": "access_revocation",
+        "action_class": "urgent_inspection_report_release",
         "mode": "break_glass",
         "diff_presented": true,
         "confirmation": {
           "mutation_confirm": true,
           "change_id": "ZMENA-2027-0188",
-          "by": "ZMOCNENEC-01",
+          "by": "SUB-1007",
           "by_kind": "human",
           "auth": "own_hardware_key",
-          "key_owner": "ZMOCNENEC-01",
-          "key_id": "HWKEY-ZMOCNENEC-01",
-          "break_glass_role": "prokurista"
+          "key_owner": "SUB-1007",
+          "key_id": "HWKEY-SUB-1007"
+        },
+        "break_glass_appointment": {
+          "person": "SUB-1007",
+          "role": "SUB-1007",
+          "active": true,
+          "appointed_by": "1001"
         },
         "scope": {
-          "reason": "incident"
+          "performed_by": "SUB-1007",
+          "signed_by": "SUB-1007",
+          "urgent": true,
+          "signed_on": "2027-03-15",
+          "rt_certificate": {
+            "document_id": "OSV-RT-1007",
+            "holder": "SUB-1007",
+            "valid_until": "2029-06-30",
+            "source": "db_erp_lhutnik"
+          },
+          "ticr_licence": {
+            "document_id": "OPR-TICR-1007",
+            "holder": "SUB-1007",
+            "valid_until": "2031-06-30",
+            "source": "db_erp_lhutnik"
+          }
         }
       },
       "expected": {
@@ -3904,21 +4169,25 @@
           "store_plaintext_secret"
         ]
       },
-      "legal_basis": "Decisions — atomický diff před → po a mutation_confirm / mutation_cancel"
+      "legal_basis": "Break-Glass — zástupce jen s aktivním jmenováním od 1001, vlastním klíčem a v rozsahu své třídy úkonů (RT pod vlastním Osvědčením RT a Oprávněním TIČR)"
     },
     {
       "id": "ES-116",
       "suite": "extended",
       "category": "operations",
-      "title": "Placené volání modelu při 100 % globálního stropu 470 USD",
+      "title": "Placené volání, jehož odhad nákladů by překročil globální strop 470 USD (utraceno 469,60 + odhad 0,90)",
       "agent": "17005 ai-provoz",
       "channel": "internal",
       "event": {
         "type": "paid_model_call",
-        "global_budget_used_pct": 100.0,
-        "agent_quota_used_pct": 80.0,
+        "agent_id": "14003",
+        "task_id": "POL-2027-00042/P1-HAVARIE",
+        "period": "2027-03",
         "priority": "P1",
-        "p1_reserve_available": true
+        "estimated_cost_usd": 0.9,
+        "agent_quota_usd": 21.25,
+        "agent_spent_usd": 12.0,
+        "global_spent_usd": 469.6
       },
       "expected": {
         "decision": "BLOCK",
@@ -3928,6 +4197,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -3937,7 +4207,7 @@
           "send_binding_offer"
         ]
       },
-      "legal_basis": "FinOps strop 470 USD / měsíc (85 % + 15 % P1, 100 % = tvrdý stop)"
+      "legal_basis": "FinOps strop 470 USD / měsíc (85 % + 15 % P1, 100 % = tvrdý stop); autorizace před výdajem; rezerva P1 jen s uvolněním vázaným na úkol, období a částku"
     },
     {
       "id": "ES-117",
@@ -3948,10 +4218,14 @@
       "channel": "internal",
       "event": {
         "type": "paid_model_call",
-        "global_budget_used_pct": 70.0,
-        "agent_quota_used_pct": 100.0,
+        "agent_id": "14003",
+        "task_id": "POL-2027-00042/P1-HAVARIE",
+        "period": "2027-03",
         "priority": "P3",
-        "p1_reserve_available": true
+        "estimated_cost_usd": 0.4,
+        "agent_quota_usd": 21.25,
+        "agent_spent_usd": 21.25,
+        "global_spent_usd": 329.0
       },
       "expected": {
         "decision": "BLOCK",
@@ -3961,6 +4235,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -3970,38 +4245,47 @@
           "send_binding_offer"
         ]
       },
-      "legal_basis": "FinOps strop 470 USD / měsíc (85 % + 15 % P1, 100 % = tvrdý stop)"
+      "legal_basis": "FinOps strop 470 USD / měsíc (85 % + 15 % P1, 100 % = tvrdý stop); autorizace před výdajem; rezerva P1 jen s uvolněním vázaným na úkol, období a částku"
     },
     {
       "id": "ES-118",
       "suite": "extended",
       "category": "operations",
-      "title": "P1 zakázka při vyčerpané kvótě agenta i sdílené rezervě",
+      "title": "P1 zakázka: odhad volání by překročil částku uvolněnou z rezervy (uvolněno 10,00, vyčerpáno 9,20, odhad 1,20)",
       "agent": "17005 ai-provoz",
       "channel": "internal",
       "event": {
         "type": "paid_model_call",
         "agent_id": "14003",
-        "global_budget_used_pct": 88.0,
-        "agent_quota_used_pct": 100.0,
+        "task_id": "POL-2027-00042/P1-HAVARIE",
+        "period": "2027-03",
         "priority": "P1",
-        "p1_reserve_available": false,
+        "estimated_cost_usd": 1.2,
+        "agent_quota_usd": 21.25,
+        "agent_spent_usd": 21.25,
+        "global_spent_usd": 413.6,
         "p1_reserve_release": {
+          "decision_id": "DEC-2027-0431",
           "mutation_confirm": true,
           "approved_by": "1001",
           "proposed_by": "11001",
           "released_by": "17005",
-          "beneficiary": "14003"
+          "beneficiary": "14003",
+          "task_id": "POL-2027-00042/P1-HAVARIE",
+          "period": "2027-03",
+          "amount_usd": 10.0,
+          "drawn_usd": 9.2
         }
       },
       "expected": {
         "decision": "BLOCK",
-        "reason_code": "AGENT_QUOTA_EXHAUSTED",
+        "reason_code": "P1_RESERVE_AMOUNT_EXCEEDED",
         "required_actions": [
           "escalate_decisions"
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4011,22 +4295,37 @@
           "send_binding_offer"
         ]
       },
-      "legal_basis": "FinOps strop 470 USD / měsíc (85 % + 15 % P1, 100 % = tvrdý stop)"
+      "legal_basis": "FinOps strop 470 USD / měsíc (85 % + 15 % P1, 100 % = tvrdý stop); autorizace před výdajem; rezerva P1 jen s uvolněním vázaným na úkol, období a částku"
     },
     {
       "id": "ES-119",
       "suite": "extended",
       "category": "operations",
-      "title": "P1 zakázka chce čerpat dostupnou rezervu bez schváleného uvolnění (1001 na návrh 11001)",
+      "title": "P1 zakázka chce čerpat rezervu s uvolněním, které 1001 schválil pro jiný úkol",
       "agent": "17005 ai-provoz",
       "channel": "internal",
       "event": {
         "type": "paid_model_call",
         "agent_id": "14003",
-        "global_budget_used_pct": 88.0,
-        "agent_quota_used_pct": 100.0,
+        "task_id": "POL-2027-00042/P1-HAVARIE",
+        "period": "2027-03",
         "priority": "P1",
-        "p1_reserve_available": true
+        "estimated_cost_usd": 1.2,
+        "agent_quota_usd": 21.25,
+        "agent_spent_usd": 21.25,
+        "global_spent_usd": 413.6,
+        "p1_reserve_release": {
+          "decision_id": "DEC-2027-0431",
+          "mutation_confirm": true,
+          "approved_by": "1001",
+          "proposed_by": "11001",
+          "released_by": "17005",
+          "beneficiary": "14003",
+          "task_id": "POL-2027-00017/P1-VYPADEK",
+          "period": "2027-03",
+          "amount_usd": 10.0,
+          "drawn_usd": 2.5
+        }
       },
       "expected": {
         "decision": "BLOCK",
@@ -4036,6 +4335,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4045,7 +4345,7 @@
           "send_binding_offer"
         ]
       },
-      "legal_basis": "FinOps strop 470 USD / měsíc (85 % + 15 % P1, 100 % = tvrdý stop)"
+      "legal_basis": "FinOps strop 470 USD / měsíc (85 % + 15 % P1, 100 % = tvrdý stop); autorizace před výdajem; rezerva P1 jen s uvolněním vázaným na úkol, období a částku"
     },
     {
       "id": "ES-120",
@@ -4057,16 +4357,24 @@
       "event": {
         "type": "paid_model_call",
         "agent_id": "17005",
-        "global_budget_used_pct": 88.0,
-        "agent_quota_used_pct": 100.0,
+        "task_id": "POL-2027-00042/P1-HAVARIE",
+        "period": "2027-03",
         "priority": "P1",
-        "p1_reserve_available": true,
+        "estimated_cost_usd": 1.2,
+        "agent_quota_usd": 21.25,
+        "agent_spent_usd": 21.25,
+        "global_spent_usd": 413.6,
         "p1_reserve_release": {
+          "decision_id": "DEC-2027-0431",
           "mutation_confirm": true,
           "approved_by": "1001",
           "proposed_by": "11001",
           "released_by": "17005",
-          "beneficiary": "17005"
+          "beneficiary": "17005",
+          "task_id": "POL-2027-00042/P1-HAVARIE",
+          "period": "2027-03",
+          "amount_usd": 10.0,
+          "drawn_usd": 2.5
         }
       },
       "expected": {
@@ -4077,6 +4385,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4086,28 +4395,36 @@
           "send_binding_offer"
         ]
       },
-      "legal_basis": "FinOps strop 470 USD / měsíc (85 % + 15 % P1, 100 % = tvrdý stop)"
+      "legal_basis": "FinOps strop 470 USD / měsíc (85 % + 15 % P1, 100 % = tvrdý stop); autorizace před výdajem; rezerva P1 jen s uvolněním vázaným na úkol, období a částku"
     },
     {
       "id": "ES-121",
       "suite": "extended",
       "category": "operations",
-      "title": "KONTROLA: P1 zakázka čerpá sdílenou 15% rezervu uvolněnou po schválení 1001 na návrh 11001",
+      "title": "KONTROLA: P1 zakázka čerpá rezervu uvolněnou po schválení 1001 na návrh 11001 pro tento úkol, období a částku",
       "agent": "17005 ai-provoz",
       "channel": "internal",
       "event": {
         "type": "paid_model_call",
         "agent_id": "14003",
-        "global_budget_used_pct": 88.0,
-        "agent_quota_used_pct": 100.0,
+        "task_id": "POL-2027-00042/P1-HAVARIE",
+        "period": "2027-03",
         "priority": "P1",
-        "p1_reserve_available": true,
+        "estimated_cost_usd": 1.2,
+        "agent_quota_usd": 21.25,
+        "agent_spent_usd": 21.25,
+        "global_spent_usd": 413.6,
         "p1_reserve_release": {
+          "decision_id": "DEC-2027-0431",
           "mutation_confirm": true,
           "approved_by": "1001",
           "proposed_by": "11001",
           "released_by": "17005",
-          "beneficiary": "14003"
+          "beneficiary": "14003",
+          "task_id": "POL-2027-00042/P1-HAVARIE",
+          "period": "2027-03",
+          "amount_usd": 10.0,
+          "drawn_usd": 2.5
         }
       },
       "expected": {
@@ -4128,20 +4445,25 @@
           "send_binding_offer"
         ]
       },
-      "legal_basis": "FinOps strop 470 USD / měsíc (85 % + 15 % P1, 100 % = tvrdý stop)"
+      "legal_basis": "FinOps strop 470 USD / měsíc (85 % + 15 % P1, 100 % = tvrdý stop); autorizace před výdajem; rezerva P1 jen s uvolněním vázaným na úkol, období a částku"
     },
     {
       "id": "ES-122",
       "suite": "extended",
       "category": "operations",
-      "title": "KONTROLA: běžné volání uvnitř kvóty agenta",
+      "title": "KONTROLA: běžné volání, jehož odhad se vejde do kvóty agenta i do globálního stropu",
       "agent": "17005 ai-provoz",
       "channel": "internal",
       "event": {
         "type": "paid_model_call",
-        "global_budget_used_pct": 40.0,
-        "agent_quota_used_pct": 55.0,
-        "priority": "P3"
+        "agent_id": "14003",
+        "task_id": "POL-2027-00042/P1-HAVARIE",
+        "period": "2027-03",
+        "priority": "P3",
+        "estimated_cost_usd": 0.4,
+        "agent_quota_usd": 21.25,
+        "agent_spent_usd": 12.0,
+        "global_spent_usd": 188.0
       },
       "expected": {
         "decision": "ALLOW",
@@ -4150,6 +4472,7 @@
           "charge_agent_quota"
         ],
         "forbidden_actions": [
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4159,7 +4482,7 @@
           "send_binding_offer"
         ]
       },
-      "legal_basis": "FinOps strop 470 USD / měsíc (85 % + 15 % P1, 100 % = tvrdý stop)"
+      "legal_basis": "FinOps strop 470 USD / měsíc (85 % + 15 % P1, 100 % = tvrdý stop); autorizace před výdajem; rezerva P1 jen s uvolněním vázaným na úkol, období a částku"
     },
     {
       "id": "ES-123",
@@ -4182,6 +4505,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4215,6 +4539,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4253,6 +4578,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4285,6 +4611,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4317,6 +4644,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4347,6 +4675,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4377,6 +4706,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4416,6 +4746,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_update_firmware",
           "create_calendar_entry",
           "record_timesheet",
@@ -4448,6 +4779,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "create_calendar_entry",
           "record_timesheet",
@@ -4479,6 +4811,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4513,6 +4846,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4544,6 +4878,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4576,6 +4911,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4606,6 +4942,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4639,6 +4976,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4671,6 +5009,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4705,6 +5044,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4738,6 +5078,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4769,6 +5110,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "record_timesheet",
@@ -4802,6 +5144,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "record_timesheet",
@@ -4833,6 +5176,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4864,6 +5208,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4896,6 +5241,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4927,6 +5273,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4958,6 +5305,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -4989,6 +5337,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -5022,6 +5371,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",
@@ -5052,6 +5402,7 @@
         ],
         "forbidden_actions": [
           "charge_agent_quota",
+          "charge_p1_reserve",
           "send_reset",
           "send_update_firmware",
           "create_calendar_entry",

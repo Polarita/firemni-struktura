@@ -753,7 +753,7 @@ def build_poster_html() -> str:
             <span class="pill-grp"><span class="mtag ai">ai</span><span class="mtag id">ai-provoz</span><span class="mtag usd">10 $</span></span>
           </div>
           <div class="mcard-role">Paperclip, Zulip boti, FinOps __BUDGET_TOTAL__ USD a Eval Stage 1/2</div>
-          <div class="mcard-desc">Strop <code>__BUDGET_TOTAL__ USD/m</code> (<code>85 %</code> provoz + <code>15 % P1</code> rezerva, <code>100 % = tvrdý stop</code>), 1 zdroj promptů v Gitea, <code>wt-worker/judge</code> a dvoustupňový <code>Promptfoo</code> (<code>Stage 1 &amp; 2</code>).</div>
+          <div class="mcard-desc">Strop <code>__BUDGET_TOTAL__ USD/m</code> (<code>85 %</code> provoz + <code>15 % P1</code> rezerva, <code>100 % = tvrdý stop</code>), 1 zdroj promptů v Gitea, <code>wt-worker/judge</code> a dvoustupňová <code>Eval Suite</code> (<code>Stage 1 &amp; 2</code>; <code>Promptfoo</code> s modelem mimo CI).</div>
         </div>
       </div>
       <div class="col-foot">SLA ≥ 99,9 % · Stage 1 &amp; 2 Eval 20/20 · Strop ≤ __BUDGET_TOTAL__ USD/m</div>

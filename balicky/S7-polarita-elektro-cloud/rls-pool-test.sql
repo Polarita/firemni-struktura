@@ -30,7 +30,13 @@
 --         not against a hand-made copy.
 --     (5) It does not replace a test through the real pooler: the reset behaviour of the
 --         deployed pooler must be verified against its official documentation and tested
---         through it when Block 19 is built.
+--         through it when Block 19 is built. Because of (4) a pass says nothing about the
+--         isolation of the REAL schema either.
+--     (6) Running and result: psql -X -v heslo_app="$HESLO_APP" -f rls-pool-test.sql
+--         (the script sets ON_ERROR_STOP itself). A missing or empty heslo_app and every
+--         failed check end with a non-zero exit code. The run PASSED only when the exit
+--         code is 0 AND the last line of the standard output is exactly
+--         RLS_POOL_TEST_RESULT=PASS - the caller must check both.
 -- CZ: Požadavky — přečti před spuštěním:
 --     (1) Pouze psql: skript používá meta-příkazy psql (\connect, \gset, \if). Nelze jej
 --         spustit jiným klientem ani jako jeden řetězec SQL.
@@ -52,15 +58,33 @@
 --         ruční kopii.
 --     (5) Nenahrazuje test přes skutečný pooler: chování nasazeného pooleru při vracení
 --         spojení je nutné ověřit proti jeho oficiální dokumentaci a otestovat přes něj
---         při stavbě Bloku 19.
+--         při stavbě Bloku 19. Kvůli bodu (4) průchod nevypovídá ani o izolaci SKUTEČNÉHO
+--         schématu.
+--     (6) Spuštění a výsledek: psql -X -v heslo_app="$HESLO_APP" -f rls-pool-test.sql
+--         (ON_ERROR_STOP si skript nastavuje sám). Chybějící nebo prázdné heslo_app i každá
+--         neprošlá kontrola končí nenulovým návratovým kódem. Běh PROŠEL jen tehdy, když je
+--         návratový kód 0 A ZÁROVEŇ poslední řádek standardního výstupu je přesně
+--         RLS_POOL_TEST_RESULT=PASS - volající musí ověřit obojí.
 -- =====================================================================================
 
 \set ON_ERROR_STOP on
 
+-- EN: The mandatory input heslo_app. A missing or empty value must end as a REAL ERROR
+--     (non-zero exit code of psql under ON_ERROR_STOP), never as a quiet \quit with code 0:
+--     a job that ran no check must not look green. The administrator connection is already
+--     open here, so the failure is raised by the server.
+-- CZ: Povinný vstup heslo_app. Chybějící nebo prázdná hodnota musí skončit SKUTEČNOU CHYBOU
+--     (nenulový návratový kód psql při ON_ERROR_STOP), nikdy tichým \quit s kódem 0: úloha,
+--     která neprovedla žádnou kontrolu, nesmí vypadat zeleně. Spojení administrátora je zde
+--     už otevřené, chybu proto vyvolá server.
 \if :{?heslo_app}
+    SELECT btrim(:'heslo_app') = '' AS heslo_app_prazdne \gset
 \else
-    \echo 'STOP: psql variable heslo_app is not set / není nastavena proměnná psql heslo_app'
-    \quit
+    \set heslo_app_prazdne true
+\endif
+\if :heslo_app_prazdne
+    \echo 'STOP: psql variable heslo_app is missing or empty / proměnná psql heslo_app chybí nebo je prázdná'
+    DO $$ BEGIN RAISE EXCEPTION 'rls-pool-test.sql STOP: psql variable heslo_app is missing or empty - no check was run'; END $$;
 \endif
 
 -- -------------------------------------------------------------------------------------
@@ -360,3 +384,13 @@ DROP SCHEMA saas_vzor CASCADE;
 DROP ROLE saas_app;
 
 \echo 'rls-pool-test.sql: all POOL checks passed, fixture removed / všechny kontroly POOL prošly, přípravek odstraněn'
+
+-- EN: RESULT LINE — the very last output of the script and the ONLY proof of a pass. It is
+--     reached only when no statement and no \connect failed (ON_ERROR_STOP), POOL 1-6 ran
+--     and part D removed the fixture. The caller (CI) accepts the run only when psql
+--     returned 0 AND the last line of the standard output is exactly this line.
+-- CZ: VÝSLEDKOVÝ ŘÁDEK — úplně poslední výstup skriptu a JEDINÝ doklad průchodu. Dosáhne se
+--     jen tehdy, když neselhal žádný příkaz ani \connect (ON_ERROR_STOP), proběhly POOL 1-6
+--     a část D odstranila přípravek. Volající (CI) běh přijme jen tehdy, když psql vrátil 0
+--     A ZÁROVEŇ poslední řádek standardního výstupu je přesně tento řádek.
+\echo 'RLS_POOL_TEST_RESULT=PASS'

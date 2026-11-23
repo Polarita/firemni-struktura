@@ -163,6 +163,14 @@ class PricingTests(unittest.TestCase):
             "discount 150": lambda d: d["mrr_tariffs"][1].__setitem__("labour_discount_pct", 150),
             "discount negative": lambda d: d["mrr_tariffs"][1].__setitem__("labour_discount_pct", -5),
             "duplicate tariff": lambda d: d["mrr_tariffs"][1].__setitem__("code", "START_SVJ"),
+            "package code __proto__": lambda d: d["turnkey_packages"][0].__setitem__("code", "__proto__"),
+            "tariff code __proto__": lambda d: d["mrr_tariffs"][0].__setitem__("code", "__proto__"),
+            "code with a space": lambda d: d["turnkey_packages"][0].__setitem__("code", "EV WALLBOX"),
+            "code with a dot": lambda d: d["mrr_tariffs"][0].__setitem__("code", "START.SVJ"),
+            "code starting with a digit": lambda d: d["turnkey_packages"][0].__setitem__("code", "1EV"),
+            "code with a trailing newline": lambda d: d["turnkey_packages"][0].__setitem__("code", "EV_WALLBOX\n"),
+            "code with a diacritic": lambda d: d["turnkey_packages"][0].__setitem__("code", "STOUPAČKY"),
+            "code too long": lambda d: d["turnkey_packages"][0].__setitem__("code", "A" * 65),
             "no tariffs": lambda d: d.__setitem__("mrr_tariffs", []),
             "from above to": lambda d: d["turnkey_packages"][0].__setitem__("price_from", 96000),
             "zero package": lambda d: d["turnkey_packages"][0].__setitem__("price_from", 0),
@@ -447,6 +455,67 @@ class ConfiguratorKernelTests(unittest.TestCase):
         self.assertIn("input.value = String(clampInt(input))", self.template)
         for forbidden in ("fetch(", "XMLHttpRequest", "sendBeacon", "<form", "localStorage", "innerHTML", "eval("):
             self.assertNotIn(forbidden, self.template)
+
+    def test_codes_named_like_object_members_keep_parity_with_pricing_py(self) -> None:
+        # EN: Codes that are members of every plain JavaScript object ("constructor", "toString", ...) pass the
+        #     safe pattern; the page keeps quantities in a Map, so their totals equal pricing.py - also when
+        #     nothing is chosen. A code outside the pattern ("__proto__") is refused on both sides.
+        # CZ: Kódy, které jsou členy každého obyčejného objektu JavaScriptu („constructor“, „toString“, ...),
+        #     bezpečným vzorem projdou; stránka drží množství v Map, takže jejich součty odpovídají pricing.py -
+        #     i když není vybráno nic. Kód mimo vzor („__proto__“) se odmítne na obou stranách.
+        kernel = self.kernel()
+        self.assertIn("/^" + pricing.SAFE_CODE_PATTERN + "$/", kernel)
+        self.assertIn("packages: new Map()", self.template)
+        self.assertNotIn("packages: {}", self.template)
+        self.assertNotRegex(self.template, r"state\.packages\[")
+        document = copy.deepcopy(self.price_list)
+        codes = ["constructor", "toString", "hasOwnProperty"]
+        for package, code in zip(document["turnkey_packages"], codes):
+            package["code"] = code
+        pricing.validate_price_list(document)
+        public = pricing.public_price_list(document)
+        month = 7
+        selections = [[], [["constructor", 3]], [["toString", 1], ["hasOwnProperty", 200]],
+                      [["constructor", 2], ["toString", 5], ["hasOwnProperty", 7]], [["constructor", 4], ["constructor", 0]]]
+        expected_totals = []
+        for selection in selections:
+            final = dict(selection)   # the last quantity of a code wins / platí poslední množství kódu
+            ranges = [pricing.package_range(document, code, quantity, month) for code, quantity in final.items() if quantity > 0]
+            expected_totals.append({"from": str(int(sum((r[0] for r in ranges), Decimal(0)) * 100)),
+                                    "to": str(int(sum((r[1] for r in ranges), Decimal(0)) * 100)),
+                                    "chosen": [[code, final[code]] for code in codes if final.get(code, 0) > 0]})
+        for bad in ("__proto__", "", "a b", "1A", "A" * 65, "EV-WALLBOX"):
+            broken = copy.deepcopy(self.price_list)
+            broken["turnkey_packages"][0]["code"] = bad
+            with self.assertRaises(pricing.PricingError, msg=bad):
+                pricing.validate_price_list(broken)
+        expected = {"totals": expected_totals, "refused": ["RangeError"] * 8, "accepted": ["ok"] * 3,
+                    "prototype_untouched": True}
+        script = (
+            f"const P = {json.dumps(public)};\n" + kernel +
+            f"const selections = {json.dumps(selections)};\n"
+            "const kind = (run) => { try { run(); return 'ok'; } catch (e) { return e.name; } };\n"
+            "const forged = JSON.parse(JSON.stringify(P)); forged.turnkey_packages[0].code = '__proto__';\n"
+            "const refused = [() => setQuantity(new Map(), '__proto__', 1), () => setQuantity(new Map(), '', 1),\n"
+            "  () => setQuantity(new Map(), 'a b', 1), () => setQuantity(new Map(), '1A', 1), () => setQuantity(new Map(), 'A'.repeat(65), 1),\n"
+            "  () => setQuantity(new Map(), 'EV-WALLBOX', 1), () => setQuantity(new Map(), 7, 1),\n"
+            "  () => packagesTotal(forged, new Map(), 7)].map(kind);\n"
+            "const accepted = ['constructor', 'A'.repeat(64), 'a_1'].map((code) => kind(() => setQuantity(new Map(), code, 1)));\n"
+            "emit(JSON.stringify({\n"
+            "  totals: selections.map((selection) => {\n"
+            "    const quantities = new Map(); selection.forEach(([code, quantity]) => setQuantity(quantities, code, quantity));\n"
+            f"    const total = packagesTotal(P, quantities, {month});\n"
+            "    return { from: String(total.from), to: String(total.to), chosen: total.chosen };\n"
+            "  }),\n"
+            "  refused: refused, accepted: accepted,\n"
+            "  prototype_untouched: Object.getPrototypeOf({}) === Object.prototype && typeof ({}).toString === 'function',\n"
+            "}));\n")
+        output = _run_javascript(script)
+        if output is None:
+            if os.environ.get("POLARITA_REQUIRE_BROWSER") == "1":
+                self.fail("POLARITA_REQUIRE_BROWSER=1 and neither Node.js nor a Chromium browser found")
+            self.skipTest("neither Node.js nor a Chromium browser available / není dostupný Node.js ani prohlížeč Chromium")
+        self.assertEqual(json.loads(output), expected)
 
     def test_kernel_computes_like_pricing_py(self) -> None:
         document = copy.deepcopy(self.price_list)

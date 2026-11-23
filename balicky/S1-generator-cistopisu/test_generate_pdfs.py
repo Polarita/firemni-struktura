@@ -144,6 +144,74 @@ class PrintPathTests(unittest.TestCase):
                         gen.generate(templates, datas, out, self.NAME, True, False)
                 self.assertEqual(sorted(p.name for p in out.iterdir()), [], label)
 
+    def test_invalid_input_never_deletes_the_output_protected_by_a_held_lock(self) -> None:
+        # EN: While another run holds the lock of the document, a run with a defective input fails on the
+        #     lock (existing semantics: refusal, no waiting) and removes nothing; once the lock is free,
+        #     the same defect withdraws the pair.
+        # CZ: Dokud zámek dokumentu drží jiný běh, běh s vadným vstupem selže na zámku (stávající
+        #     semantika: odmítnutí, žádné čekání) a nic neodstraní; po uvolnění zámku táž vada dvojici stáhne.
+        good_data = (gen.DATA_DIR / f"{self.NAME}.json").read_text(encoding="utf-8")
+        good_template = (gen.TEMPLATE_DIR / f"{self.NAME}.md").read_text(encoding="utf-8")
+        for label, (template, data) in {"broken json": (good_template, "{"), "no heading": (good_template.lstrip("# "), good_data),
+                                        "no data file": (good_template, None), "no template": (None, good_data)}.items():
+            with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as tools:
+                out, templates, datas = Path(tmp) / "out", Path(tmp) / "sablony", Path(tmp) / "data"
+                templates.mkdir(), datas.mkdir()
+                (templates / f"{self.NAME}.md").write_text(good_template, encoding="utf-8")
+                (datas / f"{self.NAME}.json").write_text(good_data, encoding="utf-8")
+                with mock.patch.object(gen, "BROWSER_CANDIDATES", (_fake_browser(Path(tools), "good"),)):
+                    gen.generate(templates, datas, out, self.NAME, True, False)
+                    before = {p.name: p.read_bytes() for p in out.iterdir()}
+                    self.assertEqual(len(before), 2, label)
+                    for folder, suffix, content in ((templates, "md", template), (datas, "json", data)):
+                        if content is None:
+                            (folder / f"{self.NAME}.{suffix}").unlink()
+                        else:
+                            (folder / f"{self.NAME}.{suffix}").write_text(content, encoding="utf-8")
+                    with gen._DocumentLock(out, self.NAME):
+                        with self.assertRaises(gen.GeneratorError, msg=label) as caught:
+                            gen.generate(templates, datas, out, self.NAME, True, False)
+                        self.assertIn("another generation", str(caught.exception), label)
+                        self.assertEqual({p.name: p.read_bytes() for p in out.iterdir() if not p.name.endswith(".lock")}, before, label)
+                    with self.assertRaises(gen.GeneratorError, msg=label) as caught:
+                        gen.generate(templates, datas, out, self.NAME, True, False)
+                    self.assertNotIn("another generation", str(caught.exception), label)
+                self.assertEqual(sorted(p.name for p in out.iterdir()), [], label)
+
+    def test_missing_template_withdraws_the_older_pdf_and_manifest(self) -> None:
+        # EN: A removed template is an invalid input too: --only withdraws the named pair, a full run every
+        #     pair whose manifest has no template. --check and foreign files are left alone.
+        # CZ: Odstraněná šablona je také vadný vstup: --only stáhne jmenovanou dvojici, plný běh každou
+        #     dvojici, jejíž manifest nemá šablonu. --check ani cizí soubory se nedotknou.
+        good_data = (gen.DATA_DIR / f"{self.NAME}.json").read_text(encoding="utf-8")
+        good_template = (gen.TEMPLATE_DIR / f"{self.NAME}.md").read_text(encoding="utf-8")
+        for only in (self.NAME, None):
+            with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as tools:
+                out, templates, datas = Path(tmp) / "out", Path(tmp) / "sablony", Path(tmp) / "data"
+                templates.mkdir(), datas.mkdir()
+                (templates / f"{self.NAME}.md").write_text(good_template, encoding="utf-8")
+                (datas / f"{self.NAME}.json").write_text(good_data, encoding="utf-8")
+                with mock.patch.object(gen, "BROWSER_CANDIDATES", (_fake_browser(Path(tools), "good"),)):
+                    gen.generate(templates, datas, out, self.NAME, True, False)
+                    (out / "cizi.pdf").write_bytes(b"%PDF-foreign")
+                    self.assertEqual(len(list(out.iterdir())), 3, only)
+                    (templates / f"{self.NAME}.md").unlink()
+                    with self.assertRaises(gen.GeneratorError, msg=only):
+                        gen.generate(templates, datas, out, only, True, True)
+                    self.assertEqual(len(list(out.iterdir())), 3, only)
+                    with self.assertRaises(gen.GeneratorError, msg=only):
+                        gen.generate(templates, datas, out, only, True, False)
+                self.assertEqual(sorted(p.name for p in out.iterdir()), ["cizi.pdf"], only)
+        # EN: A name that is not a plain file stem never reaches outside the output folder.
+        # CZ: Název, který není prostým názvem souboru, nikdy nesáhne mimo výstupní složku.
+        with tempfile.TemporaryDirectory() as tmp:
+            out, templates = Path(tmp) / "out", Path(tmp) / "sablony"
+            out.mkdir(), templates.mkdir()
+            (Path(tmp) / "x.manifest.json").write_text("{}", encoding="utf-8")
+            (Path(tmp) / "x.pdf").write_bytes(b"%PDF-outside")
+            self.assertEqual(gen.withdraw_without_template(templates, out, "../x"), [])
+            self.assertEqual(sorted(p.name for p in Path(tmp).iterdir()), ["out", "sablony", "x.manifest.json", "x.pdf"])
+
     def test_interrupted_publication_never_leaves_a_manifest_of_another_pdf(self) -> None:
         # EN: The publication fails at each of its steps; whatever manifest exists afterwards describes the PDF next to it.
         # CZ: Zveřejnění selže v každém svém kroku; jakýkoli manifest, který potom existuje, popisuje PDF vedle sebe.

@@ -155,6 +155,15 @@ entities:
       bom_ref: {type: external_ref, target: 'cad-urs-engine:bom', required: true}
       design_verification_ref: {type: external_ref, target: 'cad-urs-engine:design_verification', required: false, required_to_close: true}
       passport_ref: {type: external_ref, target: 'cad-urs-engine:passport', required: false, required_to_close: true}
+      # EN: The passport whose revocation the terminal has taken over. Written only by the
+      #     atomic operation revoke_passport, which in the same transaction locks every READY
+      #     print job of the unit. The passport of the unit counts as revoked while this value
+      #     equals passport_ref; a newly issued passport has a new reference.
+      # CZ: Pas, jehož odvolání terminál převzal. Zapisuje jej jen atomická operace
+      #     revoke_passport, která ve stejné transakci zamkne každou tiskovou úlohu rozváděče
+      #     ve stavu READY. Pas rozváděče se považuje za odvolaný, dokud se tato hodnota
+      #     rovná passport_ref; nově vydaný pas má nový odkaz.
+      revoked_passport_ref: {type: external_ref, target: 'cad-urs-engine:passport', required: false}
       status: {type: enum, enum: unit_status, required: true, default: PLANNED}
       released_at: {type: timestamptz, required: false, required_when: "status = 'RELEASED'"}
     state_machine:
@@ -441,7 +450,14 @@ entities:
         - {from: DRAFT, to: REVOKED, action: revoke, guards: [verification_voided, reason_recorded]}
         - {from: IN_DECISIONS, to: REVOKED, action: revoke, guards: [verification_voided, reason_recorded]}
         - {from: REJECTED, to: REVOKED, action: revoke, guards: [verification_voided, reason_recorded]}
-        - {from: SIGNED, to: REVOKED, action: revoke_signed, guards: [verification_voided, reason_recorded, mutation_confirm_1001]}
+        # EN: A SIGNED declaration is a basis of the print, so its revocation never runs alone:
+        #     in the same atomic operation every READY print job of the unit is locked again
+        #     (see `atomic_operations`). An unsigned declaration is not a basis of any print.
+        # CZ: Prohlášení ve stavu SIGNED je podkladem tisku, proto jeho odvolání nikdy neběží
+        #     samo: ve stejné atomické operaci se znovu zamkne každá tisková úloha rozváděče
+        #     ve stavu READY (viz `atomic_operations`). Nepodepsané prohlášení podkladem
+        #     žádného tisku není.
+        - {from: SIGNED, to: REVOKED, action: revoke_signed, atomic: revoke_signed_declaration, guards: [verification_voided, reason_recorded, mutation_confirm_1001]}
     close_requirements:           # EN: needed for SIGNED / CZ: nutné pro stav SIGNED
       fields: [decisions_ref, signed_by_person_no, signed_at, signed_pdf_key]
 
@@ -482,11 +498,16 @@ entities:
         #     přetisk znovu ověřují aktuální podklady (print_basis_current) v okamžiku akce.
         - {from: BLOCKED, to: READY, action: unlock, guards: [print_basis_current]}
         - {from: READY, to: PRINTED, action: print, guards: [online_with_server, print_basis_current]}
-        # EN: The basis fell while the job was waiting: the job is locked again. Runs inside
-        #     void_passed_verification, or on its own when the passport or the declaration
-        #     is revoked.
-        # CZ: Podklady padly, zatímco úloha čekala: úloha se znovu zamkne. Běží uvnitř
-        #     void_passed_verification, nebo samostatně při odvolání pasu či prohlášení.
+        # EN: The basis fell while the job was waiting: the job is locked again. The relock is
+        #     never a separate step and is never offered on its own: it runs only as a member
+        #     of the atomic operation that takes the basis away — void_passed_verification,
+        #     revoke_signed_declaration or revoke_passport (see `atomic_operations`). Whichever
+        #     basis falls, no job of the unit is READY once that operation is committed.
+        # CZ: Podklady padly, zatímco úloha čekala: úloha se znovu zamkne. Zamčení není nikdy
+        #     samostatný krok a samostatně se nenabízí: běží jen jako člen atomické operace,
+        #     která podklad odebírá — void_passed_verification, revoke_signed_declaration nebo
+        #     revoke_passport (viz `atomic_operations`). Ať padne kterýkoli podklad, po
+        #     potvrzení té operace není žádná úloha rozváděče ve stavu READY.
         - {from: READY, to: BLOCKED, action: relock, guards: [print_basis_lost]}
         - {from: PRINTED, to: REPRINT_REQUESTED, action: request_reprint, guards: [reason_recorded]}
         - {from: REPRINT_REQUESTED, to: READY, action: approve_reprint, guards: [mutation_confirm_1001, print_basis_current]}
@@ -509,15 +530,41 @@ entities:
 #     vyhodnotí zámky všech členských přechodů nad stavem PŘED operací, zapíše všechny nové
 #     stavy, a selže-li kterýkoli krok, nezapíše nic. `each: true` = člen platí pro každý
 #     řádek rozváděče, který je v tom okamžiku ve stavu `from` (i žádný).
+# EN: `set:` = the member writes the listed field of the unit instead of switching a state;
+#     its `guards` are evaluated like the guards of a transition.
+# CZ: `set:` = člen místo přepnutí stavu zapíše uvedené pole rozváděče; jeho `guards` se
+#     vyhodnocují stejně jako zámky přechodu.
 atomic_operations:
   operations:
-    # EN: After this operation no print job of the unit is READY, so nothing can be printed
-    #     from a job released earlier. Jobs already PRINTED are handled by labels_voided.
-    # CZ: Po této operaci není žádná tisková úloha rozváděče READY, takže z dříve uvolněné
-    #     úlohy nelze nic vytisknout. Již vytištěné úlohy řeší zámek labels_voided.
+    # EN: The print has three bases: the passed verification, the signed declaration and the
+    #     passport. Taking ANY of them away is one of the three operations below and each
+    #     of them locks the READY jobs in the same transaction. After the operation no print
+    #     job of the unit is READY, so nothing can be printed from a job released earlier.
+    #     Jobs already PRINTED are handled by labels_voided.
+    # CZ: Tisk má tři podklady: vyhovující ověření, podepsané prohlášení a pas. Odebrání
+    #     KTERÉHOKOLI z nich je jedna ze tří operací níže a každá ve stejné transakci zamkne
+    #     úlohy ve stavu READY. Po operaci není žádná tisková úloha rozváděče READY, takže
+    #     z dříve uvolněné úlohy nelze nic vytisknout. Již vytištěné úlohy řeší zámek
+    #     labels_voided.
     void_passed_verification:
       members:
         - {entity: routine_verification, from: CLOSED_PASS, to: VOIDED, action: void}
+        - {entity: label_print_job, each: true, from: READY, to: BLOCKED, action: relock}
+    revoke_signed_declaration:
+      members:
+        - {entity: declaration_of_conformity, from: SIGNED, to: REVOKED, action: revoke_signed}
+        - {entity: label_print_job, each: true, from: READY, to: BLOCKED, action: relock}
+    # EN: The passport itself lives in cad-urs-engine, outside this database. The terminal
+    #     takes its revocation over by this operation: it records the revoked passport on
+    #     the unit and locks the READY jobs in one transaction. Until then the print is
+    #     still stopped by print_basis_current, which asks cad-urs-engine at every print.
+    # CZ: Samotný pas žije v cad-urs-engine, mimo tuto databázi. Terminál jeho odvolání
+    #     přebírá touto operací: v jedné transakci zapíše odvolaný pas k rozváděči a zamkne
+    #     úlohy ve stavu READY. Do té doby tisk i tak zastaví zámek print_basis_current,
+    #     který se cad-urs-engine ptá při každém tisku.
+    revoke_passport:
+      members:
+        - {entity: switchboard_unit, set: {revoked_passport_ref: passport_ref}, action: record_passport_revocation, guards: [passport_revoked_at_source, reason_recorded, mutation_confirm_1001]}
         - {entity: label_print_job, each: true, from: READY, to: BLOCKED, action: relock}
 
 # EN: Named guards used in the state machines above. Each is evaluated on the
@@ -541,18 +588,19 @@ guards:
   online_with_server: "EN: no closing or printing from the offline queue / CZ: žádné uzavření ani tisk z offline fronty"
   verification_closed_pass: "EN: latest routine_verification of the unit is CLOSED_PASS (not VOIDED) / CZ: poslední kusové ověření rozváděče je CLOSED_PASS (není VOIDED)"
   verification_closed_fail: "EN: latest routine_verification is CLOSED_FAIL / CZ: poslední kusové ověření je CLOSED_FAIL"
-  print_basis_current: "EN: at the moment of the action: the latest routine_verification of the unit is CLOSED_PASS (not VOIDED), the passport from cad-urs-engine is sealed and not revoked, and the live (not REVOKED) declaration_of_conformity relies on that verification and is SIGNED by person 1001 / CZ: v okamžiku akce: poslední kusové ověření rozváděče je CLOSED_PASS (není VOIDED), pas z cad-urs-engine je opatřen pečetí a není zneplatněn a živé (ne REVOKED) prohlášení o shodě se o toto ověření opírá a je SIGNED osobou 1001"
-  print_basis_lost: "EN: print_basis_current does not hold, or the transition runs as a member of void_passed_verification / CZ: print_basis_current neplatí, nebo přechod běží jako člen operace void_passed_verification"
+  print_basis_current: "EN: at the moment of the action: the latest routine_verification of the unit is CLOSED_PASS (not VOIDED), the passport from cad-urs-engine is sealed and not revoked (neither in cad-urs-engine nor by revoked_passport_ref of the unit), and the live (not REVOKED) declaration_of_conformity relies on that verification and is SIGNED by person 1001 / CZ: v okamžiku akce: poslední kusové ověření rozváděče je CLOSED_PASS (není VOIDED), pas z cad-urs-engine je opatřen pečetí a není zneplatněn (v cad-urs-engine ani polem revoked_passport_ref rozváděče) a živé (ne REVOKED) prohlášení o shodě se o toto ověření opírá a je SIGNED osobou 1001"
+  print_basis_lost: "EN: the transition runs as a member of the atomic operation that takes a basis of the print away (void_passed_verification, revoke_signed_declaration, revoke_passport); it is never offered on its own / CZ: přechod běží jako člen atomické operace, která odebírá podklad tisku (void_passed_verification, revoke_signed_declaration, revoke_passport); samostatně se nikdy nenabízí"
   failed_verification_voided: "EN: the routine_verification that put the unit into VERIFIED_FAIL is VOIDED with a void_reason confirmed by 1001 / CZ: kusové ověření, které rozváděč převedlo do VERIFIED_FAIL, je VOIDED s důvodem void_reason potvrzeným 1001"
   verification_voided: "EN: referenced routine_verification transitioned to VOIDED / CZ: navázané kusové ověření přešlo do VOIDED"
   new_verification_opened: "EN: a new routine_verification in OPEN exists for the unit / CZ: pro rozváděč existuje nový záznam kusového ověření ve stavu OPEN"
-  passport_revoked: "EN: previously issued passport is revoked in cad-urs-engine and in the registry / CZ: dříve vydaný pas je zneplatněn v cad-urs-engine i v registru"
+  passport_revoked_at_source: "EN: the passport in passport_ref is revoked in cad-urs-engine and in the registry / CZ: pas z passport_ref je zneplatněn v cad-urs-engine i v registru"
+  passport_revoked: "EN: previously issued passport is revoked in cad-urs-engine and in the registry and the atomic operation revoke_passport recorded it on the unit (revoked_passport_ref equals passport_ref) / CZ: dříve vydaný pas je zneplatněn v cad-urs-engine i v registru a atomická operace revoke_passport jej zapsala k rozváděči (revoked_passport_ref se rovná passport_ref)"
   declaration_revoked: "EN: no declaration_of_conformity of the unit is in a state other than REVOKED / CZ: žádné prohlášení o shodě rozváděče není v jiném stavu než REVOKED"
   labels_voided: "EN: every label_print_job of the unit is VOIDED and the printed labels were physically removed (photo in the file) / CZ: každá tisková úloha rozváděče je VOIDED a vytištěné štítky byly fyzicky odstraněny (fotografie ve spisu)"
   unit_back_in_workshop: "EN: the released unit is physically back in the workshop (elektro-wms receipt) / CZ: uvolněný rozváděč je fyzicky zpět na dílně (příjemka v elektro-wms)"
   wms_dispatch_block_restored: "EN: dispatch block in elektro-wms is active again / CZ: blokace expedice v elektro-wms je znovu aktivní"
   serial_number_assigned: "EN: serial number assigned by cz-sk-registry-kernel / CZ: výrobní číslo přiděleno modulem cz-sk-registry-kernel"
-  passport_present: "EN: passport generated by cad-urs-engine and sealed / CZ: pas vygenerován v cad-urs-engine a opatřen pečetí"
+  passport_present: "EN: passport generated by cad-urs-engine and sealed, and it is not the revoked one (passport_ref differs from revoked_passport_ref) / CZ: pas vygenerován v cad-urs-engine a opatřen pečetí a není to pas odvolaný (passport_ref se liší od revoked_passport_ref)"
   judge_15002_pass: "EN: independent review by 15002 passed / CZ: nezávislá kontrola 15002 prošla"
   declaration_signed_by_1001: "EN: the live (not REVOKED) declaration_of_conformity relies on the latest CLOSED_PASS verification and is SIGNED by person 1001 / CZ: živé (ne REVOKED) prohlášení o shodě se opírá o poslední ověření CLOSED_PASS a je SIGNED osobou 1001"
   qes_signature_present: "EN: personal qualified signature is in the PDF / CZ: v PDF je osobní kvalifikovaný podpis"

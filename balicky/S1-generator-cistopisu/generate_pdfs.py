@@ -13,10 +13,11 @@ EN: Fills Markdown templates from sablony/ with variables from data/<same-name>.
     an old document. Templates must be plain Markdown: raw HTML and variables inside code are refused.
     Validity protocol: a document is valid only as the pair <name>.pdf + <name>.manifest.json made by
     one successful run from the current inputs. Whenever a run for a document fails - its template or
-    data cannot be read or do not pass validation, the print fails, or the printed PDF does not pass
-    validation - the older pair of that document is removed (manifest first). A PDF without a manifest
-    is an unfinished run and is never a basis for approval. --check validates only and never touches
-    the outputs.
+    data are missing, cannot be read or do not pass validation, the print fails, or the printed PDF does
+    not pass validation - the older pair of that document is removed (manifest first). One lock of the
+    document is held from reading the inputs up to the withdrawal or the publication; while another run
+    holds it, this run fails and touches nothing. A PDF without a manifest is an unfinished run and is
+    never a basis for approval. --check validates only and never touches the outputs.
 CZ: Vyplní Markdown šablony ze sablony/ proměnnými z data/<stejný-název>.json, vysází je do
     tiskového HTML (A4) a vytiskne PDF přes headless prohlížeč Chromium (Chrome / Edge).
     Ke každému dokumentu zapíše manifest s proměnnými a SHA-256 otisky šablony, dat a PDF —
@@ -26,10 +27,12 @@ CZ: Vyplní Markdown šablony ze sablony/ proměnnými z data/<stejný-název>.j
     spisu z dat), takže nepovedený tisk nikdy nezanechá ani nepřijme starý dokument. Šablony musí
     být čistý Markdown: surové HTML a proměnné uvnitř kódu se odmítnou.
     Protokol platnosti: dokument platí jen jako dvojice <název>.pdf + <název>.manifest.json z jednoho
-    úspěšného běhu nad aktuálními vstupy. Kdykoli běh pro dokument selže - šablonu nebo data nelze
-    přečíst či neprojdou validací, tisk selže nebo vytištěné PDF neprojde validací - starší dvojice
-    toho dokumentu se odstraní (manifest první). PDF bez manifestu je nedokončený běh a nikdy není
-    podkladem pro schválení. --check jen validuje a na výstupy nesahá.
+    úspěšného běhu nad aktuálními vstupy. Kdykoli běh pro dokument selže - šablona nebo data chybí,
+    nelze je přečíst či neprojdou validací, tisk selže nebo vytištěné PDF neprojde validací - starší
+    dvojice toho dokumentu se odstraní (manifest první). Jeden zámek dokumentu se drží od načtení vstupů
+    až po stažení nebo zveřejnění; drží-li jej jiný běh, tento běh selže a na nic nesáhne. PDF bez
+    manifestu je nedokončený běh a nikdy není podkladem pro schválení. --check jen validuje a na
+    výstupy nesahá.
 
 Usage / Použití:
     python generate_pdfs.py                      # all templates with sample data, watermark VZOR
@@ -42,6 +45,7 @@ Requires / Vyžaduje: Python packages "markdown" and "pypdf" (see requirements.t
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import html
 import json
@@ -363,82 +367,134 @@ def collect(template_dir: Path, only: str | None) -> list[Path]:
     return templates
 
 
+def withdraw_without_template(template_dir: Path, out_dir: Path, only: str | None) -> list[str]:
+    """
+    EN: A document whose template is gone has no current inputs, so its older pair is withdrawn too -
+        under the lock of that document, exactly like any other invalid input. With --only it is the
+        named document; in a full run every pair in out_dir whose manifest has no template. Only names
+        with a manifest of this generator are touched (a foreign PDF in the folder is left alone) and
+        a name that is not a plain file stem is ignored. Returns the names withdrawn.
+    CZ: Dokument, jehož šablona zmizela, nemá aktuální vstupy, proto se jeho starší dvojice stáhne také -
+        pod zámkem toho dokumentu, stejně jako při jiném vadném vstupu. S --only jde o jmenovaný
+        dokument; při plném běhu o každou dvojici v out_dir, jejíž manifest nemá šablonu. Sahá se jen na
+        názvy s manifestem tohoto generátoru (cizí PDF ve složce zůstane) a název, který není prostým
+        názvem souboru, se ignoruje. Vrací stažené názvy.
+    """
+    if not out_dir.is_dir():
+        return []
+    stems = {path.stem for path in template_dir.glob("*.md")}
+    suffix = ".manifest.json"
+    if only:
+        candidates = [only]
+    else:
+        candidates = sorted(path.name[:-len(suffix)] for path in out_dir.glob(f"*{suffix}"))
+    withdrawn = []
+    for name in candidates:
+        if name in stems or not name or name.startswith(".") or Path(name).name != name or "\\" in name:
+            continue
+        if not (out_dir / f"{name}{suffix}").is_file():
+            continue
+        with _DocumentLock(out_dir, name):
+            invalidate(out_dir, name)
+        withdrawn.append(name)
+    return withdrawn
+
+
 def generate(template_dir: Path, data_dir: Path, out_dir: Path, only: str | None, draft: bool, check_only: bool) -> list[dict[str, Any]]:
     """Generate all documents; returns one result record per template. / Vygeneruje dokumenty; vrátí záznam za šablonu."""
-    templates = collect(template_dir, only)
+    try:
+        templates = collect(template_dir, only)
+    except GeneratorError:
+        # EN: A missing template is an invalid input as well: the older pair must not stay as valid.
+        # CZ: Chybějící šablona je také vadný vstup: starší dvojice nesmí zůstat jako platná.
+        if not check_only:
+            withdraw_without_template(template_dir, out_dir, only)
+        raise
     browser = None if check_only else find_browser()
     results: list[dict[str, Any]] = []
     shared_seen: set[str] = set()
     out_dir.mkdir(parents=True, exist_ok=True)
+    if not check_only and not only:
+        withdraw_without_template(template_dir, out_dir, None)
     for template_path in templates:
         name = template_path.stem
         # EN: Validity protocol: a document is valid only as the pair PDF + manifest made by ONE successful
         #     run from the current inputs. As soon as the current inputs of a document cannot be read or
         #     do not pass validation, its older pair no longer describes the current state and is removed
         #     (manifest first) - exactly as after a failed print. --check never touches the outputs.
+        #     ONE lock of the document is held from reading the inputs through validation up to the
+        #     withdrawal or the publication, so a failing run can never delete or mix the output that
+        #     another run is just producing under its lock; with the lock taken this run fails and
+        #     touches nothing. --check takes no lock because it writes nothing.
         # CZ: Protokol platnosti: dokument platí jen jako dvojice PDF + manifest z JEDNOHO úspěšného běhu
         #     nad aktuálními vstupy. Jakmile aktuální vstupy dokumentu nejdou přečíst nebo neprojdou
         #     validací, jeho starší dvojice už aktuální stav nepopisuje a odstraní se (manifest první) -
         #     stejně jako po nepovedeném tisku. --check na výstupy nikdy nesahá.
-        try:
-            data_path = data_dir / f"{name}.json"
-            if not data_path.is_file():
-                raise GeneratorError(f"{name}: data file {data_path.name} not found")
-            # EN: Each source is read ONCE; the document and the hashes in the manifest come from the same bytes.
-            # CZ: Každý zdroj se čte JEDNOU; dokument i otisky v manifestu vycházejí z týchž bajtů.
-            try:
-                template_bytes = template_path.read_bytes()
-                data_bytes = data_path.read_bytes()
-                template = template_bytes.decode("utf-8")
-                values = json.loads(data_bytes.decode("utf-8"))
-            except (OSError, ValueError) as error:  # unreadable, invalid UTF-8 or invalid JSON / nečitelné, neplatné UTF-8 nebo JSON
-                raise GeneratorError(f"{name}: cannot read template or data: {error}") from error
-            if not template.startswith("# "):
-                raise GeneratorError(f"{name}: template must start with a level-1 heading")
-            filled = fill(template, values, name)
-        except GeneratorError:
+        #     JEDEN zámek dokumentu se drží od načtení vstupů přes validaci až po stažení nebo zveřejnění,
+        #     takže chybný běh nikdy nesmaže ani nesmíchá výstup, který jiný běh právě vyrábí pod svým
+        #     zámkem; je-li zámek obsazen, tento běh selže a na nic nesáhne. --check zámek nebere,
+        #     protože nic nezapisuje.
+        with contextlib.ExitStack() as held:
             if not check_only:
-                invalidate(out_dir, name)
-            raise
-        shared_seen |= placeholders(template) & set(SHARED_VARIABLES)
-        record: dict[str, Any] = {"template": template_path.name, "variables": len(values)}
-        if not check_only:
-            title = template.splitlines()[0][2:].strip()
-            stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-            if draft:
-                footer = (f"VZOR s fiktivními daty — Polarita s.r.o. · šablona {template_path.name} · "
-                          f"vygenerováno {stamp} · koncept ai podléhá kontrole 15001 a podpisu 1001")
-            else:
-                footer = f"Polarita s.r.o. · dokument {name} · vygenerováno {stamp}"
-            pdf_path = out_dir / f"{name}.pdf"
-            manifest_path = out_dir / f"{name}.manifest.json"
-            # EN: The staging folder is unique and lies inside out_dir, so the final renames are atomic.
-            # CZ: Přípravná složka je jedinečná a leží uvnitř out_dir, takže závěrečná přejmenování jsou atomická.
-            with _DocumentLock(out_dir, name), tempfile.TemporaryDirectory(prefix=f".{name}.staging-", dir=out_dir) as work_dir:
-                html_path = Path(work_dir) / f"{name}.html"
-                fresh_pdf = Path(work_dir) / f"{name}.pdf"
-                html_path.write_text(to_html(filled, title, draft, footer), encoding="utf-8", newline="\n")
+                held.enter_context(_DocumentLock(out_dir, name))
+            try:
+                data_path = data_dir / f"{name}.json"
+                if not data_path.is_file():
+                    raise GeneratorError(f"{name}: data file {data_path.name} not found")
+                # EN: Each source is read ONCE; the document and the hashes in the manifest come from the same bytes.
+                # CZ: Každý zdroj se čte JEDNOU; dokument i otisky v manifestu vycházejí z týchž bajtů.
                 try:
-                    print_pdf(browser or "", html_path, fresh_pdf)
-                    case_number = values.get("spis_id")
-                    pages = validate_pdf(fresh_pdf, case_number if isinstance(case_number, str) else None)
-                except GeneratorError:
-                    # EN: Never leave an older PDF or manifest next to a failed run - they would look current.
-                    # CZ: Vedle nepovedeného běhu nikdy nenech starší PDF ani manifest - vypadaly by aktuálně.
+                    template_bytes = template_path.read_bytes()
+                    data_bytes = data_path.read_bytes()
+                    template = template_bytes.decode("utf-8")
+                    values = json.loads(data_bytes.decode("utf-8"))
+                except (OSError, ValueError) as error:  # unreadable, invalid UTF-8 or invalid JSON / nečitelné, neplatné UTF-8 nebo JSON
+                    raise GeneratorError(f"{name}: cannot read template or data: {error}") from error
+                if not template.startswith("# "):
+                    raise GeneratorError(f"{name}: template must start with a level-1 heading")
+                filled = fill(template, values, name)
+            except GeneratorError:
+                if not check_only:
                     invalidate(out_dir, name)
-                    raise
-                manifest = {
-                    "document": name,
-                    "title": title,
-                    "draft_watermark": draft,
-                    "generated_utc": stamp,
-                    "variables": values,
-                    "sha256": {"template": hashlib.sha256(template_bytes).hexdigest(),
-                               "data": hashlib.sha256(data_bytes).hexdigest(), "pdf": sha256(fresh_pdf)},
-                    "pages": pages,
-                }
-                publish(out_dir, name, fresh_pdf, manifest)
-            record.update({"pdf": pdf_path.name, "pages": pages})
+                raise
+            shared_seen |= placeholders(template) & set(SHARED_VARIABLES)
+            record: dict[str, Any] = {"template": template_path.name, "variables": len(values)}
+            if not check_only:
+                title = template.splitlines()[0][2:].strip()
+                stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+                if draft:
+                    footer = (f"VZOR s fiktivními daty — Polarita s.r.o. · šablona {template_path.name} · "
+                              f"vygenerováno {stamp} · koncept ai podléhá kontrole 15001 a podpisu 1001")
+                else:
+                    footer = f"Polarita s.r.o. · dokument {name} · vygenerováno {stamp}"
+                pdf_path = out_dir / f"{name}.pdf"
+                # EN: The staging folder is unique and lies inside out_dir, so the final renames are atomic.
+                # CZ: Přípravná složka je jedinečná a leží uvnitř out_dir, takže závěrečná přejmenování jsou atomická.
+                with tempfile.TemporaryDirectory(prefix=f".{name}.staging-", dir=out_dir) as work_dir:
+                    html_path = Path(work_dir) / f"{name}.html"
+                    fresh_pdf = Path(work_dir) / f"{name}.pdf"
+                    html_path.write_text(to_html(filled, title, draft, footer), encoding="utf-8", newline="\n")
+                    try:
+                        print_pdf(browser or "", html_path, fresh_pdf)
+                        case_number = values.get("spis_id")
+                        pages = validate_pdf(fresh_pdf, case_number if isinstance(case_number, str) else None)
+                    except GeneratorError:
+                        # EN: Never leave an older PDF or manifest next to a failed run - they would look current.
+                        # CZ: Vedle nepovedeného běhu nikdy nenech starší PDF ani manifest - vypadaly by aktuálně.
+                        invalidate(out_dir, name)
+                        raise
+                    manifest = {
+                        "document": name,
+                        "title": title,
+                        "draft_watermark": draft,
+                        "generated_utc": stamp,
+                        "variables": values,
+                        "sha256": {"template": hashlib.sha256(template_bytes).hexdigest(),
+                                   "data": hashlib.sha256(data_bytes).hexdigest(), "pdf": sha256(fresh_pdf)},
+                        "pages": pages,
+                    }
+                    publish(out_dir, name, fresh_pdf, manifest)
+                record.update({"pdf": pdf_path.name, "pages": pages})
         results.append(record)
     if not only:
         missing_shared = [var for var in SHARED_VARIABLES if var not in shared_seen]

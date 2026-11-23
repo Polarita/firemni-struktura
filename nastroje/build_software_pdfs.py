@@ -475,7 +475,7 @@ def build_poster_html() -> str:
       <div class="u-title">Paperclip + Zulip · metadata-schema-kernel · AigisCode · Stage 1/2 Eval</div>
       <ul class="u-list">
         <li><code>Paperclip</code> (rozšíření Polarity <code>N-10</code>, <code>decisions.int.polarita.cz</code>) + <code>Zulip</code> v <code>Bloku 7</code> · <code>Claude / Gemini / Codex CLI</code> · strop <code>470 USD/m</code> (<code>85 % + 15 % P1</code>)</li>
-        <li>Worktrees <code>wt-worker / wt-judge</code> · <code>Draivix/aigiscode (MIT)</code> + <code>Gitea CI</code> · dvoustupňový <code>Promptfoo</code> (<code>Stage 1</code> samostatné v Bloku 7, <code>Stage 2</code> v Bloku 12)</li>
+        <li>Worktrees <code>wt-worker / wt-judge</code> · <code>Draivix/aigiscode (MIT)</code> + <code>Gitea CI</code> · dvoustupňová <code>Eval Suite</code> (<code>Stage 1</code> bez modelu v Bloku 7 a CI, <code>Stage 2</code> v Bloku 12; <code>Promptfoo</code> s modelem mimo CI)</li>
         <li><code>metadata-schema-kernel</code> (vlastní schémata <code>db_erp_lhutnik</code> + <code>wms</code>, 0 zásahů do vendor DB!) · <code>polarita-ads-mcp (PAUSED)</code> · <code>Nod</code> (egress ACL)</li>
       </ul>
     </div>
@@ -610,7 +610,7 @@ def build_poster_html() -> str:
             <span class="mtag">90d / 10 l</span>
           </div>
           <div class="mcard-role">Dvouvrstvá retence hovorů, bloby pošty, Gitea a archiv</div>
-          <div class="mcard-desc"><code>Valkey</code>, fotky, <code>stalwart-blobs</code> a <strong><code>90d</code> stereo hovory</strong> v <code>Garage</code>, <code>Gitea</code> a WORM <code>legal-archive</code> (<strong><code>LEGAL_HOLD 3–10 let</code></strong>, <code>.zfo</code>, pasy CE, deníky).</div>
+          <div class="mcard-desc"><code>Valkey</code>, fotky, <code>stalwart-blobs</code> a stereo hovory s přepisy v <code>Garage</code> (<strong>výmaz k <code>83.</code> dni, všechny kopie nejdéle <code>90d</code></strong>), <code>Gitea</code> a WORM <code>legal-archive</code> (<strong><code>LEGAL_HOLD 3–10 let</code></strong>, <code>.zfo</code>, pasy CE, deníky).</div>
         </div>
         <div class="mcard">
           <div class="mcard-top">
@@ -654,7 +654,7 @@ def build_poster_html() -> str:
             <span class="mtag odd17">Odd. 17</span>
           </div>
           <div class="mcard-role">Vlastní schémata + Ads MCP PAUSED + Stage 1/2</div>
-          <div class="mcard-desc"><code>metadata-schema-kernel</code> (<code>db_erp_lhutnik</code>, <code>wms</code>), <code>polarita-ads-mcp</code> (<code>PAUSED</code> + Cap) a <code>Promptfoo</code> (<code>Stage 1</code> samostatné v Bloku 7, <code>Stage 2</code> v B12).</div>
+          <div class="mcard-desc"><code>metadata-schema-kernel</code> (<code>db_erp_lhutnik</code>, <code>wms</code>), <code>polarita-ads-mcp</code> (<code>PAUSED</code> + Cap) a <code>Eval Suite</code> (<code>Stage 1</code> bez modelu v Bloku 7 a CI, <code>Stage 2</code> v B12; <code>Promptfoo</code> mimo CI).</div>
         </div>
         <div class="mcard custom">
           <div class="mcard-top">
@@ -1348,7 +1348,7 @@ def build_book_html() -> str:
         <tr>
           <td><strong>ČÁST II · Mozek ai, 10 modulů &amp; Ústředna</strong><br>(Vrstvy 07–11)</td>
           <td><code>07-ai-orchestrace-decisions-a-eval.md</code> až <code>11-finance-uol-hr-bozp-portal-flotila-a-komunikace.md</code></td>
-          <td><code>Paperclip + Zulip</code> v Bloku 7 (<code>decisions.int.polarita.cz</code>, rozšíření <code>N-10</code>), <code>Claude / Gemini / Codex CLI</code>, strop <code>{BUDGET_TOTAL} USD</code> (85+15 %), <code>metadata-schema-kernel</code> (vlastní schémata), samostatný <code>Stage 1 &amp; 2 Promptfoo</code>, ISDS Bridge (<code>06:50</code> ve službě / <code>&lt; 10d PAUSED</code>, <code>czebox.cz</code>), <strong>360° Karta + WebRTC</strong>, matice zdrojů + <code>Mapy.cz</code>, 3× <code>OCPP</code> (<code>wss://ocpp.polarita.cz</code>), <code>elektro-wms</code> (schéma <code>wms</code>, baterie &gt; 2 kWh od 18. 2. 2027, RMA <code>complaint_asserted_at</code>), <code>Moodle LTS</code>, <code>QElectroTech</code> (stanice <code>1001+</code>) + <code>cad-urs-engine</code>, <code>ORG-UOL</code>, přednástupní <code>JMHZ</code>, obecná odpovědnost za vozidla a <code>Asterisk + offline WhisperX + Silero VAD + librosa + Stalwart (Garage bloby) + dělený Chatwoot</code>.</td>
+          <td><code>Paperclip + Zulip</code> v Bloku 7 (<code>decisions.int.polarita.cz</code>, rozšíření <code>N-10</code>), <code>Claude / Gemini / Codex CLI</code>, strop <code>{BUDGET_TOTAL} USD</code> (85+15 %), <code>metadata-schema-kernel</code> (vlastní schémata), samostatná <code>Stage 1 &amp; 2 Eval Suite</code> (+ <code>Promptfoo</code> mimo CI), ISDS Bridge (<code>06:50</code> ve službě / <code>&lt; 10d PAUSED</code>, <code>czebox.cz</code>), <strong>360° Karta + WebRTC</strong>, matice zdrojů + <code>Mapy.cz</code>, 3× <code>OCPP</code> (<code>wss://ocpp.polarita.cz</code>), <code>elektro-wms</code> (schéma <code>wms</code>, baterie &gt; 2 kWh od 18. 2. 2027, RMA <code>complaint_asserted_at</code>), <code>Moodle LTS</code>, <code>QElectroTech</code> (stanice <code>1001+</code>) + <code>cad-urs-engine</code>, <code>ORG-UOL</code>, přednástupní <code>JMHZ</code>, obecná odpovědnost za vozidla a <code>Asterisk + offline WhisperX + Silero VAD + librosa + Stalwart (Garage bloby) + dělený Chatwoot</code>.</td>
         </tr>
         <tr>
           <td><strong>ČÁST III · Rozvojové balíčky S1–S7</strong><br>(Bloky 13–19)</td>

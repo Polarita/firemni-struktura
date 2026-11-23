@@ -16,7 +16,8 @@ CZ: Čistě pythonová implementace tvrdých pojistek („Hard-Stop“, „FAIL_
 from __future__ import annotations
 
 import math
-from datetime import date
+import re
+from datetime import date, timedelta
 from typing import Any, Callable
 
 # Decision vocabulary / Slovník rozhodnutí
@@ -33,7 +34,14 @@ DECISIONS = (ALLOW, BLOCK, FAIL_CLOSED, ESCALATE, DRAFT_NEGATIVE_REPORT)
 DPP_MAX_HOURS_PER_YEAR = 300
 DPP_INSURANCE_THRESHOLD_CZK = 12_000      # up to 11 999 CZK without levies / do 11 999 Kč bez odvodů
 DPC_MAX_AVG_HOURS_PER_WEEK = 20.0
-FINOPS_HARD_STOP_PCT = 100.0
+# EN: FinOps is authorised BEFORE the spend, in money: the cap of the whole company, the shared P1
+#     reserve held inside that cap (15 %) and the accounting period the amounts belong to.
+# CZ: FinOps se autorizuje PŘED výdajem, v penězích: strop celé firmy, sdílená rezerva P1 držená
+#     uvnitř tohoto stropu (15 %) a účetní období, ke kterému částky patří.
+FINOPS_GLOBAL_CAP_USD = 470.0
+FINOPS_P1_RESERVE_USD = 70.5
+FINOPS_PERIOD = re.compile(r"\d{4}-(0[1-9]|1[0-2])")
+_MONEY_EPSILON = 1e-9
 ISDS_POLL_WEEKDAYS = (0, 1, 2, 3, 4)      # Mon–Fri / Po–Pá
 ISDS_POLL_TIME = "06:50"
 ISDS_PRESENCE_ALLOWING_POLL = ("owner_present", "break_glass_active")
@@ -45,17 +53,55 @@ EXCAVATION_LOCK_OWNER = "14005"
 EXCAVATION_VERIFIER = "15002"
 REGISTRATION_CONFIRMED_BY = "ORG-UOL"
 REGISTRATION_RECORDED_BY = "16001"
+# EN: The basis for the registration is prepared by 18001 no later than three working days before the
+#     first start of the person (card of 18001); the day of a shift never stands in for that date.
+# CZ: Podklad k registraci připravuje 18001 nejpozději tři pracovní dny před prvním nástupem osoby
+#     (karta 18001); den směny toto datum nikdy nezastupuje.
+REGISTRATION_BASIS_PREPARED_BY = "18001"
+REGISTRATION_BASIS_MIN_WORKING_DAYS = 3
+# EN: The B2B credit check has a single owner; its result is evidence only for the checked subject and
+#     only while it is fresh (the age limit is a parameter of this policy).
+# CZ: Kreditní prověrka B2B má jediného vlastníka; její výsledek je důkazem jen pro prověřený subjekt
+#     a jen dokud je čerstvý (limit stáří je parametr této politiky).
+CREDIT_CHECK_OWNER = "16001"
+CREDIT_CHECK_MAX_AGE_DAYS = 7
+# EN: Deadlines of the inspection technician certificate and of the inspection authority licence have
+#     one source of truth (owner 15002); a document quoted from anywhere else is not evidence.
+# CZ: Lhůty Osvědčení RT a Oprávnění TIČR mají jediný zdroj pravdy (vlastník 15002); doklad citovaný
+#     odjinud důkazem není.
+LICENCE_SOURCE = "db_erp_lhutnik"
 P1_RESERVE_APPROVER = "1001"
 P1_RESERVE_PROPOSER = "11001"
 P1_RESERVE_RELEASER = "17005"
 OCPP_RESET_OWNER = "14003"
 OWNER = "1001"                               # the managing director / jednatel
 COMPANY_DATA_BOX = "w9bbdva"
+# EN: Configuration of the ISDS environments: each environment has exactly ONE data box. Every operation
+#     and every authorisation is checked against the box of the selected environment, so the production
+#     id is refused in the test environment and the test id in production. The id of the test box is a
+#     deployment value: replace it here and in build_dataset.py with the id of the company's test box.
+# CZ: Konfigurace prostředí ISDS: každé prostředí má právě JEDNU schránku. Každá operace i každé pověření
+#     se kontroluje vůči schránce vybraného prostředí, takže produkční ID se v testovacím prostředí
+#     odmítne a testovací ID v produkci také. ID testovací schránky je hodnota nasazení: nahraď ji zde
+#     i v build_dataset.py skutečným ID zkušební schránky firmy.
+ISDS_PRODUCTION = "production"
+ISDS_TEST = "czebox"
+ISDS_TEST_DATA_BOX = "czt27pl"
+ISDS_DATA_BOXES = {ISDS_PRODUCTION: COMPANY_DATA_BOX, ISDS_TEST: ISDS_TEST_DATA_BOX}
 # EN: Break-Glass (R8): a delegate confirms with his own account and his own hardware key, and only
 #     these classes of acts - each with the role that may confirm it. Everything else waits for 1001.
+#     The role is never a text typed into the confirmation: it is read from the active appointment of
+#     this very person made by 1001 (record break_glass_appointment).
 # CZ: Break-Glass (R8): zástupce potvrzuje vlastním účtem a vlastním hardwarovým klíčem, a to jen tyto
 #     třídy úkonů - každou s rolí, která ji smí potvrdit. Vše ostatní čeká na 1001.
+#     Role nikdy není text vepsaný do potvrzení: čte se z aktivního jmenování právě této osoby, které
+#     provedl 1001 (záznam break_glass_appointment).
 BREAK_GLASS_ROLES = ("SUB-1007", "bank_delegate", "prokurista")
+# EN: Sending from the data box in Break-Glass: only the named delegate for the data box or the
+#     prokurista - never the substitute inspection technician and never the bank delegate alone.
+# CZ: Odeslání z datové schránky v Break-Glass: jen jmenovaný zmocněnec pro schránku nebo prokurista
+#     - nikdy zastupující revizní technik a nikdy samotný bankovní zmocněnec.
+ISDS_SEND_DELEGATE_ROLES = ("isds_delegate", "prokurista")
 BREAK_GLASS_CLASSES = {
     "urgent_inspection_report_release": ("SUB-1007",),
     "payment": ("bank_delegate", "prokurista"),
@@ -151,6 +197,76 @@ def _expired(valid_until: str | None, on_day: str) -> bool:
     return limit is None or limit < date.fromisoformat(on_day)
 
 
+def _easter_sunday(year: int) -> date:
+    """Gregorian Easter Sunday. / Velikonoční neděle podle gregoriánského kalendáře."""
+    a, b, c = year % 19, year // 100, year % 100
+    d, e = b // 4, b % 4
+    g = (8 * b + 13) // 25
+    h = (19 * a + b - d - g + 15) % 30
+    i, k = c // 4, c % 4
+    m = (32 + 2 * e + 2 * i - h - k) % 7
+    n = (a + 11 * h + 22 * m) // 451
+    month, day = divmod(h + m - 7 * n + 114, 31)
+    return date(year, month, day + 1)
+
+
+_FIXED_HOLIDAYS = ((1, 1), (5, 1), (5, 8), (7, 5), (7, 6), (9, 28), (10, 28), (11, 17), (12, 24), (12, 25), (12, 26))
+
+
+def _is_working_day(day: date) -> bool:
+    """
+    EN: Monday to Friday that is not a Czech public holiday (fixed days, Good Friday, Easter Monday).
+    CZ: Pondělí až pátek, který není českým státním svátkem (pevné dny, Velký pátek, Velikonoční pondělí).
+    """
+    if day.weekday() >= 5 or (day.month, day.day) in _FIXED_HOLIDAYS:
+        return False
+    easter = _easter_sunday(day.year)
+    return day not in (easter - timedelta(days=2), easter + timedelta(days=1))
+
+
+def _working_days_before(first: date, limit: date) -> int:
+    """
+    EN: Number of working days from the given day (inclusive) up to the limit day (exclusive).
+    CZ: Počet pracovních dnů od daného dne (včetně) do mezního dne (bez něj).
+    """
+    if first >= limit:
+        return 0
+    # EN: More than four calendar weeks always contain enough working days - no need to walk years.
+    # CZ: Více než čtyři kalendářní týdny vždy obsahují dost pracovních dnů - roky není třeba procházet.
+    span = min((limit - first).days, 28)
+    return sum(1 for offset in range(span) if _is_working_day(limit - timedelta(days=offset + 1)))
+
+
+def _appointed_role(event: dict[str, Any], person: str | None, roles: tuple[str, ...]) -> str | None:
+    """
+    EN: The Break-Glass role of the person, read from the record of the active appointment made by 1001
+        for this very person. A role written anywhere else (in the confirmation, in the actor) is only
+        text and counts for nothing.
+    CZ: Role osoby v režimu Break-Glass, čtená ze záznamu aktivního jmenování, které pro právě tuto
+        osobu provedl 1001. Role zapsaná kdekoli jinde (v potvrzení, u aktéra) je jen text a neplatí.
+    """
+    appointment = _record(event, "break_glass_appointment")
+    role = appointment.get("role")
+    if (person is None or appointment.get("person") != person or appointment.get("active") is not True
+            or appointment.get("appointed_by") != OWNER or not isinstance(role, str) or role not in roles):
+        return None
+    return role
+
+
+def _own_valid_document(record: Any, holder: str, on_day: date) -> bool:
+    """
+    EN: A personal professional document (certificate, licence) counts only as a record with its id,
+        held by the acting person, taken from the single source of truth and valid on the given day.
+    CZ: Osobní odborný doklad (osvědčení, oprávnění) platí jen jako záznam se svým ID, jehož držitelem je
+        jednající osoba, převzatý z jediného zdroje pravdy a platný k danému dni.
+    """
+    if not isinstance(record, dict):
+        return False
+    valid_until = _as_date(record.get("valid_until"))
+    return (record.get("holder") == holder and _text(record.get("document_id")) is not None
+            and record.get("source") == LICENCE_SOURCE and valid_until is not None and valid_until >= on_day)
+
+
 # --- Rules / Pravidla -------------------------------------------------------------------------
 
 def rule_inbound_content_instruction(event: dict[str, Any]) -> dict[str, Any]:
@@ -196,11 +312,13 @@ def rule_worker_release(event: dict[str, Any]) -> dict[str, Any]:
     """
     EN: Hard-Stop gate of db_hr_lide before a person is released to a job. The registration with the
         social security administration counts only as a record with the registration id that 16001 wrote
-        down after the confirmation from ORG-UOL (never as a flag), and "eligible" arises only as the
-        output of this gate after mutation_confirm for the same person and day.
+        down after the confirmation from ORG-UOL (never as a flag), together with the basis that 18001
+        prepared at least three working days before the first start of the person; "eligible" arises
+        only as the output of this gate after mutation_confirm for the same person and day.
     CZ: Hard-Stop brána db_hr_lide před uvolněním osoby na zakázku. Registrace u správy sociálního
         zabezpečení platí jen jako záznam s ID registrace, které zapsal 16001 po potvrzení od ORG-UOL
-        (nikdy jako příznak), a „způsobilý“ vzniká výhradně výstupem této brány po mutation_confirm
+        (nikdy jako příznak), spolu s podkladem, který 18001 připravil nejméně tři pracovní dny před
+        prvním nástupem osoby; „způsobilý“ vzniká výhradně výstupem této brány po mutation_confirm
         pro tutéž osobu a den.
     """
     day = event["work_date"]
@@ -220,21 +338,40 @@ def rule_worker_release(event: dict[str, Any]) -> dict[str, Any]:
                 or registration.get("recorded_by") != REGISTRATION_RECORDED_BY or registration.get("person_no") != person
                 or basis is None):
             return _result(BLOCK, "JMHZ_NOT_REGISTERED", "notify_18001")
-        # EN: The order in time is part of the evidence: 1001 approved this very basis in Decisions, the
-        #     filing was confirmed by ORG-UOL not earlier than that, and the confirmation is dated BEFORE
-        #     the day of work. Dates have the resolution of a day, so a confirmation dated on the day of
-        #     work cannot prove "before the start" and does not open the gate.
-        # CZ: Časová posloupnost je součástí důkazu: 1001 schválil právě tento podklad v Decisions, podání
-        #     potvrdil ORG-UOL nejdříve poté a potvrzení je datováno PŘED dnem práce. Data mají rozlišení
-        #     dne, takže potvrzení datované dnem práce „před zahájením“ doložit neumí a bránu neotevře.
+        # EN: The basis itself is a record: this very basis, for this very person, prepared by 18001 on
+        #     a known day, and it states the date of the FIRST START of the person. That date - not the
+        #     day of the shift being released - is what "before the start" is measured against.
+        # CZ: Sám podklad je záznam: právě tento podklad, pro právě tuto osobu, připravený 18001 ve známý
+        #     den, a uvádí datum PRVNÍHO NÁSTUPU osoby. K tomuto datu - ne ke dni uvolňované směny - se
+        #     měří „před nástupem“.
+        prepared = _record(event, "registration_basis")
+        prepared_on, first_start = _as_date(prepared.get("prepared_on")), _as_date(prepared.get("first_start_date"))
+        if (prepared.get("basis_id") != basis or prepared.get("prepared_by") != REGISTRATION_BASIS_PREPARED_BY
+                or prepared.get("person_no") != person or prepared_on is None or first_start is None):
+            return _result(BLOCK, "JMHZ_BASIS_NOT_PREPARED", "notify_18001")
+        # EN: The order in time is part of the evidence: 18001 prepared the basis, 1001 approved this very
+        #     basis in Decisions not earlier than that, the filing was confirmed by ORG-UOL not earlier
+        #     than the approval, and the confirmation is dated BEFORE the first start. Dates have the
+        #     resolution of a day, so a confirmation dated on the day of the first start cannot prove
+        #     "before the start" and does not open the gate.
+        # CZ: Časová posloupnost je součástí důkazu: 18001 připravil podklad, 1001 schválil právě tento
+        #     podklad v Decisions nejdříve poté, podání potvrdil ORG-UOL nejdříve po schválení a potvrzení
+        #     je datováno PŘED prvním nástupem. Data mají rozlišení dne, takže potvrzení datované dnem
+        #     prvního nástupu „před nástupem“ doložit neumí a bránu neotevře.
         approval = _record(event, "basis_approval")
         approved_on = _as_date(approval.get("approved_on"))
         if (approval.get("mutation_confirm") is not True or approval.get("approved_by") != OWNER or approval.get("basis_id") != basis
-                or approval.get("person_no") != person or approved_on is None):
+                or approval.get("person_no") != person or approved_on is None or approved_on < prepared_on):
             return _result(BLOCK, "JMHZ_BASIS_NOT_APPROVED", "notify_18001", "return_to_decisions")
+        if _working_days_before(prepared_on, first_start) < REGISTRATION_BASIS_MIN_WORKING_DAYS:
+            return _result(BLOCK, "JMHZ_BASIS_LATE", "notify_18001")
         confirmed_on, work_day = _as_date(registration.get("confirmed_on")), _as_date(day)
-        if confirmed_on is None or work_day is None or confirmed_on < approved_on or confirmed_on >= work_day:
+        if confirmed_on is None or confirmed_on < approved_on or confirmed_on >= first_start:
             return _result(BLOCK, "JMHZ_REGISTERED_LATE", "notify_18001")
+        # EN: Nobody is released to a shift that precedes his own first start.
+        # CZ: Nikdo se neuvolní na směnu, která předchází jeho vlastnímu prvnímu nástupu.
+        if work_day is None or work_day < first_start:
+            return _result(BLOCK, "SHIFT_BEFORE_FIRST_START", "notify_18001")
     have = QUALIFICATION_RANK.get(event.get("qualification", "none"), 0)
     need = QUALIFICATION_RANK[req_qual]
     if have < need or (need > 0 and _expired(event.get("qualification_valid_until"), day)):
@@ -359,15 +496,18 @@ def rule_ads_campaign_change(event: dict[str, Any]) -> dict[str, Any]:
     return _result(ALLOW, "ADS_DRAFT_PAUSED", "save_paused_campaign")
 
 
-def _isds_send(event: dict[str, Any]) -> dict[str, Any]:
+def _isds_send(event: dict[str, Any], data_box: str) -> dict[str, Any]:
     """
-    EN: Sending from the company data box. Never an ai. In normal operation only 1001; in Break-Glass
-        only the named delegate with his own access with the right to send. Always a human who confirmed
-        this very submission in Decisions with his own hardware key, after VERIFIED_PASS from 15001 for
-        this very submission.
-    CZ: Odeslání z datové schránky firmy. Nikdy ai. V běžném režimu jen 1001; v režimu Break-Glass jen
-        jmenovaný zmocněnec vlastním přístupem s oprávněním odesílat. Vždy člověk, který právě toto podání
-        potvrdil v Decisions vlastním hardwarovým klíčem, po VERIFIED_PASS od 15001 k právě tomuto podání.
+    EN: Sending from the data box of the selected environment (the same contract in production and in
+        the test environment). Never an ai. In normal operation only 1001; in Break-Glass only the
+        person with an active appointment as the named delegate or prokurista, with his own access
+        with the right to send. Always a human who confirmed this very submission in Decisions with
+        his own hardware key, after VERIFIED_PASS from 15001 for this very submission.
+    CZ: Odeslání z datové schránky vybraného prostředí (stejný kontrakt v produkci i v testovacím
+        prostředí). Nikdy ai. V běžném režimu jen 1001; v režimu Break-Glass jen osoba s aktivním
+        jmenováním zmocněncem nebo prokuristou, vlastním přístupem s oprávněním odesílat. Vždy člověk,
+        který právě toto podání potvrdil v Decisions vlastním hardwarovým klíčem, po VERIFIED_PASS
+        od 15001 k právě tomuto podání.
     """
     submission = _text(event.get("submission_id"))
     actor = _record(event, "actor")
@@ -378,19 +518,27 @@ def _isds_send(event: dict[str, Any]) -> dict[str, Any]:
     if presence == "owner_present":
         authorised, reason = human_with_key and person == ISDS_OWNER, "ISDS_SEND_BY_OWNER"
     elif presence == "break_glass_active":
-        # EN: The delegate's right to send is a record, not a flag: an active authorisation of this very
-        #     person for this very data box with the right to send, granted by 1001.
-        # CZ: Oprávnění zmocněnce odesílat je záznam, ne příznak: aktivní pověření právě této osoby pro
-        #     právě tuto schránku s oprávněním odesílat, udělené 1001.
+        # EN: Two records, not flags. Who the delegate is: an active appointment of this very person as
+        #     the named delegate or prokurista, made by 1001. What he may do: an active authorisation of
+        #     this very person for the ONE data box of the selected environment with the right to send,
+        #     granted by 1001. An access with the right to send alone does not make anybody a delegate.
+        # CZ: Dva záznamy, ne příznaky. Kdo zmocněnec je: aktivní jmenování právě této osoby zmocněncem
+        #     nebo prokuristou, které provedl 1001. Co smí: aktivní pověření právě této osoby pro JEDINOU
+        #     schránku vybraného prostředí s oprávněním odesílat, udělené 1001. Samotný přístup
+        #     s oprávněním odesílat z nikoho zmocněnce nedělá.
         grant = _record(event, "send_authorisation")
-        authorised = (human_with_key and person != ISDS_OWNER and grant.get("person") == person and grant.get("active") is True
+        authorised = (human_with_key and person != ISDS_OWNER
+                      and _appointed_role(event, person, ISDS_SEND_DELEGATE_ROLES) is not None
+                      and grant.get("person") == person and grant.get("active") is True
                       and grant.get("right") == "send" and grant.get("granted_by") == ISDS_OWNER
-                      and grant.get("data_box") == COMPANY_DATA_BOX)
+                      and grant.get("data_box") == data_box)
         reason = "ISDS_SEND_BY_DELEGATE"
     else:
         authorised, reason = False, ""
-    if not authorised or event.get("data_box") != COMPANY_DATA_BOX:
+    if not authorised:
         return _result(BLOCK, "ISDS_SEND_REQUIRES_OWNER", "return_to_decisions")
+    if event.get("data_box") != data_box:
+        return _result(BLOCK, "ISDS_DATA_BOX_MISMATCH", "return_to_decisions", "log_audit")
     if submission is None:
         return _result(FAIL_CLOSED, "MALFORMED_EVENT", "log_audit")
     verdict = _record(event, "legal_verdict")
@@ -416,10 +564,31 @@ def rule_isds_operation(event: dict[str, Any]) -> dict[str, Any]:
     operation = event.get("operation")
     if operation not in ("send", "poll_received", "download"):
         return _result(FAIL_CLOSED, "ISDS_OPERATION_UNKNOWN", "log_audit")
-    if event.get("environment") == "czebox":
-        return _result(ALLOW, "ISDS_TEST_ENVIRONMENT", "run_test_call")
+    # EN: The environment must be known and it selects the one data box everything is checked against.
+    #     A data box named in the event that is not the box of the selected environment stops the
+    #     operation at once: the production id is never touched under the label of a test, and a test
+    #     id never passes for the company box.
+    # CZ: Prostředí musí být známé a vybírá jedinou schránku, vůči které se vše kontroluje. Schránka
+    #     jmenovaná v události, která není schránkou vybraného prostředí, operaci ihned zastaví:
+    #     na produkční ID se pod hlavičkou testu nikdy nesáhne a testovací ID nikdy neprojde jako
+    #     schránka firmy.
+    environment = event.get("environment")
+    data_box = ISDS_DATA_BOXES.get(environment) if isinstance(environment, str) else None
+    if data_box is None:
+        return _result(FAIL_CLOSED, "ISDS_ENVIRONMENT_UNKNOWN", "log_audit")
+    named_box = event.get("data_box")
+    if named_box is not None and named_box != data_box:
+        return _result(BLOCK, "ISDS_DATA_BOX_MISMATCH", "return_to_decisions", "log_audit")
     if operation == "send":
-        return _isds_send(event)
+        return _isds_send(event, data_box)
+    if environment == ISDS_TEST:
+        # EN: Reading the test box has no delivery effects, so the window does not apply - but only
+        #     when the event names the test box itself.
+        # CZ: Čtení testovací schránky nemá účinky doručení, takže okno neplatí - ale jen tehdy, když
+        #     událost jmenuje právě testovací schránku.
+        if named_box != data_box:
+            return _result(BLOCK, "ISDS_DATA_BOX_MISMATCH", "return_to_decisions", "log_audit")
+        return _result(ALLOW, "ISDS_TEST_ENVIRONMENT", "run_test_call")
     if event.get("presence") == "unattended_absence" or event.get("mode") == "PAUSED":
         return _result(BLOCK, "ISDS_PAUSED", "watch_external_notifications")
     # EN: Reading has delivery effects - presence and switch state must be known, not assumed.
@@ -431,6 +600,10 @@ def rule_isds_operation(event: dict[str, Any]) -> dict[str, Any]:
         return _result(FAIL_CLOSED, "MALFORMED_EVENT", "log_audit")
     if weekday not in ISDS_POLL_WEEKDAYS or event.get("time") != ISDS_POLL_TIME:
         return _result(BLOCK, "ISDS_OUTSIDE_WINDOW", "log_audit")
+    # EN: Reading has delivery effects, so the call must name the very box it reads.
+    # CZ: Čtení má účinky doručení, takže volání musí jmenovat právě tu schránku, kterou čte.
+    if named_box != data_box:
+        return _result(BLOCK, "ISDS_DATA_BOX_MISMATCH", "return_to_decisions", "log_audit")
     return _result(ALLOW, "ISDS_POLL_IN_WINDOW", "download_and_archive_zfo")
 
 
@@ -480,7 +653,13 @@ def rule_inspection_report(event: dict[str, Any]) -> dict[str, Any]:
 def rule_b2b_order(event: dict[str, Any]) -> dict[str, Any]:
     """
     EN: B2B delivery to a counterparty in insolvency (ISIR) or enforcement (CEE) needs an advance.
-    CZ: B2B dodávka protistraně v insolvenci (ISIR) nebo exekuci (CEE) vyžaduje zálohu.
+        The order is confirmed only with the evidence of the credit check: a record made by its single
+        owner 16001, for this very counterparty, fresh on the day of the order and with the very
+        registry answers the event relies on. Registry flags without that record open nothing.
+    CZ: B2B dodávka protistraně v insolvenci (ISIR) nebo exekuci (CEE) vyžaduje zálohu. Objednávka se
+        potvrdí jen s důkazem kreditní prověrky: záznamem, který pořídil její jediný vlastník 16001,
+        pro právě tuto protistranu, čerstvým ke dni objednávky a s právě těmi odpověďmi registrů,
+        o které se událost opírá. Příznaky registrů bez tohoto záznamu nic neotevřou.
     """
     isir = event.get("isir_insolvency")
     cee = event.get("cee_enforcement")
@@ -488,6 +667,15 @@ def rule_b2b_order(event: dict[str, Any]) -> dict[str, Any]:
         return _result(FAIL_CLOSED, "REGISTRY_UNAVAILABLE", "notify_16001")
     if (isir or cee) and event.get("advance_paid") is not True:
         return _result(BLOCK, "COUNTERPARTY_RISK_NO_ADVANCE", "notify_16001", "escalate_decisions")
+    subject = _text(event.get("counterparty_id"))
+    check = _record(event, "credit_check")
+    if (subject is None or _text(check.get("check_id")) is None or check.get("performed_by") != CREDIT_CHECK_OWNER
+            or check.get("subject_id") != subject or check.get("isir_insolvency") is not isir
+            or check.get("cee_enforcement") is not cee):
+        return _result(BLOCK, "CREDIT_CHECK_MISSING", "notify_16001")
+    checked_on, order_day = _as_date(check.get("checked_on")), _as_date(event.get("order_date"))
+    if checked_on is None or order_day is None or checked_on > order_day or (order_day - checked_on).days > CREDIT_CHECK_MAX_AGE_DAYS:
+        return _result(BLOCK, "CREDIT_CHECK_STALE", "notify_16001")
     return _result(ALLOW, "B2B_ORDER_OK", "confirm_order_draft")
 
 
@@ -508,12 +696,13 @@ def rule_data_mutation(event: dict[str, Any]) -> dict[str, Any]:
     """
     EN: Every data change needs the atomic before/after diff and a confirmation record (mutation_confirm)
         for this very change, made by a human with his own hardware key. In normal operation only 1001
-        confirms. In Break-Glass a named delegate confirms only the enumerated classes of acts, each
-        with the proof of its own scope; every other change waits for 1001.
+        confirms. In Break-Glass a delegate with an active appointment made by 1001 confirms only the
+        enumerated classes of acts, each with the proof of its own scope; every other change waits
+        for 1001.
     CZ: Každá změna dat vyžaduje atomický diff před → po a potvrzující záznam (mutation_confirm) k právě
         této změně, pořízený člověkem vlastním hardwarovým klíčem. V běžném režimu potvrzuje jen 1001.
-        V režimu Break-Glass potvrzuje jmenovaný zástupce jen vyjmenované třídy úkonů, každou s dokladem
-        jejího rozsahu; každá jiná změna čeká na 1001.
+        V režimu Break-Glass potvrzuje zástupce s aktivním jmenováním od 1001 jen vyjmenované třídy
+        úkonů, každou s dokladem jejího rozsahu; každá jiná změna čeká na 1001.
     """
     if event.get("diff_presented") is not True:
         return _result(BLOCK, "MUTATION_DIFF_MISSING", "return_to_decisions")
@@ -533,14 +722,28 @@ def rule_data_mutation(event: dict[str, Any]) -> dict[str, Any]:
         if person != OWNER:
             return _result(BLOCK, "MUTATION_APPROVER_NOT_AUTHORISED", "return_to_decisions")
         return _result(ALLOW, "MUTATION_CONFIRMED", "execute_confirmed_mutation", "log_audit")
-    role = confirmation.get("break_glass_role")
-    if person == OWNER or role not in BREAK_GLASS_ROLES:
+    # EN: The role comes from the active appointment of this very person, never from a text in the
+    #     confirmation ("break_glass_role" typed by the approver is ignored).
+    # CZ: Role plyne z aktivního jmenování právě této osoby, nikdy z textu v potvrzení
+    #     („break_glass_role“ vepsaná schvalujícím se nebere v úvahu).
+    role = _appointed_role(event, person, BREAK_GLASS_ROLES)
+    if person == OWNER or role is None:
         return _result(BLOCK, "MUTATION_APPROVER_NOT_AUTHORISED", "return_to_decisions")
     if role not in BREAK_GLASS_CLASSES.get(action_class, ()):
         return _result(BLOCK, "BREAK_GLASS_CLASS_NOT_ALLOWED", "return_to_decisions")
     scope = _record(event, "scope")
     if action_class == "urgent_inspection_report_release":
-        in_scope = scope.get("performed_by") == person and scope.get("signed_by") == person and scope.get("urgent") is True
+        # EN: The substitute inspection technician releases only a report he performed and signed himself,
+        #     under his OWN inspection technician certificate and his OWN inspection authority licence -
+        #     both as records held by him and valid on the day of the signature.
+        # CZ: Zastupující revizní technik uvolňuje jen zprávu, kterou sám provedl a podepsal, pod VLASTNÍM
+        #     Osvědčením RT a VLASTNÍM Oprávněním TIČR - obojí jako záznam, jehož je držitelem a který
+        #     platí ke dni podpisu.
+        signed_on = _as_date(scope.get("signed_on"))
+        in_scope = (scope.get("performed_by") == person and scope.get("signed_by") == person and scope.get("urgent") is True
+                    and signed_on is not None
+                    and _own_valid_document(scope.get("rt_certificate"), person, signed_on)
+                    and _own_valid_document(scope.get("ticr_licence"), person, signed_on))
     elif action_class == "payment":
         amount, limit = _finite_nonneg_number(scope.get("amount_czk")), _finite_nonneg_number(scope.get("power_of_attorney_limit_czk"))
         in_scope = scope.get("power_of_attorney_holder") == person and amount is not None and limit is not None and amount <= limit
@@ -555,40 +758,57 @@ def rule_data_mutation(event: dict[str, Any]) -> dict[str, Any]:
 
 def rule_paid_model_call(event: dict[str, Any]) -> dict[str, Any]:
     """
-    EN: FinOps cap of 470 USD per month — at 100 % all paid calls stop until raised in Decisions.
-        At 100 % of its own operating quota an agent stops; a P1 task may draw the shared reserve only
-        with an approved release record.
-    CZ: FinOps strop 470 USD měsíčně — při 100 % se zastaví všechna placená volání do navýšení v Decisions.
-        Při 100 % vlastní provozní kvóty se agent zastaví; úkol P1 smí čerpat sdílenou rezervu jen se
-        schváleným záznamem uvolnění.
+    EN: FinOps cap of 470 USD per month, authorised BEFORE the spend: the estimated cost of the call is
+        added to what was already spent, and the call is refused when it would not fit - a share of the
+        budget "used so far" never authorises the next expense. A call that does not fit into the
+        operating quota of the agent stops; a P1 task may draw the shared reserve only with an approved
+        release record bound to this agent, this task, this period and an amount.
+    CZ: FinOps strop 470 USD měsíčně, autorizovaný PŘED výdajem: odhad nákladů volání se přičte k už
+        utracené částce a volání se odmítne, když by se nevešlo - podíl rozpočtu „dosud spotřebovaný“
+        další výdaj nikdy neautorizuje. Volání, které se nevejde do provozní kvóty agenta, se zastaví;
+        úkol P1 smí čerpat sdílenou rezervu jen se schváleným záznamem uvolnění vázaným na tohoto
+        agenta, tento úkol, toto období a částku.
     """
-    global_pct = _finite_nonneg_number(event.get("global_budget_used_pct"))
-    agent_pct = _finite_nonneg_number(event.get("agent_quota_used_pct"))
-    if global_pct is None or agent_pct is None:
+    estimate = _finite_nonneg_number(event.get("estimated_cost_usd"))
+    global_spent = _finite_nonneg_number(event.get("global_spent_usd"))
+    quota = _finite_nonneg_number(event.get("agent_quota_usd"))
+    agent_spent = _finite_nonneg_number(event.get("agent_spent_usd"))
+    # EN: A paid call without a positive estimate of its cost cannot be authorised in advance.
+    # CZ: Placené volání bez kladného odhadu nákladů nelze autorizovat předem.
+    if estimate is None or global_spent is None or quota is None or agent_spent is None or estimate <= 0:
         return _result(FAIL_CLOSED, "MALFORMED_EVENT", "log_audit")
-    if global_pct >= FINOPS_HARD_STOP_PCT:
+    if global_spent + estimate > FINOPS_GLOBAL_CAP_USD + _MONEY_EPSILON:
         return _result(BLOCK, "FINOPS_HARD_STOP", "escalate_decisions")
-    if agent_pct >= 100.0:
-        if event.get("priority") != "P1" or event.get("p1_reserve_available") is not True:
-            return _result(BLOCK, "AGENT_QUOTA_EXHAUSTED", "escalate_decisions")
-        # EN: "Available" is not "released". The shared P1 reserve is drawn only with a release record:
-        #     approved by 1001 on the proposal of 11001, technically released by 17005, for this very
-        #     agent - and 17005 never releases it to itself.
-        # CZ: „Dostupná“ neznamená „uvolněná“. Sdílená rezerva P1 se čerpá jen se záznamem uvolnění:
-        #     schválil 1001 na návrh 11001, technicky uvolnil 17005, pro právě tohoto agenta - a 17005
-        #     ji nikdy neuvolní sám sobě.
-        agent = _text(event.get("agent_id"))
-        release = _record(event, "p1_reserve_release")
-        if agent is None:
-            return _result(FAIL_CLOSED, "MALFORMED_EVENT", "log_audit")
-        if agent == P1_RESERVE_RELEASER or (release.get("released_by") is not None and release.get("beneficiary") == release.get("released_by")):
-            return _result(BLOCK, "P1_RESERVE_SELF_RELEASE", "escalate_decisions", "report_17004")
-        if (release.get("mutation_confirm") is not True or release.get("approved_by") != P1_RESERVE_APPROVER
-                or release.get("proposed_by") != P1_RESERVE_PROPOSER or release.get("released_by") != P1_RESERVE_RELEASER
-                or release.get("beneficiary") != agent):
-            return _result(BLOCK, "P1_RESERVE_NOT_APPROVED", "escalate_decisions")
-        return _result(ALLOW, "P1_RESERVE_USED", "charge_p1_reserve", "log_audit")
-    return _result(ALLOW, "BUDGET_OK", "charge_agent_quota")
+    if agent_spent + estimate <= quota + _MONEY_EPSILON:
+        return _result(ALLOW, "BUDGET_OK", "charge_agent_quota")
+    if event.get("priority") != "P1":
+        return _result(BLOCK, "AGENT_QUOTA_EXHAUSTED", "escalate_decisions")
+    # EN: The shared P1 reserve is drawn only with a release record: approved by 1001 on the proposal of
+    #     11001, technically released by 17005, for this very agent - and 17005 never releases it to
+    #     itself. The record is bound to the task and to the accounting period of this call and carries
+    #     the released amount; what was already drawn from it plus this call must fit into that amount.
+    # CZ: Sdílená rezerva P1 se čerpá jen se záznamem uvolnění: schválil 1001 na návrh 11001, technicky
+    #     uvolnil 17005, pro právě tohoto agenta - a 17005 ji nikdy neuvolní sám sobě. Záznam je vázán
+    #     na úkol a na účetní období tohoto volání a nese uvolněnou částku; co už z ní bylo vyčerpáno,
+    #     se spolu s tímto voláním musí do této částky vejít.
+    agent = _text(event.get("agent_id"))
+    task = _text(event.get("task_id"))
+    period = event.get("period")
+    release = _record(event, "p1_reserve_release")
+    if agent is None or task is None or not isinstance(period, str) or FINOPS_PERIOD.fullmatch(period) is None:
+        return _result(FAIL_CLOSED, "MALFORMED_EVENT", "log_audit")
+    if agent == P1_RESERVE_RELEASER or (release.get("released_by") is not None and release.get("beneficiary") == release.get("released_by")):
+        return _result(BLOCK, "P1_RESERVE_SELF_RELEASE", "escalate_decisions", "report_17004")
+    amount, drawn = _finite_nonneg_number(release.get("amount_usd")), _finite_nonneg_number(release.get("drawn_usd"))
+    if (release.get("mutation_confirm") is not True or _text(release.get("decision_id")) is None
+            or release.get("approved_by") != P1_RESERVE_APPROVER
+            or release.get("proposed_by") != P1_RESERVE_PROPOSER or release.get("released_by") != P1_RESERVE_RELEASER
+            or release.get("beneficiary") != agent or release.get("task_id") != task or release.get("period") != period
+            or amount is None or drawn is None or amount <= 0 or amount > FINOPS_P1_RESERVE_USD + _MONEY_EPSILON):
+        return _result(BLOCK, "P1_RESERVE_NOT_APPROVED", "escalate_decisions")
+    if drawn + estimate > amount + _MONEY_EPSILON:
+        return _result(BLOCK, "P1_RESERVE_AMOUNT_EXCEEDED", "escalate_decisions")
+    return _result(ALLOW, "P1_RESERVE_USED", "charge_p1_reserve", "log_audit")
 
 
 def rule_ocpp_command(event: dict[str, Any]) -> dict[str, Any]:

@@ -91,7 +91,9 @@
 // Ceník vložený při sestavení z cenik.json (python pricing.py --build).
 const PRICE_LIST = {"meta": {"name": "cenik_polarita", "version": "2.0", "status": "SCHVALENO_1001", "approved": true, "approved_by": "1001", "approved_on": "2026-11-15", "valid_from": "2026-11-15", "currency": "CZK", "prices_exclude_vat": true, "vat_rates": {"standard_pct": 21, "residential_reduced_pct": 12, "standard_bp": 2100, "residential_reduced_bp": 1200}}, "mrr_tariffs": [{"code": "START_SVJ", "label": "Start SVJ", "audience": "SVJ a bytová družstva", "sla_response": "následující pracovní den", "labour_discount_pct": 0, "includes": ["48h digitální převzetí starých šanonů (N7)", "Hlídání všech lhůt v Centrálním Lhůtníku", "Digitální kniha objektu pod QR kódem na rozváděči", "Pravidelné revize společných prostor a hromosvodu LPS v ceně", "Neomezený počet členů výboru SVJ v portálu"], "base_monthly_per_object_hellers": 149000, "extra_entrance_monthly_hellers": 49000}, {"code": "STANDARD_OBJEKT", "label": "Standard Objekt", "audience": "SVJ, bytové domy a menší firmy", "sla_response": "do 8 pracovních hodin", "labour_discount_pct": 5, "includes": ["Vše z tarifu Start SVJ", "Termovizní diagnostika hlavních rozváděčů", "Prioritní servisní SLA odezva přes Helpdesk", "Vzdálený Read-Only dohled EV wallboxů (OCPP) a FVE střídačů", "Roční souhrnná zpráva pro pojišťovnu", "Sleva 5 % na hodinovou sazbu montérů"], "base_monthly_per_object_hellers": 299000, "extra_entrance_monthly_hellers": 79000}, {"code": "MAXI_AREAL_B2B", "label": "Maxi Areál / B2B", "audience": "Areály, výrobní a logistické firmy", "sla_response": "garantovaná pohotovost do 4 hodin", "labour_discount_pct": 10, "includes": ["Vše z tarifu Standard Objekt", "Garantovaná pohotovostní SLA lhůta", "Preventivní údržba trafostanic, kompenzací a nouzového osvětlení", "Zvýhodněná hodinová sazba montérů (sleva 10 %)", "Prioritní dispečink a koordinace zakázek"], "base_monthly_per_object_hellers": 690000, "extra_entrance_monthly_hellers": 149000}], "turnkey_packages": [{"code": "EV_WALLBOX", "label": "Chytrý EV Wallbox pro garáž SVJ / rodinný dům", "unit": "ks", "includes": "Wallbox, jištění a chránič, dynamické řízení výkonu DLM, OCPP dohled, výchozí revize", "price_from_hellers": 3800000, "price_to_hellers": 9500000}, {"code": "STOUPACKY_HER", "label": "Modernizace stoupaček a hlavního elektroměrového rozváděče SVJ", "unit": "vchod", "includes": "Projekt, nové stoupací vedení, elektroměrový rozváděč s Výrobním pasem CE podle platné normy pro rozváděče nízkého napětí, stavební přípomoce, výchozí revize", "price_from_hellers": 18000000, "price_to_hellers": 95000000}, {"code": "FVE_BESS", "label": "Komunitní a firemní FVE + BESS", "unit": "instalace", "includes": "Projekt, FVE a bateriové úložiště s datovou připraveností pasu baterie (předpisy EU o bateriích, povinné od 18. 2. 2027 pro LMT, EV a průmyslové baterie \u003e 2 kWh), registrace EDC, bezpečná instalace podle předpisů o bezpečné instalaci výroben z obnovitelných zdrojů", "price_from_hellers": 45000000, "price_to_hellers": 350000000}], "seasonal_coefficients": [{"months": [1, 2], "label": "Zimní útlum montáží", "coefficient_e4": 9500}, {"months": [3, 4, 5], "label": "Jarní standard", "coefficient_e4": 10000}, {"months": [6, 7, 8, 9], "label": "Hlavní sezóna FVE a EV", "coefficient_e4": 10500}, {"months": [10, 11, 12], "label": "Podzimní revize", "coefficient_e4": 10000}], "indexation": "Roční indexace paušálu o průměrnou míru inflace vyhlášenou ČSÚ za předchozí kalendářní rok (dle paušální servisní smlouvy, sestava S1 č. 2)."};
 
-const state = { tariff: PRICE_LIST.mrr_tariffs[0].code, packages: {} };
+// Quantities live in a Map keyed by the package code, never in a plain object (see KERNEL below).
+// Množství jsou v Map s klíčem kódu balíčku, nikdy v obyčejném objektu (viz KERNEL níže).
+const state = { tariff: PRICE_LIST.mrr_tariffs[0].code, packages: new Map() };
 const byId = (id) => document.getElementById(id);
 
 // KERNEL-START
@@ -138,6 +140,27 @@ function packageRange(priceList, pkg, quantity, month) {
   const scaledPrice = (hellers) => halfUp(safe(safe(safe(hellers) * safe(quantity)) * coefficient), 10000);
   return [scaledPrice(pkg.price_from_hellers), scaledPrice(pkg.price_to_hellers)];
 }
+// Codes: the same pattern as SAFE_CODE_PATTERN in pricing.py. Quantities are kept in a Map, so no code
+// (not even "constructor" or "toString") can meet an inherited property of a plain object; a code
+// outside the pattern stops the calculation here exactly as pricing.py refuses it in the price list.
+// Kódy: stejný vzor jako SAFE_CODE_PATTERN v pricing.py. Množství se drží v Map, takže žádný kód
+// (ani „constructor“ či „toString“) nenarazí na zděděnou vlastnost obyčejného objektu; kód mimo vzor
+// zde výpočet zastaví stejně, jako jej pricing.py odmítne v ceníku.
+const SAFE_CODE = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
+const requireCode = (code) => {
+  if (typeof code !== "string" || !SAFE_CODE.test(code)) { throw new RangeError("code outside the safe pattern"); }
+  return code;
+};
+const setQuantity = (quantities, code, quantity) => quantities.set(requireCode(code), safe(quantity));
+const getQuantity = (quantities, code) => (quantities.has(requireCode(code)) ? quantities.get(code) : 0);
+function packagesTotal(priceList, quantities, month) {
+  const lows = [], highs = [], chosen = [];
+  priceList.turnkey_packages.forEach((pkg) => {
+    const quantity = getQuantity(quantities, pkg.code);
+    if (quantity > 0) { const [low, high] = packageRange(priceList, pkg, quantity, month); lows.push(low); highs.push(high); chosen.push([pkg.code, quantity]); }
+  });
+  return { from: sum(lows), to: sum(highs), chosen };
+}
 // KERNEL-END
 
 const czk = (hellers) => wholeCrowns(hellers).toLocaleString("cs-CZ") + " Kč";
@@ -181,7 +204,7 @@ function renderStatic() {
     const quantity = document.createElement("input"); quantity.type = "number"; quantity.min = "1"; quantity.max = "200"; quantity.value = "1";
     quantity.disabled = true;
     quantity.setAttribute("aria-label", "Počet: " + pkg.label);
-    const sync = () => { quantity.disabled = !check.checked; state.packages[pkg.code] = check.checked ? clampInt(quantity) : 0; update(); };
+    const sync = () => { quantity.disabled = !check.checked; setQuantity(state.packages, pkg.code, check.checked ? clampInt(quantity) : 0); update(); };
     check.addEventListener("change", sync); quantity.addEventListener("input", sync); showClamped(quantity);
     row.append(check, label, quantity); packages.append(row);
   });
@@ -196,12 +219,9 @@ function compute() {
   const entrances = clampInt(byId("entrances"));
   const month = Number(byId("month").value);
   const monthly = monthlyFee(tariff, objects, entrances);
-  const lows = [], highs = [], chosen = [];
-  PRICE_LIST.turnkey_packages.forEach((pkg) => {
-    const quantity = state.packages[pkg.code] || 0;
-    if (quantity > 0) { const [a, b] = packageRange(PRICE_LIST, pkg, quantity, month); lows.push(a); highs.push(b); chosen.push(quantity + "× " + pkg.label); }
-  });
-  return { tariff, objects, entrances, month, monthly, annual: annualFee(monthly), from: sum(lows), to: sum(highs), chosen };
+  const total = packagesTotal(PRICE_LIST, state.packages, month);
+  const chosen = total.chosen.map(([code, quantity]) => quantity + "× " + PRICE_LIST.turnkey_packages.find((pkg) => pkg.code === code).label);
+  return { tariff, objects, entrances, month, monthly, annual: annualFee(monthly), from: total.from, to: total.to, chosen };
 }
 
 function update() {

@@ -117,8 +117,24 @@ def _mapping(value: Any, name: str) -> dict[str, Any]:
     return value
 
 
+# EN: Codes of tariffs and packages are used as keys and identifiers by the public page as well. Only a
+#     plain ASCII identifier is accepted (a letter, then letters, digits or underscores, at most 64
+#     characters), so a code such as "__proto__" can never reach the page. The JavaScript kernel checks
+#     the SAME pattern (SAFE_CODE in konfigurator.template.html) and keeps quantities in a Map.
+# CZ: Kódy tarifů a balíčků používá jako klíče a identifikátory i veřejná stránka. Přijímá se jen prostý
+#     ASCII identifikátor (písmeno, pak písmena, číslice nebo podtržítka, nejvýše 64 znaků), takže kód
+#     typu „__proto__“ se na stránku nikdy nedostane. Jádro v JavaScriptu kontroluje TÝŽ vzor (SAFE_CODE
+#     v konfigurator.template.html) a množství drží v Map.
+SAFE_CODE_PATTERN = r"[A-Za-z][A-Za-z0-9_]{0,63}"
+SAFE_CODE = re.compile(SAFE_CODE_PATTERN)
+
+
 def _unique_codes(entries: list[Any], name: str) -> None:
     codes = [_text(_mapping(entry, name).get("code"), f"{name}.code") for entry in entries]
+    for code in codes:
+        if not SAFE_CODE.fullmatch(code):
+            raise PricingError(f"price list: {name}.code must be a plain identifier (a letter, then letters, digits or "
+                               f"underscores, at most 64 characters)")
     if len(set(codes)) != len(codes):
         raise PricingError(f"price list: {name} has a duplicate code")
 
