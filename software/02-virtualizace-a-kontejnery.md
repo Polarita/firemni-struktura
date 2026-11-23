@@ -1,6 +1,6 @@
 # 02 — Virtualizace, kontejnerizace a izolace zón (Bez Dockeru na hostiteli) · Verze 3.1
 
-Tento dokument stanovuje jednotnou virtualizační a kontejnerovou platformu na centrálním serveru `polarita-hq` (`Ubuntu Server — latest LTS`) pro provoz všech aplikací, databází, komunikační ústředny, bez-síťové karantény i testů obnovy společnosti **Polarita s.r.o.**
+Tento dokument stanovuje jednotnou virtualizační a kontejnerovou platformu na centrálním serveru `polarita-hq` (`Ubuntu Server — latest LTS`) pro provoz všech aplikací, databází, komunikační ústředny, bez-síťové karantény i testů obnovy společnosti **Polarita s.r.o.** Instalační příkazy, profily, čtyři zóny a OpenTofu v této vrstvě patří do vnitřního Incusu ve VM `polarita-hq`. Vnější Incus poskytuje firemní VM a její disk v poolu `zrcadlo`.
 
 ---
 
@@ -34,7 +34,7 @@ Tento dokument stanovuje jednotnou virtualizační a kontejnerovou platformu na 
 
 ### Tabulka výchozích limitů RAM po instancích (profil `MVP 64 GB`)
 
-Hodnoty jsou výchozí a doladí se při přejímce; součet limitů instancí je nejvýše `52 GB` a hostitel s `ARC` nejvýše `12 GB` (dohromady nejvýše fyzická RAM `64 GB`). V profilu `MVP` neběží Windows VM, GPU ani plný `WhisperX` (přepis jen dávkově v noci na CPU). Dočasné instance (sestavovací instance, nedělní test obnovy) nemají vlastní řádek — běží mimo noční dávku `WhisperX` a sdílejí s ní její limit `4 GB`.
+Hodnoty jsou výchozí a doladí se při přejímce; součet limitů instancí je nejvýše `52 GB` a hostitel s `ARC` nejvýše `12 GB` (dohromady nejvýše RAM přidělená VM `64 GB`). V profilu `MVP` neběží Windows VM, GPU ani plný `WhisperX` (přepis jen dávkově v noci na CPU). Dočasné instance (sestavovací instance, nedělní test obnovy) nemají vlastní řádek — běží mimo noční dávku `WhisperX` a sdílejí s ní její limit `4 GB`.
 
 | Zóna | Instance | `limits.memory` | Vzniká v bloku |
 | :--- | :--- | :---: | :---: |
@@ -122,15 +122,15 @@ Co v tabulce není, je zakázáno (`nftables` `default drop`). Konkrétní čís
 ### Prompt 1 — Průzkum, plán a po schválení instalace a bezpečná inicializace `Incus (latest)` a `OpenTofu (latest)` (`pro 17003 spravce-site`)
 
 ```text
-Jsi správce serveru (17003 spravce-site). Na čistém serveru polarita-hq s Ubuntu Server (latest LTS) připrav instalaci jednotné virtualizační vrstvy Incus (latest) a OpenTofu (latest) — bez instalace Dockeru na hostitele. Nejprve proveď jen krok 1 (Read-Only), předlož plán kroků 2–5 ke schválení 1001 (do spuštění fronty Decisions písemně) a ZASTAV se; kroky 2–5 proveď až po schválení:
+Jsi správce serveru (17003 spravce-site). Uvnitř VM polarita-hq s Ubuntu Server (latest LTS) připrav instalaci jednotné virtualizační vrstvy Incus (latest) a OpenTofu (latest) — bez instalace Dockeru na hostitele. Nejprve proveď jen krok 1 (Read-Only), předlož plán kroků 2–5 ke schválení 1001 (do spuštění fronty Decisions písemně) a ZASTAV se; kroky 2–5 proveď až po schválení:
 
-1. Preflight (Read-Only): Ověř, že v BIOS/UEFI je zapnutá hardwarová virtualizace (příznaky vmx nebo svm, přítomnost /dev/kvm; na náhradní variantě pronajatého virtuálního stroje ověř vnořenou virtualizaci — není-li dostupná, pokračuj pouze s kontejnery LXC a OCI a pro Dangerzone nastav bez-síťový LXC režim Poppler + QPDF). Dále ověř, že funguje nftables a na hostiteli neběží kolidující démon dockerd.
+1. Preflight (Read-Only): Uvnitř VM ověř hostname polarita-hq, výsledek kvm z příkazu systemd-detect-virt, dostupnou RAM, vmx/svm a /dev/kvm. Ověř nftables, lokální socket vnitřního Incusu a stav případné předchozí inicializace. Před instalací je chybějící socket očekávaný. Ověř také, že zde neběží dockerd.
 2. Instalace z ověřených zdrojů:
    - Přidej oficiální kryptograficky podepsaný stabilní repozitář Zabbly pro Incus a nainstaluj balíčky incus (včetně podpory QEMU/KVM a UEFI firmwaru pro plné virtuální stroje).
    - Přidej oficiální kryptograficky podepsaný repozitář OpenTofu a nainstaluj balíček tofu (latest).
    - V dokumentaci neuváděj pevná čísla verzí; při inicializaci OpenTofu uzamkni aktuální ověřený provider lxc/incus přes .terraform.lock.hcl.
 3. Bezpečná neinteraktivní inicializace (incus admin init --preseed):
-   - Nastav úložiště (storage pool s ovladačem zfs nad existujícím prázdným datasetem data/incus z Bloku 1 — v preseed zapiš source jako název datasetu ZFS bez úvodního lomítka (tvar <zpool>/…/data/incus podle výpisu zfs list), nikdy jako cestu /srv/polarita/data/incus; dataset patří výhradně Incusu a nesmí obsahovat cizí soubory ani podřízené datasety — u fyzického stroje, příp. blokový pool lvm s thin-provisioningem u cloudového VPS pro podporu atomických snapshotů).
+   - Pro vnitřní Incus připrav ovladač zfs nad prázdným datasetem data/incus z Bloku 1. V preseed zadej název datasetu podle zfs list uvnitř VM. Do něj patří výhradně svazky vnitřního Incusu. Vnější pool zrcadlo při tomto kroku spravuje nadále cluster.
    - Ponech řídicí API výhradně na lokálním Unix socketu (žádný síťový listener na TCP portu!).
    - Nastav oprávnění pro servisního správce s přísnou kontrolou u 17004 klicnik (běžný účet nemá přímý přístup k /dev/kvm mimo autorizovaný Incus socket).
 4. Registruj v Incusu oficiální zdroje obrazů včetně vzdáleného registru pro nativní OCI kontejnery (--protocol oci pro docker.io a ghcr.io), abychom mohli spouštět i hotové aplikační obrazy bez Dockeru.
@@ -162,7 +162,7 @@ Proveď na serveru polarita-hq kompletní přejímací zkoušku virtualizační 
 1. Test 1 (Systémový kontejner LXC): Přes OpenTofu vytvoř neprivilegovaný kontejner Ubuntu (latest LTS), ověř jeho start, síťovou izolaci dle zóny, pořízení snapshotu a nulový drift (tofu plan vrátí beze změn).
 2. Test 2 (Nativní OCI kontejner bez Dockeru): Ověř spuštění lehkého testovacího OCI obrazu přímo přes Incus OCI integraci bez přítomnosti démonu Docker na hostiteli.
 3. Test 3 (Plný virtuální stroj KVM): Přes OpenTofu vytvoř testovací KVM virtuální stroj s hardwarovou akcelerací (/dev/kvm), ověř uvnitř hosta systemd-detect-virt = kvm a funkčnost v izolovaném profilu.
-4. Test 4 (Obraz pro zónu bez sítě a matice toků): V dočasné sestavovací instanci v dmz_edge sestav zkušební obraz, publikuj jej do místního úložiště obrazů Incus, spusť z něj instanci v data_vault a ověř, že z ní nelze navázat spojení do internetu ani nepovolené mezizónové spojení (do dmz_edge a app_internal); ověř záporným testem i alespoň jeden tok mezi každou dvojicí zón, který v matici toků není (musí být zahozen). Povolené servisní výjimky (např. OpenBao Agent -> OpenBao, aplikace -> její databáze) se v Bloku 2 netestují — kladně se ověřují v bloku, kde služba vzniká. Sečti limits.memory všech definovaných instancí (součet + hostitel a ARC nejvýše fyzická RAM).
+4. Test 4 (Obraz pro zónu bez sítě a matice toků): V dočasné sestavovací instanci v dmz_edge sestav zkušební obraz, publikuj jej do místního úložiště obrazů Incus, spusť z něj instanci v data_vault a ověř, že z ní nelze navázat spojení do internetu ani nepovolené mezizónové spojení (do dmz_edge a app_internal); ověř záporným testem i alespoň jeden tok mezi každou dvojicí zón, který v matici toků není (musí být zahozen). Povolené servisní výjimky (např. OpenBao Agent -> OpenBao, aplikace -> její databáze) se v Bloku 2 netestují — kladně se ověřují v bloku, kde služba vzniká. Sečti limits.memory všech definovaných instancí (součet + hostitel a ARC nejvýše RAM přidělená VM).
 5. Povinný okamžitý úklid: Po úspěšném změření a zápisu protokolu zkoušky všechny cvičné instance včetně sestavovací čistě odstraň přes tofu destroy a ověř (incus list, incus storage volume list), že na serveru nezůstal žádný osiřelý testovací kontejner, virtuální stroj ani diskový svazek.
 6. Ulož protokol přejímací zkoušky do /srv/polarita/workspace/dukazy/blok-02/ (do Vaultu se přenese až po jeho založení v Bloku 8).
 ```
@@ -176,6 +176,6 @@ Proveď na serveru polarita-hq kompletní přejímací zkoušku virtualizační 
 - [ ] Fungují všechny tři režimy: systémové kontejnery (`LXC`), nativní aplikační obrazy (`OCI`) i plné virtuální stroje (`KVM`).
 - [ ] V `OpenTofu (latest)` jsou definovány a ověřeny všechny 4 bezpečnostní zóny (`dmz_edge`, `app_internal`, `data_vault`, `sandbox_airgap`) a mezizónová pravidla `nftables` (`default drop` mezi mosty zón podle matice toků) jsou nasazena už v tomto bloku (veřejný perimetr a `CrowdSec` přidává `Blok 3`); zóna `data_vault` je z internetu nedosažitelná a kontejner v `sandbox_airgap` nemá žádné síťové rozhraní (`ip link` ukáže pouze `lo`).
 - [ ] Matice povolených toků mezi zónami je zapsána v `OpenTofu` včetně výslovných výjimek a záporné testy (spojení do internetu z `data_vault` a nepovolená mezizónová spojení mimo matici) skončily zahozením; povolené servisní výjimky se kladně ověřují až v bloku, kde služba vzniká.
-- [ ] Součet `limits.memory` všech definovaných instancí je v profilu `MVP` nejvýše `52 GB` a spolu s hostitelem a `ARC` (nejvýše `12 GB`) nepřesahuje fyzickou RAM.
+- [ ] Součet `limits.memory` všech definovaných instancí je v profilu `MVP` nejvýše `52 GB` a spolu s hostitelem a `ARC` (nejvýše `12 GB`) nepřesahuje RAM přidělenou VM.
 - [ ] Je ověřena cesta sestavení obrazu pro zóny bez sítě: obraz sestavený v dočasné sestavovací instanci v `dmz_edge` byl publikován do místního úložiště obrazů `Incus` a instance z něj spuštěná v `data_vault` nenaváže spojení do internetu ani nepovolené mezizónové spojení.
 - [ ] Po přejímacích testech nezůstaly v systému žádné dočasné ani nepojmenované instance (včetně sestavovací).

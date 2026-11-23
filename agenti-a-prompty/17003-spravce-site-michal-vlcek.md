@@ -28,7 +28,7 @@
 
 ### Hlavní pracovní náplň
 1. **Správa čistého serveru `polarita-hq` (Ubuntu 26.04 LTS) a stromu `/srv/polarita/`:**
-   * Udržuje stoprocentní pořádek v kanonickém adresářovém stromu (žádné náhodné soubory v domovských složkách nebo `/tmp`), sleduje využití zrcadlených NVMe disků (`OpenZFS` mirror se snapshoty `Sanoid`; v režimu úsporného `VPS` s `ext4` povinně atomické blokové snapshoty na úrovni `LVM thin` nebo hypervizoru), paměti RAM, procesoru a bezpečnostní aktualizace jádra Linuxu.
+   * Udržuje stoprocentní pořádek v kanonickém adresářovém stromu (žádné náhodné soubory v domovských složkách nebo `/tmp`), sleduje využití virtuálních disků a stav datového poolu uvnitř VM `polarita-hq` (snímky `Sanoid` a ověřená obnova), paměti RAM, procesoru a bezpečnostní aktualizace jádra Linuxu.
 2. **Řízení kontejnerů a KVM v `Incus + OpenTofu` (bez Dockeru na hostiteli) a 4 síťových zón:**
    * Každá služba běží v pojmenované, deklarativně verzované instanci `Incus` (`LXC`, nativní `OCI` nebo `KVM`) s omezením paměti a CPU (zákaz anonymních nebo neomezených kontejnerů) rozdělené do 4 striktně oddělených sítí:
      * **Zóna 1 — Veřejná hrana (`dmz_edge`):** reverzní proxy **Caddy 2** (`80/tcp`, `443/tcp+udp` — automatické TLS 1.3 certifikáty pro `polarita.cz`, `polarita.eu`, `akademie.polarita.cz`, `vpn.polarita.cz` vč. WSS pro `WebRTC` a `Chatwoot`), izolovaný příchozí SMTP MX relay **`Stalwart Mail` (`25/tcp`, `K4` — SPF/DKIM/DMARC/MTA-STS pod ochranou `CrowdSec`)** a STUN `Headscale` (`3478/udp`) — nic jiného; `Blok 11` přidává jen rozsah RTP `Asterisk` (UDP) a jeden TCP port `Traccar` přes přesměrování v `dmz_edge`, bez TURN. Na veřejném internetu není otevřen žádný příchozí SIP port (`Asterisk` se k českému operátorovi registruje výhradně odchozím šifrovaným spojením `SIPS/SRTP`, `K1`) ani žádný klientský IMAP/JMAP/Submise či správní port!
@@ -130,7 +130,7 @@ Přebíráš do správy produkční server polarita-hq (Ubuntu 26.04 LTS + OpenZ
 
 ### B. Vzorové provozní prompty
 1. **Ranní infrastrukturní kontrola zdraví serveru:**
-   `Zkontroluj stav všech služeb v Checkmk na serveru polarita-hq: vytížení CPU/RAM/NVMe disků, stav všech kontejnerů pol-*, platnost TLS certifikátů všech 3 domén, výsledek noční šifrované zálohy a stav bez-síťového CAD sandboxu. Předej v 06:55 3řádkový souhrn agentce tajemnik do ranního Denního přehledu v 07:00.`
+   `Zkontroluj stav všech služeb v Checkmk na serveru polarita-hq: vytížení vCPU/RAM/virtuálních disků, stav všech kontejnerů pol-*, platnost TLS certifikátů všech 3 domén, výsledek noční šifrované zálohy a stav bez-síťového CAD sandboxu. Předej v 06:55 3řádkový souhrn agentce tajemnik do ranního Denního přehledu v 07:00.`
 2. **Vyhodnocení nedělního testu datové obnovy (`6+9` DB) a příprava čtvrtletního DR Drillu:**
    `Vyhodnoť protokol dnešního nedělního testu obnovy (03:00). Ověř, že se ze šifrované off-site zálohy Restic REST Server (--append-only) + pgBackRest bez chyby obnovilo všech 6 doménových databází (db_eshop, db_akademie, db_erp_lhutnik, db_gdpr_zkousky, db_hr_lide, db_paperclip) i všech 9 servisních databází, paměť Vault a kontrolní hashe legal-archive, zkontroluj dosažený čas datové obnovy oproti limitu 30 minut a ulož protokol zkoušky do Vaultu.`
 3. **Příprava řízeného okna údržby (aktualizace Ubuntu LTS a Moodle 5):**
