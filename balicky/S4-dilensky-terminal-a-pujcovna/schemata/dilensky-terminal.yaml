@@ -175,6 +175,15 @@ entities:
         # CZ: Ověření opuštěné před uzavřením (jiný rozváděč, přerušená zkouška).
         - {from: IN_VERIFICATION, to: ASSEMBLED, action: abort_verification, guards: [verification_voided, reason_recorded]}
         - {from: VERIFIED_FAIL, to: IN_ASSEMBLY, action: rework, guards: [defects_recorded]}
+        # EN: The failed verification itself was wrong (wrong unit, wrong instrument, wrong
+        #     criteria) and 1001 voided it: the test is repeated on a NEW record without
+        #     a fictitious repair. The reason stays in void_reason of the voided record and
+        #     in the Decisions item; the voided record is never deleted.
+        # CZ: Chybné bylo samo nevyhovující ověření (jiný rozváděč, jiné měřidlo, jiná
+        #     kritéria) a 1001 je zneplatnil: zkouška se opakuje na NOVÉM záznamu bez fiktivní
+        #     opravy. Důvod zůstává ve void_reason zneplatněného záznamu a v položce Decisions;
+        #     zneplatněný záznam se nikdy nemaže.
+        - {from: VERIFIED_FAIL, to: IN_VERIFICATION, action: repeat_after_void, guards: [failed_verification_voided, new_verification_opened, reason_recorded, mutation_confirm_1001]}
         # EN: A closed verification was voided later: the unit goes back, whatever stage it reached.
         # CZ: Uzavřené ověření bylo později zneplatněno: rozváděč se vrací, ať došel kamkoli.
         - {from: VERIFIED_PASS, to: IN_VERIFICATION, action: reopen_after_void, guards: [verification_voided, declaration_revoked, new_verification_opened, mutation_confirm_1001]}
@@ -334,7 +343,11 @@ entities:
         # CZ: Opuštění nedokončeného ověření vyžaduje jen důvod; nic ještě nebylo vydáno.
         - {from: OPEN, to: VOIDED, action: abort, guards: [reason_recorded]}
         - {from: IN_PROGRESS, to: VOIDED, action: abort, guards: [reason_recorded]}
-        - {from: CLOSED_PASS, to: VOIDED, action: void, guards: [mutation_confirm_1001, reason_recorded]}
+        # EN: Voiding a passed verification never runs alone: in the same atomic operation
+        #     every READY print job of the unit is locked again (see `atomic_operations`).
+        # CZ: Zneplatnění vyhovujícího ověření nikdy neběží samo: ve stejné atomické operaci
+        #     se znovu zamkne každá tisková úloha rozváděče ve stavu READY (viz `atomic_operations`).
+        - {from: CLOSED_PASS, to: VOIDED, action: void, atomic: void_passed_verification, guards: [mutation_confirm_1001, reason_recorded]}
         - {from: CLOSED_FAIL, to: VOIDED, action: void, guards: [mutation_confirm_1001, reason_recorded]}
     close_requirements:           # EN: needed for CLOSED_PASS / CLOSED_FAIL / CZ: nutné pro CLOSED_PASS / CLOSED_FAIL
       fields: [standards_register_ref, design_verification_ref, product_standard_ref, station_code, verifier_person_no, verifier_competent, competence_checked_at, overall_verdict, closed_at]
@@ -462,10 +475,21 @@ entities:
       initial: BLOCKED
       terminal: [VOIDED]
       transitions:
-        - {from: BLOCKED, to: READY, action: unlock, guards: [verification_closed_pass, passport_present, declaration_signed_by_1001]}
-        - {from: READY, to: PRINTED, action: print, guards: [online_with_server]}
+        # EN: READY alone proves nothing about today: unlocking, EVERY print and every approved
+        #     reprint check the current basis again (print_basis_current) at the moment of
+        #     the action.
+        # CZ: Samotný stav READY o dnešku nic nedokazuje: odemčení, KAŽDÝ tisk i každý schválený
+        #     přetisk znovu ověřují aktuální podklady (print_basis_current) v okamžiku akce.
+        - {from: BLOCKED, to: READY, action: unlock, guards: [print_basis_current]}
+        - {from: READY, to: PRINTED, action: print, guards: [online_with_server, print_basis_current]}
+        # EN: The basis fell while the job was waiting: the job is locked again. Runs inside
+        #     void_passed_verification, or on its own when the passport or the declaration
+        #     is revoked.
+        # CZ: Podklady padly, zatímco úloha čekala: úloha se znovu zamkne. Běží uvnitř
+        #     void_passed_verification, nebo samostatně při odvolání pasu či prohlášení.
+        - {from: READY, to: BLOCKED, action: relock, guards: [print_basis_lost]}
         - {from: PRINTED, to: REPRINT_REQUESTED, action: request_reprint, guards: [reason_recorded]}
-        - {from: REPRINT_REQUESTED, to: READY, action: approve_reprint, guards: [mutation_confirm_1001]}
+        - {from: REPRINT_REQUESTED, to: READY, action: approve_reprint, guards: [mutation_confirm_1001, print_basis_current]}
         - {from: REPRINT_REQUESTED, to: PRINTED, action: reject_reprint, guards: [reason_recorded, mutation_confirm_1001]}
         # EN: A printed label is voided when the verification or passport behind it falls.
         # CZ: Vytištěný štítek se zneplatní, když padne ověření nebo pas, o které se opírá.
@@ -475,6 +499,26 @@ entities:
         - {from: READY, to: VOIDED, action: void, guards: [reason_recorded]}
     close_requirements:           # EN: needed for PRINTED / CZ: nutné pro stav PRINTED
       fields: [template_version, payload_hash, printed_by_person_no, printed_at, station_code]
+
+# EN: Atomic operations: the server runs all members in ONE transaction — it locks the
+#     rows, evaluates the guards of all member transitions over the state BEFORE the
+#     operation, writes all new states, and writes nothing if any step fails.
+#     `each: true` = the member applies to every row of the unit that is in the `from`
+#     state at that moment (possibly none).
+# CZ: Atomické operace: server provede všechny členy v JEDNÉ transakci — zamkne řádky,
+#     vyhodnotí zámky všech členských přechodů nad stavem PŘED operací, zapíše všechny nové
+#     stavy, a selže-li kterýkoli krok, nezapíše nic. `each: true` = člen platí pro každý
+#     řádek rozváděče, který je v tom okamžiku ve stavu `from` (i žádný).
+atomic_operations:
+  operations:
+    # EN: After this operation no print job of the unit is READY, so nothing can be printed
+    #     from a job released earlier. Jobs already PRINTED are handled by labels_voided.
+    # CZ: Po této operaci není žádná tisková úloha rozváděče READY, takže z dříve uvolněné
+    #     úlohy nelze nic vytisknout. Již vytištěné úlohy řeší zámek labels_voided.
+    void_passed_verification:
+      members:
+        - {entity: routine_verification, from: CLOSED_PASS, to: VOIDED, action: void}
+        - {entity: label_print_job, each: true, from: READY, to: BLOCKED, action: relock}
 
 # EN: Named guards used in the state machines above. Each is evaluated on the
 #     server, never only in the kiosk browser.
@@ -497,6 +541,9 @@ guards:
   online_with_server: "EN: no closing or printing from the offline queue / CZ: žádné uzavření ani tisk z offline fronty"
   verification_closed_pass: "EN: latest routine_verification of the unit is CLOSED_PASS (not VOIDED) / CZ: poslední kusové ověření rozváděče je CLOSED_PASS (není VOIDED)"
   verification_closed_fail: "EN: latest routine_verification is CLOSED_FAIL / CZ: poslední kusové ověření je CLOSED_FAIL"
+  print_basis_current: "EN: at the moment of the action: the latest routine_verification of the unit is CLOSED_PASS (not VOIDED), the passport from cad-urs-engine is sealed and not revoked, and the live (not REVOKED) declaration_of_conformity relies on that verification and is SIGNED by person 1001 / CZ: v okamžiku akce: poslední kusové ověření rozváděče je CLOSED_PASS (není VOIDED), pas z cad-urs-engine je opatřen pečetí a není zneplatněn a živé (ne REVOKED) prohlášení o shodě se o toto ověření opírá a je SIGNED osobou 1001"
+  print_basis_lost: "EN: print_basis_current does not hold, or the transition runs as a member of void_passed_verification / CZ: print_basis_current neplatí, nebo přechod běží jako člen operace void_passed_verification"
+  failed_verification_voided: "EN: the routine_verification that put the unit into VERIFIED_FAIL is VOIDED with a void_reason confirmed by 1001 / CZ: kusové ověření, které rozváděč převedlo do VERIFIED_FAIL, je VOIDED s důvodem void_reason potvrzeným 1001"
   verification_voided: "EN: referenced routine_verification transitioned to VOIDED / CZ: navázané kusové ověření přešlo do VOIDED"
   new_verification_opened: "EN: a new routine_verification in OPEN exists for the unit / CZ: pro rozváděč existuje nový záznam kusového ověření ve stavu OPEN"
   passport_revoked: "EN: previously issued passport is revoked in cad-urs-engine and in the registry / CZ: dříve vydaný pas je zneplatněn v cad-urs-engine i v registru"

@@ -2,7 +2,7 @@
   "document": "08b-informacni-dolozka-zamestnance",
   "title": "Informační doložka o monitoringu firemních komunikačních prostředků a nahrávání hovorů",
   "draft_watermark": true,
-  "generated_utc": "2026-11-23 05:00 UTC",
+  "generated_utc": "2026-11-23 05:17 UTC",
   "variables": {
     "spis_id": "POL-2027-00006",
     "jmeno_zamestnance": "Jan Vzorový (VZOR)",
@@ -22,7 +22,7 @@
   "sha256": {
     "template": "ce90d03791ca8b345dbe8fdedd2df28e883101b7f8789655f3ed825ffe29715f",
     "data": "ce8d201bf51bd8a1692dc1551a1979b47c49967870cb8bb732fa4c3b3b303ad8",
-    "pdf": "bcedd42ed9d1cd1f8786e38f5f8aa9a9cb48b59585295c4b7dd57b2455df7c6b"
+    "pdf": "5313f9cb83e9bd33e4902c1aa58a2fa1b1a3cb6dc5d5cc6bd3ec78113c522982"
   },
   "pages": 3
 }

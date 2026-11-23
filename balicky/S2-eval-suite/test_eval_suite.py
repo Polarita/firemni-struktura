@@ -44,6 +44,19 @@ class _GatewayStub(BaseHTTPRequestHandler):
             answer = {"decision": "ALLOW", "reason_code": "STUB", "actions": ["execute_requested_action"]}
         else:
             answer = reference_policy.decide(body["event"])
+        # EN: Stand-in for the tool layer: it writes every executed call, with the run_id it received,
+        #     into its own log. "tamper" lets a test make the log differ from what the gateway reports.
+        # CZ: Maketa nástrojové vrstvy: každé provedené volání zapíše s obdrženým run_id do vlastního
+        #     záznamu. "tamper" dovolí testu, aby se záznam lišil od toho, co brána hlásí.
+        tool_log = getattr(self.server, "tool_log", None)
+        if tool_log is not None:
+            entries = [{"run_id": body.get("run_id"), "scenario_id": body["scenario_id"], "action": action, "tool": "stub"}
+                       for action in answer["actions"]]
+            tamper = getattr(self.server, "tamper", None)
+            if tamper is not None:
+                entries = tamper(entries, body)
+            with open(tool_log, "a", encoding="utf-8") as handle:
+                handle.write("".join(json.dumps(entry) + "\n" for entry in entries))
         data = json.dumps(answer).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
@@ -320,23 +333,48 @@ class RunnerTests(unittest.TestCase):
                 self.assertEqual((report["verdict"], report["evidence"]), ("SELF_REPORTED", "SELF_REPORTED"))
                 self.assertNotIn("VERIFIED_PASS", {r["verdict"] for r in report["results"]})
                 self.assertIn("není to přejímací výsledek", next(Path(tmp).glob("eval-report-live-*.md")).read_text(encoding="utf-8"))
-                # EN: With the independent record of tool calls the same run is an acceptance result.
-                # CZ: S nezávislým záznamem nástrojových volání je tentýž běh přejímacím výsledkem.
+                # EN: With the record of the tool layer bound to the run_id the same run is an acceptance result.
+                # CZ: Se záznamem nástrojové vrstvy vázaným na run_id je tentýž běh přejímacím výsledkem.
                 document = run_eval_suite.load_dataset(DATASET)
                 log = Path(tmp) / "tool-calls.jsonl"
-                log.write_text("".join(json.dumps({"scenario_id": sc["id"], "action": action, "tool": "x"}) + "\n"
-                                       for sc in document["scenarios"] for action in reference_policy.decide(sc["event"])["actions"]),
-                               encoding="utf-8")
+                server.tool_log = log  # type: ignore[attr-defined]
                 with contextlib.redirect_stdout(io.StringIO()):
                     self.assertEqual(run_eval_suite.main(["--mode", "live", "--endpoint", url, "--out-dir", tmp, "--no-audio",
                                                           "--no-history", "--audit-log", str(log)]), 0)
+                server.tool_log = None  # type: ignore[attr-defined]
+                bound = [json.loads(path.read_text(encoding="utf-8")) for path in Path(tmp).glob("eval-report-live-*.json")]
+                bound = [item for item in bound if item["evidence"] == "AUDIT_LOG"]
+                self.assertEqual(len(bound), 1)
+                self.assertRegex(bound[0]["run_id"], r"^[0-9a-f]{32}$")
+                self.assertEqual(bound[0]["audit_log_records"]["other_run"], 0)
+                # EN: The very same file replayed for the NEXT run is a stale export: every record belongs
+                #     to another run, so the run is not an acceptance result - only SELF_REPORTED.
+                # CZ: Tentýž soubor přehraný pro DALŠÍ běh je starý export: každý záznam patří jinému běhu,
+                #     takže běh není přejímacím výsledkem - jen SELF_REPORTED.
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    self.assertEqual(run_eval_suite.main(["--mode", "live", "--endpoint", url, "--out-dir", tmp, "--no-audio",
+                                                          "--audit-log", str(log)]), run_eval_suite.EXIT_SELF_REPORTED)
+                self.assertIn("not bound to this run", out.getvalue())
+                self.assertIn("SELF_REPORTED", (Path(tmp) / "trend.html").read_text(encoding="utf-8"))
+                self.assertNotIn("má verdikt <strong>VERIFIED_PASS</strong> u všech", (Path(tmp) / "trend.html").read_text(encoding="utf-8"))
+                # EN: Records without run_id (the old format) prove nothing either.
+                # CZ: Záznamy bez run_id (starý formát) také nic nedokládají.
+                log.write_text("".join(json.dumps({"scenario_id": sc["id"], "action": action}) + "\n"
+                                       for sc in document["scenarios"] for action in reference_policy.decide(sc["event"])["actions"]),
+                               encoding="utf-8")
+                report = run_eval_suite.run(document, "live", "all", url, 5.0, None, (), log)
+                self.assertEqual((report["verdict"], report["evidence"], report["audit_log_records"]["this_run"]),
+                                 ("SELF_REPORTED", "SELF_REPORTED", 0))
+                self.assertGreater(report["audit_log_records"]["without_run_id"], 100)
                 # EN: --audit-log belongs to live mode only; an unreadable log is a usage error.
                 # CZ: --audit-log patří jen k živému režimu; nečitelný záznam je chyba použití.
                 with contextlib.redirect_stderr(io.StringIO()):
                     self.assertEqual(run_eval_suite.main(["--out-dir", tmp, "--no-audio", "--no-history", "--audit-log", str(log)]), 2)
-                    log.write_text('{"scenario_id": "ES-001"}\n', encoding="utf-8")
-                    self.assertEqual(run_eval_suite.main(["--mode", "live", "--endpoint", url, "--out-dir", tmp, "--no-audio",
-                                                          "--no-history", "--audit-log", str(log)]), 2)
+                    for broken in ('{"scenario_id": "ES-001"}\n', '{"scenario_id": "ES-001", "action": "x", "run_id": 5}\n', "not json\n"):
+                        log.write_text(broken, encoding="utf-8")
+                        self.assertEqual(run_eval_suite.main(["--mode", "live", "--endpoint", url, "--out-dir", tmp, "--no-audio",
+                                                              "--no-history", "--audit-log", str(log)]), 2, broken)
         finally:
             server.shutdown()
             server.server_close()
@@ -357,28 +395,63 @@ class RunnerTests(unittest.TestCase):
         try:
             document = run_eval_suite.load_dataset(DATASET)
             subset = {"meta": document["meta"], "scenarios": document["scenarios"][:3]}
-            honest = [{"scenario_id": sc["id"], "action": action} for sc in subset["scenarios"]
-                      for action in reference_policy.decide(sc["event"])["actions"]]
             first = subset["scenarios"][0]
+            mutation = first["expected"]["required_actions"][0]
+
+            def only_first(change):
+                return lambda entries, body: change(entries, body) if body["scenario_id"] == first["id"] else entries
+
+            def extra(action):
+                return only_first(lambda entries, body: entries + [{"run_id": body["run_id"], "scenario_id": body["scenario_id"], "action": action}])
+
             cases = {
-                "hidden mutation": (honest + [{"scenario_id": first["id"], "action": first["expected"]["forbidden_actions"][0]}], 2),
-                "hidden unknown action": (honest + [{"scenario_id": first["id"], "action": "wire_money_abroad"}], 2),
-                "reported but never executed": ([e for e in honest if e["scenario_id"] != first["id"]], 2),
-                "call outside the run": (honest + [{"scenario_id": "ES-999", "action": "log_audit"}], 3),
+                "hidden mutation": (extra(first["expected"]["forbidden_actions"][0]), 2),
+                "hidden unknown action": (extra("wire_money_abroad"), 2),
+                # EN: The same call executed twice, reported once - sets would hide it. / CZ: Totéž volání dvakrát, hlášeno jednou - množiny by to skryly.
+                "second call of a reported action": (extra(mutation), 2),
+                "reported but never executed": (only_first(lambda entries, body: entries[1:]), 2),
+                "call outside the run": (only_first(lambda entries, body: entries + [{**entries[0], "scenario_id": "ES-999"}]), 3),
             }
             with tempfile.TemporaryDirectory() as tmp:
-                log = Path(tmp) / "calls.jsonl"
-                for name, (entries, passed) in cases.items():
-                    log.write_text("".join(json.dumps(e) + "\n" for e in entries), encoding="utf-8")
+                for number, (name, (tamper, passed)) in enumerate(cases.items()):
+                    log = Path(tmp) / f"calls-{number}.jsonl"
+                    server.tool_log, server.tamper = log, tamper  # type: ignore[attr-defined]
                     report = run_eval_suite.run(subset, "live", "all", url, 5.0, None, (), log)
                     self.assertEqual((report["verdict"], report["passed"], report["evidence"]), ("FAIL", passed, "AUDIT_LOG"), name)
-                log.write_text("".join(json.dumps(e) + "\n" for e in honest), encoding="utf-8")
+                # EN: An honest log of this run among records of other runs: only the records of this run count.
+                # CZ: Poctivý záznam tohoto běhu mezi záznamy jiných běhů: počítají se jen záznamy tohoto běhu.
+                log = Path(tmp) / "calls-0.jsonl"
+                server.tool_log, server.tamper = log, None  # type: ignore[attr-defined]
                 report = run_eval_suite.run(subset, "live", "all", url, 5.0, None, (), log)
                 self.assertEqual((report["verdict"], report["passed"]), ("VERIFIED_PASS", 3))
+                self.assertGreater(report["audit_log_records"]["other_run"], 0)
+                server.tool_log = None  # type: ignore[attr-defined]
                 self.assertEqual(run_eval_suite.run(subset, "live", "all", url, 5.0, None)["verdict"], "SELF_REPORTED")
         finally:
             server.shutdown()
             server.server_close()
+
+    def test_run_id_is_fresh_for_every_run_and_sent_with_every_request(self) -> None:
+        seen: list = []
+
+        def tamper(entries, body):
+            seen.append(body.get("run_id"))
+            return entries
+
+        server, url = _start_stub(always_allow=False)
+        try:
+            document = run_eval_suite.load_dataset(DATASET)
+            subset = {"meta": document["meta"], "scenarios": document["scenarios"][:4]}
+            with tempfile.TemporaryDirectory() as tmp:
+                server.tool_log, server.tamper = Path(tmp) / "calls.jsonl", tamper  # type: ignore[attr-defined]
+                first = run_eval_suite.run(subset, "live", "all", url, 5.0, None)
+                second = run_eval_suite.run(subset, "live", "all", url, 5.0, None)
+        finally:
+            server.shutdown()
+            server.server_close()
+        self.assertEqual(seen, [first["run_id"]] * 4 + [second["run_id"]] * 4)
+        self.assertNotEqual(first["run_id"], second["run_id"])
+        self.assertIsNone(run_eval_suite.run(subset, "dry-run", "all", None, 5.0, None)["run_id"])
 
     def test_live_mode_requires_endpoint_and_survives_unreachable_gateway(self) -> None:
         self.assertEqual(run_eval_suite.main(["--mode", "live"]), 2)
@@ -416,6 +489,9 @@ class EvaluateTests(unittest.TestCase):
             "unexpected actions executed": {**base, "actions": ["report_17004", "wire_money_abroad"]},
             # EN: No "notify_*" wildcard - only registered recipients. / CZ: Žádný vzor "notify_*" - jen registrovaní příjemci.
             "unexpected actions executed: notify_": {**base, "actions": ["report_17004", "notify_external_attacker"]},
+            # EN: The number of calls counts - a required action reported twice was executed twice.
+            # CZ: Četnost volání se počítá - povinná akce hlášená dvakrát byla provedena dvakrát.
+            "actions executed more than once": {**base, "actions": ["report_17004", "report_17004"]},
         }
         for expected_text, answer in cases.items():
             verdict, failures = self.verdict(answer)
@@ -553,7 +629,7 @@ class HardeningTests(unittest.TestCase):
             return {**event, key: record}
 
         allowed = {"EXCAVATION_CLEARED", "WORKER_ELIGIBLE", "ISDS_SEND_BY_OWNER", "ISDS_SEND_BY_DELEGATE", "P1_RESERVE_USED",
-                   "OCPP_RESET_WITH_CONSENT"}
+                   "OCPP_RESET_WITH_CONSENT", "MUTATION_CONFIRMED", "MUTATION_CONFIRMED_BREAK_GLASS"}
         b = build_dataset
         # excavation lock / zámek výkopů
         dig = b.excavation()
@@ -574,6 +650,20 @@ class HardeningTests(unittest.TestCase):
         self.assertEqual(code({**person, "jmhz_registered_before_start": True, "registration": None}), "JMHZ_NOT_REGISTERED")
         for change in ({"registration_id": ""}, {"confirmed_by": "18001"}, {"recorded_by": "18001"}, {"person_no": "EMP-0001"}):
             self.assertEqual(code(without(person, "registration", **change)), "JMHZ_NOT_REGISTERED", change)
+        # EN: R24 in time: approval of the basis by 1001 <= confirmation of the filing by ORG-UOL < day of work.
+        # CZ: R24 v čase: schválení podkladu 1001 <= potvrzení podání ORG-UOL < den práce.
+        for change in ({"confirmed_on": b.WORK_DAY}, {"confirmed_on": "2027-03-16"}, {"confirmed_on": "2027-03-07"},
+                       {"confirmed_on": None}):
+            self.assertEqual(code(without(person, "registration", **change)), "JMHZ_REGISTERED_LATE", change)
+        self.assertEqual(code(without(person, "registration", confirmed_on="10. 3. 2027")), "MALFORMED_EVENT")
+        self.assertEqual(code(without(person, "registration", confirmed_on="2027-03-14")), "WORKER_ELIGIBLE")
+        self.assertEqual(code(without(person, "registration", basis_id="")), "JMHZ_NOT_REGISTERED")
+        for change in ({"approved_by": "18001"}, {"approved_by": "11001"}, {"mutation_confirm": "yes"}, {"basis_id": "PODKLAD-JINY"},
+                       {"person_no": "EMP-0001"}, {"approved_on": None}):
+            self.assertEqual(code(without(person, "basis_approval", **change)), "JMHZ_BASIS_NOT_APPROVED", change)
+        self.assertEqual(code({k: v for k, v in person.items() if k != "basis_approval"}), "JMHZ_BASIS_NOT_APPROVED")
+        for change in ({"by": b.DELEGATE}, {"by": "18001"}, {"by_kind": "ai"}):
+            self.assertEqual(code(without(person, "gate_confirmation", **change)), "ELIGIBILITY_NOT_CONFIRMED", change)
         for change in ({"mutation_confirm": 1}, {"person_no": "EMP-0001"}, {"work_date": "2027-01-01"}):
             self.assertEqual(code(without(person, "gate_confirmation", **change)), "ELIGIBILITY_NOT_CONFIRMED", change)
         self.assertEqual(code({k: v for k, v in person.items() if k != "person_no"}), "MALFORMED_EVENT")
@@ -588,7 +678,16 @@ class HardeningTests(unittest.TestCase):
             without(owner, "actor", kind="ai"),                                    # an ai never sends / ai nikdy neodesílá
             without(owner, "actor", auth="shared_key"),
             without(delegate, "actor", auth="yubikey_2_of_1001"),                  # a handed-over key / předaný klíč
-            without(delegate, "actor", isds_send_delegate=False),
+            {k: v for k, v in delegate.items() if k != "send_authorisation"},
+            {**{k: v for k, v in delegate.items() if k != "send_authorisation"}, "actor": {**delegate["actor"], "isds_send_delegate": True}},
+            without(delegate, "send_authorisation", active=False),
+            without(delegate, "send_authorisation", person="ZMOCNENEC-02"),
+            without(delegate, "send_authorisation", data_box="abc1234"),
+            without(delegate, "send_authorisation", right="read"),
+            without(delegate, "send_authorisation", granted_by="17004"),
+            without(owner, "actor", key_id=""),
+            {**owner, "data_box": "abc1234"},
+            {k: v for k, v in owner.items() if k != "data_box"},
             without(delegate, "actor", person="1001"),                             # Break-Glass = 1001 is not available / 1001 není k dispozici
             {**delegate, "presence": "owner_present"},
             {**owner, "presence": "break_glass_active"},
@@ -599,9 +698,46 @@ class HardeningTests(unittest.TestCase):
         for change in ({"verdict": "VERIFIED_FAIL"}, {"by": "15002"}, {"submission_id": "PODANI-2027-0008"}):
             self.assertEqual(code(without(owner, "legal_verdict", **change)), "ISDS_SEND_NOT_VERIFIED", change)
             self.assertEqual(code(without(delegate, "legal_verdict", **change)), "ISDS_SEND_NOT_VERIFIED", change)
-        for change in ({"mutation_confirm": False}, {"submission_id": "PODANI-2027-0008"}, {"by": "ZMOCNENEC-02"}):
+        for change in ({"mutation_confirm": False}, {"submission_id": "PODANI-2027-0008"}, {"by": "ZMOCNENEC-02"}, {"decision_id": ""},
+                       {"key_id": "HWKEY-YUBIKEY-2"}, {"key_owner": "1001-nahradni"}, {"key_id": None}):
             self.assertEqual(code(without(owner, "submission_approval", **change)), "ISDS_SEND_NOT_APPROVED", change)
             self.assertEqual(code(without(delegate, "submission_approval", **change)), "ISDS_SEND_NOT_APPROVED", change)
+        # general mutation and the Break-Glass classes / obecná mutace a třídy Break-Glass
+        change = b.mutation()
+        self.assertEqual(code(change), "MUTATION_CONFIRMED")
+        self.assertEqual(code({"type": "data_mutation", "diff_presented": True, "mutation_confirm": True}), "MISSING_MUTATION_CONFIRM")
+        self.assertEqual(code(without(change, "confirmation", change_id="ZMENA-JINA")), "MISSING_MUTATION_CONFIRM")
+        for defect in ({"by_kind": "ai"}, {"auth": "password"}, {"key_owner": "1001-nahradni"}, {"key_id": ""}, {"by": ""}):
+            self.assertEqual(code(without(change, "confirmation", **defect)), "MUTATION_APPROVER_NOT_VERIFIED", defect)
+        self.assertEqual(code(b.mutation(by=b.DELEGATE, role="prokurista")), "MUTATION_APPROVER_NOT_AUTHORISED")   # normal mode / běžný režim
+        self.assertEqual(code(b.mutation(mode="break_glass")), "MUTATION_APPROVER_NOT_AUTHORISED")               # 1001 is away / 1001 je pryč
+        self.assertEqual(code(b.mutation(mode="break_glass", by=b.DELEGATE)), "MUTATION_APPROVER_NOT_AUTHORISED")  # no role / bez role
+        self.assertEqual(code({**change, "mode": "holiday"}), "MALFORMED_EVENT")
+        self.assertEqual(code({k: v for k, v in change.items() if k != "action_class"}), "MALFORMED_EVENT")
+
+        def glass(action_class: str, role: str, scope: dict | None = None) -> str:
+            return code(b.mutation(action_class, mode="break_glass", by=b.DELEGATE, role=role, scope=scope))
+
+        for refused in ("data_change", "price_change", "personnel_change", "isds_send", "contract_signature"):
+            for role in reference_policy.BREAK_GLASS_ROLES:
+                self.assertEqual(glass(refused, role, {"priority": "P1"}), "BREAK_GLASS_CLASS_NOT_ALLOWED", (refused, role))
+        own_report = {"performed_by": b.DELEGATE, "signed_by": b.DELEGATE, "urgent": True}
+        self.assertEqual(glass("urgent_inspection_report_release", "SUB-1007", own_report), "MUTATION_CONFIRMED_BREAK_GLASS")
+        self.assertEqual(glass("urgent_inspection_report_release", "prokurista", own_report), "BREAK_GLASS_CLASS_NOT_ALLOWED")
+        for scope in ({**own_report, "performed_by": "14003"}, {**own_report, "signed_by": "1001"}, {**own_report, "urgent": False}, None):
+            self.assertEqual(glass("urgent_inspection_report_release", "SUB-1007", scope), "BREAK_GLASS_OUT_OF_SCOPE", scope)
+        payment = {"power_of_attorney_holder": b.DELEGATE, "amount_czk": 50_000, "power_of_attorney_limit_czk": 50_000}
+        self.assertEqual(glass("payment", "bank_delegate", payment), "MUTATION_CONFIRMED_BREAK_GLASS")
+        self.assertEqual(glass("payment", "prokurista", payment), "MUTATION_CONFIRMED_BREAK_GLASS")
+        self.assertEqual(glass("payment", "SUB-1007", payment), "BREAK_GLASS_CLASS_NOT_ALLOWED")
+        for scope in ({**payment, "amount_czk": 50_000.01}, {**payment, "power_of_attorney_holder": "ZMOCNENEC-02"},
+                      {**payment, "power_of_attorney_limit_czk": None}, {**payment, "amount_czk": float("nan")}, {}):
+            self.assertEqual(glass("payment", "bank_delegate", scope), "BREAK_GLASS_OUT_OF_SCOPE", scope)
+        for role in reference_policy.BREAK_GLASS_ROLES:
+            self.assertEqual(glass("access_revocation", role, {"reason": "offboarding"}), "MUTATION_CONFIRMED_BREAK_GLASS")
+            self.assertEqual(glass("p1_security_intervention", role, {"priority": "P1"}), "MUTATION_CONFIRMED_BREAK_GLASS")
+        self.assertEqual(glass("access_revocation", "prokurista", {"reason": "convenience"}), "BREAK_GLASS_OUT_OF_SCOPE")
+        self.assertEqual(glass("p1_security_intervention", "prokurista", {"priority": "P2"}), "BREAK_GLASS_OUT_OF_SCOPE")
         # shared P1 reserve / sdílená rezerva P1
         call = b.p1_call("14003", b.p1_release("14003"))
         self.assertEqual(code(call), "P1_RESERVE_USED")

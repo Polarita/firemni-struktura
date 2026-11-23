@@ -27,13 +27,13 @@ python -m venv .venv                      (doporučeno; složka .venv je v .giti
 
 Na Windows je cesta k nástroji `pip` ve virtuálním prostředí `.venv\Scripts\pip`. Tisk PDF navíc potřebuje prohlížeč `Chrome`, `Edge` nebo `Chromium`; jeho cestu lze určit proměnnou `POLARITA_PDF_BROWSER`.
 
-Ověření instalace (vše musí skončit `OK`, sada `S2` výsledkem `VERIFIED_PASS`):
+Ověření instalace — každý řádek se spouští z kořene repozitáře, závorky vracejí adresář zpět (vše musí skončit `OK`, sada `S2` výsledkem `VERIFIED_PASS`):
 
 ```text
-cd nastroje                              &&  python -m unittest test_check_consistency
-cd balicky/S1-generator-cistopisu        &&  python generate_pdfs.py --check  &&  python -m unittest test_generate_pdfs
-cd balicky/S2-eval-suite                 &&  python -m unittest test_eval_suite  &&  python run_eval_suite.py --no-history
-cd balicky/S3-konfigurator-a-tarify      &&  python pricing.py --build  &&  python -m unittest test_pricing
+(cd nastroje                          && ../.venv/bin/python -m unittest test_check_consistency)
+(cd balicky/S1-generator-cistopisu    && ../../.venv/bin/python generate_pdfs.py --check && ../../.venv/bin/python -m unittest test_generate_pdfs)
+(cd balicky/S2-eval-suite             && ../../.venv/bin/python -m unittest test_eval_suite && ../../.venv/bin/python run_eval_suite.py --no-history)
+(cd balicky/S3-konfigurator-a-tarify  && ../../.venv/bin/python pricing.py --build && ../../.venv/bin/python -m unittest test_pricing)
 ```
 
 Bez prohlížeče se tiskové testy `S1` a test javascriptového jádra konfigurátoru `S3` přeskočí; s proměnnou `POLARITA_REQUIRE_BROWSER=1` (takto běží CI) je chybějící prohlížeč selháním. Běžné běhy nezanechávají v pracovním stromu žádné nové soubory, které by `Git` viděl: reporty sady `S2` jdou do ignorované složky `output/behy/` (nebo do `--out-dir`), zvukové makety a tisková PDF jsou v `.gitignore`.

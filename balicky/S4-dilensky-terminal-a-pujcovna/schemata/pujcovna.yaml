@@ -108,6 +108,7 @@ enums:
     - REQUESTED                 # EN: sent for confirmation / CZ: odesláno k potvrzení
     - CONFIRMED                 # EN: confirmed by 1001 / CZ: potvrzeno 1001
     - HANDED_OVER               # EN: asset is with the renter / CZ: zdroj je u nájemce
+    - OVERDUE                   # EN: planned return passed, asset still with the renter / CZ: plánované vrácení uplynulo, zdroj je stále u nájemce
     - RETURNED                  # EN: asset is back, not settled yet / CZ: zdroj vrácen, zatím nevyúčtováno
     - NOT_RETURNED              # EN: asset lost or not returned, not settled yet / CZ: zdroj ztracen nebo nevrácen, zatím nevyúčtováno
     - CLOSED                    # EN: settled and invoiced / CZ: vyúčtováno a vyfakturováno
@@ -394,6 +395,9 @@ entities:
       # EN: Child protocols and invoice requests reference reservation_id (avoids cyclic FK).
       # CZ: Podřízené protokoly a podklady fakturace odkazují na reservation_id (bez cyklického FK).
       status: {type: enum, enum: reservation_status, required: true, default: DRAFT}
+      # EN: Decisions item that lists the follow-up bookings of the asset hit by a delay or loss.
+      # CZ: Položka Decisions se seznamem návazných rezervací zdroje, které zasáhlo prodlení nebo ztráta.
+      follow_up_decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_when: "status IN ('OVERDUE', 'NOT_RETURNED')"}
       status_reason: {type: text, required: false, required_when: "status IN ('REJECTED', 'PREEMPTED', 'CANCELLED', 'NOT_RETURNED')"}
     constraints:
       - {kind: check, expression: "period_to > period_from"}
@@ -416,8 +420,14 @@ entities:
         #     (viz `atomic_operations` níže) a mimo ni nikdy neběží. Jeho zámky mluví jen
         #     o stavu PŘED operací, takže žádný zámek nečeká na změnu, kterou má táž operace
         #     teprve provést.
-        - {from: DRAFT, to: REQUESTED, action: request, atomic: request_rental, guards: [renter_approved, asset_rentable, slot_free_for_rental, compliance_valid_whole_period]}
-        - {from: REQUESTED, to: CONFIRMED, action: confirm, atomic: confirm_rental, guards: [renter_approved, asset_rentable, price_list_approved, rental_booking_is_held, compliance_valid_whole_period, deposit_terms_set, confirmed_in_decisions, mutation_confirm_1001]}
+        # EN: The exclusion constraint guards only PLANNED intervals. An asset that is overdue
+        #     or lost is physically unavailable beyond its interval, so request and confirm
+        #     also need asset_not_overdue_or_lost.
+        # CZ: Vylučovací omezení hlídá jen PLÁNOVANÉ intervaly. Zdroj v prodlení nebo ztracený
+        #     je fyzicky nedostupný i mimo svůj interval, proto žádost i potvrzení vyžadují
+        #     také asset_not_overdue_or_lost.
+        - {from: DRAFT, to: REQUESTED, action: request, atomic: request_rental, guards: [renter_approved, asset_rentable, asset_not_overdue_or_lost, slot_free_for_rental, compliance_valid_whole_period]}
+        - {from: REQUESTED, to: CONFIRMED, action: confirm, atomic: confirm_rental, guards: [renter_approved, asset_rentable, asset_not_overdue_or_lost, price_list_approved, rental_booking_is_held, compliance_valid_whole_period, deposit_terms_set, confirmed_in_decisions, mutation_confirm_1001]}
         - {from: REQUESTED, to: REJECTED, action: reject, atomic: reject_rental, guards: [reason_recorded, rental_booking_is_held]}
         # EN: The held rental booking is released and the internal booking inserted in ONE transaction.
         # CZ: Držená půjčovní rezervace se uvolní a interní rezervace se vloží v JEDNÉ transakci.
@@ -428,7 +438,16 @@ entities:
         #     The asset stays OUT_RENTAL; it is written off only when the loss case is closed.
         # CZ: Zdroj ztracen nebo nevrácen: vratný protokol neexistuje, ztráta jde k 1001.
         #     Zdroj zůstává OUT_RENTAL; odepisuje se až při uzavření případu ztráty.
-        - {from: HANDED_OVER, to: NOT_RETURNED, action: declare_loss, guards: [loss_claim_opened, reason_recorded, mutation_confirm_1001]}
+        - {from: HANDED_OVER, to: NOT_RETURNED, action: declare_loss, guards: [loss_claim_opened, follow_up_bookings_escalated, reason_recorded, mutation_confirm_1001]}
+        # EN: Delay: set by the server as soon as the planned return passes. From that moment
+        #     the asset blocks every new request and confirmation, and all its follow-up
+        #     bookings are escalated in one Decisions item.
+        # CZ: Prodlení: nastaví server, jakmile uplyne plánované vrácení. Od té chvíle zdroj
+        #     blokuje každou novou žádost i potvrzení a všechny jeho návazné rezervace jsou
+        #     eskalovány v jedné položce Decisions.
+        - {from: HANDED_OVER, to: OVERDUE, action: mark_overdue, guards: [return_period_elapsed, follow_up_bookings_escalated]}
+        - {from: OVERDUE, to: RETURNED, action: take_back_overdue, atomic: take_back_overdue_rental, guards: [return_protocol_sealed]}
+        - {from: OVERDUE, to: NOT_RETURNED, action: declare_loss, guards: [loss_claim_opened, follow_up_bookings_escalated, reason_recorded, mutation_confirm_1001]}
         # EN: Late return after a declared loss: audited, confirmed by 1001, and in the same
         #     operation the asset goes through RETURN_INSPECTION like any other return.
         # CZ: Pozdní vrácení po ohlášené ztrátě: auditované, potvrzené 1001 a ve stejné
@@ -662,6 +681,7 @@ atomic_operations:
       REQUESTED: [HELD]
       CONFIRMED: [CONFIRMED]
       HANDED_OVER: [CONFIRMED]
+      OVERDUE: [CONFIRMED]
       RETURNED: [CONFIRMED]
       NOT_RETURNED: [CONFIRMED]
       CLOSED: [RELEASED]
@@ -672,6 +692,7 @@ atomic_operations:
     # CZ: Uvedeny jsou jen stavy výpůjčky, které zdroj vážou.
     reservation_asset:
       HANDED_OVER: [OUT_RENTAL]
+      OVERDUE: [OUT_RENTAL]
       NOT_RETURNED: [OUT_RENTAL]
   operations:
     # EN: `from: NONE` + `action: insert` = the operation inserts the booking row in its
@@ -710,6 +731,10 @@ atomic_operations:
       members:
         - {entity: rental_reservation, from: HANDED_OVER, to: RETURNED, action: take_back}
         - {entity: rental_asset, from: OUT_RENTAL, to: RETURN_INSPECTION, action: take_back}
+    take_back_overdue_rental:
+      members:
+        - {entity: rental_reservation, from: OVERDUE, to: RETURNED, action: take_back_overdue}
+        - {entity: rental_asset, from: OUT_RENTAL, to: RETURN_INSPECTION, action: take_back}
     # EN: Late return after a declared loss: the reservation and the asset move together,
     #     so a returned asset can never stay written off or skip the inspection.
     # CZ: Pozdní vrácení po ohlášené ztrátě: výpůjčka i zdroj se mění společně, takže
@@ -746,6 +771,9 @@ guards:
   loss_case_closed: "EN: the reservation of the asset is NOT_RETURNED, its damage_claim with loss = true is SETTLED or DISMISSED and no RETURN protocol of the reservation is SEALED / CZ: výpůjčka zdroje je ve stavu NOT_RETURNED, její damage_claim s loss = true je SETTLED nebo DISMISSED a žádný protokol RETURN této výpůjčky není SEALED"
   late_return_audited: "EN: late_return_decisions_ref is recorded and the audit log holds the reason, the person who took the asset back and the loss claim concerned; a loss claim that is not terminal has loss switched to false and return_protocol_id set to the sealed RETURN protocol (it continues as an ordinary damage claim or is dismissed by 1001), a loss claim already SETTLED is re-decided by 1001 under the same Decisions item / CZ: je zapsáno late_return_decisions_ref a auditní záznam obsahuje důvod, osobu, která zdroj převzala, a dotčenou škodu se ztrátou; škoda, která není v koncovém stavu, má loss přepnuto na false a return_protocol_id nastaveno na zapečetěný protokol RETURN (pokračuje jako běžná škoda, nebo ji 1001 zamítne), o škodě již ve stavu SETTLED rozhodne 1001 znovu pod stejnou položkou Decisions"
   reservation_confirmed: "EN: a CONFIRMED rental_reservation of this asset covers today / CZ: dnešní den pokrývá výpůjčka tohoto zdroje ve stavu CONFIRMED"
+  asset_not_overdue_or_lost: "EN: no reservation of the asset is OVERDUE or NOT_RETURNED, and none is HANDED_OVER with period_to in the past / CZ: žádná výpůjčka zdroje není ve stavu OVERDUE ani NOT_RETURNED a žádná není HANDED_OVER s period_to v minulosti"
+  return_period_elapsed: "EN: period_to of the reservation has passed and no RETURN protocol of it is SEALED / CZ: period_to výpůjčky uplynulo a žádný její protokol RETURN není SEALED"
+  follow_up_bookings_escalated: "EN: follow_up_decisions_ref is recorded and the Decisions item lists every live resource_booking of the asset that starts after the planned return: HELD rental requests stay unconfirmable (asset_not_overdue_or_lost) until rejected or moved to another asset, CONFIRMED rentals are decided by 1001 (never cancelled automatically), internal trips and service windows are passed to 14005; an empty list is recorded as well / CZ: je zapsáno follow_up_decisions_ref a položka Decisions vyjmenovává každou živou rezervaci kalendáře zdroje, která začíná po plánovaném vrácení: držené půjčovní žádosti nelze potvrdit (asset_not_overdue_or_lost), dokud nejsou zamítnuty nebo převedeny na jiný zdroj, o potvrzených výpůjčkách rozhodne 1001 (nikdy se neruší automaticky), interní výjezdy a servisní okna se předají 14005; zapisuje se i prázdný seznam"
   internal_booking_confirmed: "EN: a CONFIRMED resource_booking of kind INTERNAL_REVISION or INTERNAL_JOB covers the whole trip / CZ: celý výjezd pokrývá rezervace kalendáře druhu INTERNAL_REVISION nebo INTERNAL_JOB ve stavu CONFIRMED"
   service_booking_held: "EN: a resource_booking of kind SERVICE was inserted for the service window / CZ: pro servisní okno byla vložena rezervace kalendáře druhu SERVICE"
   protocols_discarded: "EN: no protocol of the reservation is in DRAFT or SIGNED, and none is SEALED (asset never left the store) / CZ: žádný protokol výpůjčky není DRAFT ani SIGNED a žádný není SEALED (zdroj sklad neopustil)"

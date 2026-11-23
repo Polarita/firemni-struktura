@@ -2,7 +2,7 @@
   "document": "06a-nouzova-plna-moc",
   "title": "Nouzová omezená provozní plná moc (režim Break-Glass)",
   "draft_watermark": true,
-  "generated_utc": "2026-11-23 05:00 UTC",
+  "generated_utc": "2026-11-23 05:17 UTC",
   "variables": {
     "spis_id": "POL-2027-00005",
     "cislo_plne_moci": "PM-BG-2027-001 (VZOR)",
@@ -31,7 +31,7 @@
   "sha256": {
     "template": "284dd1e703dd06bdd74ce72f9db7806848979877339efae63b268b75f63eda8a",
     "data": "05a31969f08602087d479194b6671c3a11ffe57f86989c8545e5f01f1216dc11",
-    "pdf": "220183c22e2cd130b0d03c042f54782248ec0d1813513b09b10a9b81d56347f5"
+    "pdf": "1ec27602bf7eb00780664347a63edc7a5549602f009e2a0399005e7306306484"
   },
   "pages": 4
 }

@@ -109,6 +109,41 @@ class PrintPathTests(unittest.TestCase):
             self.assertEqual(manifest["sha256"]["data"], gen.sha256(gen.DATA_DIR / f"{self.NAME}.json"))
             self.assertEqual(manifest["variables"], json.loads((gen.DATA_DIR / f"{self.NAME}.json").read_text(encoding="utf-8")))
 
+    def test_invalid_inputs_withdraw_the_older_pdf_and_manifest(self) -> None:
+        # EN: After a bad edit of the data or the template the older clean copy must not stay as a valid pair.
+        # CZ: Po chybné úpravě dat nebo šablony nesmí starší čistopis zůstat jako platná dvojice.
+        good_data = (gen.DATA_DIR / f"{self.NAME}.json").read_text(encoding="utf-8")
+        good_template = (gen.TEMPLATE_DIR / f"{self.NAME}.md").read_text(encoding="utf-8")
+        values = json.loads(good_data)
+        missing = dict(list(values.items())[1:])
+        defects = {
+            "broken json": (good_template, "{"),
+            "missing variable": (good_template, json.dumps(missing, ensure_ascii=False)),
+            "no heading": (good_template.lstrip("# "), good_data),
+            "no data file": (good_template, None),
+        }
+        for label, (template, data) in defects.items():
+            with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as tools:
+                out, templates, datas = Path(tmp) / "out", Path(tmp) / "sablony", Path(tmp) / "data"
+                templates.mkdir(), datas.mkdir()
+                (templates / f"{self.NAME}.md").write_text(good_template, encoding="utf-8")
+                (datas / f"{self.NAME}.json").write_text(good_data, encoding="utf-8")
+                with mock.patch.object(gen, "BROWSER_CANDIDATES", (_fake_browser(Path(tools), "good"),)):
+                    gen.generate(templates, datas, out, self.NAME, True, False)
+                    self.assertEqual(len(list(out.iterdir())), 2, label)
+                    (templates / f"{self.NAME}.md").write_text(template, encoding="utf-8")
+                    if data is None:
+                        (datas / f"{self.NAME}.json").unlink()
+                    else:
+                        (datas / f"{self.NAME}.json").write_text(data, encoding="utf-8")
+                    # EN: --check reports the defect but never touches the outputs. / CZ: --check vadu ohlásí, ale na výstupy nesahá.
+                    with self.assertRaises(gen.GeneratorError, msg=label):
+                        gen.generate(templates, datas, out, self.NAME, True, True)
+                    self.assertEqual(len(list(out.iterdir())), 2, label)
+                    with self.assertRaises(gen.GeneratorError, msg=label):
+                        gen.generate(templates, datas, out, self.NAME, True, False)
+                self.assertEqual(sorted(p.name for p in out.iterdir()), [], label)
+
     def test_interrupted_publication_never_leaves_a_manifest_of_another_pdf(self) -> None:
         # EN: The publication fails at each of its steps; whatever manifest exists afterwards describes the PDF next to it.
         # CZ: Zveřejnění selže v každém svém kroku; jakýkoli manifest, který potom existuje, popisuje PDF vedle sebe.

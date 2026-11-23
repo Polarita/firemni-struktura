@@ -36,7 +36,7 @@ jobs:
       #     endpoint here), workflow files are protected (only 1001 / 17004 change them).
       #     The runner container needs git, python3 (3.10 or newer), python3-venv, a Chromium browser and
       #     a pre-staged offline wheelhouse in /opt/polarita-wheels (built during Block 5 image setup
-      #     because app_internal has no internet). For the same reason the workflow uses NO marketplace
+      #     in the build instance in dmz_edge - a verified step of Block 5; the runner has no outbound traffic, only the local Gitea). For the same reason the workflow uses NO marketplace
       #     action ("uses:"): an action would have to be downloaded from the internet. The sources are
       #     fetched by plain git from the local Gitea with the short-lived token of this very job.
       # CZ: Pravidla runneru: vyhrazená instance gitea-runner v zóně app_internal, režim host (bez Dockeru),
@@ -44,7 +44,7 @@ jobs:
       #     tajemství ani živý endpoint), workflow soubory jsou chráněné (mění je jen 1001 / 17004).
       #     Kontejner runneru potřebuje git, python3 (3.10 nebo novější), python3-venv, prohlížeč Chromium
       #     a předem uložený offline wheelhouse v /opt/polarita-wheels (připravený při stavbě obrazu
-      #     v Bloku 5, zóna nemá internet). Ze stejného důvodu workflow NEPOUŽÍVÁ žádnou akci z tržiště
+      #     v sestavovací instanci v dmz_edge - ověřený krok Bloku 5; runner nemá žádný odchozí provoz, jen místní Gitea). Ze stejného důvodu workflow NEPOUŽÍVÁ žádnou akci z tržiště
       #     ("uses:"): akce by se musela stáhnout z internetu. Zdrojové soubory si bere prostým gitem
       #     z místní Gitea krátkodobým tokenem právě této úlohy.
       - name: Checkout by local git (no marketplace action) / Checkout místním gitem (bez akce z tržiště)

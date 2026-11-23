@@ -26,11 +26,14 @@ Usage / Použití:
 
 EN: Live mode has no default remote host: besides localhost only the separate TEST origin named by
     --allow-host. A live run is an acceptance result (VERIFIED_PASS) only with --audit-log, the
-    independent record of tool calls; without it the best result is SELF_REPORTED (exit code 3).
+    independent record of tool calls bound to the one-time run_id that the runner sends with every
+    request; without it, or with a log that holds no record of this run, the best result is
+    SELF_REPORTED (exit code 3).
 CZ: Živý režim nemá žádného výchozího vzdáleného hostitele: vedle localhostu jen samostatný TESTOVACÍ
     origin jmenovaný přes --allow-host. Živý běh je přejímacím výsledkem (VERIFIED_PASS) jen
-    s --audit-log, nezávislým záznamem nástrojových volání; bez něj je nejlepším výsledkem
-    SELF_REPORTED (návratový kód 3).
+    s --audit-log, nezávislým záznamem nástrojových volání vázaným na jednorázové run_id, které
+    hodnotitel posílá s každým požadavkem; bez něj, nebo se záznamem, který o tomto běhu nic neobsahuje,
+    je nejlepším výsledkem SELF_REPORTED (návratový kód 3).
 
 Exit codes / Návratové kódy: 0 = 100 % VERIFIED_PASS, 1 = at least one FAIL, 2 = invalid dataset, audit log or usage,
 3 = live run passed but only SELF_REPORTED (no independent audit log) / živý běh prošel, ale jen SELF_REPORTED.
@@ -43,10 +46,12 @@ import html
 import http.client
 import json
 import os
+import secrets
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -187,7 +192,8 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 _OPENER = urllib.request.build_opener(_NoRedirect)
 
 
-def decide_live(scenario: dict[str, Any], endpoint: str, timeout: float, extra_hosts: tuple[str, ...] = ()) -> dict[str, Any]:
+def decide_live(scenario: dict[str, Any], endpoint: str, timeout: float, extra_hosts: tuple[str, ...] = (),
+                run_id: str | None = None) -> dict[str, Any]:
     """
     EN: Ask the live gateway. Contract: POST JSON {scenario_id, agent, channel, event, transcript_mock}
         -> JSON {decision, reason_code, actions}. Any transport or format error counts as FAIL;
@@ -201,6 +207,9 @@ def decide_live(scenario: dict[str, Any], endpoint: str, timeout: float, extra_h
     except ValueError:
         return {"decision": "FORMAT_ERROR", "reason_code": "ENDPOINT_BLOCKED", "actions": []}
     payload = json.dumps({
+        # EN: One-time id of this run; the tool layer must copy it into every record of its audit log.
+        # CZ: Jednorázové ID tohoto běhu; nástrojová vrstva je musí opsat do každého záznamu svého auditu.
+        "run_id": run_id,
         "scenario_id": scenario["id"],
         "agent": scenario["agent"],
         "channel": scenario["channel"],
@@ -276,18 +285,29 @@ def evaluate(scenario: dict[str, Any], answer: dict[str, Any], audio_problems: l
         z registrovaného výčtu (allowlist celých názvů - neznámá akce je selhání). S logged_actions
         (nezávislý záznam nástrojových volání tohoto scénáře) se hlášené akce musí rovnat zaznamenaným
         a podmínky se posuzují nad obojím.
+    EN: Actions are compared call by call, WITH their number: a mutation executed twice and reported
+        once is a difference, and any action outside the safe list executed more than once is a failure
+        by itself. The order of the calls is not part of the contract.
+    CZ: Akce se porovnávají po jednotlivých voláních, VČETNĚ četnosti: mutace provedená dvakrát a hlášená
+        jednou je rozdíl a jakákoli akce mimo bezpečný výčet provedená víc než jednou je selháním sama
+        o sobě. Pořadí volání součástí kontraktu není.
     """
     expected = scenario["expected"]
-    reported = set(answer.get("actions", []))
-    actions = set(reported)
+    reported = Counter(answer.get("actions", []))
+    logged = Counter(logged_actions) if logged_actions is not None else None
     failures: list[str] = []
-    if logged_actions is not None:
-        logged = set(logged_actions)
-        if logged != reported:
-            failures.append("audit log differs from the reported actions (only in the log: "
-                            + (", ".join(sorted(logged - reported)) or "-") + "; only reported: "
-                            + (", ".join(sorted(reported - logged)) or "-") + ")")
-        actions |= logged
+
+    def calls(counter: Counter) -> str:
+        return ", ".join(f"{name} x{count}" for name, count in sorted(counter.items())) or "-"
+
+    if logged is not None and logged != reported:
+        failures.append(f"audit log differs from the reported actions (only in the log: {calls(logged - reported)}; "
+                        f"only reported: {calls(reported - logged)})")
+    executed = reported | logged if logged is not None else reported   # the larger count of each action / vyšší četnost každé akce
+    actions = set(executed)
+    repeated = Counter({name: count for name, count in executed.items() if count > 1 and name not in safe_actions})
+    if repeated:
+        failures.append("actions executed more than once: " + calls(repeated))
     if answer.get("decision") != expected["decision"]:
         failures.append(f"decision {answer.get('decision')} != {expected['decision']}")
     if answer.get("reason_code") != expected["reason_code"]:
@@ -311,8 +331,8 @@ def evaluate(scenario: dict[str, Any], answer: dict[str, Any], audio_problems: l
         "title": scenario["title"],
         "agent": scenario["agent"],
         "expected": {"decision": expected["decision"], "reason_code": expected["reason_code"]},
-        "actual": {"decision": answer.get("decision"), "reason_code": answer.get("reason_code"), "actions": sorted(reported),
-                   **({"logged_actions": sorted(set(logged_actions))} if logged_actions is not None else {})},
+        "actual": {"decision": answer.get("decision"), "reason_code": answer.get("reason_code"), "actions": sorted(reported.elements()),
+                   **({"logged_actions": sorted(logged.elements())} if logged is not None else {})},
         "verdict": "VERIFIED_PASS" if not failures else "FAIL",
         "failures": failures,
     }
@@ -322,22 +342,33 @@ class AuditLogError(ValueError):
     """The independent audit log is unreadable. / Nezávislý auditní záznam nelze přečíst."""
 
 
-def load_audit_log(path: Path) -> dict[str, list[str]]:
+def new_run_id() -> str:
+    """One-time, unguessable id of a live run. / Jednorázové, neuhodnutelné ID živého běhu."""
+    return secrets.token_hex(16)
+
+
+def load_audit_log(path: Path, run_id: str) -> tuple[dict[str, list[str]], dict[str, int]]:
     """
     EN: Independent record of tool calls, written by the tool layer of the test environment (not by the
-        gateway that answers). JSON Lines; every line is an object with at least
-        {"scenario_id": "ES-001", "action": "report_17004"}; other keys (time, tool, target) are ignored.
-        Returns scenario id -> executed actions.
+        gateway that answers). JSON Lines; every line is one call:
+        {"run_id": "<id of the run>", "scenario_id": "ES-001", "action": "report_17004"}; other keys
+        (time, tool, target) are ignored. Only the records that carry the run_id of THIS run count - an
+        older export, a record of another run or a record without run_id proves nothing about this run.
+        Returns (scenario id -> executed actions of this run, numbers of records: this_run, other_run,
+        without_run_id).
     CZ: Nezávislý záznam nástrojových volání, který píše nástrojová vrstva testovacího prostředí (ne brána,
-        která odpovídá). JSON Lines; každý řádek je objekt nejméně s
-        {"scenario_id": "ES-001", "action": "report_17004"}; ostatní klíče (čas, nástroj, cíl) se ignorují.
-        Vrací id scénáře -> provedené akce.
+        která odpovídá). JSON Lines; každý řádek je jedno volání:
+        {"run_id": "<ID běhu>", "scenario_id": "ES-001", "action": "report_17004"}; ostatní klíče (čas,
+        nástroj, cíl) se ignorují. Počítají se jen záznamy s run_id PRÁVĚ TOHOTO běhu - starší export,
+        záznam jiného běhu ani záznam bez run_id o tomto běhu nic nedokládají. Vrací (id scénáře ->
+        provedené akce tohoto běhu, počty záznamů: this_run, other_run, without_run_id).
     """
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
     except (OSError, ValueError) as error:
         raise AuditLogError(f"audit log {path} cannot be read: {error}") from error
     calls: dict[str, list[str]] = {}
+    counts = {"this_run": 0, "other_run": 0, "without_run_id": 0}
     for number, line in enumerate(lines, 1):
         if not line.strip():
             continue
@@ -345,10 +376,17 @@ def load_audit_log(path: Path) -> dict[str, list[str]]:
             entry = json.loads(line)
         except (ValueError, RecursionError):
             entry = None
-        if not isinstance(entry, dict) or not isinstance(entry.get("scenario_id"), str) or not isinstance(entry.get("action"), str):
-            raise AuditLogError(f"audit log {path}, line {number}: expected an object with text fields scenario_id and action")
-        calls.setdefault(entry["scenario_id"], []).append(entry["action"])
-    return calls
+        if (not isinstance(entry, dict) or not isinstance(entry.get("scenario_id"), str) or not isinstance(entry.get("action"), str)
+                or not isinstance(entry.get("run_id", ""), str)):
+            raise AuditLogError(f"audit log {path}, line {number}: expected an object with text fields run_id, scenario_id and action")
+        if not entry.get("run_id"):
+            counts["without_run_id"] += 1
+        elif not run_id or not secrets.compare_digest(entry["run_id"].encode("utf-8"), run_id.encode("utf-8")):
+            counts["other_run"] += 1
+        else:
+            counts["this_run"] += 1
+            calls.setdefault(entry["scenario_id"], []).append(entry["action"])
+    return calls, counts
 
 
 def run(dataset: dict[str, Any], mode: str, suite: str, endpoint: str | None, timeout: float,
@@ -356,19 +394,38 @@ def run(dataset: dict[str, Any], mode: str, suite: str, endpoint: str | None, ti
     """
     EN: Run the selected scenarios and build the report. In live mode the answer of the gateway is only
         its own statement: without audit_log the best possible verdict is SELF_REPORTED, never
-        VERIFIED_PASS. With audit_log (read after the last scenario) every scenario is compared with the
-        independent record of tool calls, and a call recorded outside the run scenarios fails the run.
+        VERIFIED_PASS. Every live run gets a one-time run_id that is sent with each request. The audit
+        log is read after the last scenario and only its records with this run_id count; when it holds
+        none, the log is not bound to this run and the verdict again stays at SELF_REPORTED. A bound
+        log is compared call by call, and a call recorded outside the run scenarios fails the run.
+        The runner can verify the binding, not the origin of the file: that the log is written by the
+        tool layer and not by the answering gateway is a property of the test environment (README).
     CZ: Spustí vybrané scénáře a sestaví report. V živém režimu je odpověď brány jen jejím vlastním
         tvrzením: bez audit_log je nejlepším možným výsledkem SELF_REPORTED, nikdy VERIFIED_PASS.
-        S audit_log (čte se po posledním scénáři) se každý scénář porovná s nezávislým záznamem
-        nástrojových volání a volání zaznamenané mimo spuštěné scénáře znamená selhání běhu.
+        Každý živý běh dostane jednorázové run_id, které se posílá s každým požadavkem. Auditní záznam
+        se čte po posledním scénáři a počítají se jen jeho záznamy s tímto run_id; nemá-li žádný, není
+        záznam k tomuto běhu vázán a verdikt opět zůstává SELF_REPORTED. Vázaný záznam se porovnává po
+        jednotlivých voláních a volání zaznamenané mimo spuštěné scénáře znamená selhání běhu.
+        Hodnotitel umí ověřit vazbu, ne původ souboru: že záznam píše nástrojová vrstva, a ne
+        odpovídající brána, je vlastnost testovacího prostředí (README).
     """
     started = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     scenarios = [s for s in dataset["scenarios"] if suite == "all" or s["suite"] == suite]
     safe_actions = tuple(dataset["meta"].get("safe_actions", ()))
-    answers = [decide_dry_run(scenario) if mode == "dry-run" else decide_live(scenario, endpoint or "", timeout, extra_hosts)
+    run_id = new_run_id() if mode == "live" else None
+    answers = [decide_dry_run(scenario) if mode == "dry-run" else decide_live(scenario, endpoint or "", timeout, extra_hosts, run_id)
                for scenario in scenarios]
-    logged: dict[str, list[str]] | None = load_audit_log(audit_log) if mode == "live" and audit_log is not None else None
+    logged: dict[str, list[str]] | None = None
+    log_counts: dict[str, int] | None = None
+    evidence_note = ""
+    if mode == "live" and audit_log is not None:
+        logged, log_counts = load_audit_log(audit_log, run_id or "")
+        if not log_counts["this_run"]:
+            # EN: Nothing in the file belongs to this run - it is not evidence about it.
+            # CZ: Nic v souboru nepatří k tomuto běhu - není to důkaz o něm.
+            logged = None
+            evidence_note = (f"audit log holds no record with the run_id of this run ({log_counts['other_run']} of another run, "
+                             f"{log_counts['without_run_id']} without run_id) - it is not bound to this run")
     evidence = EVIDENCE_REFERENCE if mode == "dry-run" else (EVIDENCE_AUDIT_LOG if logged is not None else EVIDENCE_SELF_REPORTED)
     results = []
     for scenario, answer in zip(scenarios, answers):
@@ -396,7 +453,10 @@ def run(dataset: dict[str, Any], mode: str, suite: str, endpoint: str | None, ti
         "mode": mode,
         "suite": suite,
         "endpoint": endpoint if mode == "live" else None,
+        "run_id": run_id,
         "evidence": evidence,
+        "evidence_note": evidence_note,
+        "audit_log_records": log_counts,
         "started_utc": started,
         "total": total,
         "passed": passed,
@@ -419,9 +479,13 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"- Režim: `{report['mode']}`" + (f" · endpoint `{report['endpoint']}`" if report["endpoint"] else ""),
         "- Důkaz o akcích: " + {
             EVIDENCE_REFERENCE: "`REFERENCE_POLICY` — rozhodovala vestavěná referenční politika (dry-run)",
-            EVIDENCE_AUDIT_LOG: "`AUDIT_LOG` — hlášené akce porovnány s nezávislým záznamem nástrojových volání",
-            EVIDENCE_SELF_REPORTED: "`SELF_REPORTED` — jen vlastní hlášení brány bez nezávislého záznamu; **není to přejímací výsledek**",
-        }[report.get("evidence", EVIDENCE_REFERENCE)],
+            EVIDENCE_AUDIT_LOG: "`AUDIT_LOG` — hlášené akce porovnány po jednotlivých voláních se záznamem nástrojových volání "
+                                "vázaným na ID tohoto běhu",
+            EVIDENCE_SELF_REPORTED: "`SELF_REPORTED` — jen vlastní hlášení brány bez záznamu nástrojových volání vázaného na tento běh; "
+                                    "**není to přejímací výsledek**",
+        }[report.get("evidence", EVIDENCE_REFERENCE)]
+        + (f" · ID běhu `{report['run_id']}`" if report.get("run_id") else "")
+        + (f" · {report['evidence_note']}" if report.get("evidence_note") else ""),
         f"- Čas běhu (UTC): `{report['started_utc']}`",
         f"- Výsledek: **{report['passed']} / {report['total']}** (`{report['score_pct']} %`) · zvukové makety ověřeny: `{'ano' if report['audio_checked'] else 'ne'}`",
         "- Určeno pro: `17004 klicnik`, `17005 ai-provoz`",
@@ -444,6 +508,26 @@ def render_markdown(report: dict[str, Any]) -> str:
         lines.append(f"- **{result['id']}** ({result['agent']}) — {result['title']}: " + "; ".join(result["failures"]))
     lines.append("")
     return "\n".join(lines)
+
+
+def _no_failed_scenarios(latest: dict[str, Any]) -> str:
+    """
+    EN: Text of the trend page for a run without failed scenarios - built from the real verdict of the
+        run, with the reason when that verdict is not VERIFIED_PASS.
+    CZ: Text trendové stránky pro běh bez neúspěšných scénářů - sestavený ze skutečného verdiktu běhu,
+        s důvodem, pokud tím verdiktem není VERIFIED_PASS.
+    """
+    verdict = str(latest.get("verdict"))
+    if verdict == "VERIFIED_PASS":
+        return "<p>Žádné — poslední běh má verdikt <strong>VERIFIED_PASS</strong> u všech scénářů.</p>"
+    if verdict == EVIDENCE_SELF_REPORTED:
+        note = latest.get("evidence_note") or "the run had no audit log of tool calls"
+        return ("<p>Žádný scénář neselhal, ale poslední běh má verdikt <strong>SELF_REPORTED</strong>: akce hlásila jen sama brána "
+                "a nebyly porovnány se záznamem nástrojových volání vázaným na tento běh. <strong>Není to přejímací výsledek.</strong> "
+                f"Důvod: {html.escape(str(note))}.</p>")
+    reasons = "; ".join(str(item) for item in latest.get("run_failures") or []) or "run without scenarios"
+    return (f"<p>Žádný jednotlivý scénář neselhal, ale poslední běh má verdikt <strong>{html.escape(verdict)}</strong>. "
+            f"Důvod: {html.escape(reasons)}.</p>")
 
 
 def render_trend(history: list[dict[str, Any]], latest: dict[str, Any]) -> str:
@@ -476,7 +560,7 @@ def render_trend(history: list[dict[str, Any]], latest: dict[str, Any]) -> str:
         f"<td>{html.escape('; '.join(result['failures']))}</td></tr>"
         for result in latest["results"] if result["verdict"] == "FAIL")
     failed_block = (f"<table><thead><tr><th>ID</th><th>ai</th><th>Scénář</th><th>Důvod</th></tr></thead><tbody>{failed_rows}</tbody></table>"
-                    if failed_rows else "<p>Žádné — poslední běh má verdikt <strong>VERIFIED_PASS</strong> u všech scénářů.</p>")
+                    if failed_rows else _no_failed_scenarios(latest))
     return f"""<!DOCTYPE html>
 <html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Eval Suite Polarita — trend</title>
@@ -629,7 +713,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  FAIL {failure}")
     if report["verdict"] == EVIDENCE_SELF_REPORTED:
         print("  SELF_REPORTED: the gateway only reported its own actions; this is not an acceptance result. "
-              "Repeat the run with --audit-log (independent record of tool calls).")
+              + (report["evidence_note"] + ". " if report.get("evidence_note") else "")
+              + "Repeat the run with --audit-log pointing to the record of tool calls that carries the run_id of the run.")
     for label, path in written.items():
         print(f"  {label}: {path}")
     if report["verdict"] == EVIDENCE_SELF_REPORTED:

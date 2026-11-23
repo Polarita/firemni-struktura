@@ -120,9 +120,18 @@ if ! (cd "$STAGED/balicky/S2-eval-suite" && $PYTHON run_eval_suite.py --no-histo
 fi
 
 # shellcheck disable=SC2086
-if ! (cd "$STAGED/balicky/S3-konfigurator-a-tarify" && $PYTHON -m unittest test_pricing); then
+S3_LOG="$EXPORT/.s3-test.log"
+if ! (cd "$STAGED/balicky/S3-konfigurator-a-tarify" && $PYTHON -m unittest test_pricing) >"$S3_LOG" 2>&1; then
+    cat "$S3_LOG" >&2
     echo "pre-commit: testy cenového jádra S3 selhaly — commit zastaven." >&2
     exit 1
+fi
+# EN: Without Node.js or a Chromium browser the parity test of the JavaScript kernel is skipped. The hook
+#     says so aloud: the binding gate for that test is CI (POLARITA_REQUIRE_BROWSER=1), not this hook.
+# CZ: Bez Node.js nebo prohlížeče Chromium se paritní test javascriptového jádra přeskočí. Hook to řekne
+#     nahlas: závaznou bránou pro tento test je CI (POLARITA_REQUIRE_BROWSER=1), ne tento hook.
+if grep -q "skipped" "$S3_LOG"; then
+    echo "pre-commit: POZOR — paritní test JS jádra konfigurátoru S3 byl PŘESKOČEN (chybí Node.js i prohlížeč); závazně ho ověřuje až CI." >&2
 fi
 
 exit 0

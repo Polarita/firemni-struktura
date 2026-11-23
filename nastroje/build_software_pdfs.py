@@ -558,7 +558,7 @@ def build_poster_html() -> str:
             <span class="mtag sec">Trezor</span>
           </div>
           <div class="mcard-role">API klíče, SIPS/SRTP, DKIM, ISDS a pečetní certifikát</div>
-          <div class="mcard-desc">Tajemství pouze v RAM (odpoj. klíče TPM <code>N-16</code>, 0 v <code>.env</code>), <code>Vaultwarden SQLite</code>, <code>ISDS w9bbdva</code>, vypnutý <code>.p12 EET 2.0</code> a zap. <code>YubiKey č. 2</code>.</div>
+          <div class="mcard-desc">Tajemství pouze v RAM (odpoj. klíče TPM <code>N-16</code>, tajemství jen v <code>tmpfs</code> z <code>OpenBao Agent</code>, režim <code>0400</code>), <code>Vaultwarden SQLite</code>, <code>ISDS w9bbdva</code>, vypnutý <code>.p12 EET 2.0</code> a zap. <code>YubiKey č. 2</code>.</div>
         </div>
         <div class="mcard">
           <div class="mcard-top">
@@ -618,7 +618,7 @@ def build_poster_html() -> str:
             <span class="mtag sec">2× DR Drill</span>
           </div>
           <div class="mcard-role">Týdenní datová obnova + čtvrtletní Full DR Drill</div>
-          <div class="mcard-desc"><code>Sanoid</code>, <code>pgBackRest</code> a <code>Restic REST Server (--append-only)</code>: v neděli <code>03:00</code> obnova <code>6+9</code> DB, <code>OpenBao/Vaultwarden/Garage/Gitea</code> v <code>eth0 none</code> + čtvrtletní <strong>Full DR Drill</strong>.</div>
+          <div class="mcard-desc"><code>Sanoid</code>, <code>pgBackRest</code> a <code>Restic REST Server (--append-only)</code>: v neděli <code>03:00</code> obnova <code>6+9</code> DB, <code>OpenBao/Vaultwarden/Gitea/Vault</code> a vzorku <code>Garage</code> a <code>legal-archive</code> v dočasné instanci + čtvrtletní <strong>Full DR Drill</strong>.</div>
         </div>
         <div class="mcard">
           <div class="mcard-top">
@@ -1285,7 +1285,7 @@ def build_book_html() -> str:
         <code>6 doménových + 9 servisních databází PostgreSQL</code> (<code>0× MySQL</code>, <code>0× MongoDB</code>) s režimem <code>Clean Room</code> nad PII + Git/CI server <code>Gitea</code> ·
         Softwarová ústředna <code>Asterisk</code> (<code>WebRTC + Linphone</code>, <code>0</code> veř. SIP portů, stereo <code>90d</code> vs. <code>LEGAL_HOLD 3–10 let</code>),
         lokální přepis <code>WhisperX</code> (<code>#t=MM:SS</code>), komerčně neomezená urgence <code>Silero VAD + librosa</code> (<code>MIT / ISC</code>) výhradně nad <code>Kanálem L</code> (<code>Kanál R = FAIL_CLOSED</code>),
-        týmový hub <code>Zulip</code> (<code>Blok 7</code>), pošta <code>Stalwart Mail</code>, omnichannel <code>Chatwoot CE</code> (za <code>oauth2-proxy</code>) a 8cestný router <code>comm-gateway</code> ·
+        týmový hub <code>Zulip</code> (<code>Blok 7</code>), pošta <code>Stalwart Mail</code>, omnichannel <code>Chatwoot CE</code> (veřejně jen widget a webhooky kanálů, ostatní za VPN + <code>oauth2-proxy</code>) a 8cestný router <code>comm-gateway</code> ·
         <code>metadata-schema-kernel</code> (vlastní schémata), <code>Paperclip</code> (strop <code>470 USD</code> = 85 % + 15 % P1), <code>Stage 1 &amp; 2 Eval Suite</code>, <code>QElectroTech</code> (+ pilot <code>CadCraft</code>), <code>cad-urs-engine</code> (platná norma pro rozváděče nízkého napětí, negativní revize), <code>cz-sk-registry-kernel</code>, <code>ORG-UOL</code> a přednástupní <code>JMHZ</code>.
       </p>
     </div>

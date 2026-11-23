@@ -378,7 +378,7 @@ Každý fyzický živý člověk ve společnosti **Polarita s.r.o.** (ať pracuj
 7. **Výdej OOPP, nářadí, pojízdného skladu `VAN-*` / služebního vozu a aktivace účtu v `Keycloak SSO`, `Zulipu`, `Linphone` a `portal-spolupracovniku` (`18001 personalista` + `15001 pravni-specialista` + `17004 klicnik`):**
    * Podpis evidenčního listu vydaných OOPP (dielektrické rukavice, přilba s podbradníkem, obuv S3, postroj), u osobních přenosných měřidel, OOPP a nářadí podpis **Dohody o odpovědnosti za ztrátu svěřených věcí**, jednotná aktivace účtu v `Keycloak OIDC SSO` (mobilní `portal-spolupracovniku`, týmový `Zulip`, `Chatwoot CE` za `oauth2-proxy` a SIP klapka `Asterisk / Linphone`), u skladníků a parťáků s přidělenou dodávkou podpis **Dohody o odpovědnosti za schodek na svěřených hodnotách** se vstupní QR inventurou pojízdného skladu **`VAN-101-xx`** a při svěření služebního motorového vozidla podpis **Dohody o svěření služebního vozidla a pravidel užívání vozu (obecná odpovědnost za škodu — motorové vozidlo se nepodřazuje pod odpovědnost za ztrátu svěřených věcí!)** s určením režimu užívání (výhradně služebně, nebo i soukromě s odvodem **`1 % / 0,5 % / 0,25 %` ze vstupní ceny vč. DPH do mzdy a JMHZ podle předpisů o daních z příjmů**), povinnou fotodokumentací karoserie a napojením na **`fleet-gps-bridge`**.
 8. **Odemčení zámku způsobilosti (`Hard-Stop Gate`):**
-   * Jakmile je všech 7 bodů (vč. uloženého ID předchozí registrace ČSSZ/JMHZ) splněno a zapsáno s daty expirací v `db_hr_lide`, systém přepne pracovníka na **`ZPŮSOBILÝ: ANO`** (pro jurisdikci `CZ` a danou pobočku).
+   * Jakmile je všech 7 bodů (vč. uloženého ID předchozí registrace ČSSZ/JMHZ) splněno a zapsáno s daty expirací v `db_hr_lide` a návrh odemčení potvrdil `1001` přes `mutation_confirm` v `Decisions`, přepne deterministická brána (nikoli `ai`) pracovníka na **`ZPŮSOBILÝ: ANO`** (pro jurisdikci `CZ` a danou pobočku).
 
 ---
 
@@ -392,7 +392,7 @@ Každý fyzický živý člověk ve společnosti **Polarita s.r.o.** (ať pracuj
 4. **Vstupní lékařská prohlídka PLS** (vždy povinná při práci na stavbě, ve skladu s břemeny/regály nebo s elektrozařízením).
 5. **Vstupní školení BOZP/PO a zaškolení osoby poučené v Moodle (`14004 skolitel` + osoba znalá — elektrotechnik / vedoucí elektrotechnik, max. 3 roky):**
    * **Bezpečnostní zámek v systému:** Brigádník kategorie `BRI` (pomocný pracovník) smí být v `portal-spolupracovniku` přiřazen na stavbu **výhradně do čety, kde je fyzicky přítomen vedoucí elektrotechnik**, a smí provádět pouze pomocné práce bez napětí (sekání, chráničky, sádrování, úklid) — **nikdy práci na živých částech!**
-6. **Výdej OOPP a přepnutí semaforu na `ZPŮSOBILÝ: ANO` (v rozsahu `osoba poučená — pod dozorem vedoucího elektrotechnika`).**
+6. **Výdej OOPP a přepnutí semaforu na `ZPŮSOBILÝ: ANO` výstupem deterministické brány po `mutation_confirm` (v rozsahu `osoba poučená — pod dozorem vedoucího elektrotechnika`).**
 
 ---
 

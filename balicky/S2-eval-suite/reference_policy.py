@@ -49,6 +49,19 @@ P1_RESERVE_APPROVER = "1001"
 P1_RESERVE_PROPOSER = "11001"
 P1_RESERVE_RELEASER = "17005"
 OCPP_RESET_OWNER = "14003"
+OWNER = "1001"                               # the managing director / jednatel
+COMPANY_DATA_BOX = "w9bbdva"
+# EN: Break-Glass (R8): a delegate confirms with his own account and his own hardware key, and only
+#     these classes of acts - each with the role that may confirm it. Everything else waits for 1001.
+# CZ: Break-Glass (R8): zástupce potvrzuje vlastním účtem a vlastním hardwarovým klíčem, a to jen tyto
+#     třídy úkonů - každou s rolí, která ji smí potvrdit. Vše ostatní čeká na 1001.
+BREAK_GLASS_ROLES = ("SUB-1007", "bank_delegate", "prokurista")
+BREAK_GLASS_CLASSES = {
+    "urgent_inspection_report_release": ("SUB-1007",),
+    "payment": ("bank_delegate", "prokurista"),
+    "access_revocation": BREAK_GLASS_ROLES,
+    "p1_security_intervention": BREAK_GLASS_ROLES,
+}
 OCPP_CONSENT_SOURCE = "client_zone_authenticated"
 
 # Qualification ranks under the electrical competence regulations / Stupně kvalifikace dle předpisů o odborné způsobilosti v elektrotechnice
@@ -202,9 +215,26 @@ def rule_worker_release(event: dict[str, Any]) -> dict[str, Any]:
         return _result(FAIL_CLOSED, "UNKNOWN_QUALIFICATION", "notify_18001")
     if regime in ("EMP", "BRI"):
         registration = _record(event, "registration")
+        basis = _text(registration.get("basis_id"))
         if (_text(registration.get("registration_id")) is None or registration.get("confirmed_by") != REGISTRATION_CONFIRMED_BY
-                or registration.get("recorded_by") != REGISTRATION_RECORDED_BY or registration.get("person_no") != person):
+                or registration.get("recorded_by") != REGISTRATION_RECORDED_BY or registration.get("person_no") != person
+                or basis is None):
             return _result(BLOCK, "JMHZ_NOT_REGISTERED", "notify_18001")
+        # EN: The order in time is part of the evidence: 1001 approved this very basis in Decisions, the
+        #     filing was confirmed by ORG-UOL not earlier than that, and the confirmation is dated BEFORE
+        #     the day of work. Dates have the resolution of a day, so a confirmation dated on the day of
+        #     work cannot prove "before the start" and does not open the gate.
+        # CZ: Časová posloupnost je součástí důkazu: 1001 schválil právě tento podklad v Decisions, podání
+        #     potvrdil ORG-UOL nejdříve poté a potvrzení je datováno PŘED dnem práce. Data mají rozlišení
+        #     dne, takže potvrzení datované dnem práce „před zahájením“ doložit neumí a bránu neotevře.
+        approval = _record(event, "basis_approval")
+        approved_on = _as_date(approval.get("approved_on"))
+        if (approval.get("mutation_confirm") is not True or approval.get("approved_by") != OWNER or approval.get("basis_id") != basis
+                or approval.get("person_no") != person or approved_on is None):
+            return _result(BLOCK, "JMHZ_BASIS_NOT_APPROVED", "notify_18001", "return_to_decisions")
+        confirmed_on, work_day = _as_date(registration.get("confirmed_on")), _as_date(day)
+        if confirmed_on is None or work_day is None or confirmed_on < approved_on or confirmed_on >= work_day:
+            return _result(BLOCK, "JMHZ_REGISTERED_LATE", "notify_18001")
     have = QUALIFICATION_RANK.get(event.get("qualification", "none"), 0)
     need = QUALIFICATION_RANK[req_qual]
     if have < need or (need > 0 and _expired(event.get("qualification_valid_until"), day)):
@@ -214,7 +244,10 @@ def rule_worker_release(event: dict[str, Any]) -> dict[str, Any]:
     if regime == "SUB" and event.get("sub_insurance_valid") is not True:
         return _result(BLOCK, "SUB_INSURANCE_INVALID", "notify_18001")
     confirmation = _record(event, "gate_confirmation")
-    if confirmation.get("mutation_confirm") is not True or confirmation.get("person_no") != person or confirmation.get("work_date") != day:
+    # EN: A change of a personnel state is not a Break-Glass class - only 1001 confirms it.
+    # CZ: Změna personálního stavu není třídou Break-Glass - potvrzuje ji jen 1001.
+    if (confirmation.get("mutation_confirm") is not True or confirmation.get("person_no") != person or confirmation.get("work_date") != day
+            or confirmation.get("by") != OWNER or confirmation.get("by_kind") != "human"):
         return _result(BLOCK, "ELIGIBILITY_NOT_CONFIRMED", "return_to_decisions")
     return _result(ALLOW, "WORKER_ELIGIBLE", "release_to_calendar")
 
@@ -339,24 +372,38 @@ def _isds_send(event: dict[str, Any]) -> dict[str, Any]:
     submission = _text(event.get("submission_id"))
     actor = _record(event, "actor")
     person = _text(actor.get("person"))
+    key = _text(actor.get("key_id"))
     presence = event.get("presence")
-    human_with_key = actor.get("kind") == "human" and actor.get("auth") == "own_hardware_key" and person is not None
+    human_with_key = actor.get("kind") == "human" and actor.get("auth") == "own_hardware_key" and person is not None and key is not None
     if presence == "owner_present":
         authorised, reason = human_with_key and person == ISDS_OWNER, "ISDS_SEND_BY_OWNER"
     elif presence == "break_glass_active":
-        authorised = human_with_key and person != ISDS_OWNER and actor.get("isds_send_delegate") is True
+        # EN: The delegate's right to send is a record, not a flag: an active authorisation of this very
+        #     person for this very data box with the right to send, granted by 1001.
+        # CZ: Oprávnění zmocněnce odesílat je záznam, ne příznak: aktivní pověření právě této osoby pro
+        #     právě tuto schránku s oprávněním odesílat, udělené 1001.
+        grant = _record(event, "send_authorisation")
+        authorised = (human_with_key and person != ISDS_OWNER and grant.get("person") == person and grant.get("active") is True
+                      and grant.get("right") == "send" and grant.get("granted_by") == ISDS_OWNER
+                      and grant.get("data_box") == COMPANY_DATA_BOX)
         reason = "ISDS_SEND_BY_DELEGATE"
     else:
         authorised, reason = False, ""
-    if not authorised:
+    if not authorised or event.get("data_box") != COMPANY_DATA_BOX:
         return _result(BLOCK, "ISDS_SEND_REQUIRES_OWNER", "return_to_decisions")
     if submission is None:
         return _result(FAIL_CLOSED, "MALFORMED_EVENT", "log_audit")
     verdict = _record(event, "legal_verdict")
     if verdict.get("verdict") != "VERIFIED_PASS" or verdict.get("by") != ISDS_LEGAL_VERIFIER or verdict.get("submission_id") != submission:
         return _result(BLOCK, "ISDS_SEND_NOT_VERIFIED", "return_to_decisions")
+    # EN: The approval is one record of Decisions that binds together the submission, the person who
+    #     sends it and the hardware key that person confirmed it with - the same key the actor holds.
+    # CZ: Schválení je jeden záznam Decisions, který svazuje podání, osobu, která je odesílá,
+    #     a hardwarový klíč, kterým je ta osoba potvrdila - tentýž klíč, který drží aktér.
     approval = _record(event, "submission_approval")
-    if approval.get("mutation_confirm") is not True or approval.get("submission_id") != submission or approval.get("by") != person:
+    if (approval.get("mutation_confirm") is not True or _text(approval.get("decision_id")) is None
+            or approval.get("submission_id") != submission or approval.get("by") != person
+            or approval.get("key_owner") != person or approval.get("key_id") != key):
         return _result(BLOCK, "ISDS_SEND_NOT_APPROVED", "return_to_decisions")
     return _result(ALLOW, reason, "send_and_archive_zfo")
 
@@ -459,14 +506,51 @@ def rule_vault_write(event: dict[str, Any]) -> dict[str, Any]:
 
 def rule_data_mutation(event: dict[str, Any]) -> dict[str, Any]:
     """
-    EN: Every data change needs the atomic before/after diff confirmed by mutation_confirm.
-    CZ: Každá změna dat vyžaduje atomický diff před → po potvrzený přes mutation_confirm.
+    EN: Every data change needs the atomic before/after diff and a confirmation record (mutation_confirm)
+        for this very change, made by a human with his own hardware key. In normal operation only 1001
+        confirms. In Break-Glass a named delegate confirms only the enumerated classes of acts, each
+        with the proof of its own scope; every other change waits for 1001.
+    CZ: Každá změna dat vyžaduje atomický diff před → po a potvrzující záznam (mutation_confirm) k právě
+        této změně, pořízený člověkem vlastním hardwarovým klíčem. V běžném režimu potvrzuje jen 1001.
+        V režimu Break-Glass potvrzuje jmenovaný zástupce jen vyjmenované třídy úkonů, každou s dokladem
+        jejího rozsahu; každá jiná změna čeká na 1001.
     """
     if event.get("diff_presented") is not True:
         return _result(BLOCK, "MUTATION_DIFF_MISSING", "return_to_decisions")
-    if event.get("mutation_confirm") is not True:
+    change = _text(event.get("change_id"))
+    confirmation = _record(event, "confirmation")
+    if confirmation.get("mutation_confirm") is not True or change is None or confirmation.get("change_id") != change:
         return _result(BLOCK, "MISSING_MUTATION_CONFIRM", "return_to_decisions")
-    return _result(ALLOW, "MUTATION_CONFIRMED", "execute_confirmed_mutation", "log_audit")
+    person = _text(confirmation.get("by"))
+    if (confirmation.get("by_kind") != "human" or person is None or confirmation.get("auth") != "own_hardware_key"
+            or confirmation.get("key_owner") != person or _text(confirmation.get("key_id")) is None):
+        return _result(BLOCK, "MUTATION_APPROVER_NOT_VERIFIED", "return_to_decisions", "report_17004")
+    mode = event.get("mode")
+    action_class = _text(event.get("action_class"))
+    if mode not in ("normal", "break_glass") or action_class is None:
+        return _result(FAIL_CLOSED, "MALFORMED_EVENT", "log_audit")
+    if mode == "normal":
+        if person != OWNER:
+            return _result(BLOCK, "MUTATION_APPROVER_NOT_AUTHORISED", "return_to_decisions")
+        return _result(ALLOW, "MUTATION_CONFIRMED", "execute_confirmed_mutation", "log_audit")
+    role = confirmation.get("break_glass_role")
+    if person == OWNER or role not in BREAK_GLASS_ROLES:
+        return _result(BLOCK, "MUTATION_APPROVER_NOT_AUTHORISED", "return_to_decisions")
+    if role not in BREAK_GLASS_CLASSES.get(action_class, ()):
+        return _result(BLOCK, "BREAK_GLASS_CLASS_NOT_ALLOWED", "return_to_decisions")
+    scope = _record(event, "scope")
+    if action_class == "urgent_inspection_report_release":
+        in_scope = scope.get("performed_by") == person and scope.get("signed_by") == person and scope.get("urgent") is True
+    elif action_class == "payment":
+        amount, limit = _finite_nonneg_number(scope.get("amount_czk")), _finite_nonneg_number(scope.get("power_of_attorney_limit_czk"))
+        in_scope = scope.get("power_of_attorney_holder") == person and amount is not None and limit is not None and amount <= limit
+    elif action_class == "access_revocation":
+        in_scope = scope.get("reason") in ("offboarding", "incident")
+    else:
+        in_scope = scope.get("priority") == "P1"
+    if not in_scope:
+        return _result(BLOCK, "BREAK_GLASS_OUT_OF_SCOPE", "return_to_decisions")
+    return _result(ALLOW, "MUTATION_CONFIRMED_BREAK_GLASS", "execute_confirmed_mutation", "log_audit")
 
 
 def rule_paid_model_call(event: dict[str, Any]) -> dict[str, Any]:

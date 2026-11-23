@@ -1,6 +1,6 @@
 # 09 — Veřejný web (`polarita.cz` — Kalkulačka SVJ, 48h šanony & `Chatwoot` `WebChat`), modulární e-shop (`polarita.eu`), skladové hospodářství (`Elektro WMS`), Elektro Akademie (`akademie.polarita.cz`) a analytika (`Umami`) · Verze 3.0
 
-Tento dokument definuje zákaznickou, obchodní, skladovou, expediční, vzdělávací a analytickou webovou vrstvu společnosti **Polarita s.r.o.** (v plném souladu s **Verzí 3.0** firemní struktury — oddělení `12`, `13`, `14` a vývojový tým oddělení `17` — `17001 programator`, `17002 webmaster`, `17003 spravce-site`) postavenou jako moderní modulární stavebnice **100% sjednocená nad jediným databázovým strojem `PostgreSQL (latest)`** (`db_eshop`, `db_akademie`, `db_erp_lhutnik`, `db_gdpr_zkousky` + servisní DB `umami` a `chatwoot`, bez `MySQL` a bez `MongoDB`), mezipamětí `Valkey (latest)` a objektovým úložištěm `Garage (latest)`.
+Tento dokument definuje zákaznickou, obchodní, skladovou, expediční, vzdělávací a analytickou webovou vrstvu společnosti **Polarita s.r.o.** (v plném souladu s **Verzí 3.0** firemní struktury — oddělení `12`, `13`, `14` a vývojový tým oddělení `17` — `17001 programator`, `17002 webmaster`, `17003 spravce-site`) postavenou jako moderní modulární stavebnice **100% sjednocená nad jediným databázovým strojem `PostgreSQL` (major verze z lockfilu `Bloku 5`)** (`db_eshop`, `db_akademie`, `db_erp_lhutnik`, `db_gdpr_zkousky` + servisní DB `umami` a `chatwoot`, bez `MySQL` a bez `MongoDB`), mezipamětí `Valkey (latest)` a objektovým úložištěm `Garage (latest)`.
 
 ---
 

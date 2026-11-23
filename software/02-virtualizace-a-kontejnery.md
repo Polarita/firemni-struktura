@@ -65,7 +65,7 @@ Hodnoty jsou výchozí a doladí se při přejímce; součet limitů instancí j
 | `app_internal` | `Moodle` | `1,5 GB` | `Blok 9` |
 | `app_internal` | `Umami` | `0,5 GB` | `Blok 9` |
 | `app_internal` | pečetní modul `pyHanko` | `0,25 GB` | `Blok 4` |
-| `app_internal` | stahování signatur `ClamAV` | `0,25 GB` | `Blok 4` |
+| `dmz_edge` | instance stahovače signatur `ClamAV` | `0,25 GB` | `Blok 4` |
 | `app_internal` | `Asterisk` | `1 GB` | `Blok 11` |
 | `app_internal` | poštovní jádro `Stalwart Mail` | `1 GB` | `Blok 11` |
 | `app_internal` | `Chatwoot CE` | `2,5 GB` | `Blok 11` |
@@ -79,7 +79,7 @@ Hodnoty jsou výchozí a doladí se při přejímce; součet limitů instancí j
 
 ### Matice povolených toků mezi zónami (zdroj → cíl → port)
 
-Co v tabulce není, je zakázáno (`nftables` `default drop`). Konkrétní čísla portů se zapisují do `OpenTofu` při nasazení služby; tabulka určuje, které toky smějí vzniknout.
+Co v tabulce není, je zakázáno (`nftables` `default drop`). Konkrétní čísla portů se zapisují do `OpenTofu` při nasazení služby; tabulka určuje, které toky smějí vzniknout. Mezizónová pravidla `nftables` (`default drop` mezi mosty zón podle této matice) vznikají a testují se už v `Bloku 2`; `Blok 3` nad tento základ přidává veřejný perimetr a `CrowdSec`. Tok služby z pozdějšího bloku se zapíná a kladně ověřuje až v bloku, kde služba vzniká.
 
 | Zdroj | Cíl | Port / protokol | Poznámka |
 | :--- | :--- | :--- | :--- |
@@ -99,8 +99,11 @@ Co v tabulce není, je zakázáno (`nftables` `default drop`). Konkrétní čís
 | `Checkmk` (`app_internal`) | internet — API `Telegram` | odchozí `443/tcp` | jen out-of-band pager pro alerty |
 | `Checkmk` (`app_internal`) | externí SMTP relay ze vstupů `Bloku 0` (jeden konkrétní hostitel) | odchozí submission port tohoto relay | druhý nezávislý kanál alertů od `Bloku 6`; jiný cíl na tomto portu se zahazuje |
 | zálohovací klient (`polarita-hq`) | záložní uzel přes `Headscale VPN` | port `Restic REST Server` | jen `append-only` přístup |
-| aplikace v `app_internal` | internet | odchozí `443/tcp` (a odchozí `SIPS/SRTP`, `25/tcp` pošty) | jen vyjmenované cíle (API modelů, rejstříky, `TSA`, `SIP Trunk`, kanály `Chatwoot`) |
+| aplikace v `app_internal` | internet | odchozí `443/tcp` (a odchozí `SIPS/SRTP`, `25/tcp` pošty) | jen vyjmenované cíle (API modelů, rejstříky, `TSA`, `SIP Trunk`, kanály `Chatwoot`); neplatí pro `gitea-runner`, který nemá žádný odchozí provoz |
 | dočasná sestavovací instance (`dmz_edge`) | internet | odchozí `80/443/tcp` | jen po dobu sestavení obrazu |
+| instance stahovače signatur `ClamAV` (`dmz_edge`) | distribuční služba signatur | odchozí `443/tcp` | od `Bloku 4`; do `sandbox_airgap` jdou signatury jen adresářem `clamav-db` připojeným pro čtení |
+| `isds-podatelna-bridge` (`app_internal`) | testovací prostředí ISDS | odchozí `443/tcp` | od `Bloku 8`; produkční ISDS až po přepnutí v `Bloku 12` |
+| `gitea-runner` (`app_internal`) | `Gitea` (`app_internal`) | port HTTP `Gitea` | jediné povolené spojení runneru: žádný odchozí provoz do internetu ani do `data_vault`; závislosti má v obrazu (offline wheelhouse, `Blok 5`) |
 | `data_vault` | internet | — | žádný odchozí provoz |
 | `sandbox_airgap` | cokoli | — | žádné síťové rozhraní, žádná strojová tajemství a žádný `OpenBao Agent`; jen připojené adresáře (`airgap-spool`, a pouze pro čtení `airgap-models` a `clamav-db`) |
 
@@ -144,7 +147,7 @@ Pomocí OpenTofu (latest) a provideru lxc/incus připrav ve složce /srv/polarit
 3. Zóna 3 — data_vault: uzavřená databázová a trezorová síť s NULOVÝM přístupem do internetu (žádný odchozí NAT/egress ven ze serveru, přístup povolen výhradně podle matice toků: z autorizovaných aplikačních kontejnerů na konkrétní porty PostgreSQL/PgBouncer, Valkey a Garage, z OpenBao Agenta každé instance se síťovým rozhraním na OpenBao, z Caddy na Vaultwarden jen pro interní vhost z VPN a z Checkmk jen na čtecího agenta).
 4. Zóna 4 — sandbox_airgap: profil pro bez-síťové kontejnery a KVM virtuální stroje s výslovně odebraným síťovým rozhraním (v OpenTofu / Incus přepiš zděděný device { name = "eth0", type = "none" }, tj. eth0 none — nikdy neponechávej ani výchozí incusbr0!) a s předáváním souborů výhradně jediným tokem karanténa /srv/polarita/workspace/karantena -> spool /srv/polarita/data/airgap-spool (vstupní podsložka jen pro čtení ro) -> zpracování -> oddělený výstupní adresář spoolu, přičemž přesun provádí hostitelská jednotka systemd, ne aplikace; modely /srv/polarita/data/airgap-models a signatury ClamAV /srv/polarita/data/clamav-db připoj pouze pro čtení pro sanitizaci hlasových příloh WhisperX (HF_HUB_OFFLINE=1 + předstažené offline modely), ClamAV/Dangerzone a čtení cizích .dwg, .dxf, .ifc, .pdf, .xc4, příloh .zfo i historických šanonů ze služby 48h převzetí šanonů dle architektury CaMeL.
 5. Ke každému profilu a instanci nastav v OpenTofu pevné limity paměti RAM (limits.memory), jader CPU (limits.cpu) a počtu procesů (limits.processes) podle tabulky výchozích limitů (v profilu MVP 64 GB součet limitů instancí nejvýše 52 GB a hostitel + zfs_arc_max nejvýše 12 GB; v Plném profilu 128 GB + GPU úměrně), aby žádná zacyklená služba nemohla vyčerpat prostředky hostitelského serveru.
-6. Zapiš do OpenTofu matici povolených toků mezi zónami (zdroj -> cíl -> port; co v ní není, zahazuj) včetně výslovných výjimek (Caddy -> Vaultwarden jen interní vhost z VPN, OpenBao Agent každé instance se síťovým rozhraním -> OpenBao (instance v sandbox_airgap nemají žádná strojová tajemství ani agenta), Checkmk -> data_vault jen čtecí agent, Checkmk -> API Telegram a -> jeden konkrétní externí SMTP relay ze vstupů Bloku 0 na jeho submission port, zálohovací klient -> záložní uzel přes VPN, Traccar a RTP Asterisk až v Bloku 11 přes přesměrování v dmz_edge).
+6. Zapiš do OpenTofu matici povolených toků mezi zónami (zdroj -> cíl -> port; co v ní není, zahazuj) a po schválení ji už v tomto bloku nasaď jako mezizónová pravidla nftables (default drop mezi mosty zón podle matice; případný ufw odstraň, aby nevznikaly duplicitní tabulky; veřejný vstup z internetu zůstává do Bloku 3 zavřený — veřejný perimetr a CrowdSec přidá Blok 3 nad tento základ; toky služeb z pozdějších bloků, např. stahovač signatur ClamAV v dmz_edge -> distribuční služba signatur 443/tcp od Bloku 4, gitea-runner -> jen místní Gitea od Bloku 5 a isds-podatelna-bridge -> testovací prostředí ISDS 443/tcp od Bloku 8 s produkčním ISDS až po přepnutí v Bloku 12, se zapínají až s danou službou), včetně výslovných výjimek (Caddy -> Vaultwarden jen interní vhost z VPN, OpenBao Agent každé instance se síťovým rozhraním -> OpenBao (instance v sandbox_airgap nemají žádná strojová tajemství ani agenta), Checkmk -> data_vault jen čtecí agent, Checkmk -> API Telegram a -> jeden konkrétní externí SMTP relay ze vstupů Bloku 0 na jeho submission port, zálohovací klient -> záložní uzel přes VPN, Traccar a RTP Asterisk až v Bloku 11 přes přesměrování v dmz_edge).
 7. Připrav definici dočasné sestavovací instance v dmz_edge (odchozí přístup jen po dobu sestavení) a postup: sestavení obrazu -> publikace do místního úložiště obrazů Incus -> spuštění instance v data_vault / sandbox_airgap z tohoto obrazu -> zrušení sestavovací instance; aktualizace = nové sestavení obrazu a výměna instance (měsíčně a při bezpečnostní záplatě).
 8. Spusť tofu fmt, tofu validate a tofu plan, nech síťová ACL pravidla zkontrolovat u 17004 klicnik (VERIFIED_PASS) a předlož plán ke schválení do Decisions před spuštěním tofu apply.
 ```
@@ -158,9 +161,9 @@ Proveď na serveru polarita-hq kompletní přejímací zkoušku virtualizační 
 1. Test 1 (Systémový kontejner LXC): Přes OpenTofu vytvoř neprivilegovaný kontejner Ubuntu (latest LTS), ověř jeho start, síťovou izolaci dle zóny, pořízení snapshotu a nulový drift (tofu plan vrátí beze změn).
 2. Test 2 (Nativní OCI kontejner bez Dockeru): Ověř spuštění lehkého testovacího OCI obrazu přímo přes Incus OCI integraci bez přítomnosti démonu Docker na hostiteli.
 3. Test 3 (Plný virtuální stroj KVM): Přes OpenTofu vytvoř testovací KVM virtuální stroj s hardwarovou akcelerací (/dev/kvm), ověř uvnitř hosta systemd-detect-virt = kvm a funkčnost v izolovaném profilu.
-4. Test 4 (Obraz pro zónu bez sítě a matice toků): V dočasné sestavovací instanci v dmz_edge sestav zkušební obraz, publikuj jej do místního úložiště obrazů Incus, spusť z něj instanci v data_vault a ověř, že z ní nelze navázat žádné odchozí spojení; ověř záporným testem i alespoň jeden tok, který v matici toků není (musí být zahozen), a sečti limits.memory všech definovaných instancí (součet + hostitel a ARC nejvýše fyzická RAM).
+4. Test 4 (Obraz pro zónu bez sítě a matice toků): V dočasné sestavovací instanci v dmz_edge sestav zkušební obraz, publikuj jej do místního úložiště obrazů Incus, spusť z něj instanci v data_vault a ověř, že z ní nelze navázat spojení do internetu ani nepovolené mezizónové spojení (do dmz_edge a app_internal); ověř záporným testem i alespoň jeden tok mezi každou dvojicí zón, který v matici toků není (musí být zahozen). Povolené servisní výjimky (např. OpenBao Agent -> OpenBao, aplikace -> její databáze) se v Bloku 2 netestují — kladně se ověřují v bloku, kde služba vzniká. Sečti limits.memory všech definovaných instancí (součet + hostitel a ARC nejvýše fyzická RAM).
 5. Povinný okamžitý úklid: Po úspěšném změření a zápisu protokolu zkoušky všechny cvičné instance včetně sestavovací čistě odstraň přes tofu destroy a ověř (incus list, incus storage volume list), že na serveru nezůstal žádný osiřelý testovací kontejner, virtuální stroj ani diskový svazek.
-6. Ulož protokol přejímací zkoušky do sdílené paměti (/srv/polarita/vault/07-IT-a-Architektura/).
+6. Ulož protokol přejímací zkoušky do /srv/polarita/workspace/dukazy/blok-02/ (do Vaultu se přenese až po jeho založení v Bloku 8).
 ```
 
 ---
@@ -170,8 +173,8 @@ Proveď na serveru polarita-hq kompletní přejímací zkoušku virtualizační 
 - [ ] Na hostiteli `polarita-hq` běží **`Incus (latest)`** pouze na lokálním Unix socketu (žádný otevřený síťový port hypervizoru) a na hostiteli **není nainstalován Docker**.
 - [ ] Hardwarová akcelerace `KVM` (`/dev/kvm`) je aktivní a ověřená skutečným startem plného virtuálního stroje.
 - [ ] Fungují všechny tři režimy: systémové kontejnery (`LXC`), nativní aplikační obrazy (`OCI`) i plné virtuální stroje (`KVM`).
-- [ ] V `OpenTofu (latest)` jsou definovány a ověřeny všechny 4 bezpečnostní zóny (`dmz_edge`, `app_internal`, `data_vault`, `sandbox_airgap`) se striktními ACL v `nftables`; zóna `data_vault` je z internetu nedosažitelná a kontejner v `sandbox_airgap` nemá žádné síťové rozhraní (`ip link` ukáže pouze `lo`).
-- [ ] Matice povolených toků mezi zónami je zapsána v `OpenTofu` včetně výslovných výjimek a záporný test toku mimo matici skončil zahozením.
+- [ ] V `OpenTofu (latest)` jsou definovány a ověřeny všechny 4 bezpečnostní zóny (`dmz_edge`, `app_internal`, `data_vault`, `sandbox_airgap`) a mezizónová pravidla `nftables` (`default drop` mezi mosty zón podle matice toků) jsou nasazena už v tomto bloku (veřejný perimetr a `CrowdSec` přidává `Blok 3`); zóna `data_vault` je z internetu nedosažitelná a kontejner v `sandbox_airgap` nemá žádné síťové rozhraní (`ip link` ukáže pouze `lo`).
+- [ ] Matice povolených toků mezi zónami je zapsána v `OpenTofu` včetně výslovných výjimek a záporné testy (spojení do internetu z `data_vault` a nepovolená mezizónová spojení mimo matici) skončily zahozením; povolené servisní výjimky se kladně ověřují až v bloku, kde služba vzniká.
 - [ ] Součet `limits.memory` všech definovaných instancí je v profilu `MVP` nejvýše `52 GB` a spolu s hostitelem a `ARC` (nejvýše `12 GB`) nepřesahuje fyzickou RAM.
-- [ ] Je ověřena cesta sestavení obrazu pro zóny bez sítě: obraz sestavený v dočasné sestavovací instanci v `dmz_edge` byl publikován do místního úložiště obrazů `Incus` a instance z něj spuštěná v `data_vault` nemá žádné odchozí spojení.
+- [ ] Je ověřena cesta sestavení obrazu pro zóny bez sítě: obraz sestavený v dočasné sestavovací instanci v `dmz_edge` byl publikován do místního úložiště obrazů `Incus` a instance z něj spuštěná v `data_vault` nenaváže spojení do internetu ani nepovolené mezizónové spojení.
 - [ ] Po přejímacích testech nezůstaly v systému žádné dočasné ani nepojmenované instance (včetně sestavovací).

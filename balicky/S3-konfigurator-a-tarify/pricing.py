@@ -266,8 +266,12 @@ def require_approved(price_list: dict[str, Any], offer_date: date | None = None)
         raise PricingError("price list is not approved by 1001 - no binding offer may be based on it")
     if offer_date is None:
         offer_date = date.today()
-    elif not isinstance(offer_date, date):
-        raise PricingError("offer_date must be a calendar date")
+    elif type(offer_date) is not date:
+        # EN: Only a pure calendar date. A datetime is a subclass of date, but which day an instant
+        #     belongs to depends on the time zone - the caller must decide that, not this function.
+        # CZ: Jen čisté kalendářní datum. Datum s časem je podtřídou date, ale to, ke kterému dni okamžik
+        #     patří, závisí na časovém pásmu - o tom musí rozhodnout volající, ne tato funkce.
+        raise PricingError("offer_date must be a pure calendar date (datetime.date, not datetime.datetime)")
     approved_on = _calendar_date(meta.get("approved_on"), "meta.approved_on")
     valid_from = _calendar_date(meta.get("valid_from"), "meta.valid_from")
     if approved_on > valid_from:
@@ -416,7 +420,11 @@ def offer_margin_check(price_list: dict[str, Any], labour_without_vat: Decimal |
     require_approved(price_list, offer_date)
     labour = _require_nonneg_decimal(labour_without_vat, "labour_without_vat")
     material = _require_nonneg_decimal(material_without_vat, "material_without_vat")
-    if labour <= 0:
+    # EN: The ban on an offer without labour applies to the labour line as it stands in the offer, i.e.
+    #     rounded to hellers: 0.001 CZK of labour is invoiced as 0.00 and the offer is a pure material delivery.
+    # CZ: Zákaz nabídky bez práce platí pro řádek práce tak, jak stojí v nabídce, tedy zaokrouhlený na
+    #     haléře: 0,001 Kč práce se fakturuje jako 0,00 a nabídka je čistě materiálová dodávka.
+    if _money(labour) <= 0:
         raise PricingError("an offer without labour is a pure material delivery - it is priced by the e-shop price list, not by this matrix")
     price = _money(labour) + _money(material)
     if price <= 0:

@@ -110,10 +110,23 @@ CREATE TABLE saas_vzor.tenant (
 --     tokenu (current_tenant_id), takže dříve vydané tokeny přestanou platit prvním
 --     příkazem po potvrzení deaktivace. Stav je od saas_vzor.tenant oddělen záměrně:
 --     resolver jej musí číst a politika samotné tabulky tenant resolver volá.
+-- EN: Session generation: every session token carries the generation that was current
+--     when it was issued, and it is valid only while the two are equal. Every change of
+--     stav (deactivation AND reactivation) raises the generation in the same UPDATE
+--     (trigger below), so all sessions issued before the change are revoked in the same
+--     transaction and stay revoked after a reactivation — users must sign in again.
+--     Raising the generation alone revokes all sessions of an active tenant.
+-- CZ: Generace relací: každý token relace nese generaci platnou v okamžiku vydání a platí
+--     jen, dokud se obě shodují. Každá změna stavu (deaktivace I reaktivace) zvýší generaci
+--     v tomtéž UPDATE (trigger níže), takže všechny relace vydané před změnou jsou
+--     revokovány ve stejné transakci a zůstávají revokované i po reaktivaci — uživatelé
+--     se musí přihlásit znovu. Samotné zvýšení generace revokuje všechny relace aktivního
+--     tenanta.
 CREATE TABLE saas_vzor.tenant_stav (
     tenant_id       uuid PRIMARY KEY REFERENCES saas_vzor.tenant (tenant_id),
     stav            text NOT NULL DEFAULT 'ACTIVE'
                     CHECK (stav IN ('ACTIVE', 'DEACTIVATED')),
+    generace_relaci integer NOT NULL DEFAULT 1 CHECK (generace_relaci >= 1),
     deaktivovano_at timestamptz,
     deaktivace_ref  text,
     CONSTRAINT tenant_stav_audit_ck CHECK (
@@ -121,6 +134,32 @@ CREATE TABLE saas_vzor.tenant_stav (
         OR (stav = 'DEACTIVATED' AND deaktivovano_at IS NOT NULL AND deaktivace_ref IS NOT NULL)
     )
 );
+
+-- EN: Keeps the generation honest whatever the provisioning service sends: a change of
+--     stav always moves it forward by at least one and it can never go back. Not
+--     SECURITY DEFINER — it only touches the row being updated.
+-- CZ: Drží generaci poctivou bez ohledu na to, co služba pro zakládání tenantů pošle:
+--     změna stavu ji vždy posune aspoň o jednu vpřed a nikdy se nemůže vrátit. Není
+--     SECURITY DEFINER — pracuje jen s právě měněným řádkem.
+CREATE FUNCTION saas_vzor.tenant_stav_generace()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.stav IS DISTINCT FROM OLD.stav THEN
+        NEW.generace_relaci := GREATEST(NEW.generace_relaci, OLD.generace_relaci + 1);
+    ELSIF NEW.generace_relaci < OLD.generace_relaci THEN
+        RAISE EXCEPTION 'generace_relaci cannot decrease'
+              USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER tenant_stav_generace_trg
+    BEFORE UPDATE ON saas_vzor.tenant_stav
+    FOR EACH ROW
+    EXECUTE FUNCTION saas_vzor.tenant_stav_generace();
 
 -- EN: Session tokens issued by the authentication gateway. The token is a random UUID;
 --     the application role has NO privilege on this table, so it can neither list tokens
@@ -131,6 +170,9 @@ CREATE TABLE saas_vzor.tenant_stav (
 CREATE TABLE saas_vzor.tenant_session (
     token      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id  uuid NOT NULL REFERENCES saas_vzor.tenant (tenant_id),
+    -- EN: Session generation of the tenant at the moment of issue (see tenant_stav).
+    -- CZ: Generace relací tenanta v okamžiku vydání (viz tenant_stav).
+    generace   integer NOT NULL,
     expires_at timestamptz NOT NULL
 );
 
@@ -185,35 +227,42 @@ BEGIN
       JOIN saas_vzor.tenant_stav AS t ON t.tenant_id = s.tenant_id
      WHERE s.token = v_token
        AND s.expires_at > statement_timestamp()
-       AND t.stav = 'ACTIVE';
+       AND t.stav = 'ACTIVE'
+       AND s.generace = t.generace_relaci;
     RETURN v_tenant;
 END;
 $$;
 REVOKE ALL ON FUNCTION saas_vzor.current_tenant_id() FROM PUBLIC;
 
--- EN: Used by the session-token policy when a token is ISSUED: true only for a tenant
---     with an ACTIVE state row. SECURITY DEFINER with a pinned search_path, because the
---     authentication gateway has no access to tenant_stav.
--- CZ: Používá ji politika tokenů relací při VYDÁNÍ tokenu: true jen pro tenanta s řádkem
---     stavu ACTIVE. SECURITY DEFINER s pevným search_path, protože autentizační brána
+-- EN: Used when a token is ISSUED: returns the current session generation of a tenant
+--     with an ACTIVE state row, otherwise NULL. The gateway writes the value into the new
+--     token and the session-token policy compares it again, so a token cannot be issued
+--     for a tenant that is not ACTIVE nor with a stale generation. SECURITY DEFINER with
+--     a pinned search_path, because the authentication gateway has no access to tenant_stav.
+-- CZ: Používá se při VYDÁNÍ tokenu: vrátí aktuální generaci relací tenanta s řádkem stavu
+--     ACTIVE, jinak NULL. Brána hodnotu zapíše do nového tokenu a politika tokenů relací
+--     ji porovná znovu, takže token nelze vydat tenantovi, který není ACTIVE, ani se
+--     starou generací. SECURITY DEFINER s pevným search_path, protože autentizační brána
 --     nemá k tenant_stav přístup.
-CREATE FUNCTION saas_vzor.tenant_is_active(p_tenant_id uuid)
-RETURNS boolean
+CREATE FUNCTION saas_vzor.tenant_session_generation(p_tenant_id uuid)
+RETURNS integer
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = pg_catalog, pg_temp
 AS $$
+DECLARE
+    v_generace integer;
 BEGIN
-    RETURN EXISTS (
-        SELECT 1
-          FROM saas_vzor.tenant_stav AS t
-         WHERE t.tenant_id = p_tenant_id
-           AND t.stav = 'ACTIVE'
-    );
+    SELECT t.generace_relaci
+      INTO v_generace
+      FROM saas_vzor.tenant_stav AS t
+     WHERE t.tenant_id = p_tenant_id
+       AND t.stav = 'ACTIVE';
+    RETURN v_generace;
 END;
 $$;
-REVOKE ALL ON FUNCTION saas_vzor.tenant_is_active(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION saas_vzor.tenant_session_generation(uuid) FROM PUBLIC;
 
 -- EN: Sample business table (simplified "building" from the Digital Building Book).
 --     Uses a compound UUID primary key (tenant_id, objekt_id) to avoid global sequence
@@ -351,7 +400,7 @@ CREATE POLICY session_role_guard ON saas_vzor.tenant_session
     TO PUBLIC
     USING      (current_user IN ('saas_auth', 'saas_owner'))
     WITH CHECK (current_user = 'saas_auth'
-                AND saas_vzor.tenant_is_active(tenant_id));
+                AND generace = saas_vzor.tenant_session_generation(tenant_id));
 
 CREATE POLICY session_auth_access ON saas_vzor.tenant_session
     AS PERMISSIVE
@@ -377,7 +426,7 @@ REVOKE ALL ON ALL TABLES IN SCHEMA saas_vzor FROM PUBLIC;
 
 GRANT USAGE ON SCHEMA saas_vzor TO saas_app, saas_auth, saas_provisioner;
 GRANT EXECUTE ON FUNCTION saas_vzor.current_tenant_id() TO saas_app, saas_provisioner;
-GRANT EXECUTE ON FUNCTION saas_vzor.tenant_is_active(uuid) TO saas_auth;
+GRANT EXECUTE ON FUNCTION saas_vzor.tenant_session_generation(uuid) TO saas_auth;
 
 GRANT SELECT ON saas_vzor.tenant TO saas_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON saas_vzor.objekt TO saas_app;
@@ -402,7 +451,8 @@ ALTER ROLE saas_app SET idle_in_transaction_session_timeout = '60s';
 
 ALTER SCHEMA   saas_vzor OWNER TO saas_owner;
 ALTER FUNCTION saas_vzor.current_tenant_id() OWNER TO saas_owner;
-ALTER FUNCTION saas_vzor.tenant_is_active(uuid) OWNER TO saas_owner;
+ALTER FUNCTION saas_vzor.tenant_session_generation(uuid) OWNER TO saas_owner;
+ALTER FUNCTION saas_vzor.tenant_stav_generace() OWNER TO saas_owner;
 ALTER TABLE    saas_vzor.tenant OWNER TO saas_owner;
 ALTER TABLE    saas_vzor.tenant_stav OWNER TO saas_owner;
 ALTER TABLE    saas_vzor.tenant_session OWNER TO saas_owner;
@@ -437,10 +487,13 @@ INSERT INTO saas_vzor.tenant_stav (tenant_id) VALUES
 --     kvůli čitelnosti vzoru; v provozu je token gen_random_uuid(), žije minuty a aplikaci
 --     se předává ověřeným kanálem. Třetí řádek je již prošlý token tenanta A (pro TEST 7).
 SET LOCAL ROLE saas_auth;
-INSERT INTO saas_vzor.tenant_session (token, tenant_id, expires_at) VALUES
-    ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '11111111-1111-4111-8111-111111111111', now() + interval '15 minutes'),
-    ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '22222222-2222-4222-8222-222222222222', now() + interval '15 minutes'),
-    ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '11111111-1111-4111-8111-111111111111', now() - interval '1 minute');
+INSERT INTO saas_vzor.tenant_session (token, tenant_id, generace, expires_at) VALUES
+    ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '11111111-1111-4111-8111-111111111111',
+     saas_vzor.tenant_session_generation('11111111-1111-4111-8111-111111111111'), now() + interval '15 minutes'),
+    ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', '22222222-2222-4222-8222-222222222222',
+     saas_vzor.tenant_session_generation('22222222-2222-4222-8222-222222222222'), now() + interval '15 minutes'),
+    ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', '11111111-1111-4111-8111-111111111111',
+     saas_vzor.tenant_session_generation('11111111-1111-4111-8111-111111111111'), now() - interval '1 minute');
 
 -- EN: 5c. The application sets the token per transaction with set_config(..., true)
 --     (= SET LOCAL) — never per session, because pooled connections are shared.
@@ -676,8 +729,8 @@ BEGIN
     EXCEPTION WHEN insufficient_privilege THEN NULL;
     END;
     BEGIN
-        INSERT INTO saas_vzor.tenant_session (tenant_id, expires_at)
-        VALUES ('22222222-2222-4222-8222-222222222222', now() + interval '15 minutes');
+        INSERT INTO saas_vzor.tenant_session (tenant_id, generace, expires_at)
+        VALUES ('22222222-2222-4222-8222-222222222222', 1, now() + interval '15 minutes');
         RAISE EXCEPTION 'TEST 9 FAIL: saas_app created a session token';
     EXCEPTION WHEN insufficient_privilege THEN NULL;
     END;
@@ -913,8 +966,9 @@ $$;
 --     Resolver porovnává se statement_timestamp(), takže první příkaz odeslaný po expiraci
 --     vidí 0 řádků a nic nevloží. Skript zde záměrně čeká (pg_sleep).
 SET LOCAL ROLE saas_auth;
-INSERT INTO saas_vzor.tenant_session (token, tenant_id, expires_at) VALUES
+INSERT INTO saas_vzor.tenant_session (token, tenant_id, generace, expires_at) VALUES
     ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', '11111111-1111-4111-8111-111111111111',
+     saas_vzor.tenant_session_generation('11111111-1111-4111-8111-111111111111'),
      clock_timestamp() + interval '5 seconds');
 
 SET LOCAL ROLE saas_app;
@@ -952,16 +1006,21 @@ BEGIN
 END
 $$;
 
--- EN: TEST 15 — tenant deactivation (offboarding). saas_provisioner deactivates tenant B
---     with one audited UPDATE. The token of tenant B issued earlier is still in
---     tenant_session and has not expired, yet it opens nothing; the gateway cannot issue
---     a new token for tenant B; tenant A is not affected; saas_app cannot touch the state;
---     a deactivation without time and decision reference is rejected.
--- CZ: TEST 15 — deaktivace tenanta (ukončení). saas_provisioner deaktivuje tenanta B jedním
---     auditovaným UPDATE. Dříve vydaný token tenanta B je stále v tenant_session
---     a nevypršel, přesto neotevře nic; brána nový token pro tenanta B nevydá; tenanta A
---     se změna netýká; saas_app na stav nedosáhne; deaktivace bez času a odkazu na
---     rozhodnutí je odmítnuta.
+-- EN: TEST 15 — tenant deactivation (offboarding) and reactivation. saas_provisioner
+--     deactivates tenant B with one audited UPDATE. The token of tenant B issued earlier
+--     is still in tenant_session and has not expired, yet it opens nothing; the gateway
+--     cannot issue a new token for tenant B; tenant A is not affected; saas_app cannot
+--     touch the state; a deactivation without time and decision reference is rejected.
+--     Then tenant B is reactivated: the OLD token stays dead (its generation is stale),
+--     a token with the stale generation cannot be issued, the generation cannot be turned
+--     back, and only a token issued after the reactivation opens the data of tenant B.
+-- CZ: TEST 15 — deaktivace tenanta (ukončení) a reaktivace. saas_provisioner deaktivuje
+--     tenanta B jedním auditovaným UPDATE. Dříve vydaný token tenanta B je stále
+--     v tenant_session a nevypršel, přesto neotevře nic; brána nový token pro tenanta B
+--     nevydá; tenanta A se změna netýká; saas_app na stav nedosáhne; deaktivace bez času
+--     a odkazu na rozhodnutí je odmítnuta. Poté je tenant B reaktivován: STARÝ token
+--     zůstává mrtvý (má starou generaci), token se starou generací nelze vydat, generaci
+--     nelze vrátit zpět a data tenanta B otevře až token vydaný po reaktivaci.
 SET LOCAL ROLE saas_app;
 DO $$
 DECLARE
@@ -1008,13 +1067,14 @@ SET LOCAL ROLE saas_auth;
 DO $$
 BEGIN
     BEGIN
-        INSERT INTO saas_vzor.tenant_session (tenant_id, expires_at)
-        VALUES ('22222222-2222-4222-8222-222222222222', clock_timestamp() + interval '15 minutes');
+        INSERT INTO saas_vzor.tenant_session (tenant_id, generace, expires_at)
+        VALUES ('22222222-2222-4222-8222-222222222222', 2, clock_timestamp() + interval '15 minutes');
         RAISE EXCEPTION 'TEST 15 FAIL: token issued for a deactivated tenant';
     EXCEPTION WHEN insufficient_privilege THEN NULL;
     END;
-    INSERT INTO saas_vzor.tenant_session (token, tenant_id, expires_at)
+    INSERT INTO saas_vzor.tenant_session (token, tenant_id, generace, expires_at)
     VALUES ('ffffffff-ffff-4fff-8fff-ffffffffffff', '11111111-1111-4111-8111-111111111111',
+            saas_vzor.tenant_session_generation('11111111-1111-4111-8111-111111111111'),
             clock_timestamp() + interval '15 minutes');
 END
 $$;
@@ -1043,7 +1103,75 @@ BEGIN
     IF n <> 2 THEN
         RAISE EXCEPTION 'TEST 15 FAIL: active tenant A sees % rows instead of 2', n;
     END IF;
-    RAISE NOTICE 'TEST 15 PASS: deactivated tenant has no access, others unaffected / deaktivovany tenant bez pristupu';
+END
+$$;
+
+-- EN: Reactivation of tenant B (generation 1 -> 2 at deactivation, 2 -> 3 now).
+-- CZ: Reaktivace tenanta B (generace 1 -> 2 při deaktivaci, 2 -> 3 nyní).
+SET LOCAL ROLE saas_provisioner;
+DO $$
+DECLARE
+    g integer;
+BEGIN
+    UPDATE saas_vzor.tenant_stav
+       SET stav = 'ACTIVE',
+           deaktivovano_at = NULL,
+           deaktivace_ref = NULL
+     WHERE tenant_id = '22222222-2222-4222-8222-222222222222'::uuid
+ RETURNING generace_relaci INTO g;
+    IF g IS DISTINCT FROM 3 THEN
+        RAISE EXCEPTION 'TEST 15 FAIL: session generation is % instead of 3 after reactivation', g;
+    END IF;
+    BEGIN
+        UPDATE saas_vzor.tenant_stav
+           SET generace_relaci = 1
+         WHERE tenant_id = '22222222-2222-4222-8222-222222222222'::uuid;
+        RAISE EXCEPTION 'TEST 15 FAIL: session generation was turned back';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+END
+$$;
+
+SET LOCAL ROLE saas_app;
+DO $$
+DECLARE
+    n bigint;
+BEGIN
+    PERFORM set_config('app.tenant_token', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', true);
+    SELECT count(*) INTO n FROM saas_vzor.objekt;
+    IF n <> 0 THEN
+        RAISE EXCEPTION 'TEST 15 FAIL: old token of tenant B revived by reactivation (% rows)', n;
+    END IF;
+END
+$$;
+
+SET LOCAL ROLE saas_auth;
+DO $$
+BEGIN
+    BEGIN
+        INSERT INTO saas_vzor.tenant_session (tenant_id, generace, expires_at)
+        VALUES ('22222222-2222-4222-8222-222222222222', 1, clock_timestamp() + interval '15 minutes');
+        RAISE EXCEPTION 'TEST 15 FAIL: token with a stale generation issued';
+    EXCEPTION WHEN insufficient_privilege THEN NULL;
+    END;
+    INSERT INTO saas_vzor.tenant_session (token, tenant_id, generace, expires_at)
+    VALUES ('99999999-9999-4999-8999-999999999999', '22222222-2222-4222-8222-222222222222',
+            saas_vzor.tenant_session_generation('22222222-2222-4222-8222-222222222222'),
+            clock_timestamp() + interval '15 minutes');
+END
+$$;
+
+SET LOCAL ROLE saas_app;
+DO $$
+DECLARE
+    n bigint;
+BEGIN
+    PERFORM set_config('app.tenant_token', '99999999-9999-4999-8999-999999999999', true);
+    SELECT count(*) INTO n FROM saas_vzor.objekt;
+    IF n <> 1 THEN
+        RAISE EXCEPTION 'TEST 15 FAIL: reactivated tenant B sees % rows instead of 1 with a new token', n;
+    END IF;
+    RAISE NOTICE 'TEST 15 PASS: deactivation revokes sessions, reactivation needs a new sign-in / deaktivace revokuje relace';
 END
 $$;
 RESET ROLE;
@@ -1076,11 +1204,17 @@ RESET ROLE;
 --         a deactivation committed after its snapshot — the application role therefore
 --         works in READ COMMITTED, in short transactions, with statement and idle limits
 --         well below the token lifetime;
---     (9) deactivation only closes access. It does not delete the tenant's rows, keys or
---         backups and it leaves old token rows in place; erasure after the end of
+--     (9) deactivation closes access and revokes all sessions issued so far (session
+--         generation); a later reactivation does not revive them. It does not delete the
+--         tenant's rows, keys or backups, and the revoked token rows stay until the gateway
+--         cleans them up; erasure after the end of
 --         a contract and the full history of state changes (who, when, why) belong to
 --         a separate audited procedure and to the append-only log of the provisioning
---         service.
+--         service;
+--     (10) this file runs in ONE transaction and switches roles with SET LOCAL ROLE, so it
+--         proves nothing about a real login of saas_app nor about a pooled connection
+--         reused after COMMIT or ROLLBACK — that is the subject of the separate script
+--         rls-pool-test.sql.
 -- CZ: Vzor po sobě nic nezanechá. Ve skutečné migraci generuje DDL z oddílů 1–4
 --     modul metadata-schema-kernel a potvrzuje se; testy z oddílu 6 běží
 --     v Gitea Actions před každým vydáním.
@@ -1105,8 +1239,13 @@ RESET ROLE;
 --         a transakce REPEATABLE READ nebo SERIALIZABLE nevidí deaktivaci potvrzenou po
 --         svém snímku — aplikační role proto pracuje v READ COMMITTED, v krátkých
 --         transakcích a s limity příkazu a nečinnosti výrazně pod životností tokenu;
---     (9) deaktivace jen uzavírá přístup. Nemaže řádky, klíče ani zálohy tenanta
---         a ponechává staré řádky tokenů; výmaz po skončení smlouvy a úplná historie změn
+--     (9) deaktivace uzavírá přístup a revokuje všechny dosud vydané relace (generace
+--         relací); pozdější reaktivace je neobnoví. Nemaže řádky, klíče ani zálohy tenanta
+--         a revokované řádky tokenů zůstávají, dokud je brána neuklidí; výmaz po skončení smlouvy a úplná historie změn
 --         stavu (kdo, kdy, proč) patří do samostatného auditovaného postupu a do neměnného
---         deníku služby pro zakládání tenantů.
+--         deníku služby pro zakládání tenantů;
+--     (10) tento soubor běží v JEDNÉ transakci a role přepíná přes SET LOCAL ROLE, takže
+--         nic nedokládá o skutečném přihlášení role saas_app ani o spojení z poolu znovu
+--         použitém po COMMIT nebo ROLLBACK — to je předmětem samostatného skriptu
+--         rls-pool-test.sql.
 ROLLBACK;

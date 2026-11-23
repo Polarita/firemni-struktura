@@ -61,10 +61,10 @@ U bodů 3 a 8 kiosk vyžaduje naskenování `QR měřidla`, zápis naměřené h
 
 1. Při `VYHOVUJE` vloží `cad-urs-engine` protokol do Výrobního pasu a připraví `DRAFT` EU prohlášení o shodě.
 2. Po kontrole `15002 normovac` prohlášení v `Decisions` potvrdí a osobním kvalifikovaným podpisem podepíše `1001`. `ai` podpis nevytváří.
-3. Teprve potom kiosk odemkne tisk štítku CE s QR a podkladu `PHE` a `elektro-wms` uvolní expedici.
-4. Při `NEVYHOVUJE` se štítek netiskne a rozváděč se vrací do kompletace. Po opravě se zakládá nové ověření; původní záznam zůstává beze změny.
+3. Teprve potom kiosk odemkne tisk štítku CE s QR a podkladu `PHE` a `elektro-wms` uvolní expedici. Podklady se ověřují znovu při každém tisku i schváleném přetisku.
+4. Při `NEVYHOVUJE` se štítek netiskne a rozváděč se vrací do kompletace. Po opravě se zakládá nové ověření; původní záznam zůstává beze změny. Bylo-li chybné samo ověření a `1001` je zneplatnil, opakuje se zkouška s jeho potvrzením na novém záznamu bez opravy.
 5. Nedokončené ověření lze opustit jen se zapsaným důvodem; rozváděč se vrací do stavu po kompletaci a nové ověření je nový záznam.
-6. Uzavřené ověření může zneplatnit jen `1001` v `Decisions` s důvodem. Prohlášení o shodě se pak odvolá, pas a vytištěné štítky se zneplatní a rozváděč se vrací do ověření, i když už byl označen nebo uvolněn k expedici.
+6. Uzavřené ověření může zneplatnit jen `1001` v `Decisions` s důvodem. Dosud nevytištěné uvolněné tiskové úlohy se zamknou ve stejné operaci. Prohlášení o shodě se pak odvolá, pas a vytištěné štítky se zneplatní a rozváděč se vrací do ověření, i když už byl označen nebo uvolněn k expedici.
 
 ## Poznámky k návrhu
 

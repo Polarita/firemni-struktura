@@ -477,19 +477,51 @@ def check_database_sets(path: Path, text: str, canon: dict, report: Report) -> N
                 report.error(f"{where}:{number}", f"service database list is incomplete, missing {missing}")
 
 
-def check_builder_agents(name: str, text: str, canon: dict, report: Report) -> None:
+AGENT_HEADING_RE = re.compile(r"\b(\d{5}) · ([^\"(\n]+?) \(ai\b([^)\n]*)\)")
+# EN: Builders whose text must carry the heading of EVERY agent of the canon.
+# CZ: Generátory, jejichž text musí nést nadpis KAŽDÉHO agenta kanonu.
+BUILDERS_WITH_ALL_AGENT_HEADINGS = ("nastroje/build_org_pdfs.py",)
+
+
+def check_builder_agents(name: str, text: str, canon: dict, report: Report, require_all: bool = False) -> None:
     """
     EN: Hand-written agent headings of the PDF builders ("11001 · NAME (ai · sysid · NN USD)") must match the canon.
+        A heading is recognised by the agent id and "(ai", whatever follows - so an amount written in
+        another way ("1.00 USD", "35,00 USD", "35 EUR", no amount) is an error, not a silently skipped line.
+        The name, the system id, the value and the format of the amount are checked separately; with
+        require_all the heading of every agent of the canon must be present.
     CZ: Ručně psané nadpisy agentů v generátorech PDF („11001 · JMÉNO (ai · sysid · NN USD)“) musí odpovídat kanonu.
+        Nadpis se pozná podle ID agenta a „(ai“, ať následuje cokoli - takže částka zapsaná jinak
+        („1.00 USD“, „35,00 USD“, „35 EUR“, bez částky) je chyba, ne potichu přeskočený řádek. Jméno,
+        systémové ID, hodnota a formát částky se kontrolují samostatně; s require_all musí být přítomen
+        nadpis každého agenta kanonu.
     """
     by_id = {agent["id"]: agent for agent in canon["agents"]}
-    for number, line in enumerate(text.split("\n"), 1):
-        for agent_id, shown_name, sysid, budget in re.findall(r"\b(\d{5}) · ([^\"(]+?) \(ai · ([a-z-]+) · (\d+) USD\)", line):
+    seen: set[str] = set()
+    for number, line in enumerate(normalize(text).split("\n"), 1):
+        for agent_id, shown_name, rest in AGENT_HEADING_RE.findall(line):
+            where = f"{name}:{number}"
             agent = by_id.get(agent_id)
             if agent is None:
-                report.error(f"{name}:{number}", f"heading names unknown agent {agent_id}")
-            elif (shown_name.strip().upper(), sysid, int(budget)) != (agent["name"].upper(), agent["sysid"], agent["budget_usd"]):
-                report.error(f"{name}:{number}", f"heading of agent {agent_id} does not match the canon (name, system id, budget)")
+                report.error(where, f"heading names unknown agent {agent_id}")
+                continue
+            seen.add(agent_id)
+            if shown_name.strip().upper() != agent["name"].upper():
+                report.error(where, f"heading of agent {agent_id} does not match the canon (name)")
+            parts = re.fullmatch(r" · ([^·]+?) · ([^·]+)", rest)
+            if parts is None:
+                report.error(where, f"heading of agent {agent_id} must have the form (ai · system id · NN USD)")
+                continue
+            sysid, amount = parts.group(1), parts.group(2)
+            if sysid != agent["sysid"]:
+                report.error(where, f"heading of agent {agent_id} does not match the canon (system id)")
+            if not re.fullmatch(r"\d+ USD", amount):
+                report.error(where, f"heading of agent {agent_id}: budget must be written as whole USD (NN USD), found {amount!r}")
+            elif int(amount[:-4]) != agent["budget_usd"]:
+                report.error(where, f"heading of agent {agent_id} does not match the canon (budget {amount}, canon {agent['budget_usd']} USD)")
+    if require_all:
+        for agent_id in sorted(set(by_id) - seen):
+            report.error(name, f"heading of agent {agent_id} is missing")
 
 
 def check_budgets(canon: dict, report: Report) -> None:
@@ -514,7 +546,7 @@ def check_budgets(canon: dict, report: Report) -> None:
         if agent["id"] not in heading or agent["name"] not in heading or f"`{agent['sysid']}`" not in heading:
             report.error(rel(cards[0]), "card heading does not match the canon (id, name, system id)")
     for builder in BUILDERS:
-        check_builder_agents(builder, read(ROOT / builder), canon, report)
+        check_builder_agents(builder, read(ROOT / builder), canon, report, builder in BUILDERS_WITH_ALL_AGENT_HEADINGS)
 
 
 def check_counts(canon: dict, report: Report) -> None:

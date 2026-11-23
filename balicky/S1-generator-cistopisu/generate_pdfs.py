@@ -11,6 +11,12 @@ EN: Fills Markdown templates from sablony/ with variables from data/<same-name>.
     The PDF is printed into a temporary file and replaces the previous one only after it passed
     validation (including the case number of the data), so a failed print never leaves or accepts
     an old document. Templates must be plain Markdown: raw HTML and variables inside code are refused.
+    Validity protocol: a document is valid only as the pair <name>.pdf + <name>.manifest.json made by
+    one successful run from the current inputs. Whenever a run for a document fails - its template or
+    data cannot be read or do not pass validation, the print fails, or the printed PDF does not pass
+    validation - the older pair of that document is removed (manifest first). A PDF without a manifest
+    is an unfinished run and is never a basis for approval. --check validates only and never touches
+    the outputs.
 CZ: Vyplní Markdown šablony ze sablony/ proměnnými z data/<stejný-název>.json, vysází je do
     tiskového HTML (A4) a vytiskne PDF přes headless prohlížeč Chromium (Chrome / Edge).
     Ke každému dokumentu zapíše manifest s proměnnými a SHA-256 otisky šablony, dat a PDF —
@@ -19,6 +25,11 @@ CZ: Vyplní Markdown šablony ze sablony/ proměnnými z data/<stejný-název>.j
     PDF se tiskne do dočasného souboru a předchozí nahradí až po úspěšné validaci (včetně čísla
     spisu z dat), takže nepovedený tisk nikdy nezanechá ani nepřijme starý dokument. Šablony musí
     být čistý Markdown: surové HTML a proměnné uvnitř kódu se odmítnou.
+    Protokol platnosti: dokument platí jen jako dvojice <název>.pdf + <název>.manifest.json z jednoho
+    úspěšného běhu nad aktuálními vstupy. Kdykoli běh pro dokument selže - šablonu nebo data nelze
+    přečíst či neprojdou validací, tisk selže nebo vytištěné PDF neprojde validací - starší dvojice
+    toho dokumentu se odstraní (manifest první). PDF bez manifestu je nedokončený běh a nikdy není
+    podkladem pro schválení. --check jen validuje a na výstupy nesahá.
 
 Usage / Použití:
     python generate_pdfs.py                      # all templates with sample data, watermark VZOR
@@ -266,6 +277,15 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def invalidate(out_dir: Path, name: str) -> None:
+    """
+    EN: Withdraw the published pair of one document: the manifest (the commit record) first, then the PDF.
+    CZ: Stáhne zveřejněnou dvojici jednoho dokumentu: nejdřív manifest (potvrzující záznam), pak PDF.
+    """
+    (out_dir / f"{name}.manifest.json").unlink(missing_ok=True)
+    (out_dir / f"{name}.pdf").unlink(missing_ok=True)
+
+
 def publish(out_dir: Path, name: str, staged_pdf: Path, manifest: dict[str, Any]) -> tuple[Path, Path]:
     """
     EN: Publish one document as a pair PDF + manifest. The manifest is the commit record of the pair:
@@ -352,21 +372,34 @@ def generate(template_dir: Path, data_dir: Path, out_dir: Path, only: str | None
     out_dir.mkdir(parents=True, exist_ok=True)
     for template_path in templates:
         name = template_path.stem
-        data_path = data_dir / f"{name}.json"
-        if not data_path.is_file():
-            raise GeneratorError(f"{name}: data file {data_path.name} not found")
-        # EN: Each source is read ONCE; the document and the hashes in the manifest come from the same bytes.
-        # CZ: Každý zdroj se čte JEDNOU; dokument i otisky v manifestu vycházejí z týchž bajtů.
+        # EN: Validity protocol: a document is valid only as the pair PDF + manifest made by ONE successful
+        #     run from the current inputs. As soon as the current inputs of a document cannot be read or
+        #     do not pass validation, its older pair no longer describes the current state and is removed
+        #     (manifest first) - exactly as after a failed print. --check never touches the outputs.
+        # CZ: Protokol platnosti: dokument platí jen jako dvojice PDF + manifest z JEDNOHO úspěšného běhu
+        #     nad aktuálními vstupy. Jakmile aktuální vstupy dokumentu nejdou přečíst nebo neprojdou
+        #     validací, jeho starší dvojice už aktuální stav nepopisuje a odstraní se (manifest první) -
+        #     stejně jako po nepovedeném tisku. --check na výstupy nikdy nesahá.
         try:
-            template_bytes = template_path.read_bytes()
-            data_bytes = data_path.read_bytes()
-            template = template_bytes.decode("utf-8")
-            values = json.loads(data_bytes.decode("utf-8"))
-        except (OSError, ValueError) as error:  # unreadable, invalid UTF-8 or invalid JSON / nečitelné, neplatné UTF-8 nebo JSON
-            raise GeneratorError(f"{name}: cannot read template or data: {error}") from error
-        if not template.startswith("# "):
-            raise GeneratorError(f"{name}: template must start with a level-1 heading")
-        filled = fill(template, values, name)
+            data_path = data_dir / f"{name}.json"
+            if not data_path.is_file():
+                raise GeneratorError(f"{name}: data file {data_path.name} not found")
+            # EN: Each source is read ONCE; the document and the hashes in the manifest come from the same bytes.
+            # CZ: Každý zdroj se čte JEDNOU; dokument i otisky v manifestu vycházejí z týchž bajtů.
+            try:
+                template_bytes = template_path.read_bytes()
+                data_bytes = data_path.read_bytes()
+                template = template_bytes.decode("utf-8")
+                values = json.loads(data_bytes.decode("utf-8"))
+            except (OSError, ValueError) as error:  # unreadable, invalid UTF-8 or invalid JSON / nečitelné, neplatné UTF-8 nebo JSON
+                raise GeneratorError(f"{name}: cannot read template or data: {error}") from error
+            if not template.startswith("# "):
+                raise GeneratorError(f"{name}: template must start with a level-1 heading")
+            filled = fill(template, values, name)
+        except GeneratorError:
+            if not check_only:
+                invalidate(out_dir, name)
+            raise
         shared_seen |= placeholders(template) & set(SHARED_VARIABLES)
         record: dict[str, Any] = {"template": template_path.name, "variables": len(values)}
         if not check_only:
@@ -392,8 +425,7 @@ def generate(template_dir: Path, data_dir: Path, out_dir: Path, only: str | None
                 except GeneratorError:
                     # EN: Never leave an older PDF or manifest next to a failed run - they would look current.
                     # CZ: Vedle nepovedeného běhu nikdy nenech starší PDF ani manifest - vypadaly by aktuálně.
-                    manifest_path.unlink(missing_ok=True)
-                    pdf_path.unlink(missing_ok=True)
+                    invalidate(out_dir, name)
                     raise
                 manifest = {
                     "document": name,

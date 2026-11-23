@@ -228,6 +228,24 @@ class RuleTests(unittest.TestCase):
         self.assertTrue(problems(good.replace(f'· {agent["sysid"]} ·', "· klicnik ·")))
         self.assertTrue(problems(good.replace(agent["name"].upper(), "JAN NOVÁK")))
         self.assertTrue(problems(good.replace(agent["id"], "19999")))
+        # EN: An amount written in another way is an error, not a skipped line. / CZ: Jinak zapsaná částka je chyba, ne přeskočený řádek.
+        budget = f'{agent["budget_usd"]} USD'
+        for other in ("1.00 USD", f'{agent["budget_usd"]}.00 USD', f'{agent["budget_usd"]},00 USD', f'{agent["budget_usd"]} EUR',
+                      f'{agent["budget_usd"]}{NBSP}USD měsíčně', "USD", f'0{agent["budget_usd"]}1 USD', f'${agent["budget_usd"]}'):
+            self.assertTrue(problems(good.replace(budget, other)), other)
+        self.assertEqual(problems(good.replace(budget, f'{agent["budget_usd"]}{NBSP}USD')), [])
+        self.assertTrue(problems(good.replace(f' · {budget}', "")))                       # no amount / bez částky
+        self.assertTrue(problems(good.replace(f'ai · {agent["sysid"]} · ', "ai · ")))     # no system id / bez systémového ID
+        # EN: Every expected heading must be present. / CZ: Každý očekávaný nadpis musí být přítomen.
+        everything = "\n".join(f'"{a["id"]} · {a["name"].upper()} (ai · {a["sysid"]} · {a["budget_usd"]} USD)"' for a in self.canon["agents"])
+        report = cc.Report()
+        cc.check_builder_agents("nastroje/build_org_pdfs.py", everything, self.canon, report, True)
+        self.assertEqual(report.errors, [])
+        report = cc.Report()
+        cc.check_builder_agents("nastroje/build_org_pdfs.py", everything.split("\n", 1)[1], self.canon, report, True)
+        self.assertEqual(len(report.errors), 1)
+        self.assertIn(f'heading of agent {self.canon["agents"][0]["id"]} is missing', report.errors[0])
+        self.assertIn("nastroje/build_org_pdfs.py", cc.BUILDERS_WITH_ALL_AGENT_HEADINGS)
 
     # --- names / názvy ---
 

@@ -2,7 +2,7 @@
   "document": "04c-dohoda-sverene-predmety-meridla-oopp",
   "title": "Dohoda o odpovědnosti za ztrátu svěřených věcí — měřicí přístroje, OOPP a nářadí",
   "draft_watermark": true,
-  "generated_utc": "2026-11-23 05:00 UTC",
+  "generated_utc": "2026-11-23 05:17 UTC",
   "variables": {
     "spis_id": "POL-2027-00004",
     "jmeno_zamestnance": "Jan Vzorový",
@@ -40,7 +40,7 @@
   "sha256": {
     "template": "068b754460d97ab6b933a27e393b54d413ced3d9628f1c1c3a0f16b626de62fb",
     "data": "3918ee7edbc66547f94bac48377f4b2a0f9f345f6d0c45a613ad37d69eb7e7dd",
-    "pdf": "4e6f387536215b8423c00cf2a9cd1208897523dd6896ae686df228db9c047680"
+    "pdf": "20e4d46b6b29f9dc0ac98d8c6bec1238161964f2aeeb37c149d7864667bb40c6"
   },
   "pages": 3
 }

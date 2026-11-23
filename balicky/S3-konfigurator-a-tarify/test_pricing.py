@@ -26,7 +26,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from unittest import mock
@@ -309,6 +309,13 @@ class PricingTests(unittest.TestCase):
         self.assertFalse(pricing.offer_margin_check(self.price_list, 100, 0, 78, day)["hard_stop"])
         with self.assertRaises(pricing.PricingError):
             pricing.offer_margin_check(self.price_list, Decimal("0.004"), 0, 0, day)
+        # EN: Labour that rounds to 0.00 is no labour: the offer is a pure material delivery.
+        # CZ: Práce, která se zaokrouhlí na 0,00, není práce: nabídka je čistě materiálová dodávka.
+        for labour in (Decimal("0.001"), Decimal("0.004"), Decimal("0.0049")):
+            with self.assertRaises(pricing.PricingError) as caught:
+                pricing.offer_margin_check(self.price_list, labour, 100, 75, day)
+            self.assertIn("without labour", str(caught.exception))
+        self.assertEqual(pricing.offer_margin_check(self.price_list, Decimal("0.005"), 100, 75, day)["price_without_vat"], Decimal("100.01"))
 
     def test_binding_offer_requires_a_price_list_in_effect_on_the_offer_date(self) -> None:
         valid_from = date.fromisoformat(self.price_list["meta"]["valid_from"])
@@ -316,7 +323,10 @@ class PricingTests(unittest.TestCase):
         pricing.offer_margin_check(self.price_list, 10_000, 0, 5_000, valid_from)
         for call in (lambda: pricing.require_approved(self.price_list, valid_from - timedelta(days=1)),
                      lambda: pricing.offer_margin_check(self.price_list, 10_000, 0, 5_000, valid_from - timedelta(days=1)),
-                     lambda: pricing.require_approved(self.price_list, "2027-01-01")):
+                     lambda: pricing.require_approved(self.price_list, "2027-01-01"),
+                     # EN: A date with time is refused as a PricingError, never a TypeError. / CZ: Datum s časem se odmítne jako PricingError, nikdy TypeError.
+                     lambda: pricing.require_approved(self.price_list, datetime.combine(valid_from, datetime.min.time())),
+                     lambda: pricing.offer_margin_check(self.price_list, 10_000, 0, 5_000, datetime(2027, 1, 1, 12, 0))):
             with self.assertRaises(pricing.PricingError):
                 call()
         # EN: Approved today, valid from a future day: not usable today (the default offer date).
