@@ -2,7 +2,7 @@
   "document": "06b-protokol-break-glass",
   "title": "Protokol o aktivaci a ukončení režimu Break-Glass",
   "draft_watermark": true,
-  "generated_utc": "2026-11-22 19:31 UTC",
+  "generated_utc": "2026-11-23 05:00 UTC",
   "variables": {
     "spis_id": "POL-2027-00005",
     "cislo_protokolu": "BG-2027-001 (VZOR)",
@@ -114,7 +114,7 @@
   "sha256": {
     "template": "628d2971a3db117500e7bab743dc2734802cab302af3414ff4164fd6d624e1ac",
     "data": "4524094af6223ec7784a830461d9cda64f9685bf13cb8ba1c72a1cabcd6dd794",
-    "pdf": "252ec8461c591743430dc9c8f2f20c090a151d07711c5723d0d45acea3e94adf"
+    "pdf": "a1179a4e6482279cd72d0c63bb034be96a7ed0081c6642b262426af992b8e7b3"
   },
   "pages": 5
 }

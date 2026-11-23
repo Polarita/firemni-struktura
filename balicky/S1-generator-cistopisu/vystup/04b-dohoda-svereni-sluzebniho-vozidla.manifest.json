@@ -2,7 +2,7 @@
   "document": "04b-dohoda-svereni-sluzebniho-vozidla",
   "title": "Dohoda o svěření služebního vozidla a pravidla jeho užívání",
   "draft_watermark": true,
-  "generated_utc": "2026-11-22 19:31 UTC",
+  "generated_utc": "2026-11-23 05:00 UTC",
   "variables": {
     "spis_id": "POL-2027-00004",
     "jmeno_zamestnance": "Jan Vzorový",
@@ -31,7 +31,7 @@
   "sha256": {
     "template": "adfef50f21270c9eaa2fe7fa468deee8de30d4ffd66f320566686e4096b548b7",
     "data": "b2604e800b3c0183920975e856ba746bbac945d0ef23f8019c52f04e5d8b2373",
-    "pdf": "066d8f7ba7ffac7541ab0e1486c52464efa0868c383ff2e61e670c1737f62ae1"
+    "pdf": "b0efd973ad6e800e66534cb9c1ebd9c80669b2742fec14d87ce7df65499bbdd5"
   },
   "pages": 5
 }

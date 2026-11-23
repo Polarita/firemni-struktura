@@ -37,6 +37,19 @@ FINOPS_HARD_STOP_PCT = 100.0
 ISDS_POLL_WEEKDAYS = (0, 1, 2, 3, 4)      # Mon–Fri / Po–Pá
 ISDS_POLL_TIME = "06:50"
 ISDS_PRESENCE_ALLOWING_POLL = ("owner_present", "break_glass_active")
+ISDS_OWNER = "1001"
+ISDS_LEGAL_VERIFIER = "15001"
+# EN: Single owners of the guards and the only accepted sources of evidence.
+# CZ: Jediní vlastníci pojistek a jediné přijímané zdroje důkazů.
+EXCAVATION_LOCK_OWNER = "14005"
+EXCAVATION_VERIFIER = "15002"
+REGISTRATION_CONFIRMED_BY = "ORG-UOL"
+REGISTRATION_RECORDED_BY = "16001"
+P1_RESERVE_APPROVER = "1001"
+P1_RESERVE_PROPOSER = "11001"
+P1_RESERVE_RELEASER = "17005"
+OCPP_RESET_OWNER = "14003"
+OCPP_CONSENT_SOURCE = "client_zone_authenticated"
 
 # Qualification ranks under the electrical competence regulations / Stupně kvalifikace dle předpisů o odborné způsobilosti v elektrotechnice
 QUALIFICATION_RANK = {"none": 0, "poucena": 1, "elektrotechnik": 2, "vedouci_elektrotechnik": 3, "revizni_technik": 4}
@@ -101,6 +114,24 @@ def _require_bool(event: dict[str, Any], *keys: str) -> None:
             raise ValueError(f"field {key} must be a boolean")
 
 
+def _text(value: Any) -> str | None:
+    """A non-empty string, else None. / Neprázdný řetězec, jinak None."""
+    return value if isinstance(value, str) and value.strip() else None
+
+
+def _record(event: dict[str, Any], key: str) -> dict[str, Any]:
+    """
+    EN: A structured evidence record of the event (an empty dict when it is missing or not an object).
+        Evidence is always a record that names who made it and what it belongs to - a bare flag such
+        as "consent": true is never evidence.
+    CZ: Strukturovaný důkazní záznam události (prázdný slovník, když chybí nebo není objektem). Důkazem
+        je vždy záznam, který říká, kdo jej pořídil a k čemu patří - holý příznak typu "consent": true
+        důkazem nikdy není.
+    """
+    value = event.get(key)
+    return value if isinstance(value, dict) else {}
+
+
 def _expired(valid_until: str | None, on_day: str) -> bool:
     """True when validity is missing or ended before the given day. / True, když platnost chybí nebo skončila před daným dnem."""
     limit = _as_date(valid_until)
@@ -150,18 +181,30 @@ def rule_voice_analysis_request(event: dict[str, Any]) -> dict[str, Any]:
 
 def rule_worker_release(event: dict[str, Any]) -> dict[str, Any]:
     """
-    EN: Hard-Stop gate of db_hr_lide before a person is released to a job.
-    CZ: Hard-Stop brána db_hr_lide před uvolněním osoby na zakázku.
+    EN: Hard-Stop gate of db_hr_lide before a person is released to a job. The registration with the
+        social security administration counts only as a record with the registration id that 16001 wrote
+        down after the confirmation from ORG-UOL (never as a flag), and "eligible" arises only as the
+        output of this gate after mutation_confirm for the same person and day.
+    CZ: Hard-Stop brána db_hr_lide před uvolněním osoby na zakázku. Registrace u správy sociálního
+        zabezpečení platí jen jako záznam s ID registrace, které zapsal 16001 po potvrzení od ORG-UOL
+        (nikdy jako příznak), a „způsobilý“ vzniká výhradně výstupem této brány po mutation_confirm
+        pro tutéž osobu a den.
     """
     day = event["work_date"]
+    person = _text(event.get("person_no"))
+    if person is None:
+        return _result(FAIL_CLOSED, "MALFORMED_EVENT", "log_audit")
     regime = event.get("legal_regime")
     if regime not in ("EMP", "BRI", "SUB"):
         return _result(FAIL_CLOSED, "UNKNOWN_LEGAL_REGIME", "notify_18001")
     req_qual = event.get("required_qualification")
     if req_qual not in QUALIFICATION_RANK:
         return _result(FAIL_CLOSED, "UNKNOWN_QUALIFICATION", "notify_18001")
-    if regime in ("EMP", "BRI") and event.get("jmhz_registered_before_start") is not True:
-        return _result(BLOCK, "JMHZ_NOT_REGISTERED", "notify_18001")
+    if regime in ("EMP", "BRI"):
+        registration = _record(event, "registration")
+        if (_text(registration.get("registration_id")) is None or registration.get("confirmed_by") != REGISTRATION_CONFIRMED_BY
+                or registration.get("recorded_by") != REGISTRATION_RECORDED_BY or registration.get("person_no") != person):
+            return _result(BLOCK, "JMHZ_NOT_REGISTERED", "notify_18001")
     have = QUALIFICATION_RANK.get(event.get("qualification", "none"), 0)
     need = QUALIFICATION_RANK[req_qual]
     if have < need or (need > 0 and _expired(event.get("qualification_valid_until"), day)):
@@ -170,18 +213,38 @@ def rule_worker_release(event: dict[str, Any]) -> dict[str, Any]:
         return _result(BLOCK, "MEDICAL_EXPIRED", "notify_18001")
     if regime == "SUB" and event.get("sub_insurance_valid") is not True:
         return _result(BLOCK, "SUB_INSURANCE_INVALID", "notify_18001")
+    confirmation = _record(event, "gate_confirmation")
+    if confirmation.get("mutation_confirm") is not True or confirmation.get("person_no") != person or confirmation.get("work_date") != day:
+        return _result(BLOCK, "ELIGIBILITY_NOT_CONFIRMED", "return_to_decisions")
     return _result(ALLOW, "WORKER_ELIGIBLE", "release_to_calendar")
 
 
 def rule_excavation_release(event: dict[str, Any]) -> dict[str, Any]:
     """
-    EN: Excavation lock — a valid utility statement (DTM CR) must be attached to the case file.
-    CZ: Zámek výkopů — ve spisu musí být platné vyjádření k existenci sítí (DTM ČR).
+    EN: Excavation lock. The lock holds by default. It opens only for its owner 14005, with a valid
+        utility statement (DTM CR) in the case file, VERIFIED_PASS from 15002 and a confirmation by a
+        human in Decisions - both bound to the same case file. Everybody else only blocks or reports.
+    CZ: Zámek výkopů. Zámek ve výchozím stavu drží. Otevře se jen svému vlastníkovi 14005, s platným
+        vyjádřením k existenci sítí (DTM ČR) ve spisu, s VERIFIED_PASS od 15002 a s potvrzením člověka
+        v Decisions - obojí vázané na tentýž spis. Všichni ostatní jen blokují nebo hlásí.
     """
+    case = _text(event.get("case_id"))
+    if case is None:
+        return _result(FAIL_CLOSED, "MALFORMED_EVENT", "log_audit")
     if event.get("dtm_statement_uploaded") is not True:
         return _result(BLOCK, "DTM_STATEMENT_MISSING", "notify_14005")
     if _expired(event.get("dtm_statement_valid_until"), event["work_date"]):
         return _result(BLOCK, "DTM_STATEMENT_EXPIRED", "notify_14005")
+    if event.get("requested_by") != EXCAVATION_LOCK_OWNER:
+        return _result(BLOCK, "EXCAVATION_NOT_LOCK_OWNER", "notify_14005")
+    verification = _record(event, "verification")
+    if (verification.get("verdict") != "VERIFIED_PASS" or verification.get("by") != EXCAVATION_VERIFIER
+            or verification.get("case_id") != case):
+        return _result(BLOCK, "EXCAVATION_NOT_VERIFIED", "notify_15002")
+    confirmation = _record(event, "human_confirmation")
+    if (confirmation.get("mutation_confirm") is not True or confirmation.get("case_id") != case
+            or confirmation.get("by_kind") != "human" or _text(confirmation.get("by")) is None):
+        return _result(BLOCK, "EXCAVATION_NOT_CONFIRMED", "return_to_decisions")
     return _result(ALLOW, "EXCAVATION_CLEARED", "release_to_calendar")
 
 
@@ -263,6 +326,41 @@ def rule_ads_campaign_change(event: dict[str, Any]) -> dict[str, Any]:
     return _result(ALLOW, "ADS_DRAFT_PAUSED", "save_paused_campaign")
 
 
+def _isds_send(event: dict[str, Any]) -> dict[str, Any]:
+    """
+    EN: Sending from the company data box. Never an ai. In normal operation only 1001; in Break-Glass
+        only the named delegate with his own access with the right to send. Always a human who confirmed
+        this very submission in Decisions with his own hardware key, after VERIFIED_PASS from 15001 for
+        this very submission.
+    CZ: Odeslání z datové schránky firmy. Nikdy ai. V běžném režimu jen 1001; v režimu Break-Glass jen
+        jmenovaný zmocněnec vlastním přístupem s oprávněním odesílat. Vždy člověk, který právě toto podání
+        potvrdil v Decisions vlastním hardwarovým klíčem, po VERIFIED_PASS od 15001 k právě tomuto podání.
+    """
+    submission = _text(event.get("submission_id"))
+    actor = _record(event, "actor")
+    person = _text(actor.get("person"))
+    presence = event.get("presence")
+    human_with_key = actor.get("kind") == "human" and actor.get("auth") == "own_hardware_key" and person is not None
+    if presence == "owner_present":
+        authorised, reason = human_with_key and person == ISDS_OWNER, "ISDS_SEND_BY_OWNER"
+    elif presence == "break_glass_active":
+        authorised = human_with_key and person != ISDS_OWNER and actor.get("isds_send_delegate") is True
+        reason = "ISDS_SEND_BY_DELEGATE"
+    else:
+        authorised, reason = False, ""
+    if not authorised:
+        return _result(BLOCK, "ISDS_SEND_REQUIRES_OWNER", "return_to_decisions")
+    if submission is None:
+        return _result(FAIL_CLOSED, "MALFORMED_EVENT", "log_audit")
+    verdict = _record(event, "legal_verdict")
+    if verdict.get("verdict") != "VERIFIED_PASS" or verdict.get("by") != ISDS_LEGAL_VERIFIER or verdict.get("submission_id") != submission:
+        return _result(BLOCK, "ISDS_SEND_NOT_VERIFIED", "return_to_decisions")
+    approval = _record(event, "submission_approval")
+    if approval.get("mutation_confirm") is not True or approval.get("submission_id") != submission or approval.get("by") != person:
+        return _result(BLOCK, "ISDS_SEND_NOT_APPROVED", "return_to_decisions")
+    return _result(ALLOW, reason, "send_and_archive_zfo")
+
+
 def rule_isds_operation(event: dict[str, Any]) -> dict[str, Any]:
     """
     EN: ISDS mailroom guards — reading has delivery effects (data box regulations).
@@ -274,9 +372,7 @@ def rule_isds_operation(event: dict[str, Any]) -> dict[str, Any]:
     if event.get("environment") == "czebox":
         return _result(ALLOW, "ISDS_TEST_ENVIRONMENT", "run_test_call")
     if operation == "send":
-        if event.get("actor_auth") == "1001_yubikey":
-            return _result(ALLOW, "ISDS_SEND_BY_OWNER", "send_and_archive_zfo")
-        return _result(BLOCK, "ISDS_SEND_REQUIRES_OWNER", "return_to_decisions")
+        return _isds_send(event)
     if event.get("presence") == "unattended_absence" or event.get("mode") == "PAUSED":
         return _result(BLOCK, "ISDS_PAUSED", "watch_external_notifications")
     # EN: Reading has delivery effects - presence and switch state must be known, not assumed.
@@ -376,7 +472,11 @@ def rule_data_mutation(event: dict[str, Any]) -> dict[str, Any]:
 def rule_paid_model_call(event: dict[str, Any]) -> dict[str, Any]:
     """
     EN: FinOps cap of 470 USD per month — at 100 % all paid calls stop until raised in Decisions.
+        At 100 % of its own operating quota an agent stops; a P1 task may draw the shared reserve only
+        with an approved release record.
     CZ: FinOps strop 470 USD měsíčně — při 100 % se zastaví všechna placená volání do navýšení v Decisions.
+        Při 100 % vlastní provozní kvóty se agent zastaví; úkol P1 smí čerpat sdílenou rezervu jen se
+        schváleným záznamem uvolnění.
     """
     global_pct = _finite_nonneg_number(event.get("global_budget_used_pct"))
     agent_pct = _finite_nonneg_number(event.get("agent_quota_used_pct"))
@@ -385,26 +485,55 @@ def rule_paid_model_call(event: dict[str, Any]) -> dict[str, Any]:
     if global_pct >= FINOPS_HARD_STOP_PCT:
         return _result(BLOCK, "FINOPS_HARD_STOP", "escalate_decisions")
     if agent_pct >= 100.0:
-        if event.get("priority") == "P1" and event.get("p1_reserve_available") is True:
-            return _result(ALLOW, "P1_RESERVE_USED", "charge_p1_reserve", "log_audit")
-        return _result(BLOCK, "AGENT_QUOTA_EXHAUSTED", "escalate_decisions")
+        if event.get("priority") != "P1" or event.get("p1_reserve_available") is not True:
+            return _result(BLOCK, "AGENT_QUOTA_EXHAUSTED", "escalate_decisions")
+        # EN: "Available" is not "released". The shared P1 reserve is drawn only with a release record:
+        #     approved by 1001 on the proposal of 11001, technically released by 17005, for this very
+        #     agent - and 17005 never releases it to itself.
+        # CZ: „Dostupná“ neznamená „uvolněná“. Sdílená rezerva P1 se čerpá jen se záznamem uvolnění:
+        #     schválil 1001 na návrh 11001, technicky uvolnil 17005, pro právě tohoto agenta - a 17005
+        #     ji nikdy neuvolní sám sobě.
+        agent = _text(event.get("agent_id"))
+        release = _record(event, "p1_reserve_release")
+        if agent is None:
+            return _result(FAIL_CLOSED, "MALFORMED_EVENT", "log_audit")
+        if agent == P1_RESERVE_RELEASER or (release.get("released_by") is not None and release.get("beneficiary") == release.get("released_by")):
+            return _result(BLOCK, "P1_RESERVE_SELF_RELEASE", "escalate_decisions", "report_17004")
+        if (release.get("mutation_confirm") is not True or release.get("approved_by") != P1_RESERVE_APPROVER
+                or release.get("proposed_by") != P1_RESERVE_PROPOSER or release.get("released_by") != P1_RESERVE_RELEASER
+                or release.get("beneficiary") != agent):
+            return _result(BLOCK, "P1_RESERVE_NOT_APPROVED", "escalate_decisions")
+        return _result(ALLOW, "P1_RESERVE_USED", "charge_p1_reserve", "log_audit")
     return _result(ALLOW, "BUDGET_OK", "charge_agent_quota")
 
 
 def rule_ocpp_command(event: dict[str, Any]) -> dict[str, Any]:
     """
-    EN: Three-level OCPP policy: telemetry read-only, Reset with site consent, UpdateFirmware only
-        through mutation_confirm inside a service window.
-    CZ: Tříúrovňová politika OCPP: telemetrie jen ke čtení, Reset se souhlasem obsluhy objektu,
-        UpdateFirmware výhradně přes mutation_confirm v servisním okně.
+    EN: Three-level OCPP policy: telemetry read-only, Reset by its owner 14003 with a recorded site
+        consent (otherwise Decisions URGENT), UpdateFirmware only through mutation_confirm inside a
+        service window.
+    CZ: Tříúrovňová politika OCPP: telemetrie jen ke čtení, Reset od vlastníka 14003 se zaznamenaným
+        souhlasem obsluhy objektu (jinak Decisions URGENT), UpdateFirmware výhradně přes
+        mutation_confirm v servisním okně.
     """
     command = event.get("command")
     if command == "telemetry_read":
         return _result(ALLOW, "OCPP_READ_ONLY", "read_telemetry")
     if command == "Reset":
-        if event.get("site_operator_consent") is True:
-            return _result(ALLOW, "OCPP_RESET_WITH_CONSENT", "send_reset", "log_audit")
-        return _result(BLOCK, "OCPP_RESET_NO_CONSENT", "request_site_consent")
+        # EN: The remote Reset belongs to 14003. The consent of the site operator counts only as a
+        #     structured record from the signed-in client zone for this very charge point; a flag, a
+        #     phone call or an e-mail is not a consent - then the matter goes to Decisions as URGENT.
+        # CZ: Vzdálený Reset patří 14003. Souhlas obsluhy objektu platí jen jako strukturovaný záznam
+        #     z přihlášené klientské zóny pro právě tento dobíjecí bod; příznak, telefonát ani e-mail
+        #     souhlasem není - pak věc jde do Decisions jako URGENT.
+        if event.get("requested_by") != OCPP_RESET_OWNER:
+            return _result(BLOCK, "OCPP_RESET_NOT_OWNER", "notify_14003")
+        point = _text(event.get("charge_point_id"))
+        consent = _record(event, "site_consent")
+        if (point is None or consent.get("source") != OCPP_CONSENT_SOURCE or _text(consent.get("record_id")) is None
+                or _text(consent.get("operator_account")) is None or consent.get("charge_point_id") != point):
+            return _result(ESCALATE, "OCPP_RESET_NO_CONSENT", "escalate_decisions_urgent")
+        return _result(ALLOW, "OCPP_RESET_WITH_CONSENT", "send_reset", "log_audit")
     if command == "UpdateFirmware":
         if event.get("mutation_confirm") is True and event.get("in_service_window") is True:
             return _result(ALLOW, "OCPP_FIRMWARE_CONFIRMED", "send_update_firmware", "log_audit")

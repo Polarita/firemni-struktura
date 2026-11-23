@@ -29,6 +29,8 @@ Tento dokument je řídicím dokumentem **`Bloku 15`** Rozvojové Etapy II spole
 3. **`Hard-Stop` pod minimální marží:**
    * Nabídka s krycím příspěvkem pod minimem z ceníku se bez podpisu `1001` neodešle (`offer_margin_check` vrací `hard_stop = true`; pravidlo `MARGIN_HARD_STOP` v sadě `S2`).
    * Minimální marže se hodnotí **za celou nabídku** (práce + materiál dohromady), ne po řádcích. Čistě materiálová dodávka se touto maticí nenabízí — jde přes ceník e-shopu — a `offer_margin_check` ji odmítne.
+   * Závazná nabídka vyžaduje ceník schválený `1001` a ke dni nabídky už účinný (`meta.valid_from` nejpozději v den nabídky, `meta.approved_on` ne později než `meta.valid_from`, obojí skutečná kalendářní data); schválený, ale dosud neúčinný ceník `offer_margin_check` odmítne. Marže se počítá nad zaokrouhlenými částkami, které v nabídce skutečně stojí.
+   * Ceník má doménové meze (částka nejvýše `100 000 000 Kč`, sezónní koeficient nejvýše `10`) a validace navíc odmítne ceník, u něhož by veřejný konfigurátor při největším povoleném rozsahu nespočítal mezivýsledek přesně v celých haléřích. Veřejná stránka dostává částky z `pricing.py` už jako celá čísla a výpočet mimo přesný rozsah zastaví, místo aby jej potichu zaokrouhlila.
 4. **Konfigurátor není nabídka:**
    * Stránka nic neodesílá ani neukládá, neobsahuje formulář s osobními údaji a výslovně uvádí, že závaznou nabídku připraví a potvrdí člověk. Závazná cenová nabídka jde vždy přes `Decisions`.
 5. **Vazba na ostatní balíčky a bloky:**

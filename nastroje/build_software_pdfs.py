@@ -437,7 +437,7 @@ def build_poster_html() -> str:
     <div class="top-left">
       <h1>POLARITA S.R.O. — SOFTWAROVÁ A SERVEROVÁ ARCHITEKTURA · VERZE __VER__ (2026)</h1>
       <div class="sub">
-        <span class="em">0 Kč licencí · 100 % Open-Source + 10 modulů Odd. 17 · 6+9 DB PostgreSQL · 0× MySQL/MongoDB</span> · Asterisk + WhisperX + Silero VAD + librosa + Zulip + Stalwart + Chatwoot
+        <span class="em">Open-source jádro na serveru (0 Kč licencí za serverový software) + externí služby a proprietární klienti vedení v registru · 10 modulů Odd. 17 · 6+9 DB PostgreSQL · 0× MySQL/MongoDB</span> · Asterisk + WhisperX + Silero VAD + librosa + Zulip + Stalwart + Chatwoot
       </div>
     </div>
     <div class="top-right">
@@ -491,7 +491,7 @@ def build_poster_html() -> str:
       <div class="u-title">Server polarita-hq · Ubuntu Server LTS · OpenZFS (MVP 64 GB / Plný 128 GB+GPU)</div>
       <ul class="u-list">
         <li>Zrcadlený <code>OpenZFS</code> nad <code>/srv/polarita/</code> · <code>Incus (latest)</code> (<code>LXC</code> + <code>OCI</code> + <code>KVM</code>) deklarativně řízený přes <code>OpenTofu (latest)</code></li>
-        <li><strong>4 zóny:</strong> <code>dmz_edge</code> (<code>Caddy + 3478/udp</code> + MX) · <code>app_internal</code> (storefronty, <code>Zulip</code>, <code>Chatwoot /app/*</code> za <code>oauth2-proxy</code>) · <code>data_vault</code> (<code>6+9 PG DB + PgBouncer</code> + <code>OpenBao raft</code>) · <code>sandbox_airgap (eth0 none)</code></li>
+        <li><strong>4 zóny:</strong> <code>dmz_edge</code> (<code>Caddy + 3478/udp</code> + MX) · <code>app_internal</code> (storefronty, <code>Zulip</code>, <code>Chatwoot</code> (veřejně jen widget a webhooky kanálů, vše ostatní za VPN + <code>oauth2-proxy</code>)) · <code>data_vault</code> (<code>6+9 PG DB + PgBouncer</code> + <code>OpenBao raft</code>) · <code>sandbox_airgap (eth0 none)</code></li>
         <li><code>Restic REST Server (--append-only)</code> + watchdog (nedělní drill <code>03:00</code> + čtvrtletní <strong>Full DR Drill</strong>) · <code>Checkmk Raw</code> + <code>Telegram</code> + ext. SMTP</li>
       </ul>
     </div>
@@ -566,7 +566,7 @@ def build_poster_html() -> str:
             <span class="mtag">SSO &amp; PII</span>
           </div>
           <div class="mcard-role">OIDC SSO + forward-auth Chatwoot/Vault + Clean Room</div>
-          <div class="mcard-desc"><code>Keycloak SSO</code> (<code>PG</code> Blok 5, <code>oauth2-proxy</code> pro <code>Chatwoot /app/*</code> a <code>SilverBullet</code>), acyklický <code>Clean Room</code> (bez <code>bytea</code>) a <code>Kanál R FAIL_CLOSED</code>.</div>
+          <div class="mcard-desc"><code>Keycloak SSO</code> (<code>PG</code> Blok 5, VPN + <code>oauth2-proxy</code> pro vše z <code>Chatwoot</code> mimo veřejný widget a webhooky kanálů a pro <code>SilverBullet</code>), acyklický <code>Clean Room</code> (bez <code>bytea</code>) a <code>Kanál R FAIL_CLOSED</code>.</div>
         </div>
         <div class="mcard">
           <div class="mcard-top">
@@ -802,7 +802,7 @@ def build_poster_html() -> str:
             <span class="mtag odd17">K1–K5</span>
           </div>
           <div class="mcard-role">PBX + offline WhisperX + dělený Chatwoot &amp; Stalwart</div>
-          <div class="mcard-desc"><code>Asterisk</code> (stereo), <code>WhisperX</code> (<code>airgap-spool</code>), <code>Silero VAD + librosa</code> (jen <code>Kanál L</code>!), <code>Stalwart</code> (<code>Garage</code> bloby + <code>PTR/rDNS</code>), <code>Chatwoot</code> (<code>widget</code> vs. <code>/app/*</code>) a router.</div>
+          <div class="mcard-desc"><code>Asterisk</code> (stereo), <code>WhisperX</code> (<code>airgap-spool</code>), <code>Silero VAD + librosa</code> (jen <code>Kanál L</code>!), <code>Stalwart</code> (<code>Garage</code> bloby + <code>PTR/rDNS</code>), <code>Chatwoot</code> (veřejně jen widget a webhooky kanálů, vše ostatní za VPN + <code>oauth2-proxy</code>) a router.</div>
         </div>
       </div>
       <div class="col-foot">Garanti: 16001, 18001, 16002 &amp; 17001 · Silero + librosa</div>
@@ -820,7 +820,7 @@ def build_poster_html() -> str:
     </div>
     <div class="b-rules">
       <h4>12 PRAVIDEL SOFTWARU + 4 POJISTKY NEPŘEBÍRÁNÍ Z DRAIVIXU (VERZE __VER__)</h4>
-      <p><strong>1. 0 Kč vendor lock-in</strong> (100 % open-source bez komerčního omezení + 10 modulů Odd. 17) · <strong>2. Ověřená matice kompatibility</strong> (např. <code>Moodle LTS</code> + podporovaná větev <code>PHP-FPM</code>) · <strong>3. 0 Dockeru, 6+9 PG DB, 0× MySQL/Mongo</strong> · <strong>4. 5 klientských OS</strong> · <strong>5. Clean Room (0 PII ve Vaultu) &amp; Kanál R FAIL_CLOSED</strong> · <strong>6. <code>metadata-schema-kernel</code> jen pro vlastní schémata</strong> · <strong>7. OpenBao + 3vrstvý CaMeL + QES vs. pečeť</strong> · <strong>8. Python Decimal + Typst</strong> · <strong>9. ISDS 06:50 jen ve službě (jinak <code>PAUSED</code>) + <code>PAUSED</code> ads</strong> · <strong>10. Platná norma rozváděčů NN, negativní revize &amp; pasy baterií pro LMT, EV a průmyslové baterie &gt; 2 kWh od 18. 2. 2027</strong> · <strong>11. Přednástupní <code>JMHZ</code> &amp; vozidla v obecném režimu</strong> · <strong>12. Stage 1/2 Eval 20/20 &amp; čtvrtletní Full DR Drill</strong> · <strong>4 pojistky:</strong> (a) odpovědnost <code>1001</code> za účetnictví + smluvní <code>ORG-UOL</code>; (b) 0 nočních samo-přepisů norem/HR; (c) HW <code>OpenBao + TPM + YubiKey</code>; (d) <code>Zulip + Asterisk + WhisperX + Silero VAD + librosa</code>.</p>
+      <p><strong>1. Open-source jádro na serveru bez vendor lock-in</strong> (0 Kč licencí za serverový software + 10 modulů Odd. 17; externí služby a proprietární klienti — CLI modelů, klienti <code>Tailscale</code>, <code>Cloudflare</code>, <code>Telegram</code>, <code>Mapy.cz</code>, SMS brána, TSA — jsou vyjmenováni v registru) · <strong>2. Ověřená matice kompatibility</strong> (např. <code>Moodle LTS</code> + podporovaná větev <code>PHP-FPM</code>) · <strong>3. 0 Dockeru, 6+9 PG DB, 0× MySQL/Mongo</strong> · <strong>4. 5 klientských OS</strong> · <strong>5. Clean Room (0 PII ve Vaultu) &amp; Kanál R FAIL_CLOSED</strong> · <strong>6. <code>metadata-schema-kernel</code> jen pro vlastní schémata</strong> · <strong>7. OpenBao + 3vrstvý CaMeL + QES vs. pečeť</strong> · <strong>8. Python Decimal + Typst</strong> · <strong>9. ISDS 06:50 jen ve službě (jinak <code>PAUSED</code>) + <code>PAUSED</code> ads</strong> · <strong>10. Platná norma rozváděčů NN, negativní revize &amp; pasy baterií pro LMT, EV a průmyslové baterie &gt; 2 kWh od 18. 2. 2027</strong> · <strong>11. Přednástupní <code>JMHZ</code> &amp; vozidla v obecném režimu</strong> · <strong>12. Stage 1/2 Eval 20/20 &amp; čtvrtletní Full DR Drill</strong> · <strong>4 pojistky:</strong> (a) odpovědnost <code>1001</code> za účetnictví + smluvní <code>ORG-UOL</code>; (b) 0 nočních samo-přepisů norem/HR; (c) HW <code>OpenBao + TPM + YubiKey</code>; (d) <code>Zulip + Asterisk + WhisperX + Silero VAD + librosa</code>.</p>
     </div>
   </footer>
 
@@ -1296,8 +1296,8 @@ def build_book_html() -> str:
         <div class="txt">Realizovatelné pořadí Bloků 0–12 (Týdny 0–12) bez dopředných závislostí + Stage 1/2 Eval</div>
       </div>
       <div class="cov-stat">
-        <div class="num">0 Kč licencí · MIT/BSD/GPL</div>
-        <div class="txt">100 % open-source bez komerčního omezení (Silero VAD + librosa, oauth2-proxy, QElectroTech) + 10 modulů Odd. 17</div>
+        <div class="num">Open-source jádro · 0 Kč licencí na serveru</div>
+        <div class="txt">Open-source jádro na serveru (Silero VAD + librosa, oauth2-proxy, QElectroTech) + 10 modulů Odd. 17; externí služby a proprietární klienti (CLI modelů, klienti Tailscale, Cloudflare, Telegram, Mapy.cz, SMS brána, TSA) vedení v registru</div>
       </div>
       <div class="cov-stat">
         <div class="num">6+9 DB PG + PgBouncer · 0× MySQL</div>
@@ -1366,7 +1366,7 @@ def build_book_html() -> str:
       </div>
       <div class="zone-box app">
         <h4>2. Zóna app_internal (Storefronty, komunikační, ai a vývojová vrstva)</h4>
-        <p>Storefronty <code>Astro</code>, e-shop <code>MedusaJS + wms</code>, <code>Moodle LTS</code>, <code>Umami (+ odd. CMP)</code>, <code>Asterisk</code>, <code>Stalwart Mail</code>, <code>Zulip</code>, dělený <code>Chatwoot CE</code> (<code>/app/*</code> za <code>oauth2-proxy</code>), <code>Paperclip</code>, <code>SilverBullet (vault.int.polarita.cz)</code>, <code>Gitea</code>, <code>Paperless-ngx</code>, <code>pyHanko</code>, <code>Vikunja</code>, <code>Traccar (M2M VPN)</code> a <strong>10 modulů oddělení <code>17</code></strong> za <code>Headscale VPN + Keycloak SSO</code>.</p>
+        <p>Storefronty <code>Astro</code>, e-shop <code>MedusaJS + wms</code>, <code>Moodle LTS</code>, <code>Umami (+ odd. CMP)</code>, <code>Asterisk</code>, <code>Stalwart Mail</code>, <code>Zulip</code>, <code>Chatwoot CE</code> (veřejně jen widget a webhooky kanálů <code>WhatsApp</code> a SMS; vše ostatní — <code>/app/*</code>, <code>/platform/*</code>, <code>/super_admin/*</code>, <code>/auth/*</code> — za VPN + <code>oauth2-proxy</code>; přesný seznam cest podle <code>N-18</code>), <code>Paperclip</code>, <code>SilverBullet (vault.int.polarita.cz)</code>, <code>Gitea</code>, <code>Paperless-ngx</code>, <code>pyHanko</code>, <code>Vikunja</code>, <code>Traccar (M2M VPN)</code> a <strong>10 modulů oddělení <code>17</code></strong> za <code>Headscale VPN + Keycloak SSO</code>.</p>
       </div>
       <div class="zone-box vault">
         <h4>3. Zóna data_vault (6+9 PG DB + PgBouncer, Clean Room, 90d Audio a WORM)</h4>
@@ -1460,7 +1460,7 @@ def build_book_html() -> str:
       <strong>(a) Nikdy „Bez účetní“:</strong> zákonnou odpovědnost za účetnictví nese <code>Polarita s.r.o. (1001)</code> a odborným smluvním zpracovatelem přiznání, závěrky a mezd je kancelář <code>UOL (ORG-UOL)</code>. ·
       <strong>(b) Žádné nehlídané noční přepisy normového jádra:</strong> normové výpočty (<code>cad-urs-engine</code>), pasy rozváděčů dle platné normy a brána <code>db_hr_lide</code> podléhají <code>Draivix/aigiscode</code>, <code>Stage 1/2 Eval</code> a <code>mutation_confirm</code>. ·
       <strong>(c) Žádný webový trezor v prohlížeči a žádný export osobního QES klíče:</strong> strojová tajemství žijí v <code>RAM</code> přes <code>OpenBao (raft) + TPM + YubiKey</code>; osobní <code>QES</code> klíč zůstává výhradně v čipu <code>QSCD</code>. ·
-      <strong>(d) Žádné komerčně omezené či limitované nástroje:</strong> nasazujeme 100% open-source <code>Zulip + Asterisk + offline WhisperX + Silero VAD + librosa (MIT/ISC)</code> + dělený <code>Chatwoot CE</code> (<code>/app/*</code> za <code>oauth2-proxy</code>) a zákaz emocí na <code>Kanálu R</code> (<code>FAIL_CLOSED</code>).
+      <strong>(d) Open-source jádro bez komerčně omezených serverových nástrojů:</strong> serverové jádro je open-source — <code>Zulip + Asterisk + offline WhisperX + Silero VAD + librosa (MIT/ISC)</code> + <code>Chatwoot CE</code> (veřejně jen widget a webhooky kanálů <code>WhatsApp</code> a SMS; vše ostatní — <code>/app/*</code>, <code>/platform/*</code>, <code>/super_admin/*</code>, <code>/auth/*</code> — za VPN + <code>oauth2-proxy</code>; přesný seznam cest podle <code>N-18</code>); externí služby a proprietární klienti (CLI modelů, klienti <code>Tailscale</code>, <code>Cloudflare</code>, <code>Telegram</code>, <code>Mapy.cz</code>, SMS brána, TSA) jsou vyjmenováni v registru; platí zákaz emocí na <code>Kanálu R</code> (<code>FAIL_CLOSED</code>).
     </div>
   </div>
 

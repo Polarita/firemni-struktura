@@ -109,6 +109,77 @@ class PrintPathTests(unittest.TestCase):
             self.assertEqual(manifest["sha256"]["data"], gen.sha256(gen.DATA_DIR / f"{self.NAME}.json"))
             self.assertEqual(manifest["variables"], json.loads((gen.DATA_DIR / f"{self.NAME}.json").read_text(encoding="utf-8")))
 
+    def test_interrupted_publication_never_leaves_a_manifest_of_another_pdf(self) -> None:
+        # EN: The publication fails at each of its steps; whatever manifest exists afterwards describes the PDF next to it.
+        # CZ: Zveřejnění selže v každém svém kroku; jakýkoli manifest, který potom existuje, popisuje PDF vedle sebe.
+        real_replace = os.replace
+        for failing_step in (1, 2):
+            with tempfile.TemporaryDirectory() as tmp:
+                out = Path(tmp)
+                self.run_with("good", out)   # an older complete pair / starší úplná dvojice
+                old_pdf = (out / f"{self.NAME}.pdf").read_bytes()
+                calls = []
+
+                def flaky(source, target, failing_step=failing_step, calls=calls):
+                    calls.append(target)
+                    if len(calls) == failing_step:
+                        raise OSError("disk full")
+                    return real_replace(source, target)
+
+                with mock.patch.object(gen.os, "replace", flaky), self.assertRaises(gen.GeneratorError):
+                    self.run_with("good", out)
+                self.assertFalse((out / f"{self.NAME}.manifest.json").exists(), failing_step)
+                self.assertEqual(sorted(p.name for p in out.iterdir()), [f"{self.NAME}.pdf"], failing_step)
+                if failing_step == 1:
+                    self.assertEqual((out / f"{self.NAME}.pdf").read_bytes(), old_pdf)
+                # EN: The next run repairs the pair; no lock or staging folder is left behind.
+                # CZ: Další běh dvojici opraví; nezůstane žádný zámek ani přípravná složka.
+                self.run_with("good", out)
+                manifest = json.loads((out / f"{self.NAME}.manifest.json").read_text(encoding="utf-8"))
+                self.assertEqual(manifest["sha256"]["pdf"], gen.sha256(out / f"{self.NAME}.pdf"))
+                self.assertEqual(sorted(p.name for p in out.iterdir()), [f"{self.NAME}.manifest.json", f"{self.NAME}.pdf"])
+
+    def test_publish_takes_the_hash_from_the_staged_pdf_and_orders_the_steps(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            staging = out / ".x.staging-1"
+            staging.mkdir()
+            staged = staging / "x.pdf"
+            staged.write_bytes(b"%PDF-new")
+            (out / "x.pdf").write_bytes(b"%PDF-old")
+            (out / "x.manifest.json").write_text("{}", encoding="utf-8")
+            with self.assertRaises(gen.GeneratorError):   # a manifest of another PDF is refused / manifest jiného PDF se odmítne
+                gen.publish(out, "x", staged, {"sha256": {"pdf": gen.sha256(out / "x.pdf")}})
+            self.assertEqual((out / "x.pdf").read_bytes(), b"%PDF-old")
+            order = []
+            real_replace, real_unlink = os.replace, Path.unlink
+
+            def traced_unlink(path, *args, **kwargs):
+                order.append(("unlink", Path(path).name))
+                return real_unlink(path, *args, **kwargs)
+
+            def traced_replace(source, target):
+                order.append(("replace", Path(target).name))
+                return real_replace(source, target)
+
+            with mock.patch.object(gen.os, "replace", traced_replace), mock.patch.object(Path, "unlink", traced_unlink):
+                gen.publish(out, "x", staged, {"sha256": {"pdf": gen.sha256(staged)}})
+            self.assertEqual(order, [("unlink", "x.manifest.json"), ("replace", "x.pdf"), ("replace", "x.manifest.json")])
+            self.assertEqual(json.loads((out / "x.manifest.json").read_text(encoding="utf-8"))["sha256"]["pdf"], gen.sha256(out / "x.pdf"))
+
+    def test_parallel_generation_of_the_same_document_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            self.run_with("good", out)
+            before = {p.name: p.read_bytes() for p in out.iterdir()}
+            with gen._DocumentLock(out, self.NAME):
+                with self.assertRaises(gen.GeneratorError) as caught:
+                    self.run_with("good", out)
+                self.assertIn("another generation", str(caught.exception))
+                self.assertEqual({p.name: p.read_bytes() for p in out.iterdir() if not p.name.endswith(".lock")}, before)
+            self.assertEqual(sorted(p.name for p in out.iterdir()), sorted(before))
+            self.run_with("good", out)
+
     def test_failed_print_never_accepts_or_keeps_an_older_pdf(self) -> None:
         # EN: A browser that exits 0 without writing, fails, or produces a PDF of another case.
         # CZ: Prohlížeč, který skončí 0 a nic nezapíše, selže, nebo vyrobí PDF jiného spisu.

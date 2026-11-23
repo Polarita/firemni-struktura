@@ -18,6 +18,12 @@
 --     k zahození a spusť celý soubor. Vše běží v jedné transakci zakončené
 --     ROLLBACK, takže po skriptu nezůstane žádná role, schéma ani řádek.
 --     Nesplněná kontrola vyvolá výjimku "TEST n FAIL" a skript přeruší.
+-- EN: Send the statements one by one (for example psql with the file as input), not as
+--     one multi-statement string: TEST 14 relies on every statement having its own start
+--     time, and it deliberately waits a few seconds.
+-- CZ: Příkazy posílej jednotlivě (například psql se souborem na vstupu), ne jako jeden
+--     řetězec s více příkazy: TEST 14 spoléhá na to, že každý příkaz má vlastní čas
+--     začátku, a záměrně několik sekund čeká.
 --
 -- EN: Production layout (PRIMARY MODEL): one shared application schema where every
 --     business table carries a compound key (tenant_id, id), ENABLE + FORCE ROW LEVEL
@@ -53,7 +59,9 @@ BEGIN;
 --     saas_auth        the authentication gateway: after verifying the OIDC token it issues
 --                      a session token row. It cannot read or write business tables.
 --     saas_provisioner tenant onboarding / offboarding: the only role allowed to write the
---                      tenant registry. It cannot read or write business tables.
+--                      tenant registry and the tenant state. Offboarding = deactivation
+--                      in tenant_stav; the role has no DELETE. It cannot read or write
+--                      business tables.
 --     None of the roles is a superuser and none has BYPASSRLS. Passwords / certificates
 --     are provisioned from OpenBao, never written into SQL files.
 -- CZ: saas_owner       vlastní objekty a spouští migrace schématu; nemůže se přihlásit a
@@ -62,7 +70,9 @@ BEGIN;
 --     saas_auth        autentizační brána: po ověření tokenu OIDC vydá řádek s tokenem
 --                      relace. Doménové tabulky nečte ani do nich nezapisuje.
 --     saas_provisioner zakládání a ukončování tenantů: jediná role, která smí zapisovat do
---                      registru tenantů. Doménové tabulky nečte ani do nich nezapisuje.
+--                      registru tenantů a do stavu tenanta. Ukončení = deaktivace
+--                      v tenant_stav; právo DELETE role nemá. Doménové tabulky nečte
+--                      ani do nich nezapisuje.
 --     Žádná z rolí není superuser a žádná nemá BYPASSRLS. Hesla / certifikáty se dodávají
 --     z OpenBao, nikdy se nezapisují do SQL souborů.
 CREATE ROLE saas_owner       NOLOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
@@ -83,6 +93,35 @@ CREATE TABLE saas_vzor.tenant (
     nazev     text NOT NULL
 );
 
+-- EN: Tenant state — the part of the registry that decides about access. A tenant is
+--     active only while a row with stav = 'ACTIVE' exists here; a missing row or
+--     'DEACTIVATED' means no access (fail closed). Deactivation is one UPDATE by
+--     saas_provisioner and must carry the time and the reference of the approved decision
+--     (audit). The state is checked when a session token is issued (policy
+--     session_role_guard) and every time a token is used (current_tenant_id), so tokens
+--     issued earlier stop working with the first statement after the deactivation commits.
+--     The state is kept apart from saas_vzor.tenant on purpose: the resolver must read it,
+--     and the policy of the tenant table itself calls the resolver.
+-- CZ: Stav tenanta — část registru, která rozhoduje o přístupu. Tenant je aktivní jen
+--     tehdy, když zde existuje řádek se stav = 'ACTIVE'; chybějící řádek nebo
+--     'DEACTIVATED' znamená žádný přístup (FAIL_CLOSED). Deaktivace je jeden UPDATE rolí
+--     saas_provisioner a musí nést čas a odkaz na schválené rozhodnutí (audit). Stav se
+--     ověřuje při vydání tokenu relace (politika session_role_guard) i při každém použití
+--     tokenu (current_tenant_id), takže dříve vydané tokeny přestanou platit prvním
+--     příkazem po potvrzení deaktivace. Stav je od saas_vzor.tenant oddělen záměrně:
+--     resolver jej musí číst a politika samotné tabulky tenant resolver volá.
+CREATE TABLE saas_vzor.tenant_stav (
+    tenant_id       uuid PRIMARY KEY REFERENCES saas_vzor.tenant (tenant_id),
+    stav            text NOT NULL DEFAULT 'ACTIVE'
+                    CHECK (stav IN ('ACTIVE', 'DEACTIVATED')),
+    deaktivovano_at timestamptz,
+    deaktivace_ref  text,
+    CONSTRAINT tenant_stav_audit_ck CHECK (
+        (stav = 'ACTIVE' AND deaktivovano_at IS NULL AND deaktivace_ref IS NULL)
+        OR (stav = 'DEACTIVATED' AND deaktivovano_at IS NOT NULL AND deaktivace_ref IS NOT NULL)
+    )
+);
+
 -- EN: Session tokens issued by the authentication gateway. The token is a random UUID;
 --     the application role has NO privilege on this table, so it can neither list tokens
 --     of other tenants nor create one.
@@ -95,16 +134,29 @@ CREATE TABLE saas_vzor.tenant_session (
     expires_at timestamptz NOT NULL
 );
 
--- EN: Resolves the tenant of the current transaction from app.tenant_token. Missing, empty,
---     malformed, unknown or expired tokens return NULL, so queries fail closed to 0 rows
---     without leaking parse errors. SECURITY DEFINER with a pinned search_path: the function
---     reads tenant_session on behalf of the caller, who has no access to that table.
---     The legacy setting app.tenant_id is deliberately ignored.
--- CZ: Určí tenanta aktuální transakce z app.tenant_token. Chybějící, prázdný, neplatný,
---     neznámý i prošlý token vrátí NULL, takže dotaz selže bezpečně do 0 řádků bez úniku
---     chyby převodu. SECURITY DEFINER s pevným search_path: funkce čte tenant_session za
---     volajícího, který k tabulce přístup nemá. Dřívější nastavení app.tenant_id se
---     záměrně ignoruje.
+-- EN: Resolves the tenant of the current statement from app.tenant_token. Missing, empty,
+--     malformed, unknown or expired tokens and tokens of a tenant that is not ACTIVE return
+--     NULL, so queries fail closed to 0 rows without leaking parse errors. SECURITY DEFINER
+--     with a pinned search_path: the function reads tenant_session and tenant_stav on
+--     behalf of the caller, who has no access to those tables. The legacy setting
+--     app.tenant_id is deliberately ignored.
+--     Expiry is compared with statement_timestamp(), NOT with now(): now() is the start of
+--     the transaction, so a transaction left open would keep an expired token alive.
+--     statement_timestamp() is the time the current command arrived from the client;
+--     a single long statement, or a DO block / procedure with many inner statements, is
+--     still judged by its start — therefore the length of statements and transactions of
+--     saas_app is limited as well (section 4, known limit 8).
+-- CZ: Určí tenanta aktuálního příkazu z app.tenant_token. Chybějící, prázdný, neplatný,
+--     neznámý i prošlý token a token tenanta, který není ACTIVE, vrátí NULL, takže dotaz
+--     selže bezpečně do 0 řádků bez úniku chyby převodu. SECURITY DEFINER s pevným
+--     search_path: funkce čte tenant_session a tenant_stav za volajícího, který k těmto
+--     tabulkám přístup nemá. Dřívější nastavení app.tenant_id se záměrně ignoruje.
+--     Expirace se porovnává se statement_timestamp(), NE s now(): now() je začátek
+--     transakce, takže otevřená transakce by držela prošlý token při životě.
+--     statement_timestamp() je čas, kdy aktuální příkaz dorazil od klienta; jediný dlouhý
+--     příkaz nebo blok DO / procedura s mnoha vnitřními příkazy se dál posuzuje podle
+--     svého začátku — proto se omezuje i délka příkazů a transakcí role saas_app
+--     (oddíl 4, známá mez 8).
 CREATE FUNCTION saas_vzor.current_tenant_id()
 RETURNS uuid
 LANGUAGE plpgsql
@@ -130,12 +182,38 @@ BEGIN
     SELECT s.tenant_id
       INTO v_tenant
       FROM saas_vzor.tenant_session AS s
+      JOIN saas_vzor.tenant_stav AS t ON t.tenant_id = s.tenant_id
      WHERE s.token = v_token
-       AND s.expires_at > now();
+       AND s.expires_at > statement_timestamp()
+       AND t.stav = 'ACTIVE';
     RETURN v_tenant;
 END;
 $$;
 REVOKE ALL ON FUNCTION saas_vzor.current_tenant_id() FROM PUBLIC;
+
+-- EN: Used by the session-token policy when a token is ISSUED: true only for a tenant
+--     with an ACTIVE state row. SECURITY DEFINER with a pinned search_path, because the
+--     authentication gateway has no access to tenant_stav.
+-- CZ: Používá ji politika tokenů relací při VYDÁNÍ tokenu: true jen pro tenanta s řádkem
+--     stavu ACTIVE. SECURITY DEFINER s pevným search_path, protože autentizační brána
+--     nemá k tenant_stav přístup.
+CREATE FUNCTION saas_vzor.tenant_is_active(p_tenant_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, pg_temp
+AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1
+          FROM saas_vzor.tenant_stav AS t
+         WHERE t.tenant_id = p_tenant_id
+           AND t.stav = 'ACTIVE'
+    );
+END;
+$$;
+REVOKE ALL ON FUNCTION saas_vzor.tenant_is_active(uuid) FROM PUBLIC;
 
 -- EN: Sample business table (simplified "building" from the Digital Building Book).
 --     Uses a compound UUID primary key (tenant_id, objekt_id) to avoid global sequence
@@ -177,6 +255,8 @@ SELECT tenant_id, count(*) AS pocet_objektu
 --     Bez FORCE by vlastník (saas_owner) tiše viděl všechny tenanty.
 ALTER TABLE saas_vzor.tenant         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE saas_vzor.tenant         FORCE  ROW LEVEL SECURITY;
+ALTER TABLE saas_vzor.tenant_stav    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE saas_vzor.tenant_stav    FORCE  ROW LEVEL SECURITY;
 ALTER TABLE saas_vzor.tenant_session ENABLE ROW LEVEL SECURITY;
 ALTER TABLE saas_vzor.tenant_session FORCE  ROW LEVEL SECURITY;
 ALTER TABLE saas_vzor.objekt         ENABLE ROW LEVEL SECURITY;
@@ -233,16 +313,45 @@ CREATE POLICY tenant_provisioning ON saas_vzor.tenant
     USING      (true)
     WITH CHECK (true);
 
--- EN: Session tokens. Only the authentication gateway writes; the owner may read, because
---     current_tenant_id() (SECURITY DEFINER) runs as the owner. Nobody else passes.
--- CZ: Tokeny relací. Zapisuje jen autentizační brána; číst smí vlastník, protože
---     current_tenant_id() (SECURITY DEFINER) běží jako vlastník. Nikdo jiný neprojde.
+-- EN: Tenant state. Only saas_provisioner writes; the owner may read, because the two
+--     SECURITY DEFINER functions run as the owner. The policies do not call
+--     current_tenant_id(), so the resolver can read this table without recursion.
+-- CZ: Stav tenanta. Zapisuje jen saas_provisioner; číst smí vlastník, protože obě funkce
+--     SECURITY DEFINER běží jako vlastník. Politiky nevolají current_tenant_id(), takže
+--     resolver může tabulku číst bez rekurze.
+CREATE POLICY stav_role_guard ON saas_vzor.tenant_stav
+    AS RESTRICTIVE
+    FOR ALL
+    TO PUBLIC
+    USING      (current_user IN ('saas_provisioner', 'saas_owner'))
+    WITH CHECK (current_user = 'saas_provisioner');
+
+CREATE POLICY stav_provisioning ON saas_vzor.tenant_stav
+    AS PERMISSIVE
+    FOR ALL
+    TO saas_provisioner
+    USING      (true)
+    WITH CHECK (true);
+
+CREATE POLICY stav_owner_lookup ON saas_vzor.tenant_stav
+    AS PERMISSIVE
+    FOR SELECT
+    TO saas_owner
+    USING (true);
+
+-- EN: Session tokens. Only the authentication gateway writes, and only for a tenant that
+--     is ACTIVE at that moment; the owner may read, because current_tenant_id()
+--     (SECURITY DEFINER) runs as the owner. Nobody else passes.
+-- CZ: Tokeny relací. Zapisuje jen autentizační brána, a to jen pro tenanta, který je
+--     v tom okamžiku ACTIVE; číst smí vlastník, protože current_tenant_id()
+--     (SECURITY DEFINER) běží jako vlastník. Nikdo jiný neprojde.
 CREATE POLICY session_role_guard ON saas_vzor.tenant_session
     AS RESTRICTIVE
     FOR ALL
     TO PUBLIC
     USING      (current_user IN ('saas_auth', 'saas_owner'))
-    WITH CHECK (current_user = 'saas_auth');
+    WITH CHECK (current_user = 'saas_auth'
+                AND saas_vzor.tenant_is_active(tenant_id));
 
 CREATE POLICY session_auth_access ON saas_vzor.tenant_session
     AS PERMISSIVE
@@ -268,17 +377,34 @@ REVOKE ALL ON ALL TABLES IN SCHEMA saas_vzor FROM PUBLIC;
 
 GRANT USAGE ON SCHEMA saas_vzor TO saas_app, saas_auth, saas_provisioner;
 GRANT EXECUTE ON FUNCTION saas_vzor.current_tenant_id() TO saas_app, saas_provisioner;
+GRANT EXECUTE ON FUNCTION saas_vzor.tenant_is_active(uuid) TO saas_auth;
 
 GRANT SELECT ON saas_vzor.tenant TO saas_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON saas_vzor.objekt TO saas_app;
 GRANT SELECT ON saas_vzor.v_objekt_clean_room TO saas_app;
 
 GRANT SELECT, INSERT, UPDATE ON saas_vzor.tenant TO saas_provisioner;
+GRANT SELECT, INSERT, UPDATE ON saas_vzor.tenant_stav TO saas_provisioner;
 GRANT SELECT, INSERT, DELETE ON saas_vzor.tenant_session TO saas_auth;
+
+-- EN: Expiry is judged per statement, so statements and transactions of the application
+--     role must be short. The values are a PROPOSAL to be set well below the token
+--     lifetime; they take effect at the next login of the role. Whether the deployed
+--     version also offers a limit on the whole transaction must be verified against the
+--     official PostgreSQL documentation when Block 19 is built.
+-- CZ: Expirace se posuzuje po příkazech, takže příkazy i transakce aplikační role musí být
+--     krátké. Hodnoty jsou NÁVRH — ke schválení 1001 a nastavují se výrazně pod životnost
+--     tokenu; projeví se při dalším přihlášení role. Zda nasazená verze nabízí i limit na
+--     celou transakci, je nutné ověřit proti oficiální dokumentaci PostgreSQL při stavbě
+--     Bloku 19.
+ALTER ROLE saas_app SET statement_timeout = '30s';
+ALTER ROLE saas_app SET idle_in_transaction_session_timeout = '60s';
 
 ALTER SCHEMA   saas_vzor OWNER TO saas_owner;
 ALTER FUNCTION saas_vzor.current_tenant_id() OWNER TO saas_owner;
+ALTER FUNCTION saas_vzor.tenant_is_active(uuid) OWNER TO saas_owner;
 ALTER TABLE    saas_vzor.tenant OWNER TO saas_owner;
+ALTER TABLE    saas_vzor.tenant_stav OWNER TO saas_owner;
 ALTER TABLE    saas_vzor.tenant_session OWNER TO saas_owner;
 ALTER TABLE    saas_vzor.objekt OWNER TO saas_owner;
 ALTER VIEW     saas_vzor.v_objekt_clean_room OWNER TO saas_owner;
@@ -291,12 +417,17 @@ ALTER VIEW     saas_vzor.v_objekt_clean_room OWNER TO saas_owner;
 -- CZ: Odtud skript vystupuje jako neprivilegované role. Superuser RLS vždy obchází,
 --     takže testy spuštěné administrátorem by nic nedokázaly.
 
--- EN: 5a. Onboarding: synthetic tenants A and B are created by saas_provisioner.
--- CZ: 5a. Onboarding: syntetické tenanty A a B zakládá saas_provisioner.
+-- EN: 5a. Onboarding: synthetic tenants A and B are created by saas_provisioner, each
+--     with its state row (ACTIVE). Without the state row no token can be issued or used.
+-- CZ: 5a. Onboarding: syntetické tenanty A a B zakládá saas_provisioner, každého i s řádkem
+--     stavu (ACTIVE). Bez řádku stavu nelze token vydat ani použít.
 SET LOCAL ROLE saas_provisioner;
 INSERT INTO saas_vzor.tenant (tenant_id, nazev) VALUES
     ('11111111-1111-4111-8111-111111111111', 'Vzorová elektro firma A (syntetická)'),
     ('22222222-2222-4222-8222-222222222222', 'Vzorová elektro firma B (syntetická)');
+INSERT INTO saas_vzor.tenant_stav (tenant_id) VALUES
+    ('11111111-1111-4111-8111-111111111111'),
+    ('22222222-2222-4222-8222-222222222222');
 
 -- EN: 5b. Sign-in: the authentication gateway issues session tokens. Fixed values are used
 --     here only to keep the pattern readable; in production the token is gen_random_uuid(),
@@ -594,6 +725,8 @@ BEGIN
     IF n <> 3 THEN
         RAISE EXCEPTION 'TEST 11 FAIL: provisioner sees % registry rows instead of 3', n;
     END IF;
+    INSERT INTO saas_vzor.tenant_stav (tenant_id)
+    VALUES ('33333333-3333-4333-8333-333333333333');
     BEGIN
         SELECT count(*) INTO n FROM saas_vzor.objekt;
         RAISE EXCEPTION 'TEST 11 FAIL: provisioner can read business data';
@@ -622,12 +755,20 @@ $$;
 
 -- EN: TEST 12 — catalog check: RLS enabled and forced on every regular/partitioned table,
 --     every such table has a RESTRICTIVE policy TO PUBLIC, 0 materialized views, no
---     SUPERUSER / BYPASSRLS among the four roles, and no SECURITY DEFINER function
---     without a pinned search_path.
+--     SUPERUSER / BYPASSRLS among the four roles, and every SECURITY DEFINER function
+--     has search_path pinned to exactly "pg_catalog, pg_temp". The check reads the VALUE
+--     of search_path in pg_proc.proconfig; a function that sets only some other parameter
+--     does not pass (TEST 13 proves it). The stored text form of the value must be
+--     verified against the official documentation of the deployed PostgreSQL version when
+--     Block 19 is built; a different trusted path must be allowed here explicitly.
 -- CZ: TEST 12 — kontrola katalogu: RLS zapnuté a vynucené na každé běžné i dělené tabulce,
 --     každá taková tabulka má omezující politiku TO PUBLIC, 0 materializovaných pohledů,
---     žádná ze čtyř rolí není SUPERUSER / BYPASSRLS a žádná funkce SECURITY DEFINER
---     nemá nepřipnutý search_path.
+--     žádná ze čtyř rolí není SUPERUSER / BYPASSRLS a každá funkce SECURITY DEFINER
+--     má search_path připnutý přesně na „pg_catalog, pg_temp“. Kontrola čte HODNOTU
+--     search_path v pg_proc.proconfig; funkce, která nastavuje jen jiný parametr,
+--     neprojde (dokazuje to TEST 13). Uložený textový tvar hodnoty je nutné ověřit proti
+--     oficiální dokumentaci nasazené verze PostgreSQL při stavbě Bloku 19; jinou
+--     důvěryhodnou cestu je nutné zde povolit výslovně.
 RESET ROLE;
 DO $$
 DECLARE
@@ -678,13 +819,234 @@ BEGIN
       JOIN pg_namespace s ON s.oid = f.pronamespace
      WHERE s.nspname = 'saas_vzor'
        AND f.prosecdef
-       AND f.proconfig IS NULL;
+       AND NOT EXISTS (
+               SELECT 1
+                 FROM unnest(f.proconfig) AS c(setting)
+                WHERE split_part(c.setting, '=', 1) = 'search_path'
+                  AND replace(replace(substr(c.setting, length('search_path=') + 1), ' ', ''), '"', '')
+                      = 'pg_catalog,pg_temp'
+           );
     IF n <> 0 THEN
-        RAISE EXCEPTION 'TEST 12 FAIL: % SECURITY DEFINER functions without pinned settings', n;
+        RAISE EXCEPTION 'TEST 12 FAIL: % SECURITY DEFINER functions without search_path = pg_catalog, pg_temp', n;
     END IF;
-    RAISE NOTICE 'TEST 12 PASS: RLS forced, restrictive guard TO PUBLIC everywhere, 0 matviews, no BYPASSRLS';
+    RAISE NOTICE 'TEST 12 PASS: RLS forced, restrictive guard TO PUBLIC everywhere, 0 matviews, no BYPASSRLS, search_path pinned';
 END
 $$;
+
+-- EN: TEST 13 — negative test of the search_path check from TEST 12. Three deliberately
+--     wrong SECURITY DEFINER functions are created: one without any setting, one that sets
+--     only another parameter (the earlier "proconfig IS NULL" check let this one through)
+--     and one with search_path set to an untrusted path. The check must report all three;
+--     after they are dropped it must report none.
+-- CZ: TEST 13 — záporný test kontroly search_path z TESTU 12. Vzniknou tři záměrně chybné
+--     funkce SECURITY DEFINER: jedna bez jakéhokoli nastavení, jedna, která nastavuje jen
+--     jiný parametr (tu dřívější kontrola „proconfig IS NULL“ propustila), a jedna se
+--     search_path nastaveným na nedůvěryhodnou cestu. Kontrola musí ohlásit všechny tři;
+--     po jejich odstranění nesmí ohlásit žádnou.
+CREATE FUNCTION saas_vzor.zkouska_bez_nastaveni() RETURNS integer
+    LANGUAGE sql SECURITY DEFINER
+    AS 'SELECT 1';
+CREATE FUNCTION saas_vzor.zkouska_jiny_parametr() RETURNS integer
+    LANGUAGE sql SECURITY DEFINER
+    SET lock_timeout = '5s'
+    AS 'SELECT 1';
+CREATE FUNCTION saas_vzor.zkouska_spatna_cesta() RETURNS integer
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path = public, pg_catalog
+    AS 'SELECT 1';
+DO $$
+DECLARE
+    n bigint;
+BEGIN
+    SELECT count(*) INTO n
+      FROM pg_proc f
+      JOIN pg_namespace s ON s.oid = f.pronamespace
+     WHERE s.nspname = 'saas_vzor'
+       AND f.prosecdef
+       AND NOT EXISTS (
+               SELECT 1
+                 FROM unnest(f.proconfig) AS c(setting)
+                WHERE split_part(c.setting, '=', 1) = 'search_path'
+                  AND replace(replace(substr(c.setting, length('search_path=') + 1), ' ', ''), '"', '')
+                      = 'pg_catalog,pg_temp'
+           );
+    IF n <> 3 THEN
+        RAISE EXCEPTION 'TEST 13 FAIL: search_path check reported % of 3 wrong functions', n;
+    END IF;
+END
+$$;
+DROP FUNCTION saas_vzor.zkouska_bez_nastaveni();
+DROP FUNCTION saas_vzor.zkouska_jiny_parametr();
+DROP FUNCTION saas_vzor.zkouska_spatna_cesta();
+DO $$
+DECLARE
+    n bigint;
+BEGIN
+    SELECT count(*) INTO n
+      FROM pg_proc f
+      JOIN pg_namespace s ON s.oid = f.pronamespace
+     WHERE s.nspname = 'saas_vzor'
+       AND f.prosecdef
+       AND NOT EXISTS (
+               SELECT 1
+                 FROM unnest(f.proconfig) AS c(setting)
+                WHERE split_part(c.setting, '=', 1) = 'search_path'
+                  AND replace(replace(substr(c.setting, length('search_path=') + 1), ' ', ''), '"', '')
+                      = 'pg_catalog,pg_temp'
+           );
+    IF n <> 0 THEN
+        RAISE EXCEPTION 'TEST 13 FAIL: % functions still reported after the wrong ones were dropped', n;
+    END IF;
+    RAISE NOTICE 'TEST 13 PASS: search_path check rejects missing / other / untrusted settings';
+END
+$$;
+
+-- EN: TEST 14 — a token that expires while the transaction is still open. The whole file
+--     is ONE transaction, so now() stays at its start and is earlier than expires_at of
+--     the token issued below for the rest of the script: a check against now() would
+--     accept the token forever. The resolver compares with statement_timestamp(), so the
+--     first statement sent after the expiry sees 0 rows and cannot insert.
+--     The script waits here on purpose (pg_sleep).
+-- CZ: TEST 14 — token, který vyprší, zatímco je transakce stále otevřená. Celý soubor je
+--     JEDNA transakce, takže now() zůstává na jejím začátku a po zbytek skriptu je dřívější
+--     než expires_at tokenu vydaného níže: kontrola vůči now() by token přijímala napořád.
+--     Resolver porovnává se statement_timestamp(), takže první příkaz odeslaný po expiraci
+--     vidí 0 řádků a nic nevloží. Skript zde záměrně čeká (pg_sleep).
+SET LOCAL ROLE saas_auth;
+INSERT INTO saas_vzor.tenant_session (token, tenant_id, expires_at) VALUES
+    ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', '11111111-1111-4111-8111-111111111111',
+     clock_timestamp() + interval '5 seconds');
+
+SET LOCAL ROLE saas_app;
+DO $$
+DECLARE
+    n bigint;
+BEGIN
+    PERFORM set_config('app.tenant_token', 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', true);
+    SELECT count(*) INTO n FROM saas_vzor.objekt;
+    IF n <> 2 THEN
+        RAISE EXCEPTION 'TEST 14 FAIL: short-lived token shows % rows instead of 2 before expiry', n;
+    END IF;
+END
+$$;
+
+SELECT pg_sleep(6);
+
+DO $$
+DECLARE
+    n bigint;
+BEGIN
+    PERFORM set_config('app.tenant_token', 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', true);
+    SELECT count(*) INTO n FROM saas_vzor.objekt;
+    IF n <> 0 THEN
+        RAISE EXCEPTION 'TEST 14 FAIL: % rows visible after the token expired inside the open transaction', n;
+    END IF;
+    BEGIN
+        INSERT INTO saas_vzor.objekt (nazev) VALUES ('objekt po expiraci tokenu');
+    EXCEPTION
+        WHEN insufficient_privilege OR not_null_violation THEN
+            RAISE NOTICE 'TEST 14 PASS: token expired inside an open transaction = 0 rows / token vyprsel v otevrene transakci';
+            RETURN;
+    END;
+    RAISE EXCEPTION 'TEST 14 FAIL: insert with a token expired inside the open transaction succeeded';
+END
+$$;
+
+-- EN: TEST 15 — tenant deactivation (offboarding). saas_provisioner deactivates tenant B
+--     with one audited UPDATE. The token of tenant B issued earlier is still in
+--     tenant_session and has not expired, yet it opens nothing; the gateway cannot issue
+--     a new token for tenant B; tenant A is not affected; saas_app cannot touch the state;
+--     a deactivation without time and decision reference is rejected.
+-- CZ: TEST 15 — deaktivace tenanta (ukončení). saas_provisioner deaktivuje tenanta B jedním
+--     auditovaným UPDATE. Dříve vydaný token tenanta B je stále v tenant_session
+--     a nevypršel, přesto neotevře nic; brána nový token pro tenanta B nevydá; tenanta A
+--     se změna netýká; saas_app na stav nedosáhne; deaktivace bez času a odkazu na
+--     rozhodnutí je odmítnuta.
+SET LOCAL ROLE saas_app;
+DO $$
+DECLARE
+    n bigint;
+BEGIN
+    PERFORM set_config('app.tenant_token', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', true);
+    SELECT count(*) INTO n FROM saas_vzor.objekt;
+    IF n <> 1 THEN
+        RAISE EXCEPTION 'TEST 15 FAIL: tenant B sees % rows instead of 1 before deactivation', n;
+    END IF;
+    BEGIN
+        UPDATE saas_vzor.tenant_stav SET stav = 'ACTIVE';
+        RAISE EXCEPTION 'TEST 15 FAIL: saas_app can write the tenant state';
+    EXCEPTION WHEN insufficient_privilege THEN NULL;
+    END;
+END
+$$;
+
+SET LOCAL ROLE saas_provisioner;
+DO $$
+DECLARE
+    n bigint;
+BEGIN
+    BEGIN
+        UPDATE saas_vzor.tenant_stav
+           SET stav = 'DEACTIVATED'
+         WHERE tenant_id = '22222222-2222-4222-8222-222222222222'::uuid;
+        RAISE EXCEPTION 'TEST 15 FAIL: deactivation without time and decision reference accepted';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
+    UPDATE saas_vzor.tenant_stav
+       SET stav = 'DEACTIVATED',
+           deaktivovano_at = clock_timestamp(),
+           deaktivace_ref = 'Decisions: ukončení smlouvy tenanta B (syntetický odkaz)'
+     WHERE tenant_id = '22222222-2222-4222-8222-222222222222'::uuid;
+    GET DIAGNOSTICS n = ROW_COUNT;
+    IF n <> 1 THEN
+        RAISE EXCEPTION 'TEST 15 FAIL: provisioner deactivated % tenants instead of 1', n;
+    END IF;
+END
+$$;
+
+SET LOCAL ROLE saas_auth;
+DO $$
+BEGIN
+    BEGIN
+        INSERT INTO saas_vzor.tenant_session (tenant_id, expires_at)
+        VALUES ('22222222-2222-4222-8222-222222222222', clock_timestamp() + interval '15 minutes');
+        RAISE EXCEPTION 'TEST 15 FAIL: token issued for a deactivated tenant';
+    EXCEPTION WHEN insufficient_privilege THEN NULL;
+    END;
+    INSERT INTO saas_vzor.tenant_session (token, tenant_id, expires_at)
+    VALUES ('ffffffff-ffff-4fff-8fff-ffffffffffff', '11111111-1111-4111-8111-111111111111',
+            clock_timestamp() + interval '15 minutes');
+END
+$$;
+
+SET LOCAL ROLE saas_app;
+DO $$
+DECLARE
+    n bigint;
+BEGIN
+    PERFORM set_config('app.tenant_token', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', true);
+    SELECT count(*) INTO n FROM saas_vzor.objekt;
+    IF n <> 0 THEN
+        RAISE EXCEPTION 'TEST 15 FAIL: deactivated tenant B still sees % rows', n;
+    END IF;
+    SELECT count(*) INTO n FROM saas_vzor.tenant;
+    IF n <> 0 THEN
+        RAISE EXCEPTION 'TEST 15 FAIL: deactivated tenant B still sees % registry rows', n;
+    END IF;
+    BEGIN
+        INSERT INTO saas_vzor.objekt (nazev) VALUES ('objekt deaktivovaneho tenanta');
+        RAISE EXCEPTION 'TEST 15 FAIL: deactivated tenant B inserted a row';
+    EXCEPTION WHEN insufficient_privilege OR not_null_violation THEN NULL;
+    END;
+    PERFORM set_config('app.tenant_token', 'ffffffff-ffff-4fff-8fff-ffffffffffff', true);
+    SELECT count(*) INTO n FROM saas_vzor.objekt;
+    IF n <> 2 THEN
+        RAISE EXCEPTION 'TEST 15 FAIL: active tenant A sees % rows instead of 2', n;
+    END IF;
+    RAISE NOTICE 'TEST 15 PASS: deactivated tenant has no access, others unaffected / deaktivovany tenant bez pristupu';
+END
+$$;
+RESET ROLE;
 
 -- -------------------------------------------------------------------------------------
 -- 7. Clean-up / Úklid
@@ -707,7 +1069,18 @@ $$;
 --     (6) data migrations that must touch rows of all tenants cannot run as saas_owner
 --         (FORCE): they run per tenant through a dedicated, audited migration procedure;
 --     (7) this file has not been executed — every statement must be proven in a
---         throw-away database before it is used as a template.
+--         throw-away database before it is used as a template;
+--     (8) token expiry is judged at the start of each statement: one long statement, or
+--         a DO block / procedure with many inner statements, runs to its end with the token
+--         it started with, and a REPEATABLE READ or SERIALIZABLE transaction does not see
+--         a deactivation committed after its snapshot — the application role therefore
+--         works in READ COMMITTED, in short transactions, with statement and idle limits
+--         well below the token lifetime;
+--     (9) deactivation only closes access. It does not delete the tenant's rows, keys or
+--         backups and it leaves old token rows in place; erasure after the end of
+--         a contract and the full history of state changes (who, when, why) belong to
+--         a separate audited procedure and to the append-only log of the provisioning
+--         service.
 -- CZ: Vzor po sobě nic nezanechá. Ve skutečné migraci generuje DDL z oddílů 1–4
 --     modul metadata-schema-kernel a potvrzuje se; testy z oddílu 6 běží
 --     v Gitea Actions před každým vydáním.
@@ -726,5 +1099,14 @@ $$;
 --     (6) datové migrace, které musí sáhnout na řádky všech tenantů, nemohou běžet jako
 --         saas_owner (FORCE): běží po tenantech vyhrazeným auditovaným migračním postupem;
 --     (7) tento soubor nebyl spuštěn — každý příkaz je nutné před použitím jako předlohy
---         prokázat v databázi určené k zahození.
+--         prokázat v databázi určené k zahození;
+--     (8) expirace tokenu se posuzuje na začátku každého příkazu: jeden dlouhý příkaz nebo
+--         blok DO / procedura s mnoha vnitřními příkazy doběhne s tokenem, se kterým začal,
+--         a transakce REPEATABLE READ nebo SERIALIZABLE nevidí deaktivaci potvrzenou po
+--         svém snímku — aplikační role proto pracuje v READ COMMITTED, v krátkých
+--         transakcích a s limity příkazu a nečinnosti výrazně pod životností tokenu;
+--     (9) deaktivace jen uzavírá přístup. Nemaže řádky, klíče ani zálohy tenanta
+--         a ponechává staré řádky tokenů; výmaz po skončení smlouvy a úplná historie změn
+--         stavu (kdo, kdy, proč) patří do samostatného auditovaného postupu a do neměnného
+--         deníku služby pro zakládání tenantů.
 ROLLBACK;

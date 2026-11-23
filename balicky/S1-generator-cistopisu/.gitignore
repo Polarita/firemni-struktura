@@ -1,2 +1,4 @@
 vystup/*.html
+vystup/.*.lock
+vystup/.*.staging-*/
 __pycache__/

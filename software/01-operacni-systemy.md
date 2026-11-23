@@ -76,11 +76,12 @@ Plán instalace a inicializace serveru polarita-hq na Ubuntu Server (latest LTS)
 
 ```text
 Tento prompt je čistě čtecí kontrola (nic nemění); případný návrh nápravy předlož ke schválení 1001.
-Při přípravě a nasazování jakéhokoliv nástroje ve společnosti Polarita s.r.o. proveď povinnou kontrolu multiplatformní přístupnosti pro koncová zařízení:
+V Bloku 1 ověř jen to, co už existuje (klientská zařízení a jejich nástroje), a zapiš matici multiplatformní kompatibility, podle které se každá služba otestuje až v bloku, kde vzniká:
 
-1. Pracovní stanice: Ověř, že administrace, schvalovací fronta Decisions, sdílená paměť Vault i klientské nástroje fungují bez omezení na operačních systémech Windows (latest Pro), Linux Desktop (latest LTS) i Apple macOS (latest) přes standardní prohlížeč a multiplatformní klienty.
-2. Mobilní zařízení: Ověř, že webová a terénní rozhraní (360° Karta spisu s 1-klik tlačítky „Pracuj“, mobilní Zadávací listy, nahrávání fotografií ze stavby, hlasové diktování Stavebního deníku, kamerový skener QR kódů měřidel/vozidel/rozváděčů a přihlašování hardwarovým klíčem YubiKey přes USB-C / NFC) fungují plnohodnotně na systémech Android (latest) i Apple iOS / iPadOS (latest).
-3. Pokud by některý zvažovaný software vázal uživatele výhradně na jediný klientský systém bez možnosti webového nebo vzdáleného multiplatformního přístupu, označ jej jako neshodu a navrhni multiplatformní alternativu nebo provoz v izolované serverové VM v Incusu.
+1. Pracovní stanice: Ověř, že na stanicích, které jsou v Bloku 1 k dispozici (Windows latest Pro, Linux Desktop latest LTS, Apple macOS latest), je nainstalován aktuální prohlížeč a klient SSH a že se z nich lze klíčem přihlásit ke správě serveru; ostatní klientské nástroje (VPN klient, Zulip, Linphone, Thunderbird, JSignPdf, QElectroTech) jen zapiš do matice s blokem, ve kterém se nainstalují a ověří.
+2. Mobilní zařízení: Ověř, že telefony a tablety Android (latest) a Apple iOS / iPadOS (latest), které jsou k dispozici, mají aktuální systém se záplatami a aktuální prohlížeč a že je na nich čitelný hardwarový klíč YubiKey přes USB-C / NFC.
+3. Matice kompatibility: Zapiš do /srv/polarita/vault/07-IT-a-Architektura/ matici služba × platforma × blok ověření. Funkční zkoušky služeb patří do DoD bloků, kde služby vznikají — VPN v Bloku 3, fronta Decisions v Bloku 7, paměť Vault a 360° Karta spisu v Bloku 8, terénní rozhraní (Zadávací listy, fotografie, diktování Stavebního deníku, kamerový skener QR kódů) v Bloku 11; v Bloku 1 se nezkoušejí.
+4. Pokud by některý zvažovaný software vázal uživatele výhradně na jediný klientský systém bez možnosti webového nebo vzdáleného multiplatformního přístupu, označ jej jako neshodu a navrhni multiplatformní alternativu nebo provoz v izolované serverové VM v Incusu.
 ```
 
 ---
@@ -93,4 +94,4 @@ Při přípravě a nasazování jakéhokoliv nástroje ve společnosti Polarita 
 - [ ] Datový pool `OpenZFS mirror` je nativně šifrovaný (`zpool status = ONLINE` na obou discích, klíč zapečetěný v `TPM 2.0`), operační systém leží na samostatném zrcadleném oddílu obou disků včetně obou `ESP`, bezobslužný restart je vyzkoušen (pool se odemkl bez obsluhy), obnova ze záložní kopie klíče z obálky `Break-Glass` je vyzkoušena a otevřený bod `N-17` je uzavřen zápisem skutečného postupu.
 - [ ] Existují datasety `data/airgap-spool`, `data/airgap-models` a adresář signatur `ClamAV` `data/clamav-db`.
 - [ ] Přihlášení přes `OpenSSH` funguje výhradně klíčem (`PasswordAuthentication no`, `PermitRootLogin no`).
-- [ ] Správa serveru přes `OpenSSH` klíčem je ověřena ze stanice `1001` a pravidlo multiplatformní kontroly z `Promptu 3` (**Windows**, **Linux**, **Apple macOS**, **Android**, **Apple iOS / iPadOS**) je zapsáno ve `/srv/polarita/vault/07-IT-a-Architektura/` jako přejímací bod každého dalšího bloku.
+- [ ] Správa serveru přes `OpenSSH` klíčem je ověřena ze stanice `1001` na dostupných klientských zařízeních je ověřen aktuální systém, prohlížeč a čitelnost klíče `YubiKey` a ve `/srv/polarita/vault/07-IT-a-Architektura/` je zapsána matice multiplatformní kompatibility (služba × **Windows**, **Linux**, **Apple macOS**, **Android**, **Apple iOS / iPadOS** × blok ověření); funkční zkoušky `Decisions`, `Vaultu`, 360° Karty spisu a terénních rozhraní nejsou součástí `Bloku 1` — patří do `DoD` bloků, kde tyto služby vznikají.

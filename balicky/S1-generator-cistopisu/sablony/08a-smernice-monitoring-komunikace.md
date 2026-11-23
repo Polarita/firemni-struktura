@@ -59,7 +59,7 @@ Společnost uchovává záznamy ve dvou vrstvách:
 
 | Vrstva | Co obsahuje | Doba uchování | Úložiště |
 | :--- | :--- | :--- | :--- |
-| Provozní | Zvukové záznamy a doslovné přepisy všech nahraných hovorů | 90 dnů od pořízení; poté se vymaže zvuk i doslovný přepis a ve spisu zůstává jen věcný záznam o hovoru (kdo volal, kdy a s jakým požadavkem) | šifrované úložiště Garage |
+| Provozní | Zvukové záznamy a doslovné přepisy všech nahraných hovorů | nejdéle 90 dnů od pořízení ve všech kopiích včetně záloh; nejpozději poté se vymaže zvuk i doslovný přepis a ve spisu zůstává jen věcný záznam o hovoru (kdo volal, kdy a s jakým požadavkem) | šifrované úložiště Garage |
 | LEGAL_HOLD | Zvukové záznamy i doslovné přepisy hovorů přiřazených ke spisu, ve kterých se sjednávala smlouva, změna díla nebo vícepráce, hovorů k reklamacím a hlášení havárií | 3 až 10 let podle délky promlčecí lhůty nároku, ke kterému se hovor vztahuje | neměnný archiv legal-archive |
 
 Zařazení hovoru do vrstvy LEGAL_HOLD se zaznamenává u spisu spolu s důvodem. Písemná komunikace přiřazená ke spisu se uchovává po dobu uchování spisu.

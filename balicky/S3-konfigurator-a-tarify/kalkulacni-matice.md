@@ -17,9 +17,10 @@ Interní pravidla pro `14002 rozpoctar`, `14005 zakazky`, `12001 marketing` a `1
 1. Krycí příspěvek se počítá **za celou nabídku** (práce + materiál dohromady), nikdy po jednotlivých řádcích: `(cena nabídky bez DPH − všechny přímé náklady práce i materiálu) / cena nabídky bez DPH`. Výpočet provádí funkce `offer_margin_check`; samotná přirážka na materiál (`material_markup_pct`) je záměrně nižší než minimální marže a dorovnává ji práce.
 2. Je-li výsledek pod hodnotou `minimum_contribution_margin_pct`, funkce vrátí `hard_stop = true`; tato hodnota se předává pojistce jako pole `below_minimum_margin`.
 3. **Čistě materiálová dodávka** (nabídka bez práce) se touto maticí nenaceňuje a `offer_margin_check` ji odmítne — prodej samotného materiálu jde přes ceník e-shopu.
-4. Závaznou nabídku lze počítat jen ze schváleného ceníku (`meta.approved`); nad neschváleným ceníkem `offer_margin_check` skončí chybou.
-5. Nabídka s `hard_stop = true` se **neodešle**; `14002` ji předloží s rozpadem nákladů jednateli `1001` do `Decisions`. Odeslat ji lze jen po jeho výslovném podpisu výjimky.
-6. Pravidlo ověřuje scénář `MARGIN_HARD_STOP` v sadě balíčku `S2`; závazná nabídka bez výsledku kontroly marže tam končí `FAIL_CLOSED`.
+4. Závaznou nabídku lze počítat jen ze schváleného a ke dni nabídky už účinného ceníku (`meta.approved`, `meta.valid_from` nejpozději v den nabídky); nad neschváleným nebo dosud neúčinným ceníkem `offer_margin_check` skončí chybou. Datum nabídky se předává parametrem `offer_date`, výchozí je dnešní den.
+5. Marže se posuzuje nad přesně těmi částkami, které jsou v nabídce: řádek práce i řádek materiálu se zaokrouhlí na haléře, cena nabídky je jejich součet (vrací se jako `price_without_vat`) a vykazovaná marže se zaokrouhluje dolů, takže podlimitní nabídka se nikdy nezobrazí jako vyhovující.
+6. Nabídka s `hard_stop = true` se **neodešle**; `14002` ji předloží s rozpadem nákladů jednateli `1001` do `Decisions`. Odeslat ji lze jen po jeho výslovném podpisu výjimky.
+7. Pravidlo ověřuje scénář `MARGIN_HARD_STOP` v sadě balíčku `S2`; závazná nabídka bez výsledku kontroly marže tam končí `FAIL_CLOSED`.
 
 ## 3. Zádržné a platební podmínky
 

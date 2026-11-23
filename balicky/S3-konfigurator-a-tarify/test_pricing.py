@@ -26,6 +26,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 from unittest import mock
@@ -56,7 +57,8 @@ class PricingTests(unittest.TestCase):
         self.assertEqual(pricing._czk(Decimal("1416.5")), "1 417 Kč")
         self.assertEqual(pricing._czk(Decimal("1415.49")), "1 415 Kč")
         template = pricing.TEMPLATE_PATH.read_text(encoding="utf-8")
-        self.assertIn("const halfUp = (numerator, divisor) => Math.floor((numerator + divisor / 2) / divisor);", template)
+        self.assertIn("const shifted = safe(safe(numerator) + divisor / 2);", template)
+        self.assertIn("return (shifted - shifted % divisor) / divisor;", template)
         self.assertIn("const wholeCrowns = (hellers) => halfUp(hellers, 100);", template)
 
     def test_three_tariffs_and_three_turnkey_packages(self) -> None:
@@ -98,10 +100,10 @@ class PricingTests(unittest.TestCase):
     def test_margin_hard_stop_below_minimum(self) -> None:
         minimum = Decimal(self.price_list["minimum_contribution_margin_pct"])
         below = pricing.margin_check(self.price_list, 100_000, 100_000 * (1 - (minimum - 1) / 100))
-        border_below = pricing.margin_check(self.price_list, 100_000, 78_004)  # 21.996% rounds to 22.00%
+        border_below = pricing.margin_check(self.price_list, 100_000, 78_004)  # 21.996 % is shown as 21.99 %, never as 22.00 %
         at_minimum = pricing.margin_check(self.price_list, 100_000, 100_000 * (1 - minimum / 100))
         self.assertTrue(below["hard_stop"])
-        self.assertEqual(border_below["contribution_margin_pct"], Decimal("22.00"))
+        self.assertEqual(border_below["contribution_margin_pct"], Decimal("21.99"))
         self.assertTrue(border_below["hard_stop"])
         self.assertFalse(at_minimum["hard_stop"])
 
@@ -184,6 +186,25 @@ class PricingTests(unittest.TestCase):
             "approved as text": lambda d: d["meta"].__setitem__("approved", "true"),
             "proposal with approver": lambda d: d["meta"].update(approved=False, status="NAVRH_KE_SCHVALENI_1001"),
             "prices with vat": lambda d: d["meta"].__setitem__("prices_exclude_vat", False),
+            # EN: Dates are real calendar dates in the right order. / CZ: Data jsou skutečná kalendářní data ve správném pořadí.
+            "month 99": lambda d: d["meta"].__setitem__("approved_on", "2026-99-99"),
+            "30 February": lambda d: d["meta"].__setitem__("valid_from", "2027-02-30"),
+            "date with time": lambda d: d["meta"].__setitem__("valid_from", "2026-11-15T00:00"),
+            "date as number": lambda d: d["meta"].__setitem__("valid_from", 20261115),
+            "valid before approval": lambda d: d["meta"].update(approved_on="2026-11-15", valid_from="2026-11-14"),
+            "proposal with approval date": lambda d: d["meta"].update(approved=False, status="NAVRH_KE_SCHVALENI_1001",
+                                                                       approved_by=None, valid_from=None),
+            # EN: Domain bounds - checked before rounding, always a PricingError. / CZ: Doménové meze - před zaokrouhlením, vždy PricingError.
+            "huge price": lambda d: d["turnkey_packages"][0].__setitem__("price_to", 10 ** 40),
+            "huge float": lambda d: d["mrr_tariffs"][0].__setitem__("base_monthly_per_object", 1e300),
+            "infinite rate": lambda d: d["hourly_rates"]["designer"].__setitem__("rate", float("inf")),
+            "price above bound": lambda d: d["turnkey_packages"][0].__setitem__("price_to", 100_000_000.01),
+            "coefficient above bound": lambda d: d["seasonal_coefficients"][0].__setitem__("coefficient", 10.5),
+            "markup above bound": lambda d: d.__setitem__("material_markup_pct", 1001),
+            # EN: Inside the bounds, but the public page could not compute it exactly in whole hellers.
+            # CZ: Uvnitř mezí, ale veřejná stránka by to v celých haléřích nespočítala přesně.
+            "unsafe package arithmetic": lambda d: (d["turnkey_packages"][0].update(price_to=99_000_000),
+                                                    d["seasonal_coefficients"][0].__setitem__("coefficient", 9.5)),
             "not an object": lambda d: d.clear(),
         }
         for name, change in defects.items():
@@ -237,6 +258,81 @@ class PricingTests(unittest.TestCase):
         # CZ: Čistě materiálová dodávka se touto maticí nenaceňuje (ceník e-shopu).
         with self.assertRaises(pricing.PricingError):
             pricing.offer_margin_check(self.price_list, 0, material, 10_000)
+
+    def test_extreme_values_end_as_pricing_error_naming_the_field(self) -> None:
+        for value in (10 ** 40, -10 ** 40, 1e300, float("inf"), float("nan"), 10 ** 400):
+            with self.assertRaises(pricing.PricingError) as caught:
+                pricing._number(value, "turnkey_packages[X].price_to")
+            self.assertIn("turnkey_packages[X].price_to", str(caught.exception), value)
+        self.assertEqual(pricing._number(100_000_000, "x"), Decimal("100000000"))
+        # EN: The command line prints the error and returns 1 - no traceback. / CZ: Příkazová řádka chybu vypíše a vrátí 1 - žádný traceback.
+        with tempfile.TemporaryDirectory() as tmp:
+            document = copy.deepcopy(self.price_list)
+            document["hourly_rates"]["designer"]["rate"] = 10 ** 40
+            path = Path(tmp) / "cenik.json"
+            path.write_text(json.dumps(document), encoding="utf-8")
+            errors = io.StringIO()
+            with mock.patch.object(pricing, "PRICE_LIST_PATH", path), contextlib.redirect_stderr(errors):
+                self.assertEqual(pricing.main(["--overview"]), 1)
+            self.assertIn("hourly_rates[designer].rate", errors.getvalue())
+
+    def test_public_arithmetic_stays_inside_exact_integers(self) -> None:
+        # EN: The fields of the page may not multiply by more than the kernel was checked for.
+        # CZ: Pole stránky nesmějí násobit víc, než pro kolik bylo jádro ověřeno.
+        template = pricing.TEMPLATE_PATH.read_text(encoding="utf-8")
+        self.assertIn(f'id="objects" type="number" min="1" max="{pricing.PUBLIC_MAX_OBJECTS}"', template)
+        self.assertIn(f'id="entrances" type="number" min="0" max="{pricing.PUBLIC_MAX_ENTRANCES}"', template)
+        self.assertIn(f'quantity.max = "{pricing.PUBLIC_MAX_QUANTITY}"', template)
+        self.assertEqual(len(re.findall(r'\bmax\s*=\s*"', template)), 3)
+        public = pricing.public_price_list(self.price_list)
+        for entry in public["mrr_tariffs"] + public["turnkey_packages"] + public["seasonal_coefficients"]:
+            for key, value in entry.items():
+                if key.endswith(("_hellers", "_e4")):
+                    self.assertIs(type(value), int, key)
+                else:
+                    self.assertNotIsInstance(value, float, key)
+        self.assertEqual(public["meta"]["vat_rates"]["standard_bp"], int(Decimal(str(self.price_list["meta"]["vat_rates"]["standard_pct"])) * 100))
+        self.assertEqual(public["mrr_tariffs"][0]["base_monthly_per_object_hellers"],
+                         int(Decimal(str(self.price_list["mrr_tariffs"][0]["base_monthly_per_object"])) * 100))
+
+    def test_offer_margin_is_judged_over_the_amounts_of_the_offer(self) -> None:
+        # EN: 100.004 + 0 is offered as 100.00; with costs 78.003 that is 21.997 % - below the minimum of 22 %.
+        # CZ: 100,004 + 0 se nabízí jako 100,00; s náklady 78,003 je to 21,997 % - pod minimem 22 %.
+        day = date(2026, 12, 1)
+        result = pricing.offer_margin_check(self.price_list, Decimal("100.004"), 0, Decimal("78.003"), day)
+        self.assertEqual((result["price_without_vat"], result["hard_stop"], result["contribution_margin_pct"]),
+                         (Decimal("100.00"), True, Decimal("21.99")))
+        # EN: The price is the sum of the two rounded lines, exactly as they stand in the offer.
+        # CZ: Cena je součet dvou zaokrouhlených řádků, přesně jak stojí v nabídce.
+        lines = pricing.offer_margin_check(self.price_list, Decimal("100.004"), Decimal("50.004"), 100, day)
+        self.assertEqual(lines["price_without_vat"], Decimal("150.00"))
+        self.assertFalse(pricing.offer_margin_check(self.price_list, 100, 0, 78, day)["hard_stop"])
+        with self.assertRaises(pricing.PricingError):
+            pricing.offer_margin_check(self.price_list, Decimal("0.004"), 0, 0, day)
+
+    def test_binding_offer_requires_a_price_list_in_effect_on_the_offer_date(self) -> None:
+        valid_from = date.fromisoformat(self.price_list["meta"]["valid_from"])
+        pricing.require_approved(self.price_list, valid_from)
+        pricing.offer_margin_check(self.price_list, 10_000, 0, 5_000, valid_from)
+        for call in (lambda: pricing.require_approved(self.price_list, valid_from - timedelta(days=1)),
+                     lambda: pricing.offer_margin_check(self.price_list, 10_000, 0, 5_000, valid_from - timedelta(days=1)),
+                     lambda: pricing.require_approved(self.price_list, "2027-01-01")):
+            with self.assertRaises(pricing.PricingError):
+                call()
+        # EN: Approved today, valid from a future day: not usable today (the default offer date).
+        # CZ: Schváleno dnes, platné od budoucího dne: dnes (výchozí datum nabídky) nepoužitelné.
+        future = copy.deepcopy(self.price_list)
+        future["meta"].update(approved_on=date.today().isoformat(), valid_from=(date.today() + timedelta(days=30)).isoformat())
+        pricing.validate_price_list(future)
+        with self.assertRaises(pricing.PricingError):
+            pricing.require_approved(future)
+        with self.assertRaises(pricing.PricingError):
+            pricing.offer_margin_check(future, 10_000, 0, 5_000)
+        pricing.offer_margin_check(future, 10_000, 0, 5_000, date.today() + timedelta(days=30))
+        # EN: A document that skipped validation is still checked. / CZ: Dokument, který minul validaci, se přesto kontroluje.
+        future["meta"]["valid_from"] = "2026-99-99"
+        with self.assertRaises(pricing.PricingError):
+            pricing.require_approved(future, date(2099, 1, 1))
 
     def test_binding_offer_requires_an_approved_price_list(self) -> None:
         pricing.require_approved(self.price_list)
@@ -350,13 +446,19 @@ class ConfiguratorKernelTests(unittest.TestCase):
         document["turnkey_packages"][0].update(price_from=38000.33, price_to=95000.55)
         document["seasonal_coefficients"][0]["coefficient"] = 0.9333
         document["meta"]["vat_rates"].update(standard_pct=21, residential_reduced_pct=12.5)
+        # EN: The largest amounts the validation still lets through at the largest multipliers of the page.
+        # CZ: Největší částky, které validace ještě pustí, při největších násobitelích stránky.
+        document["mrr_tariffs"][2].update(base_monthly_per_object=9_999_999.99, extra_entrance_monthly=9_999_999.99)
+        document["turnkey_packages"][2].update(price_from=30_000_000.01, price_to=30_000_000.03)
         pricing.validate_price_list(document)
         public = pricing.public_price_list(document)
         fee_cases = [(code, objects, entrances) for code in ("START_SVJ", "STANDARD_OBJEKT", "MAXI_AREAL_B2B")
                      for objects, entrances in ((1, 0), (3, 4), (7, 13), (200, 500))]
         package_cases = [(code, quantity, month) for code in ("EV_WALLBOX", "STOUPACKY_HER", "FVE_BESS")
                          for quantity in (1, 3, 200) for month in (1, 2, 5, 7, 12)]
-        vat_amounts = ["1003.50", "0.01", "0.05", "1415.50", "33.33", "999999.99", "12130.00", "1.15", "2.675", "1214.235"]
+        vat_amounts = ["1003.50", "0.01", "0.05", "1415.50", "33.33", "999999.99", "12130.00", "1.15", "2.68", "1214.24",
+                       "6999999999.93"]
+        vat_hellers = [int(Decimal(amount) * 100) for amount in vat_amounts]
         clamp_cases = [["5", 1, 200], ["0", 1, 200], ["-3", 0, 500], ["999", 1, 200], ["2.9", 1, 200], ["", 1, 200], ["abc", 0, 500],
                        ["1e3", 1, 200], ["Infinity", 1, 200]]
 
@@ -364,27 +466,39 @@ class ConfiguratorKernelTests(unittest.TestCase):
             "fees": [str(int(pricing.monthly_fee(document, *case) * 100)) for case in fee_cases],
             "packages": [[str(int(v * 100)) for v in pricing.package_range(document, code, quantity, month)]
                          for code, quantity, month in package_cases],
-            "vat": [[str(int(pricing.with_vat(document, Decimal(amount).quantize(Decimal("0.01"), rounding=pricing.ROUND_HALF_UP),
-                                              reduced_residential=reduced) * 100)) for reduced in (False, True)]
+            "vat": [[str(int(pricing.with_vat(document, Decimal(amount), reduced_residential=reduced) * 100)) for reduced in (False, True)]
                     for amount in vat_amounts],
+            "annual": [str(int(pricing.annual_fee(document, *case) * 100)) for case in fee_cases],
             "crowns": [pricing._czk(Decimal(amount)).replace(" Kč", "").replace(" ", "") for amount in vat_amounts],
             "clamp": [5, 1, 0, 200, 2, 1, 0, 200, 1],
             "labels": ["21 %", "12,5 %"],
             "missing_month": "error",
+            # EN: Anything outside the exact integers stops the kernel instead of being rounded silently.
+            # CZ: Cokoli mimo přesná celá čísla jádro zastaví, místo aby se to potichu zaokrouhlilo.
+            "unsafe": ["RangeError"] * 8,
+            "half_up_exact": [str((2 ** 53 - 1 - 5000 + 5000) // 10000), "1", "0", "900719925474"],
         }
         script = (
             f"const P = {json.dumps(public)};\n" + self.kernel() +
             f"const feeCases = {json.dumps(fee_cases)}, packageCases = {json.dumps(package_cases)};\n"
-            f"const amounts = {json.dumps(vat_amounts)}, clampCases = {json.dumps(clamp_cases)};\n"
+            f"const amounts = {json.dumps(vat_hellers)}, clampCases = {json.dumps(clamp_cases)};\n"
             "const tariff = (code) => P.mrr_tariffs.find((t) => t.code === code);\n"
             "const pkg = (code) => P.turnkey_packages.find((t) => t.code === code);\n"
-            "const hellers = (text) => halfUp(scaled(text, 4), 100);\n"
+            "const hellers = (value) => value;\n"
+            "const kind = (run) => { try { run(); return 'ok'; } catch (e) { return e.name; } };\n"
+            "const big = 2 ** 53;\n"
+            "const unsafe = [() => safe(big), () => safe(1.5), () => safe(-1), () => safe('5'), () => withVat(big - 1, 2100),\n"
+            "  () => monthlyFee({base_monthly_per_object_hellers: big - 1, extra_entrance_monthly_hellers: 1}, 1, 1),\n"
+            "  () => packageRange(P, {price_from_hellers: 1, price_to_hellers: big / 2}, 200, 1), () => annualFee(big / 4)].map(kind);\n"
             "let missing = 'ok'; try { seasonalCoefficient({seasonal_coefficients: []}, 3); } catch (e) { missing = 'error'; }\n"
             "emit(JSON.stringify({\n"
             "  fees: feeCases.map(([c, o, e]) => String(monthlyFee(tariff(c), o, e))),\n"
             "  packages: packageCases.map(([c, q, m]) => packageRange(P, pkg(c), q, m).map(String)),\n"
-            "  vat: amounts.map((a) => [String(withVat(hellers(a), P.meta.vat_rates.standard_pct)),"
-            " String(withVat(hellers(a), P.meta.vat_rates.residential_reduced_pct))]),\n"
+            "  vat: amounts.map((a) => [String(withVat(hellers(a), P.meta.vat_rates.standard_bp)),"
+            " String(withVat(hellers(a), P.meta.vat_rates.residential_reduced_bp))]),\n"
+            "  annual: feeCases.map(([c, o, e]) => String(annualFee(monthlyFee(tariff(c), o, e)))),\n"
+            "  unsafe: unsafe,\n"
+            "  half_up_exact: [halfUp(big - 1 - 5000, 10000), halfUp(5000, 10000), halfUp(4999, 10000), halfUp(9007199254735000, 10000)].map(String),\n"
             "  crowns: amounts.map((a) => String(wholeCrowns(hellers(a)))),\n"
             "  clamp: clampCases.map(([raw, min, max]) => clampValue(raw, min, max)),\n"
             "  labels: [pctLabel(P.meta.vat_rates.standard_pct), pctLabel(P.meta.vat_rates.residential_reduced_pct)],\n"

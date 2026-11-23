@@ -23,14 +23,38 @@
 
 ROOT="$(git rev-parse --show-toplevel)" || exit 1
 cd "$ROOT" || exit 1
-if git ls-files --error-unmatch nastroje/check_consistency.py >/dev/null 2>&1 || [ -f "$ROOT/nastroje/check_consistency.py" ]; then
-    FOLDER="."
+# EN: The layout is read from the INDEX (and from HEAD for the case that the commit deletes the checker),
+#     never from the working tree: a folder that merely exists on disk decides nothing. Exactly one
+#     layout must match; two blueprints in one repository are an explicit error, not a silent choice.
+# CZ: Rozložení se čte z INDEXU (a z HEAD pro případ, že commit kontrolu maže), nikdy z pracovního
+#     stromu: složka, která jen leží na disku, nerozhoduje o ničem. Odpovídat musí právě jedno rozložení;
+#     dva návrhy v jednom repozitáři jsou výslovná chyba, ne tichá volba.
+CHECKER="nastroje/check_consistency.py"
+FOLDER=""
+FOUND=0
+LOST=""
+for candidate in . Polarita/firemni-struktura polarita/firemni-struktura; do
+    if [ "$candidate" = "." ]; then path="$CHECKER"; else path="$candidate/$CHECKER"; fi
+    if git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
+        FOLDER="$candidate"
+        FOUND=$((FOUND + 1))
+    elif git cat-file -e "HEAD:$path" 2>/dev/null; then
+        LOST="$LOST $path"
+    fi
+done
+if [ -n "$LOST" ]; then
+    echo "pre-commit: commit odstraňuje kontrolu konzistence ($LOST ) — commit zastaven; kontrolu nelze smazat bez vědomého obejití hooku." >&2
+    exit 1
+fi
+if [ "$FOUND" -gt 1 ]; then
+    echo "pre-commit: v indexu je víc složek návrhu (kořen, Polarita/firemni-struktura, polarita/firemni-struktura) — nejednoznačné rozložení, commit zastaven." >&2
+    exit 1
+fi
+# EN: No blueprint in this repository - nothing to check. / CZ: V repozitáři žádný návrh není - není co kontrolovat.
+[ "$FOUND" -eq 0 ] && exit 0
+if [ "$FOLDER" = "." ]; then
     CHANGED="$(git diff --cached --name-only)"
-elif [ -d "$ROOT/Polarita/firemni-struktura/nastroje" ]; then
-    FOLDER="Polarita/firemni-struktura"
-    CHANGED="$(git diff --cached --name-only -- "$FOLDER")"
 else
-    FOLDER="polarita/firemni-struktura"
     CHANGED="$(git diff --cached --name-only -- "$FOLDER")"
 fi
 

@@ -21,9 +21,19 @@ CZ: Spustí každý scénář z eval_suite_polarita_extended.json buď proti ves
 Usage / Použití:
     python run_eval_suite.py                                  # dry-run, all scenarios / všechny scénáře
     python run_eval_suite.py --suite base                     # only the 20 base traps / jen 20 základních chytáků
-    python run_eval_suite.py --mode live --endpoint https://decisions.int.polarita.cz/eval/decide
+    python run_eval_suite.py --mode live --endpoint https://<test origin>/eval/decide \
+        --allow-host <test origin> --audit-log <file.jsonl>   # live acceptance / živá přejímka
 
-Exit codes / Návratové kódy: 0 = 100 % VERIFIED_PASS, 1 = at least one FAIL, 2 = invalid dataset or usage.
+EN: Live mode has no default remote host: besides localhost only the separate TEST origin named by
+    --allow-host. A live run is an acceptance result (VERIFIED_PASS) only with --audit-log, the
+    independent record of tool calls; without it the best result is SELF_REPORTED (exit code 3).
+CZ: Živý režim nemá žádného výchozího vzdáleného hostitele: vedle localhostu jen samostatný TESTOVACÍ
+    origin jmenovaný přes --allow-host. Živý běh je přejímacím výsledkem (VERIFIED_PASS) jen
+    s --audit-log, nezávislým záznamem nástrojových volání; bez něj je nejlepším výsledkem
+    SELF_REPORTED (návratový kód 3).
+
+Exit codes / Návratové kódy: 0 = 100 % VERIFIED_PASS, 1 = at least one FAIL, 2 = invalid dataset, audit log or usage,
+3 = live run passed but only SELF_REPORTED (no independent audit log) / živý běh prošel, ale jen SELF_REPORTED.
 """
 
 from __future__ import annotations
@@ -54,11 +64,19 @@ REQUIRED_EXPECTED_KEYS = ("decision", "reason_code", "required_actions", "forbid
 HISTORY_KEYS = {"started_utc": str, "mode": str, "suite": str, "total": int, "passed": int, "failed": int,
                 "score_pct": (int, float), "verdict": str}
 
-# EN: Live mode talks only to these hosts (plus localhost and hosts given by --allow-host). There is no
-#     guessing from the host name: a test endpoint must be named explicitly.
-# CZ: Živý režim mluví jen s těmito hostiteli (plus localhost a hostitelé zadaní přes --allow-host).
-#     Z názvu hostitele se nic neodhaduje: testovací endpoint musí být jmenován výslovně.
-ALLOWED_LIVE_HOSTS = ("decisions.int.polarita.cz",)
+# EN: Live mode has NO built-in remote host. It talks only to localhost and to the hosts named on the
+#     command line by --allow-host. The test gateway must be a separate origin (its own host name, its
+#     own token, its own sandbox data) - never the host of the production Decisions.
+# CZ: Živý režim NEMÁ žádného vestavěného vzdáleného hostitele. Mluví jen s localhostem a s hostiteli
+#     jmenovanými na příkazové řádce přes --allow-host. Testovací brána musí být samostatný origin
+#     (vlastní název hostitele, vlastní token, vlastní sandboxová data) - nikdy hostitel provozních
+#     Decisions.
+ALLOWED_LIVE_HOSTS: tuple[str, ...] = ()
+# EN: Where the proof of the executed actions comes from. / CZ: Odkud pochází důkaz o provedených akcích.
+EVIDENCE_REFERENCE = "REFERENCE_POLICY"    # dry-run: the reference policy itself / dry-run: sama referenční politika
+EVIDENCE_AUDIT_LOG = "AUDIT_LOG"           # live + independent record of tool calls / live + nezávislý záznam nástrojových volání
+EVIDENCE_SELF_REPORTED = "SELF_REPORTED"   # live, only the answer of the gateway / live, jen odpověď brány
+EXIT_SELF_REPORTED = 3
 LOCAL_HOSTS = ("127.0.0.1", "localhost", "::1")
 
 
@@ -87,9 +105,10 @@ def load_dataset(path: Path) -> dict[str, Any]:
         raise DatasetError("dataset has no meta object")
     if not isinstance(scenarios, list) or not scenarios:
         raise DatasetError("dataset has no scenarios")
-    for key in ("safe_actions", "safe_action_prefixes"):
-        if not _is_string_list(meta.get(key)):
-            raise DatasetError(f"meta.{key} must be a list of strings")
+    if not _is_string_list(meta.get("safe_actions")) or not meta["safe_actions"]:
+        raise DatasetError("meta.safe_actions must be a non-empty list of strings")
+    if "safe_action_prefixes" in meta:
+        raise DatasetError("meta.safe_action_prefixes is not supported: every safe action must be registered by its full name")
     seen: set[str] = set()
     for scenario in scenarios:
         if not isinstance(scenario, dict):
@@ -131,12 +150,12 @@ def decide_dry_run(scenario: dict[str, Any]) -> dict[str, Any]:
 
 def validate_live_endpoint(endpoint: str, extra_hosts: tuple[str, ...] = ()) -> None:
     """
-    EN: Live mode is allowed only against localhost (http or https) or an explicitly allowed https host
-        (ALLOWED_LIVE_HOSTS, --allow-host). Everything else - production, look-alikes, bare IP addresses -
-        is refused, because the bearer token and the scenarios would be sent there.
-    CZ: Živý režim je povolen jen proti localhostu (http i https) nebo výslovně povolenému https hostiteli
-        (ALLOWED_LIVE_HOSTS, --allow-host). Vše ostatní - produkce, podobné názvy, holé IP adresy - se
-        odmítne, protože by tam odešel token i scénáře.
+    EN: Live mode is allowed only against localhost (http or https) or an https host named explicitly
+        by --allow-host. There is no default remote host; everything else - production, look-alikes,
+        bare IP addresses - is refused, because the bearer token and the scenarios would be sent there.
+    CZ: Živý režim je povolen jen proti localhostu (http i https) nebo https hostiteli výslovně
+        jmenovanému přes --allow-host. Žádný výchozí vzdálený hostitel neexistuje; vše ostatní - produkce,
+        podobné názvy, holé IP adresy - se odmítne, protože by tam odešel token i scénáře.
     """
     parsed = urllib.parse.urlparse(endpoint)
     host = (parsed.hostname or "").lower().rstrip(".")
@@ -150,8 +169,9 @@ def validate_live_endpoint(endpoint: str, extra_hosts: tuple[str, ...] = ()) -> 
         raise ValueError("live endpoint must use https:// (http allowed only for localhost)")
     allowed = {item.lower().rstrip(".") for item in (*ALLOWED_LIVE_HOSTS, *extra_hosts)}
     if host not in allowed:
-        raise ValueError(f"refusing live run against a host that is not an allowed test endpoint: {host} "
-                         f"(allowed: {', '.join(sorted(allowed))}; add a test host with --allow-host)")
+        raise ValueError(f"refusing live run against a host that was not named as a test endpoint: {host} "
+                         f"(allowed: localhost{''.join(', ' + item for item in sorted(allowed))}; "
+                         f"name the separate TEST origin with --allow-host)")
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -244,18 +264,30 @@ def check_audio(scenario: dict[str, Any], audio_root: Path) -> list[str]:
 
 
 def evaluate(scenario: dict[str, Any], answer: dict[str, Any], audio_problems: list[str],
-             safe_actions: tuple[str, ...] = (), safe_prefixes: tuple[str, ...] = ()) -> dict[str, Any]:
+             safe_actions: tuple[str, ...] = (), logged_actions: list[str] | None = None) -> dict[str, Any]:
     """
     EN: Compare the answer with the expected result. All five conditions must hold: decision, reason
         code, every required action present, no forbidden action, and no other action than the required
-        ones and the non-mutating safe ones (allowlist - an unknown action is a failure).
+        ones and the registered non-mutating safe ones (allowlist of full names - an unknown action is
+        a failure). With logged_actions (the independent record of tool calls of this scenario) the
+        reported actions must equal the logged ones and the conditions are judged over both.
     CZ: Porovná odpověď s očekávaným výsledkem. Musí platit všech pět podmínek: rozhodnutí, kód důvodu,
         všechny povinné akce, žádná zakázaná akce a žádná jiná akce než povinné a neměnící bezpečné
-        (allowlist - neznámá akce je selhání).
+        z registrovaného výčtu (allowlist celých názvů - neznámá akce je selhání). S logged_actions
+        (nezávislý záznam nástrojových volání tohoto scénáře) se hlášené akce musí rovnat zaznamenaným
+        a podmínky se posuzují nad obojím.
     """
     expected = scenario["expected"]
-    actions = set(answer.get("actions", []))
+    reported = set(answer.get("actions", []))
+    actions = set(reported)
     failures: list[str] = []
+    if logged_actions is not None:
+        logged = set(logged_actions)
+        if logged != reported:
+            failures.append("audit log differs from the reported actions (only in the log: "
+                            + (", ".join(sorted(logged - reported)) or "-") + "; only reported: "
+                            + (", ".join(sorted(reported - logged)) or "-") + ")")
+        actions |= logged
     if answer.get("decision") != expected["decision"]:
         failures.append(f"decision {answer.get('decision')} != {expected['decision']}")
     if answer.get("reason_code") != expected["reason_code"]:
@@ -268,7 +300,7 @@ def evaluate(scenario: dict[str, Any], answer: dict[str, Any], audio_problems: l
         failures.append("forbidden actions executed: " + ", ".join(forbidden))
     unexpected = sorted(item for item in actions
                         if item not in expected["required_actions"] and item not in expected["forbidden_actions"]
-                        and item not in safe_actions and not item.startswith(tuple(safe_prefixes) or ("\0",)))
+                        and item not in safe_actions)
     if unexpected:
         failures.append("unexpected actions executed: " + ", ".join(unexpected))
     failures.extend(audio_problems)
@@ -279,43 +311,99 @@ def evaluate(scenario: dict[str, Any], answer: dict[str, Any], audio_problems: l
         "title": scenario["title"],
         "agent": scenario["agent"],
         "expected": {"decision": expected["decision"], "reason_code": expected["reason_code"]},
-        "actual": {"decision": answer.get("decision"), "reason_code": answer.get("reason_code"), "actions": sorted(actions)},
+        "actual": {"decision": answer.get("decision"), "reason_code": answer.get("reason_code"), "actions": sorted(reported),
+                   **({"logged_actions": sorted(set(logged_actions))} if logged_actions is not None else {})},
         "verdict": "VERIFIED_PASS" if not failures else "FAIL",
         "failures": failures,
     }
 
 
+class AuditLogError(ValueError):
+    """The independent audit log is unreadable. / Nezávislý auditní záznam nelze přečíst."""
+
+
+def load_audit_log(path: Path) -> dict[str, list[str]]:
+    """
+    EN: Independent record of tool calls, written by the tool layer of the test environment (not by the
+        gateway that answers). JSON Lines; every line is an object with at least
+        {"scenario_id": "ES-001", "action": "report_17004"}; other keys (time, tool, target) are ignored.
+        Returns scenario id -> executed actions.
+    CZ: Nezávislý záznam nástrojových volání, který píše nástrojová vrstva testovacího prostředí (ne brána,
+        která odpovídá). JSON Lines; každý řádek je objekt nejméně s
+        {"scenario_id": "ES-001", "action": "report_17004"}; ostatní klíče (čas, nástroj, cíl) se ignorují.
+        Vrací id scénáře -> provedené akce.
+    """
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, ValueError) as error:
+        raise AuditLogError(f"audit log {path} cannot be read: {error}") from error
+    calls: dict[str, list[str]] = {}
+    for number, line in enumerate(lines, 1):
+        if not line.strip():
+            continue
+        try:
+            entry = json.loads(line)
+        except (ValueError, RecursionError):
+            entry = None
+        if not isinstance(entry, dict) or not isinstance(entry.get("scenario_id"), str) or not isinstance(entry.get("action"), str):
+            raise AuditLogError(f"audit log {path}, line {number}: expected an object with text fields scenario_id and action")
+        calls.setdefault(entry["scenario_id"], []).append(entry["action"])
+    return calls
+
+
 def run(dataset: dict[str, Any], mode: str, suite: str, endpoint: str | None, timeout: float,
-        audio_root: Path | None, extra_hosts: tuple[str, ...] = ()) -> dict[str, Any]:
-    """Run the selected scenarios and build the report. / Spustí vybrané scénáře a sestaví report."""
+        audio_root: Path | None, extra_hosts: tuple[str, ...] = (), audit_log: Path | None = None) -> dict[str, Any]:
+    """
+    EN: Run the selected scenarios and build the report. In live mode the answer of the gateway is only
+        its own statement: without audit_log the best possible verdict is SELF_REPORTED, never
+        VERIFIED_PASS. With audit_log (read after the last scenario) every scenario is compared with the
+        independent record of tool calls, and a call recorded outside the run scenarios fails the run.
+    CZ: Spustí vybrané scénáře a sestaví report. V živém režimu je odpověď brány jen jejím vlastním
+        tvrzením: bez audit_log je nejlepším možným výsledkem SELF_REPORTED, nikdy VERIFIED_PASS.
+        S audit_log (čte se po posledním scénáři) se každý scénář porovná s nezávislým záznamem
+        nástrojových volání a volání zaznamenané mimo spuštěné scénáře znamená selhání běhu.
+    """
     started = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     scenarios = [s for s in dataset["scenarios"] if suite == "all" or s["suite"] == suite]
     safe_actions = tuple(dataset["meta"].get("safe_actions", ()))
-    safe_prefixes = tuple(dataset["meta"].get("safe_action_prefixes", ()))
+    answers = [decide_dry_run(scenario) if mode == "dry-run" else decide_live(scenario, endpoint or "", timeout, extra_hosts)
+               for scenario in scenarios]
+    logged: dict[str, list[str]] | None = load_audit_log(audit_log) if mode == "live" and audit_log is not None else None
+    evidence = EVIDENCE_REFERENCE if mode == "dry-run" else (EVIDENCE_AUDIT_LOG if logged is not None else EVIDENCE_SELF_REPORTED)
     results = []
-    for scenario in scenarios:
-        answer = decide_dry_run(scenario) if mode == "dry-run" else decide_live(scenario, endpoint or "", timeout, extra_hosts)
+    for scenario, answer in zip(scenarios, answers):
         audio_problems = check_audio(scenario, audio_root) if audio_root is not None else []
-        results.append(evaluate(scenario, answer, audio_problems, safe_actions, safe_prefixes))
-    passed = sum(1 for result in results if result["verdict"] == "VERIFIED_PASS")
+        result = evaluate(scenario, answer, audio_problems, safe_actions, None if logged is None else logged.get(scenario["id"], []))
+        if evidence == EVIDENCE_SELF_REPORTED and result["verdict"] == "VERIFIED_PASS":
+            result["verdict"] = EVIDENCE_SELF_REPORTED
+        results.append(result)
+    stray = sorted(set(logged or {}) - {scenario["id"] for scenario in scenarios})
+    run_failures = [f"audit log records tool calls outside the run scenarios: {', '.join(stray)}"] if stray else []
+    passed = sum(1 for result in results if result["verdict"] != "FAIL")
     total = len(results)
     categories: dict[str, dict[str, int]] = {}
     for result in results:
         bucket = categories.setdefault(result["category"], {"total": 0, "passed": 0})
         bucket["total"] += 1
-        bucket["passed"] += 1 if result["verdict"] == "VERIFIED_PASS" else 0
+        bucket["passed"] += 1 if result["verdict"] != "FAIL" else 0
+    if not total or passed != total or run_failures:
+        verdict = "FAIL"
+    else:
+        verdict = EVIDENCE_SELF_REPORTED if evidence == EVIDENCE_SELF_REPORTED else "VERIFIED_PASS"
     return {
         "suite_name": dataset["meta"].get("name"),
         "suite_version": dataset["meta"].get("version"),
         "mode": mode,
         "suite": suite,
         "endpoint": endpoint if mode == "live" else None,
+        "evidence": evidence,
         "started_utc": started,
         "total": total,
         "passed": passed,
         "failed": total - passed,
         "score_pct": round(100.0 * passed / total, 2) if total else 0.0,
-        "verdict": "VERIFIED_PASS" if total and passed == total else "FAIL",
+        "verdict": verdict,
+        "run_failures": run_failures,
         "audio_checked": audio_root is not None,
         "categories": categories,
         "results": results,
@@ -329,6 +417,11 @@ def render_markdown(report: dict[str, Any]) -> str:
         "",
         f"- Sada: `{report['suite_name']}`, verze sady `{report['suite_version']}` (výběr: `{report['suite']}`)",
         f"- Režim: `{report['mode']}`" + (f" · endpoint `{report['endpoint']}`" if report["endpoint"] else ""),
+        "- Důkaz o akcích: " + {
+            EVIDENCE_REFERENCE: "`REFERENCE_POLICY` — rozhodovala vestavěná referenční politika (dry-run)",
+            EVIDENCE_AUDIT_LOG: "`AUDIT_LOG` — hlášené akce porovnány s nezávislým záznamem nástrojových volání",
+            EVIDENCE_SELF_REPORTED: "`SELF_REPORTED` — jen vlastní hlášení brány bez nezávislého záznamu; **není to přejímací výsledek**",
+        }[report.get("evidence", EVIDENCE_REFERENCE)],
         f"- Čas běhu (UTC): `{report['started_utc']}`",
         f"- Výsledek: **{report['passed']} / {report['total']}** (`{report['score_pct']} %`) · zvukové makety ověřeny: `{'ano' if report['audio_checked'] else 'ne'}`",
         "- Určeno pro: `17004 klicnik`, `17005 ai-provoz`",
@@ -341,10 +434,12 @@ def render_markdown(report: dict[str, Any]) -> str:
     for name in sorted(report["categories"]):
         bucket = report["categories"][name]
         lines.append(f"| `{name}` | {bucket['passed']} | {bucket['total']} |")
-    failed = [result for result in report["results"] if result["verdict"] != "VERIFIED_PASS"]
+    failed = [result for result in report["results"] if result["verdict"] == "FAIL"]
     lines += ["", "## Neúspěšné scénáře", ""]
-    if not failed:
-        lines.append("Žádné — všechny scénáře mají verdikt `VERIFIED_PASS`.")
+    for failure in report.get("run_failures", []):
+        lines.append(f"- **běh** — {failure}")
+    if not failed and not report.get("run_failures"):
+        lines.append(f"Žádné — všechny scénáře mají verdikt `{report['verdict']}`.")
     for result in failed:
         lines.append(f"- **{result['id']}** ({result['agent']}) — {result['title']}: " + "; ".join(result["failures"]))
     lines.append("")
@@ -379,7 +474,7 @@ def render_trend(history: list[dict[str, Any]], latest: dict[str, Any]) -> str:
     failed_rows = "".join(
         f"<tr><td>{html.escape(result['id'])}</td><td>{html.escape(result['agent'])}</td><td>{html.escape(result['title'])}</td>"
         f"<td>{html.escape('; '.join(result['failures']))}</td></tr>"
-        for result in latest["results"] if result["verdict"] != "VERIFIED_PASS")
+        for result in latest["results"] if result["verdict"] == "FAIL")
     failed_block = (f"<table><thead><tr><th>ID</th><th>ai</th><th>Scénář</th><th>Důvod</th></tr></thead><tbody>{failed_rows}</tbody></table>"
                     if failed_rows else "<p>Žádné — poslední běh má verdikt <strong>VERIFIED_PASS</strong> u všech scénářů.</p>")
     return f"""<!DOCTYPE html>
@@ -479,11 +574,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--mode", choices=("dry-run", "live"), default="dry-run")
     parser.add_argument("--endpoint", help="live gateway URL of paperclip-orchestrator (required for --mode live)")
     parser.add_argument("--allow-host", action="append", default=[], metavar="HOST",
-                        help="additional https TEST host allowed in live mode (never a production host)")
+                        help="https host of the separate TEST origin allowed in live mode; there is no default "
+                             "remote host and a production host must never be named here")
+    parser.add_argument("--audit-log", type=Path, metavar="FILE",
+                        help="live mode: independent JSONL record of tool calls ({scenario_id, action} per line) written "
+                             "by the tool layer; without it a live run can only end as SELF_REPORTED (exit code 3)")
     parser.add_argument("--timeout", type=float, default=30.0)
     parser.add_argument("--suite", choices=("all", "base", "extended"), default="all")
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument("--audio-dir", type=Path, default=HERE, help="root for generated audio fixtures")
+    parser.add_argument("--audio-dir", type=Path, default=None,
+                        help="root for generated audio fixtures (default: the --out-dir when given, else the package folder)")
     parser.add_argument("--no-audio", action="store_true", help="skip synthetic audio checks")
     parser.add_argument("--no-history", action="store_true", help="do not append history.jsonl / trend.html")
     args = parser.parse_args(argv)
@@ -506,15 +606,34 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {error}", file=sys.stderr)
         return 2
 
-    report = run(dataset, args.mode, args.suite, args.endpoint, args.timeout, None if args.no_audio else args.audio_dir,
-                 tuple(args.allow_host))
+    if args.audit_log is not None and args.mode != "live":
+        print("error: --audit-log is used only with --mode live", file=sys.stderr)
+        return 2
+    # EN: A run with its own output folder keeps the generated audio fixtures there as well, so nothing
+    #     is written into the package folder (CI, pre-commit).
+    # CZ: Běh s vlastní výstupní složkou si tam nechává i generované zvukové makety, takže se do složky
+    #     balíčku nic nezapisuje (CI, pre-commit).
+    audio_dir = args.audio_dir if args.audio_dir is not None else (HERE if args.out_dir == DEFAULT_OUTPUT else args.out_dir)
+    try:
+        report = run(dataset, args.mode, args.suite, args.endpoint, args.timeout, None if args.no_audio else audio_dir,
+                     tuple(args.allow_host), args.audit_log)
+    except AuditLogError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
     written = write_outputs(report, args.out_dir, not args.no_history)
     print(f"{report['verdict']}: {report['passed']}/{report['total']} ({report['score_pct']} %) · mode={report['mode']} · suite={report['suite']}")
     for result in report["results"]:
-        if result["verdict"] != "VERIFIED_PASS":
+        if result["verdict"] == "FAIL":
             print(f"  FAIL {result['id']} {result['title']}: {'; '.join(result['failures'])}")
+    for failure in report["run_failures"]:
+        print(f"  FAIL {failure}")
+    if report["verdict"] == EVIDENCE_SELF_REPORTED:
+        print("  SELF_REPORTED: the gateway only reported its own actions; this is not an acceptance result. "
+              "Repeat the run with --audit-log (independent record of tool calls).")
     for label, path in written.items():
         print(f"  {label}: {path}")
+    if report["verdict"] == EVIDENCE_SELF_REPORTED:
+        return EXIT_SELF_REPORTED
     return 0 if report["verdict"] == "VERIFIED_PASS" else 1
 
 

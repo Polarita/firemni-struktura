@@ -25,7 +25,8 @@ import argparse
 import json
 import re
 import sys
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from datetime import date
+from decimal import ROUND_FLOOR, ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +38,22 @@ OVERVIEW_PATH = HERE / "prehled-cen.md"
 
 CENT = Decimal("0.01")
 
+# EN: Domain bounds of the price list. They are applied BEFORE any rounding, so an absurd value ends as
+#     a PricingError naming the field, and they keep every intermediate result of the public page (whole
+#     hellers in JavaScript) inside the exactly representable integers - see _check_public_arithmetic.
+# CZ: Doménové meze ceníku. Uplatňují se PŘED jakýmkoli zaokrouhlením, takže nesmyslná hodnota skončí
+#     jako PricingError se jménem pole, a drží každý mezivýsledek veřejné stránky (celé haléře
+#     v JavaScriptu) uvnitř přesně zobrazitelných celých čísel - viz _check_public_arithmetic.
+MAX_AMOUNT = Decimal("100000000")        # CZK per item / Kč za položku
+MAX_COEFFICIENT = Decimal("10")
+MAX_MARKUP_PCT = Decimal("1000")
+MAX_SAFE_INTEGER = 2 ** 53 - 1           # Number.MAX_SAFE_INTEGER of JavaScript
+# EN: Largest multipliers the public page may use (the "max" of its number fields must not exceed them).
+# CZ: Největší násobitele, které smí veřejná stránka použít ("max" jejích číselných polí je nesmí překročit).
+PUBLIC_MAX_OBJECTS = 200
+PUBLIC_MAX_ENTRANCES = 500
+PUBLIC_MAX_QUANTITY = 200
+
 
 class PricingError(ValueError):
     """Invalid pricing input. / Neplatný vstup cenového výpočtu."""
@@ -47,21 +64,39 @@ def _dec(value: Any) -> Decimal:
     return Decimal(str(value))
 
 
-def _number(value: Any, name: str, *, minimum: Decimal | int = 0, maximum: Decimal | int | None = None,
+def _number(value: Any, name: str, *, minimum: Decimal | int = 0, maximum: Decimal | int = MAX_AMOUNT,
             positive: bool = False, places: int = 2) -> Decimal:
-    """Validate one number of the price list. / Zvaliduje jedno číslo ceníku."""
+    """
+    EN: Validate one number of the price list. The bounds are checked first; only a value inside them
+        is compared with its rounded form, so no input can raise anything else than PricingError.
+    CZ: Zvaliduje jedno číslo ceníku. Nejdřív se kontrolují meze; teprve hodnota uvnitř nich se porovnává
+        se svým zaokrouhleným tvarem, takže žádný vstup nevyvolá nic jiného než PricingError.
+    """
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise PricingError(f"price list: {name} must be a number")
     try:
         dec = Decimal(str(value))
-    except InvalidOperation as exc:
+    except (InvalidOperation, ValueError) as exc:
         raise PricingError(f"price list: {name} must be a number") from exc
-    if not dec.is_finite() or dec < minimum or (positive and dec <= 0) or (maximum is not None and dec > maximum):
-        upper = "" if maximum is None else f" and <= {maximum}"
-        raise PricingError(f"price list: {name} must be {'> 0' if positive else '>= ' + str(minimum)}{upper}")
-    if dec != dec.quantize(Decimal(1).scaleb(-places)):
+    if not dec.is_finite() or dec < minimum or (positive and dec <= 0) or dec > maximum:
+        raise PricingError(f"price list: {name} must be {'> 0' if positive else '>= ' + str(minimum)} and <= {maximum}")
+    try:
+        exact = dec == dec.quantize(Decimal(1).scaleb(-places))
+    except InvalidOperation:
+        exact = False
+    if not exact:
         raise PricingError(f"price list: {name} may have at most {places} decimal places")
     return dec
+
+
+def _calendar_date(value: Any, name: str) -> date:
+    """A real calendar date YYYY-MM-DD. / Skutečné kalendářní datum RRRR-MM-DD."""
+    if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        raise PricingError(f"price list: {name} must be a date YYYY-MM-DD")
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise PricingError(f"price list: {name} is not an existing calendar date") from exc
 
 
 def _text(value: Any, name: str) -> str:
@@ -106,11 +141,13 @@ def validate_price_list(price_list: Any) -> dict[str, Any]:
     if meta["approved"]:
         if meta["status"] != "SCHVALENO_1001" or meta.get("approved_by") != "1001":
             raise PricingError("price list: an approved price list must have status SCHVALENO_1001 and approved_by 1001")
-        for key in ("approved_on", "valid_from"):
-            if not isinstance(meta.get(key), str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", meta[key]):
-                raise PricingError(f"price list: meta.{key} must be a date YYYY-MM-DD")
-    elif meta["status"] != "NAVRH_KE_SCHVALENI_1001" or meta.get("approved_by") is not None or meta.get("valid_from") is not None:
-        raise PricingError("price list: a proposal must have status NAVRH_KE_SCHVALENI_1001 and no approver or validity date")
+        # EN: Real calendar dates in the right order: a price list cannot take effect before it was approved.
+        # CZ: Skutečná kalendářní data ve správném pořadí: ceník nemůže nabýt účinnosti dřív, než byl schválen.
+        if _calendar_date(meta.get("approved_on"), "meta.approved_on") > _calendar_date(meta.get("valid_from"), "meta.valid_from"):
+            raise PricingError("price list: meta.valid_from must not be earlier than meta.approved_on")
+    elif (meta["status"] != "NAVRH_KE_SCHVALENI_1001" or meta.get("approved_by") is not None or meta.get("valid_from") is not None
+          or meta.get("approved_on") is not None):
+        raise PricingError("price list: a proposal must have status NAVRH_KE_SCHVALENI_1001 and no approver, approval date or validity date")
     vat = _mapping(meta.get("vat_rates"), "meta.vat_rates")
     for key in ("standard_pct", "residential_reduced_pct"):
         _number(vat.get(key), f"meta.vat_rates.{key}", maximum=100)
@@ -145,7 +182,7 @@ def validate_price_list(price_list: Any) -> dict[str, Any]:
         _text(_mapping(entry, f"hourly_rates[{role}]").get("label"), f"hourly_rates[{role}].label")
         _number(entry.get("rate"), f"hourly_rates[{role}].rate", positive=True)
 
-    _number(root.get("material_markup_pct"), "material_markup_pct")
+    _number(root.get("material_markup_pct"), "material_markup_pct", maximum=MAX_MARKUP_PCT)
     _number(root.get("minimum_contribution_margin_pct"), "minimum_contribution_margin_pct", maximum=100)
     retention = _mapping(root.get("retention_pct"), "retention_pct")
     if _number(retention.get("min"), "retention_pct.min", maximum=100) > _number(retention.get("max"), "retention_pct.max", maximum=100):
@@ -167,7 +204,7 @@ def validate_price_list(price_list: Any) -> dict[str, Any]:
     for band in _items(root.get("seasonal_coefficients"), "seasonal_coefficients"):
         band = _mapping(band, "seasonal_coefficients")
         _text(band.get("label"), "seasonal_coefficients.label")
-        _number(band.get("coefficient"), "seasonal_coefficients.coefficient", positive=True, places=4)
+        _number(band.get("coefficient"), "seasonal_coefficients.coefficient", positive=True, places=4, maximum=MAX_COEFFICIENT)
         for month in _items(band.get("months"), "seasonal_coefficients.months"):
             if isinstance(month, bool) or not isinstance(month, int):
                 raise PricingError("price list: seasonal_coefficients.months must be integers")
@@ -175,7 +212,36 @@ def validate_price_list(price_list: Any) -> dict[str, Any]:
     if sorted(months) != list(range(1, 13)):
         raise PricingError("price list: seasonal_coefficients must cover every month 1-12 exactly once")
     _text(root.get("indexation"), "indexation")
+    _check_public_arithmetic(root)
     return root
+
+
+def _hellers(value: Any) -> int:
+    """Whole hellers of a validated amount. / Celé haléře zvalidované částky."""
+    return int(_dec(value) * 100)
+
+
+def _check_public_arithmetic(root: dict[str, Any]) -> None:
+    """
+    EN: The public page computes in whole hellers with JavaScript numbers, which are exact only up to
+        2^53 - 1. Take the worst case the page can reach (largest multipliers, highest coefficient,
+        every package chosen, highest VAT rate) and refuse a price list whose intermediate result
+        would leave that range - the page then never has to round an amount it cannot represent.
+    CZ: Veřejná stránka počítá v celých haléřích čísly JavaScriptu, která jsou přesná jen do 2^53 - 1.
+        Vezme se nejhorší případ, kterého stránka může dosáhnout (největší násobitele, nejvyšší
+        koeficient, všechny balíčky vybrané, nejvyšší sazba DPH), a ceník, jehož mezivýsledek by ten
+        rozsah opustil, se odmítne - stránka pak nikdy nezaokrouhluje částku, kterou neumí zobrazit.
+    """
+    vat = max(int(_dec(pct) * 100) for pct in root["meta"]["vat_rates"].values()) + 10000
+    coefficient = max(int(_dec(band["coefficient"]) * 10000) for band in root["seasonal_coefficients"])
+    fee = max(_hellers(t["base_monthly_per_object"]) * PUBLIC_MAX_OBJECTS + _hellers(t["extra_entrance_monthly"]) * PUBLIC_MAX_ENTRANCES
+              for t in root["mrr_tariffs"])
+    scaled_packages = [_hellers(p["price_to"]) * PUBLIC_MAX_QUANTITY * coefficient for p in root["turnkey_packages"]]
+    packages = sum(-(-value // 10000) for value in scaled_packages)
+    worst = max(fee * 12, fee * vat + 5000, max(scaled_packages) + 5000, packages * vat + 5000)
+    if worst > MAX_SAFE_INTEGER:
+        raise PricingError("price list: amounts are too large for the exact arithmetic of the public configurator "
+                           "(an intermediate result in hellers would exceed 2^53 - 1)")
 
 
 def load_price_list(path: Path | None = None) -> dict[str, Any]:
@@ -188,14 +254,27 @@ def load_price_list(path: Path | None = None) -> dict[str, Any]:
     return validate_price_list(document)
 
 
-def require_approved(price_list: dict[str, Any]) -> None:
+def require_approved(price_list: dict[str, Any], offer_date: date | None = None) -> None:
     """
-    EN: A binding offer may be based only on a price list approved by 1001.
-    CZ: Závazná nabídka smí vycházet jen z ceníku schváleného jednatelem 1001.
+    EN: A binding offer may be based only on a price list approved by 1001 that is already in effect on
+        the day of the offer (today when no date is given): approved and not yet valid is not enough.
+    CZ: Závazná nabídka smí vycházet jen z ceníku schváleného jednatelem 1001, který je ke dni nabídky
+        (dnes, když datum není zadáno) už účinný: schválený, ale dosud neplatný ceník nestačí.
     """
     meta = price_list.get("meta", {})
     if meta.get("approved") is not True or meta.get("approved_by") != "1001":
         raise PricingError("price list is not approved by 1001 - no binding offer may be based on it")
+    if offer_date is None:
+        offer_date = date.today()
+    elif not isinstance(offer_date, date):
+        raise PricingError("offer_date must be a calendar date")
+    approved_on = _calendar_date(meta.get("approved_on"), "meta.approved_on")
+    valid_from = _calendar_date(meta.get("valid_from"), "meta.valid_from")
+    if approved_on > valid_from:
+        raise PricingError("price list: meta.valid_from must not be earlier than meta.approved_on")
+    if offer_date < valid_from:
+        raise PricingError(f"price list is approved but takes effect only on {valid_from.isoformat()} - "
+                           f"no binding offer dated {offer_date.isoformat()} may be based on it")
 
 
 def _money(value: Decimal) -> Decimal:
@@ -306,13 +385,16 @@ def margin_check(price_list: dict[str, Any], price_without_vat: Decimal | int | 
     if price <= 0:
         raise PricingError("price must be > 0")
     raw_margin_pct = (price - costs) / price * 100
-    margin_pct = raw_margin_pct.quantize(CENT, rounding=ROUND_HALF_UP)
+    # EN: Shown rounded DOWN, so a margin below the minimum can never be displayed as reaching it.
+    # CZ: Zobrazuje se zaokrouhlená DOLŮ, takže marže pod minimem se nikdy nezobrazí, jako by ho dosáhla.
+    margin_pct = raw_margin_pct.quantize(CENT, rounding=ROUND_FLOOR)
     minimum = _dec(price_list["minimum_contribution_margin_pct"])
     return {"contribution_margin_pct": margin_pct, "minimum_pct": minimum, "hard_stop": raw_margin_pct < minimum}
 
 
 def offer_margin_check(price_list: dict[str, Any], labour_without_vat: Decimal | int | float,
-                       material_without_vat: Decimal | int | float, direct_costs: Decimal | int | float) -> dict[str, Any]:
+                       material_without_vat: Decimal | int | float, direct_costs: Decimal | int | float,
+                       offer_date: date | None = None) -> dict[str, Any]:
     """
     EN: Hard-Stop of a binding offer, evaluated for the whole offer: price = labour + material, costs =
         all direct costs of both. The material markup alone is below the minimum margin by design, so
@@ -324,14 +406,23 @@ def offer_margin_check(price_list: dict[str, Any], labour_without_vat: Decimal |
         po řádcích by zastavila každou nabídku; čistě materiálová dodávka se touto maticí nenaceňuje
         vůbec (jde přes ceník e-shopu). Neschválený ceník odmítne. Klíč „hard_stop“ je hodnota
         below_minimum_margin pro pojistku MARGIN_HARD_STOP.
+    EN: The margin is judged over exactly the amounts that go into the offer: both lines rounded to
+        hellers and their sum, which is also returned as price_without_vat. The price list must be in
+        effect on offer_date (today when not given).
+    CZ: Marže se posuzuje nad přesně těmi částkami, které jdou do nabídky: oba řádky zaokrouhlené na
+        haléře a jejich součet, který se také vrací jako price_without_vat. Ceník musí být ke dni
+        offer_date (dnes, není-li zadán) účinný.
     """
-    require_approved(price_list)
+    require_approved(price_list, offer_date)
     labour = _require_nonneg_decimal(labour_without_vat, "labour_without_vat")
     material = _require_nonneg_decimal(material_without_vat, "material_without_vat")
     if labour <= 0:
         raise PricingError("an offer without labour is a pure material delivery - it is priced by the e-shop price list, not by this matrix")
-    result = margin_check(price_list, labour + material, direct_costs)
-    result["price_without_vat"] = _money(labour + material)
+    price = _money(labour) + _money(material)
+    if price <= 0:
+        raise PricingError("the offer price rounds to zero")
+    result = margin_check(price_list, price, direct_costs)
+    result["price_without_vat"] = price
     return result
 
 
@@ -370,10 +461,15 @@ def with_vat(price_list: dict[str, Any], net_amount: Decimal | int | float, *, r
 PUBLIC_META_KEYS = ("name", "version", "status", "approved", "approved_by", "approved_on", "valid_from", "currency",
                     "prices_exclude_vat")
 PUBLIC_VAT_KEYS = ("standard_pct", "residential_reduced_pct")
-PUBLIC_TARIFF_KEYS = ("code", "label", "audience", "base_monthly_per_object", "extra_entrance_monthly", "sla_response",
-                      "labour_discount_pct", "includes")
-PUBLIC_PACKAGE_KEYS = ("code", "label", "unit", "price_from", "price_to", "includes")
-PUBLIC_SEASON_KEYS = ("months", "coefficient", "label")
+PUBLIC_TARIFF_KEYS = ("code", "label", "audience", "sla_response", "labour_discount_pct", "includes")
+PUBLIC_PACKAGE_KEYS = ("code", "label", "unit", "includes")
+PUBLIC_SEASON_KEYS = ("months", "label")
+# EN: Amounts leave Python already as integers: "<field>_hellers" (CZK x 100), "coefficient_e4"
+#     (coefficient x 10 000) and "<rate>_bp" (per cent x 100). The page never parses a decimal number.
+# CZ: Částky opouštějí Python už jako celá čísla: "<pole>_hellers" (Kč x 100), "coefficient_e4"
+#     (koeficient x 10 000) a "<sazba>_bp" (procenta x 100). Stránka nikdy nepřevádí desetinné číslo.
+PUBLIC_TARIFF_AMOUNTS = ("base_monthly_per_object", "extra_entrance_monthly")
+PUBLIC_PACKAGE_AMOUNTS = ("price_from", "price_to")
 
 
 def public_price_list(price_list: dict[str, Any]) -> dict[str, Any]:
@@ -388,13 +484,18 @@ def public_price_list(price_list: dict[str, Any]) -> dict[str, Any]:
     def pick(entry: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Any]:
         return {key: (list(entry[key]) if isinstance(entry[key], list) else entry[key]) for key in keys}
 
+    def amounts(entry: dict[str, Any], keys: tuple[str, ...], amount_keys: tuple[str, ...]) -> dict[str, Any]:
+        return {**pick(entry, keys), **{f"{key}_hellers": _hellers(entry[key]) for key in amount_keys}}
+
     meta = pick(price_list["meta"], PUBLIC_META_KEYS)
-    meta["vat_rates"] = pick(price_list["meta"]["vat_rates"], PUBLIC_VAT_KEYS)
+    vat = price_list["meta"]["vat_rates"]
+    meta["vat_rates"] = {**pick(vat, PUBLIC_VAT_KEYS), **{key[:-3] + "bp": int(_dec(vat[key]) * 100) for key in PUBLIC_VAT_KEYS}}
     return {
         "meta": meta,
-        "mrr_tariffs": [pick(item, PUBLIC_TARIFF_KEYS) for item in price_list["mrr_tariffs"]],
-        "turnkey_packages": [pick(item, PUBLIC_PACKAGE_KEYS) for item in price_list["turnkey_packages"]],
-        "seasonal_coefficients": [pick(item, PUBLIC_SEASON_KEYS) for item in price_list["seasonal_coefficients"]],
+        "mrr_tariffs": [amounts(item, PUBLIC_TARIFF_KEYS, PUBLIC_TARIFF_AMOUNTS) for item in price_list["mrr_tariffs"]],
+        "turnkey_packages": [amounts(item, PUBLIC_PACKAGE_KEYS, PUBLIC_PACKAGE_AMOUNTS) for item in price_list["turnkey_packages"]],
+        "seasonal_coefficients": [{**pick(item, PUBLIC_SEASON_KEYS), "coefficient_e4": int(_dec(item["coefficient"]) * 10000)}
+                                  for item in price_list["seasonal_coefficients"]],
         "indexation": str(price_list["indexation"]),
     }
 
@@ -490,7 +591,7 @@ def main(argv: list[str] | None = None) -> int:
                 print("written", path.name)
         if args.overview or not args.build:
             print(render_overview(price_list))
-    except (PricingError, OSError) as error:
+    except (PricingError, OSError, ArithmeticError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     return 0

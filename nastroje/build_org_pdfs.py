@@ -518,7 +518,7 @@ def build_poster_html() -> str:
       <div class="u-eyebrow">ČISTÝ FYZICKÝ SERVER · UBUNTU LTS · CELÁ FIRMA V INCUS · 6+9 PG DB + PGBOUNCER</div>
       <div class="u-title">Server <code>polarita-hq</code> · Kořen <code>/srv/polarita/</code> · Acyklické Bloky 0–12</div>
       <ul class="u-list">
-        <li>4 zóny: <code>dmz_edge</code> (Caddy + <code>3478/udp</code> + MX <code>25/tcp</code>, <code>0</code> SIP) · <code>app_internal</code> (storefronty + <code>Asterisk</code>, <code>Zulip</code>, <code>Chatwoot /app/*</code> za <code>oauth2-proxy</code>) · <code>data_vault</code> (<code>6+9 PG DB + PgBouncer</code> + OpenBao) · <code>sandbox_airgap (eth0 none)</code></li>
+        <li>4 zóny: <code>dmz_edge</code> (Caddy + <code>3478/udp</code> + MX <code>25/tcp</code>, <code>0</code> SIP) · <code>app_internal</code> (storefronty + <code>Asterisk</code>, <code>Zulip</code>, <code>Chatwoot</code> (veřejně jen widget a webhooky kanálů, vše ostatní za VPN + <code>oauth2-proxy</code>)) · <code>data_vault</code> (<code>6+9 PG DB + PgBouncer</code> + OpenBao) · <code>sandbox_airgap (eth0 none)</code></li>
         <li><code>Headscale VPN</code> · <code>Clean Room</code> (0 HR karet ve Vaultu) + <code>Kanál R FAIL_CLOSED</code> · <code>Restic REST Server (--append-only)</code> + watchdog (nedělní + čtvrtletní Full DR Drill)</li>
       </ul>
     </div>
@@ -737,7 +737,7 @@ def build_poster_html() -> str:
             <span class="pill-grp"><span class="mtag ai">ai</span><span class="mtag id">spravce-site</span><span class="mtag usd">15 $</span></span>
           </div>
           <div class="mcard-role">Správce Ubuntu LTS, Incus/OpenTofu, PBX a 6+9 PG DB + PgBouncer</div>
-          <div class="mcard-desc"><code>Incus + OpenTofu</code>, 4 zóny (<code>eth0 none</code>), <code>Asterisk</code>, <code>Zulip</code> (Blok 7), <code>Stalwart</code>, <code>Chatwoot /app/*</code> za <code>oauth2-proxy</code>, <code>6+9 PG DB</code>, Checkmk + watchdog a 2× DR drill.</div>
+          <div class="mcard-desc"><code>Incus + OpenTofu</code>, 4 zóny (<code>eth0 none</code>), <code>Asterisk</code>, <code>Zulip</code> (Blok 7), <code>Stalwart</code>, <code>Chatwoot</code> (veřejně jen widget a webhooky kanálů, vše ostatní za VPN + <code>oauth2-proxy</code>), <code>6+9 PG DB</code>, Checkmk + watchdog a 2× DR drill.</div>
         </div>
         <div class="mcard">
           <div class="mcard-top">

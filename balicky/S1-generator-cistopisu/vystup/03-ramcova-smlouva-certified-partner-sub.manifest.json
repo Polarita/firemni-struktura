@@ -2,7 +2,7 @@
   "document": "03-ramcova-smlouva-certified-partner-sub",
   "title": "Rámcová smlouva o spolupráci — Certified Partner SUB",
   "draft_watermark": true,
-  "generated_utc": "2026-11-22 19:31 UTC",
+  "generated_utc": "2026-11-23 05:00 UTC",
   "variables": {
     "spis_id": "POL-2027-00003",
     "cislo_smlouvy": "RS-SUB-2027-0001 (VZOR)",
@@ -54,7 +54,7 @@
   "sha256": {
     "template": "71be866d696a86b05acd1f4aa7eaaa53ca6a641633f89232eb8fdb20dad63a50",
     "data": "4e86388134fc2c7ac9205b98c443e1638cc86b254e20458c54aef3ab05d35191",
-    "pdf": "2e91f7f3601514899401e190c553cd5d67b5fdeb6a4f60edb0568f162334dad2"
+    "pdf": "be3ea115336fd34b21ceaedfb343b5ea5165bd77b2ea70571b64730174b8c90b"
   },
   "pages": 6
 }

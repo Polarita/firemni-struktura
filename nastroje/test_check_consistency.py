@@ -263,11 +263,16 @@ class RuleTests(unittest.TestCase):
         total = self.canon["budget_total_usd"]
         for planted in ("IČO: 12345678", "IČ 12345678", "IČO `12345678`", f"IČO:{NBSP}12345678", "Polarita s.r.o., IČO **12345678**",
                         "DIČ: CZ12345678", "DIČ `CZ12345678`", "datová schránka `abc1234`", "ID schránky ISDS: `x9bbdva`",
-                        f"celofiremní strop `{total + 10} USD`", f"měsíční strop je {total - 20} USD", f"stropem **{total + 30} USD**"):
+                        f"celofiremní strop `{total + 10} USD`", f"měsíční strop je {total - 20} USD", f"stropem **{total + 30} USD**",
+                        # EN: Shorter and longer wrong amounts, thousands separator, decimals. / CZ: Kratší i delší chybné částky, oddělovač tisíců, desetinná místa.
+                        "celofiremní strop `70 USD`", f"strop 1{total} USD", f"strop je 1{NBSP}{total} USD", "FinOps strop 4 USD",
+                        f"strop {total},50 USD", f"stropu {total}0 USD měsíčně", "strop 47 USD"):
             self.assertTrue(self.errors(cc.check_company, planted), planted)
         for clean in (f"IČO: {company['ico']}", f"DIČ: {company['dic']}", f"datová schránka `{company['isds']}`", "IČO: 00000000",
                       f"celofiremní strop `{total} USD`", "strop agenta je `35 USD`", "objednávka č. 12345678", "schránka `czebox`",
-                      "limit 500 USD na nákup", "ISDS režim `PAUSED`"):
+                      "limit 500 USD na nákup", "ISDS režim `PAUSED`",
+                      f"strop {total} USD (85 + 15 %), podíl role 10 USD", f"<td>strop {total} USD</td><td>10 USD</td>",
+                      "strop agentů 17005 a 17004 je 35 USD", f"strop je {total} USD"):
             self.assertEqual(self.errors(cc.check_company, clean), [], clean)
         # EN: Sample contracts of package S1 name fictitious counterparties. / CZ: Vzorové smlouvy S1 jmenují fiktivní protistrany.
         sample = cc.ROOT / "balicky/S1-generator-cistopisu/data/01-smlouva-o-dilo.json"

@@ -418,6 +418,9 @@ def check_names(path: Path, text: str, canon: dict, report: Report) -> None:
                     report.error(f"{where}:{number}", f"unknown network zone {name}")
 
 
+CAP_RE = re.compile(r"(?i)\bstrop\w*([^\n.;|]{0,45}?)(?<![\d,.])(?<!\d )((?:\d{1,3}(?: \d{3})+|\d+)(?:[,.]\d+)?) USD")
+
+
 def check_company(path: Path, text: str, canon: dict, report: Report) -> None:
     """
     EN: Company identifiers (company id, VAT id, data box id) and the company-wide budget cap must match the canon.
@@ -441,8 +444,16 @@ def check_company(path: Path, text: str, canon: dict, report: Report) -> None:
             for found in re.findall(r"`([a-z0-9]{7})`", line):
                 if re.search(r"\d", found) and re.search(r"[a-z]", found) and found != company["isds"]:
                     report.error(f"{where}:{number}", f"data box id {found} differs from canon {company['isds']}")
-        for found in re.findall(r"(?i)\bstrop\w*[^\n.;|]{0,45}?(?<![\d,])(\d{3}) USD", line):
-            if found != total:
+        # EN: The WHOLE amount is read (70, 470, 1470, "1 470", 470,50) - a wrong cap with fewer or more
+        #     digits is a wrong cap too. Skipped: the cap of a single agent and an amount that belongs to
+        #     another cell or to a later amount of the line.
+        # CZ: Čte se CELÁ částka (70, 470, 1470, „1 470“, 470,50) - chybný strop s méně nebo více číslicemi
+        #     je také chybný strop. Přeskakuje se strop jednotlivého agenta a částka, která patří do jiné
+        #     buňky nebo k pozdější částce na řádku.
+        for between, found in CAP_RE.findall(line):
+            if re.search(r"(?i)agent|USD|[<{]", between):
+                continue
+            if found.replace(" ", "") != total:
                 report.error(f"{where}:{number}", f"budget cap {found} USD differs from canon {total} USD")
 
 

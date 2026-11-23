@@ -266,6 +266,68 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def publish(out_dir: Path, name: str, staged_pdf: Path, manifest: dict[str, Any]) -> tuple[Path, Path]:
+    """
+    EN: Publish one document as a pair PDF + manifest. The manifest is the commit record of the pair:
+        it carries the hash of the STAGED PDF and is the last thing that appears, by an atomic rename.
+        Order: (1) the old manifest is removed, (2) the staged PDF replaces the old one atomically,
+        (3) the staged manifest is renamed in atomically. Two files cannot be switched by one system
+        call, so the invariant is: a manifest that exists always describes the PDF next to it; an
+        interrupted run leaves a PDF WITHOUT a manifest, never a PDF with a foreign or half-written one.
+        Both staged files live in one unique staging folder inside out_dir (same file system).
+    CZ: Zveřejní jeden dokument jako dvojici PDF + manifest. Manifest je potvrzujícím záznamem dvojice:
+        nese otisk PŘIPRAVENÉHO PDF a objeví se jako poslední, atomickým přejmenováním. Pořadí: (1) starý
+        manifest se odstraní, (2) připravené PDF atomicky nahradí staré, (3) připravený manifest se
+        atomicky přejmenuje na místo. Dva soubory nelze přepnout jedním systémovým voláním, proto platí
+        invariant: existující manifest vždy popisuje PDF vedle sebe; přerušený běh zanechá PDF BEZ
+        manifestu, nikdy PDF s cizím nebo nedopsaným manifestem. Oba připravené soubory leží v jedné
+        jedinečné přípravné složce uvnitř out_dir (stejný souborový systém).
+    """
+    pdf_path = out_dir / f"{name}.pdf"
+    manifest_path = out_dir / f"{name}.manifest.json"
+    staged_manifest = staged_pdf.with_name(f"{name}.manifest.json")
+    if manifest["sha256"]["pdf"] != sha256(staged_pdf):
+        raise GeneratorError(f"{name}: staged PDF does not match its manifest")
+    with open(staged_manifest, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    try:
+        manifest_path.unlink(missing_ok=True)
+        os.replace(staged_pdf, pdf_path)
+        os.replace(staged_manifest, manifest_path)
+    except OSError as error:
+        manifest_path.unlink(missing_ok=True)
+        raise GeneratorError(f"{name}: cannot publish the PDF and its manifest: {error}") from error
+    return pdf_path, manifest_path
+
+
+class _DocumentLock:
+    """
+    EN: One generation of one document into one folder at a time (exclusive lock file); two parallel
+        runs could otherwise mix the data, the PDF and the hashes of different runs.
+    CZ: Jedno generování jednoho dokumentu do jedné složky v jednom okamžiku (výlučný zámkový soubor);
+        dva souběžné běhy by jinak mohly smíchat data, PDF a otisky různých běhů.
+    """
+
+    def __init__(self, out_dir: Path, name: str) -> None:
+        self.path = out_dir / f".{name}.lock"
+        self.name = name
+
+    def __enter__(self) -> "_DocumentLock":
+        try:
+            descriptor = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError as error:
+            raise GeneratorError(f"{self.name}: another generation of this document is running (lock file {self.path.name}); "
+                                 f"if no generator is running, delete the lock file and repeat") from error
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(str(os.getpid()))
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.path.unlink(missing_ok=True)
+
+
 def collect(template_dir: Path, only: str | None) -> list[Path]:
     """List templates and verify that all eight sets are present. / Vypíše šablony a ověří všech osm sestav."""
     templates = sorted(template_dir.glob("*.md"))
@@ -293,10 +355,14 @@ def generate(template_dir: Path, data_dir: Path, out_dir: Path, only: str | None
         data_path = data_dir / f"{name}.json"
         if not data_path.is_file():
             raise GeneratorError(f"{name}: data file {data_path.name} not found")
+        # EN: Each source is read ONCE; the document and the hashes in the manifest come from the same bytes.
+        # CZ: Každý zdroj se čte JEDNOU; dokument i otisky v manifestu vycházejí z týchž bajtů.
         try:
-            template = template_path.read_text(encoding="utf-8")
-            values = json.loads(data_path.read_text(encoding="utf-8"))
-        except ValueError as error:  # invalid UTF-8 or invalid JSON / neplatné UTF-8 nebo neplatný JSON
+            template_bytes = template_path.read_bytes()
+            data_bytes = data_path.read_bytes()
+            template = template_bytes.decode("utf-8")
+            values = json.loads(data_bytes.decode("utf-8"))
+        except (OSError, ValueError) as error:  # unreadable, invalid UTF-8 or invalid JSON / nečitelné, neplatné UTF-8 nebo JSON
             raise GeneratorError(f"{name}: cannot read template or data: {error}") from error
         if not template.startswith("# "):
             raise GeneratorError(f"{name}: template must start with a level-1 heading")
@@ -313,7 +379,9 @@ def generate(template_dir: Path, data_dir: Path, out_dir: Path, only: str | None
                 footer = f"Polarita s.r.o. · dokument {name} · vygenerováno {stamp}"
             pdf_path = out_dir / f"{name}.pdf"
             manifest_path = out_dir / f"{name}.manifest.json"
-            with tempfile.TemporaryDirectory() as work_dir:
+            # EN: The staging folder is unique and lies inside out_dir, so the final renames are atomic.
+            # CZ: Přípravná složka je jedinečná a leží uvnitř out_dir, takže závěrečná přejmenování jsou atomická.
+            with _DocumentLock(out_dir, name), tempfile.TemporaryDirectory(prefix=f".{name}.staging-", dir=out_dir) as work_dir:
                 html_path = Path(work_dir) / f"{name}.html"
                 fresh_pdf = Path(work_dir) / f"{name}.pdf"
                 html_path.write_text(to_html(filled, title, draft, footer), encoding="utf-8", newline="\n")
@@ -324,21 +392,20 @@ def generate(template_dir: Path, data_dir: Path, out_dir: Path, only: str | None
                 except GeneratorError:
                     # EN: Never leave an older PDF or manifest next to a failed run - they would look current.
                     # CZ: Vedle nepovedeného běhu nikdy nenech starší PDF ani manifest - vypadaly by aktuálně.
-                    pdf_path.unlink(missing_ok=True)
                     manifest_path.unlink(missing_ok=True)
+                    pdf_path.unlink(missing_ok=True)
                     raise
-                shutil.move(str(fresh_pdf), str(pdf_path))
-            manifest = {
-                "document": name,
-                "title": title,
-                "draft_watermark": draft,
-                "generated_utc": stamp,
-                "variables": values,
-                "sha256": {"template": sha256(template_path), "data": sha256(data_path), "pdf": sha256(pdf_path)},
-                "pages": pages,
-            }
-            manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
-                                                           encoding="utf-8", newline="\n")
+                manifest = {
+                    "document": name,
+                    "title": title,
+                    "draft_watermark": draft,
+                    "generated_utc": stamp,
+                    "variables": values,
+                    "sha256": {"template": hashlib.sha256(template_bytes).hexdigest(),
+                               "data": hashlib.sha256(data_bytes).hexdigest(), "pdf": sha256(fresh_pdf)},
+                    "pages": pages,
+                }
+                publish(out_dir, name, fresh_pdf, manifest)
             record.update({"pdf": pdf_path.name, "pages": pages})
         results.append(record)
     if not only:

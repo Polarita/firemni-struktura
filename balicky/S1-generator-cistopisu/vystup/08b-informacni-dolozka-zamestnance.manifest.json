@@ -2,7 +2,7 @@
   "document": "08b-informacni-dolozka-zamestnance",
   "title": "Informační doložka o monitoringu firemních komunikačních prostředků a nahrávání hovorů",
   "draft_watermark": true,
-  "generated_utc": "2026-11-22 19:31 UTC",
+  "generated_utc": "2026-11-23 05:00 UTC",
   "variables": {
     "spis_id": "POL-2027-00006",
     "jmeno_zamestnance": "Jan Vzorový (VZOR)",
@@ -20,9 +20,9 @@
     "dolozku_predal": "Václav Šercl, jednatel"
   },
   "sha256": {
-    "template": "c0c96a3eb2437435a9d54a221428fac9933dbbac4bca2af49de5d9f3bf4f193f",
+    "template": "ce90d03791ca8b345dbe8fdedd2df28e883101b7f8789655f3ed825ffe29715f",
     "data": "ce8d201bf51bd8a1692dc1551a1979b47c49967870cb8bb732fa4c3b3b303ad8",
-    "pdf": "3a0b2dd638bb6bd7167c6eab8d7b4d167569bc097f29b6d0fa692ad8ef6cf626"
+    "pdf": "bcedd42ed9d1cd1f8786e38f5f8aa9a9cb48b59585295c4b7dd57b2455df7c6b"
   },
   "pages": 3
 }

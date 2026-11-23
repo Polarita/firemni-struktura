@@ -34,16 +34,29 @@ jobs:
       # EN: Runner rules: a dedicated gitea-runner instance in the zone app_internal, host mode (no Docker),
       #     no access to production secrets (this workflow uses none - never add a secret or a live
       #     endpoint here), workflow files are protected (only 1001 / 17004 change them).
-      #     The runner container needs git, nodejs (for checkout), python3 (3.10 or newer), python3-venv,
-      #     a Chromium browser and a pre-staged offline wheelhouse in /opt/polarita-wheels (built during
-      #     Block 5 image setup because app_internal has no internet).
+      #     The runner container needs git, python3 (3.10 or newer), python3-venv, a Chromium browser and
+      #     a pre-staged offline wheelhouse in /opt/polarita-wheels (built during Block 5 image setup
+      #     because app_internal has no internet). For the same reason the workflow uses NO marketplace
+      #     action ("uses:"): an action would have to be downloaded from the internet. The sources are
+      #     fetched by plain git from the local Gitea with the short-lived token of this very job.
       # CZ: Pravidla runneru: vyhrazená instance gitea-runner v zóně app_internal, režim host (bez Dockeru),
       #     bez přístupu k produkčním tajemstvím (tento workflow žádné nepoužívá - nikdy sem nepřidávej
       #     tajemství ani živý endpoint), workflow soubory jsou chráněné (mění je jen 1001 / 17004).
-      #     Kontejner runneru potřebuje git, nodejs (kvůli akci checkout), python3 (3.10 nebo novější),
-      #     python3-venv, prohlížeč Chromium a předem uložený offline wheelhouse v /opt/polarita-wheels
-      #     (připravený při stavbě obrazu v Bloku 5, zóna nemá internet).
-      - uses: actions/checkout@v4
+      #     Kontejner runneru potřebuje git, python3 (3.10 nebo novější), python3-venv, prohlížeč Chromium
+      #     a předem uložený offline wheelhouse v /opt/polarita-wheels (připravený při stavbě obrazu
+      #     v Bloku 5, zóna nemá internet). Ze stejného důvodu workflow NEPOUŽÍVÁ žádnou akci z tržiště
+      #     ("uses:"): akce by se musela stáhnout z internetu. Zdrojové soubory si bere prostým gitem
+      #     z místní Gitea krátkodobým tokenem právě této úlohy.
+      - name: Checkout by local git (no marketplace action) / Checkout místním gitem (bez akce z tržiště)
+        env:
+          POLARITA_JOB_TOKEN: ${{ github.token }}
+        run: |
+          test -z "$(ls -A .)" || { echo "workspace is not empty / pracovní složka není prázdná"; exit 1; }
+          AUTH="$(printf 'x-access-token:%s' "$POLARITA_JOB_TOKEN" | base64 | tr -d '\n')"
+          git init -q .
+          git remote add origin "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          git -c "http.extraheader=Authorization: Basic $AUTH" fetch -q --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout -q --detach FETCH_HEAD
 
       # EN: The venv and all run outputs live in a fresh temporary folder outside the checkout: no fixed
       #     path that another job or user could prepare in advance, nothing that pollutes git status.
@@ -69,7 +82,7 @@ jobs:
         working-directory: balicky/S2-eval-suite
         run: |
           python3 -m unittest test_eval_suite
-          python3 run_eval_suite.py --no-history --out-dir "$POLARITA_CI_WORK/eval-out"
+          python3 run_eval_suite.py --no-history --out-dir "$POLARITA_CI_WORK/eval-out" --audio-dir "$POLARITA_CI_WORK/eval-audio"
 
       - name: S3 pricing kernel & build sync / Cenové jádro a shoda sestavení
         working-directory: balicky/S3-konfigurator-a-tarify

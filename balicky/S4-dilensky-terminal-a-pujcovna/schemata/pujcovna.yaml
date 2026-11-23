@@ -205,6 +205,12 @@ entities:
       initial: HELD
       terminal: [RELEASED]
       transitions:
+        # EN: A booking of kind RENTAL never changes state on its own: its transitions run
+        #     only as members of the atomic operations listed in `atomic_operations` below.
+        #     Bookings of the other kinds are switched by their owning record.
+        # CZ: Rezervace kalendáře druhu RENTAL nikdy nemění stav sama: její přechody běží
+        #     jen jako členové atomických operací vyjmenovaných v `atomic_operations` níže.
+        #     Rezervace ostatních druhů přepíná jejich vlastnický záznam.
         - {from: HELD, to: CONFIRMED, action: confirm, guards: [booking_owner_confirmed]}
         - {from: HELD, to: RELEASED, action: release, guards: [reason_recorded]}
         - {from: CONFIRMED, to: RELEASED, action: release, guards: [reason_recorded, booking_owner_finished_or_cancelled]}
@@ -241,11 +247,30 @@ entities:
         - {from: OUT_INTERNAL, to: IN_STOCK, action: return_internal, guards: [compliance_valid_today]}
         - {from: OUT_INTERNAL, to: IN_SERVICE, action: send_to_service, guards: [reason_recorded]}
         - {from: OUT_INTERNAL, to: BLOCKED, action: block_expired, guards: [compliance_expired]}
+        # EN: hand_over, take_back and write_off_lost never run alone: each is a member of an
+        #     atomic operation together with the transition of the rental reservation
+        #     (see `atomic_operations` below).
+        # CZ: hand_over, take_back a write_off_lost nikdy neběží samostatně: každý je členem
+        #     atomické operace spolu s přechodem výpůjčky (viz `atomic_operations` níže).
         - {from: IN_STOCK, to: OUT_RENTAL, action: hand_over, guards: [reservation_confirmed, handover_protocol_sealed, compliance_valid_whole_period]}
+        # EN: Also the way back after a declared loss (late return): the asset is still
+        #     OUT_RENTAL then, so it always passes through RETURN_INSPECTION.
+        # CZ: Také cesta zpět po ohlášené ztrátě (pozdní vrácení): zdroj je tehdy stále
+        #     OUT_RENTAL, takže vždy projde přejímkou RETURN_INSPECTION.
         - {from: OUT_RENTAL, to: RETURN_INSPECTION, action: take_back, guards: [return_protocol_sealed]}
-        # EN: Lost or never returned: written off only with a loss claim and a decision of 1001.
-        # CZ: Ztráta nebo nevrácení: vyřazení jen se založenou škodou (ztráta) a rozhodnutím 1001.
-        - {from: OUT_RENTAL, to: RETIRED, action: write_off_lost, guards: [loss_claim_opened, mutation_confirm_1001]}
+        # EN: Irreversible write-off: only when the loss case is closed (loss claim SETTLED
+        #     or DISMISSED, no sealed return protocol) and only inside the atomic operation
+        #     close_after_loss, which closes the reservation at the same moment. Until then
+        #     the asset stays OUT_RENTAL and a late return remains possible. An asset found
+        #     after the write-off does not come back through this state machine: it is a new
+        #     acquisition decided by 1001 with a new master record in Lhutnik.
+        # CZ: Nevratný odpis: jen při uzavřeném případu ztráty (škoda se ztrátou SETTLED nebo
+        #     DISMISSED, žádný zapečetěný vratný protokol) a jen uvnitř atomické operace
+        #     close_after_loss, která ve stejném okamžiku uzavírá výpůjčku. Do té doby zůstává
+        #     zdroj OUT_RENTAL a pozdní vrácení je stále možné. Zdroj nalezený po odpisu se
+        #     tímto automatem nevrací: jde o nové pořízení, o němž rozhodne 1001, s novým
+        #     hlavním záznamem v Lhůtníku.
+        - {from: OUT_RENTAL, to: RETIRED, action: write_off_lost, guards: [loss_case_closed, mutation_confirm_1001]}
         # EN: Planned calibration or repair straight from stock; the service window blocks the calendar.
         # CZ: Plánovaná kalibrace nebo oprava přímo ze skladu; servisní okno zablokuje kalendář.
         - {from: IN_STOCK, to: IN_SERVICE, action: send_to_service, guards: [reason_recorded, service_booking_held]}
@@ -363,6 +388,9 @@ entities:
       # CZ: Rozhodnutí 1001, že se kauce nevybírá, nebo schválený ceník s nulovou kaucí.
       deposit_waiver_decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_when: "deposit_status = 'WAIVED'"}
       confirmed_decisions_ref: {type: external_ref, target: 'decisions:item', required: false, required_to_close: true}
+      # EN: Decision of 1001 that accepted a late return after a declared loss (audit trail).
+      # CZ: Rozhodnutí 1001, kterým bylo přijato pozdní vrácení po ohlášené ztrátě (auditní stopa).
+      late_return_decisions_ref: {type: external_ref, target: 'decisions:item', required: false}
       # EN: Child protocols and invoice requests reference reservation_id (avoids cyclic FK).
       # CZ: Podřízené protokoly a podklady fakturace odkazují na reservation_id (bez cyklického FK).
       status: {type: enum, enum: reservation_status, required: true, default: DRAFT}
@@ -380,27 +408,41 @@ entities:
       initial: DRAFT
       terminal: [CLOSED, REJECTED, PREEMPTED, CANCELLED]
       transitions:
-        - {from: DRAFT, to: REQUESTED, action: request, guards: [renter_approved, asset_rentable, booking_held, compliance_valid_whole_period]}
-        - {from: REQUESTED, to: CONFIRMED, action: confirm, guards: [renter_approved, asset_rentable, price_list_approved, booking_confirmed, compliance_valid_whole_period, deposit_terms_set, confirmed_in_decisions, mutation_confirm_1001]}
-        - {from: REQUESTED, to: REJECTED, action: reject, guards: [reason_recorded, booking_released]}
+        # EN: A transition with `atomic:` is the entry point of the atomic operation of that
+        #     name (see `atomic_operations` below) and never runs outside it. Its guards speak
+        #     only about the state BEFORE the operation, so no guard waits for a change that
+        #     the same operation is about to make.
+        # CZ: Přechod s klíčem `atomic:` je vstupním bodem stejnojmenné atomické operace
+        #     (viz `atomic_operations` níže) a mimo ni nikdy neběží. Jeho zámky mluví jen
+        #     o stavu PŘED operací, takže žádný zámek nečeká na změnu, kterou má táž operace
+        #     teprve provést.
+        - {from: DRAFT, to: REQUESTED, action: request, atomic: request_rental, guards: [renter_approved, asset_rentable, slot_free_for_rental, compliance_valid_whole_period]}
+        - {from: REQUESTED, to: CONFIRMED, action: confirm, atomic: confirm_rental, guards: [renter_approved, asset_rentable, price_list_approved, rental_booking_is_held, compliance_valid_whole_period, deposit_terms_set, confirmed_in_decisions, mutation_confirm_1001]}
+        - {from: REQUESTED, to: REJECTED, action: reject, atomic: reject_rental, guards: [reason_recorded, rental_booking_is_held]}
         # EN: The held rental booking is released and the internal booking inserted in ONE transaction.
         # CZ: Držená půjčovní rezervace se uvolní a interní rezervace se vloží v JEDNÉ transakci.
-        - {from: REQUESTED, to: PREEMPTED, action: preempt_by_internal_revision, guards: [internal_revision_request_approved, reason_recorded, booking_released]}
-        - {from: CONFIRMED, to: HANDED_OVER, action: hand_over, guards: [deposit_received, handover_protocol_sealed, compliance_valid_whole_period]}
-        - {from: HANDED_OVER, to: RETURNED, action: take_back, guards: [return_protocol_sealed]}
+        - {from: REQUESTED, to: PREEMPTED, action: preempt_by_internal_revision, atomic: preempt_rental, guards: [internal_revision_request_approved, reason_recorded, rental_booking_is_held]}
+        - {from: CONFIRMED, to: HANDED_OVER, action: hand_over, atomic: hand_over_rental, guards: [deposit_received, handover_protocol_sealed, compliance_valid_whole_period]}
+        - {from: HANDED_OVER, to: RETURNED, action: take_back, atomic: take_back_rental, guards: [return_protocol_sealed]}
         # EN: Asset lost or not returned: no return protocol exists, the loss goes to 1001.
+        #     The asset stays OUT_RENTAL; it is written off only when the loss case is closed.
         # CZ: Zdroj ztracen nebo nevrácen: vratný protokol neexistuje, ztráta jde k 1001.
+        #     Zdroj zůstává OUT_RENTAL; odepisuje se až při uzavření případu ztráty.
         - {from: HANDED_OVER, to: NOT_RETURNED, action: declare_loss, guards: [loss_claim_opened, reason_recorded, mutation_confirm_1001]}
-        - {from: NOT_RETURNED, to: RETURNED, action: take_back_late, guards: [return_protocol_sealed]}
-        - {from: RETURNED, to: CLOSED, action: close, guards: [deposit_settled, damage_claims_resolved, invoice_request_handed_to_finance, booking_released]}
-        - {from: NOT_RETURNED, to: CLOSED, action: close_after_loss, guards: [deposit_settled, damage_claims_resolved, invoice_request_handed_to_finance, booking_released]}
+        # EN: Late return after a declared loss: audited, confirmed by 1001, and in the same
+        #     operation the asset goes through RETURN_INSPECTION like any other return.
+        # CZ: Pozdní vrácení po ohlášené ztrátě: auditované, potvrzené 1001 a ve stejné
+        #     operaci jde zdroj do přejímky RETURN_INSPECTION jako při každém jiném vrácení.
+        - {from: NOT_RETURNED, to: RETURNED, action: take_back_late, atomic: take_back_late_rental, guards: [return_protocol_sealed, late_return_audited, mutation_confirm_1001]}
+        - {from: RETURNED, to: CLOSED, action: close, atomic: close_rental, guards: [deposit_settled, damage_claims_resolved, invoice_request_handed_to_finance, rental_booking_is_confirmed]}
+        - {from: NOT_RETURNED, to: CLOSED, action: close_after_loss, atomic: close_after_loss, guards: [deposit_settled, damage_claims_resolved, invoice_request_handed_to_finance, rental_booking_is_confirmed]}
         - {from: DRAFT, to: CANCELLED, action: cancel, guards: [reason_recorded]}
-        - {from: REQUESTED, to: CANCELLED, action: cancel, guards: [reason_recorded, booking_released]}
+        - {from: REQUESTED, to: CANCELLED, action: cancel, atomic: cancel_requested_rental, guards: [reason_recorded, rental_booking_is_held]}
         # EN: A confirmed rental is never cancelled automatically; a clash with
         #     an internal revision trip goes to 1001 in Decisions.
         # CZ: Potvrzená výpůjčka se nikdy neruší automaticky; střet s interním
         #     revizním výjezdem jde k 1001 do Decisions.
-        - {from: CONFIRMED, to: CANCELLED, action: cancel_confirmed, guards: [reason_recorded, booking_released, protocols_discarded, mutation_confirm_1001]}
+        - {from: CONFIRMED, to: CANCELLED, action: cancel_confirmed, atomic: cancel_confirmed_rental, guards: [reason_recorded, rental_booking_is_confirmed, protocols_discarded, mutation_confirm_1001]}
     close_requirements:           # EN: needed for CLOSED / CZ: nutné pro stav CLOSED
       fields: [price_list_id, deposit_amount, deposit_currency, confirmed_decisions_ref]
 
@@ -457,6 +499,22 @@ entities:
       #     původní protokol ještě SEALED — bez zablokování.
       - {kind: unique_partial, columns: [reservation_id, direction], where: "supersedes_protocol_id IS NULL AND status <> 'DISCARDED'"}
       - {kind: unique_partial, columns: [supersedes_protocol_id], where: "supersedes_protocol_id IS NOT NULL AND status <> 'DISCARDED'"}
+      # EN: A replacement must belong to the SAME reservation and the SAME direction as the
+      #     protocol it replaces. Enforced by a composite foreign key onto a composite unique
+      #     key of the same table; rows without supersedes_protocol_id are not affected
+      #     (intended PostgreSQL form: UNIQUE (id, reservation_id, direction) and
+      #     FOREIGN KEY (supersedes_protocol_id, reservation_id, direction) REFERENCES
+      #     handover_protocol (id, reservation_id, direction) with the default MATCH SIMPLE;
+      #     verify against the official documentation of the deployed PostgreSQL version
+      #     when Blok 16 is built). A protocol never replaces itself.
+      # CZ: Náhrada musí patřit ke STEJNÉ výpůjčce a mít STEJNÝ směr jako protokol, který
+      #     nahrazuje. Vynucuje to složený cizí klíč na složený unikátní klíč téže tabulky;
+      #     řádků bez supersedes_protocol_id se netýká (zamýšlený tvar v PostgreSQL je uveden
+      #     výše; ověřit proti oficiální dokumentaci nasazené verze PostgreSQL při stavbě
+      #     Bloku 16). Protokol nikdy nenahrazuje sám sebe.
+      - {kind: unique, columns: [id, reservation_id, direction]}
+      - {kind: foreign_key, columns: [supersedes_protocol_id, reservation_id, direction], ref_entity: handover_protocol, ref_columns: [id, reservation_id, direction]}
+      - {kind: check, expression: "supersedes_protocol_id IS NULL OR supersedes_protocol_id <> id"}
       # EN: A draft may exist before the briefing; signing a handover without it is impossible.
       # CZ: Rozpracovaný protokol smí existovat před poučením; podepsat předání bez něj nelze.
       - {kind: check, expression: "status IN ('DRAFT', 'DISCARDED') OR direction <> 'HANDOVER' OR safety_briefing_confirmed IS TRUE"}
@@ -465,7 +523,7 @@ entities:
       initial: DRAFT
       terminal: [SUPERSEDED, DISCARDED]
       transitions:
-        - {from: DRAFT, to: SIGNED, action: sign, guards: [photos_minimum_met, accessories_checked, safety_briefing_if_handover, both_signatures_present]}
+        - {from: DRAFT, to: SIGNED, action: sign, guards: [photos_minimum_met, accessories_checked, safety_briefing_if_handover, both_signatures_present, replacement_matches_original]}
         - {from: SIGNED, to: SEALED, action: seal, guards: [pdf_rendered, server_seal_applied]}
         # EN: Runs in the same transaction as the seal of the replacement, so exactly one
         #     protocol per reservation and direction is valid at any moment.
@@ -575,6 +633,105 @@ entities:
     close_requirements:           # EN: needed for HANDED_TO_FINANCE / CZ: nutné pro stav HANDED_TO_FINANCE
       fields: [net_amount, currency, decisions_ref, finance_ref]
 
+# EN: Atomic operations. Records whose states depend on each other (rental reservation,
+#     its calendar booking, the rented asset) never change one after another. The server
+#     runs each operation below as ONE transaction in four steps:
+#       1. lock all member rows (fixed order: reservation, booking, asset);
+#       2. check that every member is in its `from` state and evaluate the guards of ALL
+#          member transitions once, over the state BEFORE the operation;
+#       3. write all `to` states;
+#       4. check the proposed combination of states against `invariants`.
+#     If any step fails, nothing is written. A member transition is never offered as
+#     a separate action for a rental. `invariants` list, for every reservation status,
+#     the allowed status of its live booking (NONE = no booking row) and of its asset.
+# CZ: Atomické operace. Záznamy, jejichž stavy na sobě závisí (výpůjčka, její rezervace
+#     v kalendáři, půjčený zdroj), se nikdy nemění jeden po druhém. Server provede každou
+#     operaci níže jako JEDNU transakci ve čtyřech krocích:
+#       1. zamkne všechny členské řádky (pevné pořadí: výpůjčka, rezervace kalendáře, zdroj);
+#       2. ověří, že každý člen je ve svém stavu `from`, a zámky VŠECH členských přechodů
+#          vyhodnotí jednou nad stavem PŘED operací;
+#       3. zapíše všechny stavy `to`;
+#       4. ověří navrženou kombinaci stavů proti `invariants`.
+#     Selže-li kterýkoli krok, nezapíše se nic. Členský přechod se u výpůjčky nikdy nenabízí
+#     jako samostatná akce. `invariants` uvádějí pro každý stav výpůjčky přípustný stav její
+#     živé rezervace kalendáře (NONE = řádek rezervace neexistuje) a jejího zdroje.
+atomic_operations:
+  invariants:
+    reservation_booking:
+      DRAFT: [NONE]
+      REQUESTED: [HELD]
+      CONFIRMED: [CONFIRMED]
+      HANDED_OVER: [CONFIRMED]
+      RETURNED: [CONFIRMED]
+      NOT_RETURNED: [CONFIRMED]
+      CLOSED: [RELEASED]
+      REJECTED: [RELEASED]
+      PREEMPTED: [RELEASED]
+      CANCELLED: [NONE, RELEASED]   # EN: NONE = cancelled as DRAFT / CZ: NONE = zrušeno ve stavu DRAFT
+    # EN: Only the statuses that bind the asset are listed.
+    # CZ: Uvedeny jsou jen stavy výpůjčky, které zdroj vážou.
+    reservation_asset:
+      HANDED_OVER: [OUT_RENTAL]
+      NOT_RETURNED: [OUT_RENTAL]
+  operations:
+    # EN: `from: NONE` + `action: insert` = the operation inserts the booking row in its
+    #     initial state; the exclusion constraint of resource_booking has the final word.
+    # CZ: `from: NONE` + `action: insert` = operace vloží řádek rezervace kalendáře v jeho
+    #     počátečním stavu; poslední slovo má vylučovací omezení entity resource_booking.
+    request_rental:
+      members:
+        - {entity: rental_reservation, from: DRAFT, to: REQUESTED, action: request}
+        - {entity: resource_booking, from: NONE, to: HELD, action: insert}
+    confirm_rental:
+      members:
+        - {entity: rental_reservation, from: REQUESTED, to: CONFIRMED, action: confirm}
+        - {entity: resource_booking, from: HELD, to: CONFIRMED, action: confirm}
+    reject_rental:
+      members:
+        - {entity: rental_reservation, from: REQUESTED, to: REJECTED, action: reject}
+        - {entity: resource_booking, from: HELD, to: RELEASED, action: release}
+    preempt_rental:
+      members:
+        - {entity: rental_reservation, from: REQUESTED, to: PREEMPTED, action: preempt_by_internal_revision}
+        - {entity: resource_booking, from: HELD, to: RELEASED, action: release}
+    cancel_requested_rental:
+      members:
+        - {entity: rental_reservation, from: REQUESTED, to: CANCELLED, action: cancel}
+        - {entity: resource_booking, from: HELD, to: RELEASED, action: release}
+    cancel_confirmed_rental:
+      members:
+        - {entity: rental_reservation, from: CONFIRMED, to: CANCELLED, action: cancel_confirmed}
+        - {entity: resource_booking, from: CONFIRMED, to: RELEASED, action: release}
+    hand_over_rental:
+      members:
+        - {entity: rental_reservation, from: CONFIRMED, to: HANDED_OVER, action: hand_over}
+        - {entity: rental_asset, from: IN_STOCK, to: OUT_RENTAL, action: hand_over}
+    take_back_rental:
+      members:
+        - {entity: rental_reservation, from: HANDED_OVER, to: RETURNED, action: take_back}
+        - {entity: rental_asset, from: OUT_RENTAL, to: RETURN_INSPECTION, action: take_back}
+    # EN: Late return after a declared loss: the reservation and the asset move together,
+    #     so a returned asset can never stay written off or skip the inspection.
+    # CZ: Pozdní vrácení po ohlášené ztrátě: výpůjčka i zdroj se mění společně, takže
+    #     vrácený zdroj nemůže zůstat odepsaný ani minout přejímku.
+    take_back_late_rental:
+      members:
+        - {entity: rental_reservation, from: NOT_RETURNED, to: RETURNED, action: take_back_late}
+        - {entity: rental_asset, from: OUT_RENTAL, to: RETURN_INSPECTION, action: take_back}
+    close_rental:
+      members:
+        - {entity: rental_reservation, from: RETURNED, to: CLOSED, action: close}
+        - {entity: resource_booking, from: CONFIRMED, to: RELEASED, action: release}
+    # EN: Closing a loss case writes the asset off in the same operation; this is the only
+    #     way to write_off_lost, and after it no late return is possible (CLOSED is terminal).
+    # CZ: Uzavření případu ztráty ve stejné operaci odepíše zdroj; je to jediná cesta
+    #     k write_off_lost a po ní už pozdní vrácení možné není (CLOSED je koncový stav).
+    close_after_loss:
+      members:
+        - {entity: rental_reservation, from: NOT_RETURNED, to: CLOSED, action: close_after_loss}
+        - {entity: resource_booking, from: CONFIRMED, to: RELEASED, action: release}
+        - {entity: rental_asset, from: OUT_RENTAL, to: RETIRED, action: write_off_lost}
+
 # EN: Named guards used in the state machines above; evaluated on the server.
 # CZ: Pojmenované zámky použité ve stavových automatech výše; vyhodnocuje server.
 guards:
@@ -586,15 +743,17 @@ guards:
   return_protocol_sealed: "EN: RETURN protocol is SEALED / CZ: protokol RETURN je SEALED"
   return_protocol_sealed_or_loss_declared: "EN: RETURN protocol is SEALED, or the reservation is NOT_RETURNED / CZ: protokol RETURN je SEALED, nebo je výpůjčka ve stavu NOT_RETURNED"
   loss_claim_opened: "EN: a damage_claim with loss = true exists for the reservation / CZ: k výpůjčce existuje záznam damage_claim s loss = true"
+  loss_case_closed: "EN: the reservation of the asset is NOT_RETURNED, its damage_claim with loss = true is SETTLED or DISMISSED and no RETURN protocol of the reservation is SEALED / CZ: výpůjčka zdroje je ve stavu NOT_RETURNED, její damage_claim s loss = true je SETTLED nebo DISMISSED a žádný protokol RETURN této výpůjčky není SEALED"
+  late_return_audited: "EN: late_return_decisions_ref is recorded and the audit log holds the reason, the person who took the asset back and the loss claim concerned; a loss claim that is not terminal has loss switched to false and return_protocol_id set to the sealed RETURN protocol (it continues as an ordinary damage claim or is dismissed by 1001), a loss claim already SETTLED is re-decided by 1001 under the same Decisions item / CZ: je zapsáno late_return_decisions_ref a auditní záznam obsahuje důvod, osobu, která zdroj převzala, a dotčenou škodu se ztrátou; škoda, která není v koncovém stavu, má loss přepnuto na false a return_protocol_id nastaveno na zapečetěný protokol RETURN (pokračuje jako běžná škoda, nebo ji 1001 zamítne), o škodě již ve stavu SETTLED rozhodne 1001 znovu pod stejnou položkou Decisions"
   reservation_confirmed: "EN: a CONFIRMED rental_reservation of this asset covers today / CZ: dnešní den pokrývá výpůjčka tohoto zdroje ve stavu CONFIRMED"
   internal_booking_confirmed: "EN: a CONFIRMED resource_booking of kind INTERNAL_REVISION or INTERNAL_JOB covers the whole trip / CZ: celý výjezd pokrývá rezervace kalendáře druhu INTERNAL_REVISION nebo INTERNAL_JOB ve stavu CONFIRMED"
   service_booking_held: "EN: a resource_booking of kind SERVICE was inserted for the service window / CZ: pro servisní okno byla vložena rezervace kalendáře druhu SERVICE"
   protocols_discarded: "EN: no protocol of the reservation is in DRAFT or SIGNED, and none is SEALED (asset never left the store) / CZ: žádný protokol výpůjčky není DRAFT ani SIGNED a žádný není SEALED (zdroj sklad neopustil)"
-  booking_held: "EN: a resource_booking row (kind RENTAL, same asset and period) was inserted for the reservation without violating the exclusion constraint / CZ: k výpůjčce byl vložen řádek resource_booking (druh RENTAL, stejný zdroj a období), aniž porušil vylučovací omezení"
-  booking_confirmed: "EN: the resource_booking of the reservation is switched to CONFIRMED in the same transaction / CZ: rezervace kalendáře této výpůjčky se ve stejné transakci přepíná do CONFIRMED"
-  booking_released: "EN: the resource_booking of the reservation is switched to RELEASED in the same transaction / CZ: rezervace kalendáře této výpůjčky se ve stejné transakci přepíná do RELEASED"
-  booking_owner_confirmed: "EN: the owning record (rental reservation, internal trip, service order) is confirmed / CZ: vlastnický záznam (výpůjčka, interní výjezd, servisní zakázka) je potvrzen"
-  booking_owner_finished_or_cancelled: "EN: the owning record is closed, cancelled or preempted / CZ: vlastnický záznam je uzavřen, zrušen nebo vytlačen"
+  slot_free_for_rental: "EN: before the operation, the reservation has no live resource_booking and no live booking of the asset overlaps the period; the operation request_rental then inserts the booking (kind RENTAL, same asset and period) / CZ: před operací nemá výpůjčka žádnou živou rezervaci kalendáře a období se nepřekrývá s žádnou živou rezervací zdroje; operace request_rental pak rezervaci (druh RENTAL, stejný zdroj a období) vloží"
+  rental_booking_is_held: "EN: before the operation, the live resource_booking of the reservation is HELD / CZ: před operací je živá rezervace kalendáře této výpůjčky ve stavu HELD"
+  rental_booking_is_confirmed: "EN: before the operation, the live resource_booking of the reservation is CONFIRMED / CZ: před operací je živá rezervace kalendáře této výpůjčky ve stavu CONFIRMED"
+  booking_owner_confirmed: "EN: kind RENTAL: the transition runs as a member of the atomic operation confirm_rental, whose invariants check the resulting pair of states; other kinds: the owning record (internal trip, service order) is confirmed / CZ: druh RENTAL: přechod běží jako člen atomické operace confirm_rental, jejíž invarianty ověřují výslednou dvojici stavů; ostatní druhy: vlastnický záznam (interní výjezd, servisní zakázka) je potvrzen"
+  booking_owner_finished_or_cancelled: "EN: kind RENTAL: the transition runs as a member of an atomic operation that closes or cancels the reservation, whose invariants check the resulting pair of states; other kinds: the owning record is finished or cancelled / CZ: druh RENTAL: přechod běží jako člen atomické operace, která výpůjčku uzavírá nebo ruší a jejíž invarianty ověřují výslednou dvojici stavů; ostatní druhy: vlastnický záznam je dokončen nebo zrušen"
   framework_contract_signed: "EN: rental terms signed by both parties are in the file / CZ: oboustranně podepsané podmínky půjčovny jsou ve spisu"
   decisions_ref_recorded: "EN: approved_decisions_ref is populated / CZ: approved_decisions_ref je vyplněno"
   all_lines_priced: "EN: every price line has a rate and a deposit / CZ: každý řádek ceníku má sazbu i kauci"
@@ -615,7 +774,8 @@ guards:
   both_signatures_present: "EN: both parties signed on the device / CZ: obě strany podepsaly na zařízení"
   pdf_rendered: "EN: protocol PDF rendered by Typst / CZ: PDF protokolu vysázeno v Typst"
   server_seal_applied: "EN: server seal with timestamp applied / CZ: připojena serverová pečeť s časovým razítkem"
-  replacement_protocol_sealed: "EN: the replacement protocol whose supersedes_protocol_id points to this one is SEALED / CZ: náhradní protokol, jehož supersedes_protocol_id míří na tento, je ve stavu SEALED"
+  replacement_protocol_sealed: "EN: the replacement protocol whose supersedes_protocol_id points to this one is SEALED and has the same reservation_id and direction / CZ: náhradní protokol, jehož supersedes_protocol_id míří na tento, je ve stavu SEALED a má stejné reservation_id i direction"
+  replacement_matches_original: "EN: supersedes_protocol_id is empty, or the protocol it points to is SEALED and has the same reservation_id and direction / CZ: supersedes_protocol_id je prázdné, nebo protokol, na který míří, je ve stavu SEALED a má stejné reservation_id i direction"
   estimate_recorded: "EN: repair estimate is stored / CZ: je uložen odhad opravy"
   finance_draft_created: "EN: invoice DRAFT exists in finance-uol-marze-engine / CZ: v finance-uol-marze-engine existuje DRAFT faktury"
   mutation_confirm_1001: "EN: confirmed by 1001 in Decisions / CZ: potvrzeno osobou 1001 v Decisions"
