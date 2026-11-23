@@ -1,4 +1,4 @@
-# Právní a normová báze: pravidla a registr otevřených bodů — Polarita s.r.o. (Verze 3.0)
+# Právní a normová báze: pravidla a registr otevřených bodů — Polarita s.r.o. (Verze 3.1)
 
 Tento dokument stanoví, **jak firma zachází s právními předpisy, technickými normami a smlouvami**, a eviduje technické údaje návrhu, které byly ověřeny nebo na ověření čekají. Návrh je teoretický koncept a návod pro čistý stroj; nic v něm nenahrazuje právní ani odborné posouzení.
 

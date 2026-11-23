@@ -1,11 +1,11 @@
 /**
  * EN: SAMPLE ONLY — NOT EXECUTED. This spec is a pattern for Block 18 (package S6,
- *     Polarita-3.0). It has never been run: the application under test and the test
+ *     Polarita-3.1). It has never been run: the application under test and the test
  *     environment do not exist yet (greenfield design, server `polarita-hq` is not
  *     built). All selectors, screen texts and the seed record are illustrative and
  *     must be adapted to the real application before the first run.
  * CZ: POUZE VZOR — NEBYL SPUŠTĚN. Tento test je vzorem pro Blok 18 (balíček S6,
- *     Polarita-3.0). Nikdy neběžel: testovaná aplikace ani testovací prostředí zatím
+ *     Polarita-3.1). Nikdy neběžel: testovaná aplikace ani testovací prostředí zatím
  *     neexistují (greenfield návrh, server `polarita-hq` není postaven). Všechny
  *     selektory, texty obrazovek a záznam ze seedu jsou ilustrační a před prvním
  *     během se musí přizpůsobit skutečné aplikaci.
@@ -55,7 +55,8 @@ function requireBaseUrl(): string {
     throw new Error('POLARITA_E2E_BASE_URL is not set / není nastavena proměnná POLARITA_E2E_BASE_URL');
   }
   const parsed = new URL(BASE_URL);
-  if (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') {
+  const localHttp = parsed.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname);
+  if (parsed.protocol !== 'https:' && !localHttp) {
     throw new Error(`Unsafe POLARITA_E2E_BASE_URL protocol: ${parsed.protocol}`);
   }
   return BASE_URL;

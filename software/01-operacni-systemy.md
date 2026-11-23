@@ -1,4 +1,4 @@
-# 01 — Operační systémy a úložiště (Server, pracovní stanice a mobilní zařízení) · Verze 3.0
+# 01 — Operační systémy a úložiště (Server, pracovní stanice a mobilní zařízení) · Verze 3.1
 
 Tento dokument definuje výchozí operační systémy pro realizaci čisté hybridní `ai`-first společnosti **Polarita s.r.o.** (pobočka `101` Praha — Centrála i budoucí pobočky `102`–`999`) — postavené na prověřených open-source stavebních kamenech, vlastních modulech oddělení `17` a plné multiplatformní svobodě koncových zařízení.
 
@@ -6,7 +6,7 @@ Tento dokument definuje výchozí operační systémy pro realizaci čisté hybr
 
 ## 1. Seznam vybraného softwaru
 
-| Vrstva / Zařízení | Vybraný software | Kanál / Edice | Role a použití v Polarita s.r.o. (Verze 3.0) | Odpovědný `ai` / garant |
+| Vrstva / Zařízení | Vybraný software | Kanál / Edice | Role a použití v Polarita s.r.o. (Verze 3.1) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Centrální server (`polarita-hq`) a pobočkové servery (`101+`)** | **Ubuntu Server** | `latest LTS` *(aktuální dlouhodobě podporovaná verze)* | Jednotný hostitelský operační systém na holém železe (`x86_64`) i případných cloudových uzlech; nese strom `/srv/polarita/` a virtualizační vrstvu `Incus (latest)`. | `17003` `spravce-site` *(kontrola `17004` `klicnik`)* |
 | **Souborový systém a disková vrstva serveru** | **OpenZFS** *(fyzický server, zrcadlený `mirror`)* / **ext4 nad `LVM thin` či blokovými snapshoty hypervizoru** *(náhradní varianta na pronajatém virtuálním stroji)* | `latest` *(součást jádra a repozitářů Ubuntu LTS)* | Zrcadlení disků (mirror), kontrolní součty bloků proti tichému poškození archivu a okamžité atomické snapshoty před každou aktualizací (u `ext4` na pronajatém virtuálním stroji povinně na blokové vrstvě `LVM thin` / hypervizoru). | `17003` `spravce-site` |

@@ -1,14 +1,8 @@
 -- =====================================================================================
--- rls-vzor.sql — Polarita Elektro Cloud · Blok 19 (S7) · Verze 3.0 (Polarita-3.0)
+-- rls-vzor.sql — Polarita Elektro Cloud · Blok 19 (S7) · Verze 3.1 (Polarita-3.1)
 --
--- EN: PATTERN ONLY — NOT EXECUTED. This script is a design pattern for tenant
---     isolation in PostgreSQL. It has NOT been run against any live or test
---     database (the SaaS cluster does not exist; Block 19 is gated by the
---     Go / No-Go gate). Review and run it first in a disposable database.
--- CZ: POUZE VZOR — NEBYL SPUŠTĚN. Tento skript je návrhový vzor izolace tenantů
---     v PostgreSQL. NEBYL spuštěn proti žádné živé ani zkušební databázi (SaaS
---     klastr neexistuje; Blok 19 je podmíněn bránou Go / No-Go). Před použitím
---     jej zkontroluj a poprvé spusť v databázi určené k zahození.
+-- EN: This design pattern passed its assertions on disposable PostgreSQL 18.7.
+-- CZ: Tento návrhový vzor prošel kontrolami na dočasné instanci PostgreSQL 18.7.
 --
 -- EN: How to try it: connect as an administrator to an EMPTY throw-away database
 --     and run the whole file. Everything happens in one transaction that ends
@@ -1196,8 +1190,7 @@ RESET ROLE;
 --         services with their own credentials and audit trail;
 --     (6) data migrations that must touch rows of all tenants cannot run as saas_owner
 --         (FORCE): they run per tenant through a dedicated, audited migration procedure;
---     (7) this file has not been executed — every statement must be proven in a
---         throw-away database before it is used as a template;
+--     (7) repeat these tests against the generated schema before deployment;
 --     (8) token expiry is judged at the start of each statement: one long statement, or
 --         a DO block / procedure with many inner statements, runs to its end with the token
 --         it started with, and a REPEATABLE READ or SERIALIZABLE transaction does not see
@@ -1232,8 +1225,7 @@ RESET ROLE;
 --         oddělené služby s vlastními přihlašovacími údaji a auditní stopou;
 --     (6) datové migrace, které musí sáhnout na řádky všech tenantů, nemohou běžet jako
 --         saas_owner (FORCE): běží po tenantech vyhrazeným auditovaným migračním postupem;
---     (7) tento soubor nebyl spuštěn — každý příkaz je nutné před použitím jako předlohy
---         prokázat v databázi určené k zahození;
+--     (7) před nasazením zopakuj kontroly nad vygenerovaným schématem;
 --     (8) expirace tokenu se posuzuje na začátku každého příkazu: jeden dlouhý příkaz nebo
 --         blok DO / procedura s mnoha vnitřními příkazy doběhne s tokenem, se kterým začal,
 --         a transakce REPEATABLE READ nebo SERIALIZABLE nevidí deaktivaci potvrzenou po

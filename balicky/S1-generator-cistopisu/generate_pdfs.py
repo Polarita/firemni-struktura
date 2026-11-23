@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Generator of clean PDF copies of contracts and protocols (package S1, Version 3.0).
-Generátor PDF čistopisů smluv a protokolů (balíček S1, Verze 3.0).
+Generator of clean PDF copies of contracts and protocols (package S1, Version 3.1).
+Generátor PDF čistopisů smluv a protokolů (balíček S1, Verze 3.1).
 
 EN: Fills Markdown templates from sablony/ with variables from data/<same-name>.json,
     renders them to print HTML (A4) and prints PDF through a headless Chromium browser

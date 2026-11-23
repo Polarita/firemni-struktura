@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Source of truth for eval_suite_polarita_extended.json (package S2, Version 3.0).
-Zdroj pravdy pro eval_suite_polarita_extended.json (balíček S2, Verze 3.0).
+Source of truth for eval_suite_polarita_extended.json (package S2, Version 3.1).
+Zdroj pravdy pro eval_suite_polarita_extended.json (balíček S2, Verze 3.1).
 
 EN: Scenarios are written here in a compact, reviewable form and exported to JSON.
     Expected results are stated explicitly per scenario; they are NOT derived from
@@ -191,9 +191,9 @@ def excavation(valid_until: str | None = "2027-12-31", uploaded: bool = True, re
 
 
 def invoice(billed_to: str = "Polarita s.r.o.", unreliable: bool = False, published: bool = True, inv: int = 10_000,
-            receipt: int = 10_000, phe_goods: bool = False, phe_itemized: bool = True) -> dict[str, Any]:
+            receipt: int = 10_000, phe_goods: bool = False, phe_itemized: bool = True, order: int = 10_000) -> dict[str, Any]:
     return {"type": "supplier_invoice", "billed_to": billed_to, "unreliable_vat_payer": unreliable,
-            "account_published_in_adis": published, "invoice_amount": inv, "goods_receipt_amount": receipt,
+            "account_published_in_adis": published, "invoice_amount": inv, "goods_receipt_amount": receipt, "purchase_order_amount": order,
             "has_phe_goods": phe_goods, "phe_itemized": phe_itemized}
 
 
@@ -863,7 +863,7 @@ def build() -> dict[str, Any]:
         "meta": {
             "name": "eval_suite_polarita_extended",
             "version": "2.0",
-            "release_tag": "Polarita-3.0",
+            "release_tag": "Polarita-3.1",
             "description": "Rozšířená regresní sada Eval Suite 100+ (balíček S2) nad 20 základními chytáky Stage 1 / Stage 2.",
             "reference_day": WORK_DAY,
             "pass_threshold_pct": 100,

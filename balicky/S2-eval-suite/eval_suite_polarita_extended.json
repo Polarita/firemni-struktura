@@ -2,7 +2,7 @@
   "meta": {
     "name": "eval_suite_polarita_extended",
     "version": "2.0",
-    "release_tag": "Polarita-3.0",
+    "release_tag": "Polarita-3.1",
     "description": "Rozšířená regresní sada Eval Suite 100+ (balíček S2) nad 20 základními chytáky Stage 1 / Stage 2.",
     "reference_day": "2027-03-15",
     "pass_threshold_pct": 100,
@@ -262,6 +262,7 @@
         "account_published_in_adis": true,
         "invoice_amount": 10000,
         "goods_receipt_amount": 10000,
+        "purchase_order_amount": 10000,
         "has_phe_goods": false,
         "phe_itemized": true
       },
@@ -293,6 +294,7 @@
         "account_published_in_adis": false,
         "invoice_amount": 10000,
         "goods_receipt_amount": 10000,
+        "purchase_order_amount": 10000,
         "has_phe_goods": false,
         "phe_itemized": true
       },
@@ -2321,6 +2323,7 @@
         "account_published_in_adis": true,
         "invoice_amount": 10000,
         "goods_receipt_amount": 10000,
+        "purchase_order_amount": 10000,
         "has_phe_goods": false,
         "phe_itemized": true
       },
@@ -2353,6 +2356,7 @@
         "account_published_in_adis": true,
         "invoice_amount": 10000,
         "goods_receipt_amount": 10000,
+        "purchase_order_amount": 10000,
         "has_phe_goods": false,
         "phe_itemized": true
       },
@@ -2384,6 +2388,7 @@
         "account_published_in_adis": true,
         "invoice_amount": 10001,
         "goods_receipt_amount": 10000,
+        "purchase_order_amount": 10000,
         "has_phe_goods": false,
         "phe_itemized": true
       },
@@ -2415,6 +2420,7 @@
         "account_published_in_adis": true,
         "invoice_amount": 10000,
         "goods_receipt_amount": 10000,
+        "purchase_order_amount": 10000,
         "has_phe_goods": true,
         "phe_itemized": false
       },
@@ -2446,6 +2452,7 @@
         "account_published_in_adis": true,
         "invoice_amount": 10000,
         "goods_receipt_amount": 10000,
+        "purchase_order_amount": 10000,
         "has_phe_goods": false,
         "phe_itemized": true
       },
@@ -2476,6 +2483,7 @@
         "account_published_in_adis": true,
         "invoice_amount": 9500,
         "goods_receipt_amount": 10000,
+        "purchase_order_amount": 10000,
         "has_phe_goods": false,
         "phe_itemized": true
       },
@@ -2506,6 +2514,7 @@
         "account_published_in_adis": true,
         "invoice_amount": 10000,
         "goods_receipt_amount": 10000,
+        "purchase_order_amount": 10000,
         "has_phe_goods": true,
         "phe_itemized": true
       },

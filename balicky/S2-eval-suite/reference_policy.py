@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Deterministic reference policy for the Polarita Eval Suite (package S2, Version 3.0).
-Deterministická referenční politika pro Eval Suite Polarita (balíček S2, Verze 3.0).
+Deterministic reference policy for the Polarita Eval Suite (package S2, Version 3.1).
+Deterministická referenční politika pro Eval Suite Polarita (balíček S2, Verze 3.1).
 
 EN: Pure-Python, dependency-free implementation of the hard guards ("Hard-Stop", "FAIL_CLOSED",
     "Decisions") described in the Polarita blueprint. It is the mock tool layer used by the dry-run
@@ -154,7 +154,10 @@ def _finite_nonneg_number(value: Any) -> float | None:
     """Return finite non-negative float or None (rejects bool, NaN, inf, negatives)."""
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
-    num = float(value)
+    try:
+        num = float(value)
+    except OverflowError:
+        return None
     if not math.isfinite(num) or num < 0:
         return None
     return num
@@ -436,17 +439,10 @@ def rule_supplier_invoice(event: dict[str, Any]) -> dict[str, Any]:
         return _result(BLOCK, "ADIS_ACCOUNT_NOT_PUBLISHED", "notify_16001", "escalate_decisions")
     inv_amount = _finite_nonneg_number(event.get("invoice_amount"))
     gr_amount = _finite_nonneg_number(event.get("goods_receipt_amount"))
-    if inv_amount is None or gr_amount is None:
+    po_amount = _finite_nonneg_number(event.get("purchase_order_amount"))
+    if inv_amount is None or gr_amount is None or po_amount is None:
         return _result(FAIL_CLOSED, "MALFORMED_EVENT", "log_audit")
-    po_raw = event.get("purchase_order_amount")
-    if po_raw is not None:
-        po_amount = _finite_nonneg_number(po_raw)
-        if po_amount is None:
-            return _result(FAIL_CLOSED, "MALFORMED_EVENT", "log_audit")
-        matched_limit = min(gr_amount, po_amount)
-    else:
-        matched_limit = gr_amount
-    if inv_amount > matched_limit:
+    if inv_amount > min(gr_amount, po_amount):
         return _result(BLOCK, "THREE_WAY_MISMATCH", "notify_13002")
     if event.get("has_phe_goods") is True and event.get("phe_itemized") is not True:
         return _result(BLOCK, "PHE_NOT_ITEMIZED", "notify_13002")

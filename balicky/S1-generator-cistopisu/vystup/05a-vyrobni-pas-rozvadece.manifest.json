@@ -2,7 +2,7 @@
   "document": "05a-vyrobni-pas-rozvadece",
   "title": "Výrobní pas rozváděče",
   "draft_watermark": true,
-  "generated_utc": "2026-11-23 05:17 UTC",
+  "generated_utc": "2026-11-23 05:58 UTC",
   "variables": {
     "spis_id": "POL-2027-00001",
     "nazev_klienta": "Společenství vlastníků Vzorová 12 (VZOR)",
@@ -103,7 +103,7 @@
   "sha256": {
     "template": "ddc7a11e01fda5e3e0bb6b31c3dbc6f33b1c7bf174261cd86b44b36aa238964c",
     "data": "fc61b82ce0dc50a42736a4b289c58d014e79dbf0d95fa22346914b9433bcb5b8",
-    "pdf": "86e4024f23ecf0ace1f48162e0aeff1b71d3fdd6d1a559794b578125c3dbb3f2"
+    "pdf": "db42b79d6634e1611d6c3544d1e7808b52522eab3eda97e890e39cd9a8762fc7"
   },
   "pages": 8
 }

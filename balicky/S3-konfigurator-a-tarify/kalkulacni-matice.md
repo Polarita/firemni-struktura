@@ -1,4 +1,4 @@
-# Interní kalkulační a provizní matice (`N8`) · Verze 3.0
+# Interní kalkulační a provizní matice (`N8`) · Verze 3.1
 
 Interní pravidla pro `14002 rozpoctar`, `14005 zakazky`, `12001 marketing` a `16001 ucetni`. Čísla se neopisují — hodnoty jsou v [`cenik.json`](./cenik.json) a v generovaném [`prehled-cen.md`](./prehled-cen.md) (stav `SCHVÁLENO 1001`, 15. 11. 2026); výpočty provádí [`pricing.py`](./pricing.py).
 

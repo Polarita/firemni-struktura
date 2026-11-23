@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Unit and integration tests of the Polarita Eval Suite runner (package S2, Version 3.0).
-Jednotkové a integrační testy runneru Eval Suite Polarita (balíček S2, Verze 3.0).
+Unit and integration tests of the Polarita Eval Suite runner (package S2, Version 3.1).
+Jednotkové a integrační testy runneru Eval Suite Polarita (balíček S2, Verze 3.1).
 
 Usage / Použití:  python -m unittest -v test_eval_suite
 """
@@ -589,7 +589,7 @@ class HardeningTests(unittest.TestCase):
     def test_missing_or_wrongly_typed_deciding_fields_never_allow(self) -> None:
         nan = float("nan")
         invoice = {"type": "supplier_invoice", "billed_to": "Polarita s.r.o.", "unreliable_vat_payer": False,
-                   "account_published_in_adis": True, "invoice_amount": 100, "goods_receipt_amount": 100, "has_phe_goods": False}
+                   "account_published_in_adis": True, "invoice_amount": 100, "goods_receipt_amount": 100, "purchase_order_amount": 100, "has_phe_goods": False}
         self.assertEqual(reference_policy.decide(invoice)["decision"], "ALLOW")
         poll = build_dataset.isds("poll_received")
         self.assertEqual(reference_policy.decide(poll)["decision"], "ALLOW")
@@ -808,8 +808,12 @@ class HardeningTests(unittest.TestCase):
         # EN: Three-way match - the invoice may exceed neither the goods receipt nor the purchase order.
         # CZ: 3-Way Match - faktura nesmí překročit příjemku ani objednávku.
         invoice = {"type": "supplier_invoice", "billed_to": "Polarita s.r.o.", "unreliable_vat_payer": False,
-                   "account_published_in_adis": True, "invoice_amount": 100, "goods_receipt_amount": 100, "has_phe_goods": False}
+                   "account_published_in_adis": True, "invoice_amount": 100, "goods_receipt_amount": 100, "purchase_order_amount": 100, "has_phe_goods": False}
         self.assertEqual(reference_policy.decide({**invoice, "purchase_order_amount": 100})["decision"], "ALLOW")
+        for amount in (None, False, -1, float("inf"), 10**400):
+            self.assertEqual(reference_policy.decide({**invoice, "purchase_order_amount": amount})["decision"], "FAIL_CLOSED")
+        without_order = {key: value for key, value in invoice.items() if key != "purchase_order_amount"}
+        self.assertEqual(reference_policy.decide(without_order)["decision"], "FAIL_CLOSED")
         self.assertEqual(reference_policy.decide({**invoice, "purchase_order_amount": 99.99})["reason_code"], "THREE_WAY_MISMATCH")
         self.assertEqual(reference_policy.decide({**invoice, "goods_receipt_amount": 99.99})["reason_code"], "THREE_WAY_MISMATCH")
         self.assertEqual(reference_policy.decide({**invoice, "purchase_order_amount": "100"})["decision"], "FAIL_CLOSED")

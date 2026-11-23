@@ -1,11 +1,11 @@
 -- =====================================================================================
--- rls-pool-test.sql — Polarita Elektro Cloud · Blok 19 (S7) · Verze 3.0 (Polarita-3.0)
+-- rls-pool-test.sql — Polarita Elektro Cloud · Blok 19 (S7) · Verze 3.1 (Polarita-3.1)
 --
--- EN: PATTERN ONLY — NOT EXECUTED. Companion of rls-vzor.sql. That file runs in one
+-- EN: Tested on disposable PostgreSQL 18.7. Companion of rls-vzor.sql. That file runs in one
 --     transaction and switches roles with SET LOCAL ROLE; this script covers what it
 --     cannot: a REAL login of saas_app and a connection that is reused for further
 --     transactions after COMMIT and after ROLLBACK, as a connection pool does.
--- CZ: POUZE VZOR — NEBYL SPUŠTĚN. Doplněk k rls-vzor.sql. Ten běží v jedné transakci
+-- CZ: Ověřeno na dočasné instanci PostgreSQL 18.7. Doplněk k rls-vzor.sql. Ten běží v jedné transakci
 --     a role přepíná přes SET LOCAL ROLE; tento skript pokrývá to, co on nemůže:
 --     SKUTEČNÉ přihlášení role saas_app a spojení, které se po COMMIT i po ROLLBACK
 --     použije pro další transakce, jak to dělá pool spojení.

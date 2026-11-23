@@ -2,7 +2,7 @@
   "document": "05c-eu-prohlaseni-o-shode",
   "title": "EU prohlášení o shodě",
   "draft_watermark": true,
-  "generated_utc": "2026-11-23 05:17 UTC",
+  "generated_utc": "2026-11-23 05:58 UTC",
   "variables": {
     "spis_id": "POL-2027-00001",
     "oznaceni_rozvadece": "+RP2 (podružný rozváděč dobíjecích stanic)",
@@ -35,7 +35,7 @@
   "sha256": {
     "template": "61395f4a4ef53335be13e768abbd3dab893aa442633a9439d2a10a37821922cb",
     "data": "a171858e8c104218b7ca3651d41ff21fbe2dd7139a97ed522eb6b281eaeebe54",
-    "pdf": "d3365f8938748b977d2b2edde1feac433a0e735feb0ee35c3dc6687ff439b70e"
+    "pdf": "6544940925e04bbc828eda9628b8a9c7b574d1b75f1eb0d5b87953e3949bbfa2"
   },
   "pages": 3
 }

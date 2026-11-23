@@ -1,9 +1,9 @@
 /**
  * EN: SAMPLE ONLY — NOT EXECUTED. Shared helper of the living manual (Block 18, package S6,
- *     Polarita-3.0). Every spec file imports it and binds it to ITS OWN chapter, so the
+ *     Polarita-3.1). Every spec file imports it and binds it to ITS OWN chapter, so the
  *     helper is written once and no chapter can write into another chapter's manifest.
  * CZ: POUZE VZOR — NEBYL SPUŠTĚN. Sdílená pomocná funkce živé příručky (Blok 18, balíček S6,
- *     Polarita-3.0). Každý soubor testu ji importuje a naváže na SVOU kapitolu, takže je
+ *     Polarita-3.1). Každý soubor testu ji importuje a naváže na SVOU kapitolu, takže je
  *     napsána jednou a žádná kapitola nemůže zapisovat do manifestu jiné kapitoly.
  *
  * EN: Usage in a spec file:
@@ -12,6 +12,7 @@
  * CZ: Použití v souboru testu: viz výše.
  */
 
+import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -85,8 +86,8 @@ export function vytvorKrok(kapitola: Kapitola): Krok {
       const order = (stepCounters.get(counterKey) ?? 0) + 1;
       stepCounters.set(counterKey, order);
 
-      const safeTestKey = info.testId.replace(/[^a-zA-Z0-9_-]+/g, '_');
-      const screenshotName = `${kapitola.id}-${safeTestKey.slice(-12)}-${String(order).padStart(2, '0')}-${slugify(popisek).slice(0, 48)}.png`;
+      const safeTestKey = createHash('sha256').update(info.testId).digest('hex').slice(0, 32);
+      const screenshotName = `${kapitola.id}-${safeTestKey}-${String(order).padStart(2, '0')}-${slugify(popisek).slice(0, 48)}.png`;
       const screenshotDir = path.join(MANUAL_DIR, 'screenshots');
       const manifestDir = path.join(MANUAL_DIR, 'manifest');
       const manifestFile = path.join(manifestDir, `${kapitola.id}-${safeTestKey}.json`);
