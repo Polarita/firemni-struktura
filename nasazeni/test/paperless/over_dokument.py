@@ -18,7 +18,10 @@ from documents.data_models import ConsumableDocument, DocumentMetadataOverrides,
 from documents.models import CustomField, CustomFieldInstance, Document, PaperlessTask
 from documents.tasks import consume_file
 
-case, checksum = sys.argv[1:]
+case, checksum = sys.argv[1:3]
+prijem = sys.argv[3:] == ["--sanon"]
+if sys.argv[3:] and not prijem:
+    raise ValueError("Neznámý způsob příjmu")
 if os.getuid() != 1000 or not re.fullmatch(r"POL-[0-9]{4}-[0-9]{5}", case) or not re.fullmatch(r"[a-f0-9]{64}", checksum):
     raise RuntimeError("Neplatná zkouška archivu")
 data = sys.stdin.buffer.read(128 * 1024**2 + 1)
@@ -27,7 +30,7 @@ if len(data) > 128 * 1024**2 or not data.startswith(b"%PDF") or hashlib.sha256(d
 field, _ = CustomField.objects.get_or_create(name="case_id", defaults={"data_type": CustomField.FieldDataType.STRING})
 if field.data_type != CustomField.FieldDataType.STRING:
     raise RuntimeError("Pole case_id má jiný datový typ")
-title = f"{case} – Předávací protokol TEST"
+title = f"{case} – " + ("Převzatý sken" if prijem else "Předávací protokol TEST")
 doc = Document.objects.filter(checksum=checksum).first()
 attempt = 0
 while True:
@@ -50,9 +53,14 @@ while doc is None and time.monotonic() < deadline:
         raise RuntimeError("Úloha OCR protokolu skončila chybou")
     time.sleep(5)
     doc = Document.objects.filter(checksum=checksum).first()
-if doc is None or doc.title != title or not CustomFieldInstance.objects.filter(document=doc, field=field, value_text=case).exists():
+if doc is None or (not prijem and doc.title != title) or not CustomFieldInstance.objects.filter(document=doc, field=field, value_text=case).exists():
     raise RuntimeError("Chybí zkušební protokol s vazbou na spis")
 text = "".join(c for c in unicodedata.normalize("NFKD", doc.content.lower()) if not unicodedata.combining(c))
-if not all(word in text for word in ("protokol", "svitidlo")):
-    raise RuntimeError("OCR nepřečetlo očekávaný obsah čistého PDF")
-print(f"Paperless uložil dokument {doc.pk} ke spisu {case} a přečetl rastrový protokol z karantény.", flush=True)
+if prijem:
+    # Prázdné OCR vyžaduje ruční kontrolu. Výsledek zůstává v evidenci převzatých skenů.
+    import json
+    print(json.dumps({"dokument": doc.pk, "ocr": bool(text.strip())}))
+else:
+    if not all(word in text for word in ("protokol", "svitidlo")):
+        raise RuntimeError("OCR nepřečetlo očekávaný obsah čistého PDF")
+    print(f"Paperless uložil dokument {doc.pk} ke spisu {case} a přečetl rastrový protokol z karantény.", flush=True)

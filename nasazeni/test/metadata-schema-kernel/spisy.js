@@ -84,6 +84,9 @@ async function ukazPrijem(kod, current) {
         const li = document.createElement("li");
         const when = timestamp => new Date(timestamp).toLocaleString("cs-CZ");
         li.textContent = "Převzato " + when(r.prijato) + " · termín " + when(r.termin) + " · " + r.bajtu.toLocaleString("cs-CZ") + " B";
+        const states = {"v-karantene":"v karanténě", "odmitnuto":"karanténa odmítla přílohu",
+            "ocr-hotovo":"uloženo v archivu, OCR dokončeno", "ke-kontrole":"uloženo v archivu, OCR vyžaduje kontrolu"};
+        if (states[r.stav]) li.textContent += " · " + states[r.stav];
         list.append(li);
     }
     if (!receipts.length) list.textContent = "Spis zatím nemá potvrzení.";

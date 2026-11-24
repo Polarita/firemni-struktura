@@ -36,7 +36,7 @@ os.environ.update({
     "PAPERLESS_COOKIE_PREFIX": "polarchiv_", "PAPERLESS_PROXY_SSL_HEADER": '["HTTP_X_FORWARDED_PROTO","https"]',
     "PAPERLESS_DBENGINE": "postgresql", "PAPERLESS_DBHOST": "10.239.33.12", "PAPERLESS_DBPORT": "5432",
     "PAPERLESS_DBNAME": "paperless", "PAPERLESS_DBUSER": "paperless", "PAPERLESS_DBPASS": secret("pg-paperless"),
-    "PAPERLESS_DBSSLMODE": "verify-full", "PAPERLESS_DBSSLROOTCERT": str(conf / "postgres.crt"),
+    "PAPERLESS_DB_OPTIONS": "sslmode=verify-full,sslrootcert=" + str(conf / "postgres.crt"),
     "PAPERLESS_REDIS": "unix:///run/paperless-broker/valkey.sock",
     "PAPERLESS_DATA_DIR": "/var/lib/polarita-paperless/data", "PAPERLESS_MEDIA_ROOT": "/var/lib/polarita-paperless/media",
     "PAPERLESS_CONSUMPTION_DIR": "/var/lib/polarita-paperless/consume",

@@ -1,0 +1,7 @@
+[Unit]
+Description=Kontrola nových výsledků karantény pro archiv šanonů
+[Timer]
+OnBootSec=3min
+OnUnitInactiveSec=2min
+[Install]
+WantedBy=timers.target

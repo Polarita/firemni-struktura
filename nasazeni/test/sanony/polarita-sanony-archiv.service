@@ -1,0 +1,9 @@
+[Unit]
+Description=Archivace očištěných šanonů s vazbou na spis
+After=incus.service
+RequiresMountsFor=/srv/polarita/workspace /srv/polarita/infra
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -I /srv/polarita/infra/karantena-test/bin/sanony/archiv.py
+UMask=0077
+TimeoutStartSec=infinity

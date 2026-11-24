@@ -46,6 +46,7 @@ if [[ $restart == true ]]; then
     incus restart paperless-test
     python3 "$src/../trezor/agenti.py" --klient paperless-test
 fi
+bash "$src/../karantena/pamet-fronty.sh"
 "${inside[@]}" python3 - "$host" <<'PY'
 from http.client import HTTPConnection
 import sys, time

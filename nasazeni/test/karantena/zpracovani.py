@@ -152,6 +152,9 @@ def process(source, token):
             raise ValueError("Neznámý výsledek kontroly")
         archive = {"ocisteno": "prijate", "odmitnuto": "odmitnute", "ceka": "ceka"}[state]
         safe_report = {k: report[k] for k in ("stav", "duvod", "typ", "signatury_hodin", "navrat") if k in report}
+        safe_report["otisk_vstupu"] = digest
+        if state == "ocisteno":
+            safe_report["otisk_vystupu"] = output_hash
         record(job, safe_report)
         source.replace(BASE / archive / job)
         print(job, state, safe_report["duvod"], flush=True)

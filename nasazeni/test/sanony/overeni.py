@@ -44,13 +44,13 @@ def over(origin, password):
     call("PUT", route, b"TEST", "application/pdf", 415)
     one = json.loads(call("PUT", route, pdf, "application/pdf"))
     two = json.loads(call("PUT", route, pdf, "application/pdf"))
-    if one != two or one["case_id"] != case or one["priloha"] != key or one["bajtu"] != len(pdf):
+    if any(one[k] != two[k] for k in ("priloha","case_id","prijato","termin","bajtu")) or one["case_id"] != case or one["priloha"] != key or one["bajtu"] != len(pdf):
         raise RuntimeError("Opakování nepotvrdilo stejnou přílohu")
     if datetime.fromisoformat(one["termin"]) - datetime.fromisoformat(one["prijato"]) != timedelta(hours=48):
         raise RuntimeError("Potvrzení neobsahuje lhůtu 48 hodin")
     call("PUT", route, pdf + b"\n", "application/pdf", 409)
     rows = json.loads(call("GET", api+"sanony/"+case))
-    if rows.count(one) != 1:
+    if sum(r["priloha"] == key and r["termin"] == one["termin"] for r in rows) != 1:
         raise RuntimeError("Karta spisu neukázala právě jedno potvrzení")
     print(f"Ředitelství převzalo testovací PDF ke spisu {case}. Opakované odeslání vrátilo stejný termín 48 hodin.")
     print("Anonymní příjem, cizí původ, jiný formát a záměna obsahu pod stejným číslem byly odmítnuty.")
