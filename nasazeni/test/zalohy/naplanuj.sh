@@ -5,9 +5,10 @@ src=$(cd "$(dirname "$0")" && pwd)
 [[ $src =~ ^/srv/polarita/infra/(stavba|releases)/[0-9a-f]{40}/nasazeni/test/zalohy$ ]]
 tmp=$(mktemp -d)
 trap 'rm -r -- "$tmp"' EXIT
-for phase in sber obnova; do
+for phase in sber obnova hovory; do
     cmd=sber.py
     if [[ $phase == obnova ]]; then cmd=obnov.py; fi
+    if [[ $phase == hovory ]]; then cmd=hovory_sber.py; fi
     unit=polarita-restic-$phase
     cat >"$tmp/$unit.service" <<UNIT
 [Unit]
@@ -26,6 +27,6 @@ UNIT
     install -m 0644 "$tmp/$unit.service" "$src/$unit.timer" /etc/systemd/system/
 done
 systemctl daemon-reload
-systemctl enable --now polarita-restic-sber.timer polarita-restic-obnova.timer
+systemctl enable --now polarita-restic-sber.timer polarita-restic-obnova.timer polarita-restic-hovory.timer
 systemctl is-active --quiet polarita-restic-sber.timer
 systemctl is-active --quiet polarita-restic-obnova.timer

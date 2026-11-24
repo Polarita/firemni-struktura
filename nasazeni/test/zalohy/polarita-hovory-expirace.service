@@ -1,0 +1,14 @@
+[Unit]
+Description=Výmaz denních repozitářů po dosažení retenční lhůty hovoru
+RequiresMountsFor=/var/lib/restic-test
+[Service]
+Type=oneshot
+User=pol-restic
+Group=pol-restic
+ExecStart=/usr/bin/python3 /usr/local/lib/polarita-restic/hovory_retence.py
+PrivateNetwork=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/restic-test/data/polarita-test
+ProtectHome=true
+NoNewPrivileges=true
+UMask=0077

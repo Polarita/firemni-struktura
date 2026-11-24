@@ -1,0 +1,8 @@
+[Unit]
+Description=Výmaz denních repozitářů provozních hovorů podle času pořízení
+[Timer]
+OnCalendar=*-*-* 00:00:00 UTC
+AccuracySec=1s
+Persistent=true
+[Install]
+WantedBy=timers.target

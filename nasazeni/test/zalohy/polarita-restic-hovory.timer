@@ -1,0 +1,7 @@
+[Unit]
+Description=Noční oddělená záloha provozního zvuku a přepisů
+[Timer]
+OnCalendar=*-*-* 00:40:00 Europe/Prague
+Persistent=true
+[Install]
+WantedBy=timers.target
