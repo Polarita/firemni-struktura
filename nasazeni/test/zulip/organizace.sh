@@ -8,7 +8,14 @@ flock 9
 inside=(incus exec -T zulip-test --)
 names=$(mktemp -p "$work" pozice.XXXXXXXX)
 trap 'rm -f -- "$names"' EXIT
-python3 "$src/../paperclip/pozice.py" --zulip >"$names"
+python3 - >"$names" <<'PYZ'
+import json
+from pathlib import Path
+plan = json.loads(Path("/srv/polarita/data/paperclip/pozice.json").read_bytes())
+if not plan.get("zdroj_gitea"):
+    raise SystemExit("Chybí soupis botů z ověřené revize Gitey")
+print(json.dumps({a["id"]: f'{a["name"]} (ai {a["id"]})' for a in plan["agents"]}, ensure_ascii=False))
+PYZ
 chmod 0644 "$names"
 mv -T "$names" "$work/pozice.json"
 install -m 0644 "$src/organizace.py" "$work/"

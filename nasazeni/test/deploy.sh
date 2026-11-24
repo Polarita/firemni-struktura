@@ -78,14 +78,6 @@ fi
 "${guest[@]}" bash "$dest/nasazeni/test/trezor/instalace.sh" "$dest/agent" | tee "$tmp/trezor.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/databaze/aplikace.sh" | tee "$tmp/databaze.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/paperclip/server.sh" "$fqdn" | tee "$tmp/paperclip.txt"
-"${guest[@]}" bash "$dest/nasazeni/test/paperclip/spravce.sh" "$fqdn" | tee -a "$tmp/paperclip.txt"
-"${guest[@]}" bash "$dest/nasazeni/test/paperclip/stage1.sh" | tee -a "$tmp/paperclip.txt"
-"${guest[@]}" bash "$dest/nasazeni/test/paperclip/vstup.sh"
-sudo -n bash nasazeni/test/port-vpn.sh 8445 >/dev/null
-"${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/paperclip/zkouska_vpn.py "$fqdn" | tee -a "$tmp/paperclip.txt"
-printf 'https://%s:8445/\n' "$fqdn" | "${inc[@]}" exec --project polarita -T polarita-hq -- incus exec -T reditelstvi-test -- sh -ec 'umask 022; cat >/usr/local/share/.polarita-paperclip-url.next; mv -T /usr/local/share/.polarita-paperclip-url.next /usr/local/share/polarita-paperclip-url'
-"${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-07
-"${inc[@]}" file push --project polarita "$tmp/paperclip.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-07/paperclip-$commit.txt"
 "${guest[@]}" touch /srv/polarita/infra/keycloak-test/conf/databaze-pripravena
 "${guest[@]}" bash "$dest/nasazeni/test/trezor/zkouska-startu.sh" | tee "$tmp/restart.txt"
 sudo -n python3 nasazeni/test/trezor/zkouska-obnovy.py "$dest/nasazeni/test/trezor" | tee "$tmp/obnova.txt"
@@ -107,6 +99,14 @@ git archive --format=tar.gz "$commit" | "${guest[@]}" install -m 0600 /dev/stdin
 "${guest[@]}" python3 "$dest/nasazeni/test/git/zdroj_ci.py" "$dest/zdroj-ci.tar.gz" --zkouska-skenu | tee -a "$tmp/gitea.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/git/repozitar.py" --ochrana --kandidat "$dest/revize-ci.json" | tee -a "$tmp/gitea.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/git/over_ci.py" "$dest/revize-ci.json" | tee -a "$tmp/gitea.txt"
+"${guest[@]}" bash "$dest/nasazeni/test/paperclip/spravce.sh" "$fqdn" "$dest/revize-ci.json" | tee -a "$tmp/paperclip.txt"
+"${guest[@]}" bash "$dest/nasazeni/test/paperclip/stage1.sh" | tee -a "$tmp/paperclip.txt"
+"${guest[@]}" bash "$dest/nasazeni/test/paperclip/vstup.sh"
+sudo -n bash nasazeni/test/port-vpn.sh 8445 >/dev/null
+"${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/paperclip/zkouska_vpn.py "$fqdn" | tee -a "$tmp/paperclip.txt"
+printf 'https://%s:8445/\n' "$fqdn" | "${inc[@]}" exec --project polarita -T polarita-hq -- incus exec -T reditelstvi-test -- sh -ec 'umask 022; cat >/usr/local/share/.polarita-paperclip-url.next; mv -T /usr/local/share/.polarita-paperclip-url.next /usr/local/share/polarita-paperclip-url'
+"${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-07
+"${inc[@]}" file push --project polarita "$tmp/paperclip.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-07/paperclip-$commit.txt"
 "${guest[@]}" incus exec -T reditelstvi-test -- touch /usr/local/share/polarita-gitea-oidc.ok
 "${guest[@]}" bash "$dest/nasazeni/test/objekty/zkouska.sh" | tee "$tmp/garage.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/databaze/obnova.py" | tee "$tmp/obnova-databazi.txt"

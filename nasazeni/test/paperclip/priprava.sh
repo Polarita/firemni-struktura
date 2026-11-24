@@ -21,9 +21,6 @@ cd "$work/tofu"
 install -m 0644 "$src/paperclip.tf" "$src/../incus/providers.tf" "$src/../incus/.terraform.lock.hcl" .
 tmp=$(mktemp -d)
 trap 'rm -r -- "$tmp"' EXIT
-python3 "$src/pozice.py" >"$tmp/pozice.json"
-install -m 0600 "$tmp/pozice.json" "$store/pozice.json.next"
-mv -T "$store/pozice.json.next" "$store/pozice.json"
 tofu init -input=false -lockfile=readonly
 tofu validate
 tofu plan -input=false -out="$tmp/plan"

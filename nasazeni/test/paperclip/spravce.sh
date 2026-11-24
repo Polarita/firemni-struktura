@@ -29,5 +29,10 @@ if ! "${inside[@]}" grep -qx PAPERCLIP_AUTH_DISABLE_SIGN_UP=true /etc/polarita-p
 fi
 login over
 incus file push --mode=0644 "$src/organizace.py" paperclip-test/etc/polarita-paperclip/
-incus file push --mode=0644 /srv/polarita/data/paperclip/pozice.json paperclip-test/etc/polarita-paperclip/pozice.json
+store=/srv/polarita/data/paperclip
+plan=$(mktemp -p "$store" pozice.XXXXXXXX)
+trap 'rm -f -- "$plan"' EXIT
+python3 "$src/pozice.py" "${2:?Chybí revize ověřená v Gitee}" >"$plan"
+incus file push --mode=0644 "$plan" paperclip-test/etc/polarita-paperclip/pozice.json
 "${inside[@]}" python3 /etc/polarita-paperclip/organizace.py "$fqdn" </srv/polarita/data/bootstrap-test/test-login/heslo
+mv -T "$plan" "$store/pozice.json"

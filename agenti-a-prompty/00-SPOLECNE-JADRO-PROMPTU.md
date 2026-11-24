@@ -7,7 +7,7 @@ Tento soubor je **jediným zdrojem společných pravidel**, která musí obsahov
 1. Pravidlo společné všem `ai` se mění **pouze zde**, mezi značkami `JADRO-START` a `JADRO-END`.
 2. Po změně spusť `python nastroje/sync_prompt_core.py` a `python nastroje/check_consistency.py`.
 3. Každá změna jádra je změnou systémových promptů — před nasazením musí projít základní sadou `Eval Suite` (`ES-001` až `ES-020`) a rozšířenou sadou balíčku `S2`.
-4. Oddíly specifické pro danou pozici zůstávají v kartě nad společným jádrem; jádro je nesmí opakovat ani jim odporovat. Poslední z nich je vždy oddíl „SMÍŠ BEZ DECISIONS“ s úplným výčtem samostatných akcí dané pozice — jádro se na něj odkazuje, protože agent za běhu vidí jen svůj systémový prompt, nikoli kartu.
+4. Oddíly specifické pro danou pozici zůstávají v kartě nad společným jádrem; jádro je nesmí opakovat ani jim odporovat. Poslední z nich je vždy oddíl „SMÍŠ BEZ DECISIONS“ s úplným výčtem samostatných akcí dané pozice — jádro na něj odkazuje. Paperclip načte společná pravidla, chartu oddělení a celou kartu z téže ověřené revize Gitey.
 5. První řádek vloženého oddílu doplňuje skript z kanonu (`nastroje/kanon.json`): číslo, systémové ID a měsíční strop konkrétního `ai`.
 
 ## Znění jádra
