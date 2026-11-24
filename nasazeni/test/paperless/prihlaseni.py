@@ -81,6 +81,11 @@ if len(sys.argv) > 2:
     case, doc_id, field_id = sys.argv[2:]
     if not re.fullmatch(r"POL-[0-9]{4}-[0-9]{5}", case) or not doc_id.isdecimal() or not field_id.isdecimal():
         raise ValueError("Chybné označení dokumentu")
+    for endpoint in ("/api/ui_settings/", "/api/saved_views/"):
+        with web.open(origin + endpoint, timeout=45) as res:
+            if res.status != 200 or res.headers.get_content_type() != "application/json":
+                raise RuntimeError("Archiv nezpřístupnil nastavení dokumentového rozhraní správci.")
+            json.load(res)
     with web.open(origin + "/api/documents/" + doc_id + "/", timeout=45) as res:
         doc = json.load(res)
     if (doc["id"] != int(doc_id) or doc["title"] != f"{case} – Předávací protokol TEST"

@@ -29,7 +29,8 @@ with transaction.atomic():
     if doc.owner_id is None:
         doc.owner = user
         doc.save(update_fields=["owner"])
-    for model in ("document", "customfield"):
+    # Webový klient při otevření dokumentu načítá osobní nastavení a vlastní uložené pohledy.
+    for model in ("document", "customfield", "uisettings", "savedview"):
         permission = Permission.objects.get(content_type__app_label="documents", codename="view_" + model)
         user.user_permissions.add(permission)
 print(doc.pk, cf.field_id)
