@@ -8,7 +8,7 @@ jobs:
   sestaveni:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Ověřit zdroje a sestavit tiskové dokumenty
         env:
           POLARITA_PDF_BROWSER: /usr/bin/google-chrome
@@ -17,7 +17,7 @@ jobs:
           test "$GITHUB_REF_NAME" = "$(python -c 'import json; print(json.load(open("nastroje/kanon.json"))["release_tag"])')"
           python -m venv "$RUNNER_TEMP/pdf-env"
           source "$RUNNER_TEMP/pdf-env/bin/activate"
-          pip install -r nastroje/requirements.txt
+          pip install -r nastroje/requirements.txt -r balicky/S1-generator-cistopisu/requirements.txt
           python nastroje/check_consistency.py
           python nastroje/sync_prompt_core.py --check
           python nastroje/build_org_pdfs.py

@@ -36,6 +36,8 @@ if not target.exists():
 PY
 test -s heslo
 tr -d '\n' <heslo | sha256sum | cut -d' ' -f1 | incus file push --mode=0444 - "$name/etc/polarita-test.sha256"
+incus exec "$name" -- mkdir -p /usr/local/share
+incus file push --mode=0644 "$src/../../balicky/S3-konfigurator-a-tarify/konfigurator.html" "$name/usr/local/share/konfigurator.html"
 incus file push --mode=0755 "$binary" "$name/usr/local/bin/polarita-portal.new"
 incus exec "$name" -- mv /usr/local/bin/polarita-portal.new /usr/local/bin/polarita-portal
 incus file push --mode=0755 "$src/portal.init" "$name/etc/init.d/polarita-portal"

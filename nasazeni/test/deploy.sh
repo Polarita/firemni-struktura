@@ -17,6 +17,7 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 CGO_ENABLED=0 go build -trimpath -o "$tmp/portal" nasazeni/test/portal.go
 "${inc[@]}" file push --mode 0755 --project polarita "$tmp/portal" "polarita-hq$dest/portal"
+"${guest[@]}" "$dest/nasazeni/test/incus.sh"
 "${guest[@]}" "$dest/nasazeni/test/site.sh"
 "${guest[@]}" "$dest/nasazeni/test/portal.sh" "$dest/portal"
 sudo -n bash nasazeni/test/vstup.sh

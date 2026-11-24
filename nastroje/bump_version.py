@@ -74,8 +74,8 @@ def bump_text(text: str, old: str, new: str) -> tuple[str, int]:
 
 def main(argv: list[str] | None = None) -> int:
     arguments = argv if argv is not None else sys.argv[1:]
-    if len(arguments) != 1 or not re.fullmatch(r"(0|[1-9]\d*)\.(0|[1-9]\d*)", arguments[0]):
-        print("usage: python nastroje/bump_version.py <major.minor>   (e.g. 3.0; no leading zeros)", file=sys.stderr)
+    if len(arguments) != 1 or not re.fullmatch(r"(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?", arguments[0]):
+        print("usage: python nastroje/bump_version.py <major.minor[.patch]>   (e.g. 3.0; no leading zeros)", file=sys.stderr)
         return 2
     new = arguments[0]
     canon = json.loads(CANON_PATH.read_text(encoding="utf-8"))

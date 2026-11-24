@@ -502,7 +502,7 @@ class RuleTests(unittest.TestCase):
     def test_bump_version_refuses_malformed_numbers(self) -> None:
         with mock.patch.object(bump_version, "bump_text", side_effect=AssertionError("must not rewrite anything")), \
                 contextlib.redirect_stderr(io.StringIO()):
-            for bad in ("02.9", "2.09", "2", "2.9.1", "v2.9", "2,9", "", "2.9 "):
+            for bad in ("02.9", "2.09", "2", "2.9.01", "2.9.1.2", "v2.9", "2,9", "", "2.9 "):
                 self.assertEqual(bump_version.main([bad]), 2, bad)
             self.assertEqual(bump_version.main([]), 2)
             self.assertEqual(bump_version.main(["2.9", "3.0"]), 2)

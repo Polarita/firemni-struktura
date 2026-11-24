@@ -1,0 +1,16 @@
+config: {}
+storage_pools:
+  - name: default
+    driver: zfs
+    config:
+      source: polarita_zfs/data/incus/pool
+profiles:
+  - name: default
+    config:
+      security.privileged: "false"
+    devices:
+      root:
+        type: disk
+        path: /
+        pool: default
+networks: []

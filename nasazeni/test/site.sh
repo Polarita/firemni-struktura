@@ -13,7 +13,8 @@ install -m 644 "$src/zones.nft" /etc/polarita/zones.nft
 install -m 644 "$src/polarita-zones.service" /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable polarita-zones.service
-systemctl restart polarita-zones.service
+systemctl start polarita-zones.service
+nft -f /etc/polarita/zones.nft
 install -m 644 "$src/zones.tf" zones.tf
 tofu fmt -check
 tofu init -input=false -lockfile=readonly

@@ -20,7 +20,7 @@ const cookieName = "__Host-polarita-test"
 var page = template.Must(template.New("portal").Parse(`<!doctype html><html lang="cs"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ředitelství Polarity</title><style>
 :root{font:110%/1.55 "Segoe UI",system-ui,sans-serif;color:#152a37;background:#f0f4f4}
 body{margin:0}header{padding:1rem max(5vw,1rem);border-bottom:1px solid #bdccce;color:#294956}main{max-width:32rem;margin:8vh auto;padding:2rem}h1{font-size:clamp(2rem,6vw,3rem);line-height:1.12}label{display:block;margin:1rem 0 .3rem}input,button{font:inherit;padding:.65rem .8rem;border-radius:.3rem}input{width:100%;box-sizing:border-box;border:1px solid #778b90}button{margin:1rem 0;background:#15555c;color:white;border:0;cursor:pointer}small{color:#314f57}
-</style><header>Polarita s.r.o.</header><main><h1>Ředitelství Polarity</h1>{{if .Signed}}<h2>Ověření přístupu</h2><p>Jste přihlášeni jako <strong>spravce</strong> v testovacím prostředí.</p><p>Úspěšně jste otevřeli chráněnou stránku ředitelství.</p><form method="post" action="/odhlasit"><button>Odhlásit se</button></form>{{else}}<p>Přihlášení do testovacího prostředí</p>{{if .Error}}<p role="alert">{{.Error}}</p>{{end}}<form method="post" action="/prihlasit"><label for="u">Jméno</label><input id="u" name="username" autocomplete="username" required><label for="p">Heslo</label><input id="p" name="password" type="password" autocomplete="current-password" required><button>Přihlásit se</button></form>{{end}}</main></html>`))
+</style><header>Polarita s.r.o.</header><main><h1>Ředitelství Polarity</h1>{{if .Signed}}<h2>Ověření přístupu</h2><p>Jste přihlášeni jako <strong>spravce</strong> v testovacím prostředí.</p><p><a href="/konfigurator">Otevřít konfigurátor paušálu Elektro Správa</a></p><form method="post" action="/odhlasit"><button>Odhlásit se</button></form>{{else}}<p>Přihlášení do testovacího prostředí</p>{{if .Error}}<p role="alert">{{.Error}}</p>{{end}}<form method="post" action="/prihlasit"><label for="u">Jméno</label><input id="u" name="username" autocomplete="username" required><label for="p">Heslo</label><input id="p" name="password" type="password" autocomplete="current-password" required><button>Přihlásit se</button></form>{{end}}</main></html>`))
 
 type portal struct {
 	digest   [32]byte
@@ -64,6 +64,14 @@ func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
+	case r.URL.Path == "/konfigurator" && r.Method == "GET":
+		if !signed {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'")
+		http.ServeFile(w, r, "/usr/local/share/konfigurator.html")
+		return
 	case r.URL.Path == "/prihlasit" && r.Method == "POST":
 		if len(p.failures) >= 10 {
 			w.Header().Set("Retry-After", "60")

@@ -1,4 +1,4 @@
-# Karta ai zaměstnance č. 13002: Petra Veselá (ai) — Manažerka nákupu, B2B sourcingu a veřejných zakázek (`nakupci`) · Verze 3.2
+# Karta ai zaměstnance č. 13002: Petra Veselá (ai) — Manažerka nákupu, B2B sourcingu a veřejných zakázek (`nakupci`) · Verze 3.2.1
 
 ## 1. Osobní a organizační karta
 
@@ -140,6 +140,6 @@ Zahajujeme činnost nákupu a B2B sourcingu společnosti Polarita s.r.o.
 
 ## 6. Zapojení do rozvojových balíčků `S1–S7` (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.2 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
+Balíčky `S1–S7` jsou ve Verzi 3.2.1 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
 
 * `Blok 15` (`S3`): dodává živé nákupní ceny jako podklad přirážky na materiál a kontroly minimální marže.
