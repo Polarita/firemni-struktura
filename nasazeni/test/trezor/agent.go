@@ -167,6 +167,7 @@ template {
 		if g.Zulip {
 			fields["zulip__redis_password"] = [2]string{"valkey/zulip", "heslo"}
 			fields["zulip__secret_key"] = [2]string{"zulip/aplikace", "secret_key"}
+			fields["zulip__social_auth_oidc_secret"] = [2]string{"zulip/aplikace", "oidc_secret"}
 		}
 		for file, field := range fields {
 			template := fmt.Sprintf(`{{ with secret "test/data/%s" }}{{ .Data.data.%s }}{{ end }}`, field[0], field[1])

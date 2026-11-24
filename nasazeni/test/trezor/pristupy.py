@@ -255,7 +255,7 @@ def initialize_objects(manager):
             elif suffix == "zulip/fronta":
                 fields = {name: secrets.token_urlsafe(32) for name in ("rabbitmq_password","memcached_password")}
             elif suffix == "zulip/aplikace":
-                fields = {"secret_key": secrets.token_urlsafe(48)}
+                fields = {name: secrets.token_urlsafe(48) for name in ("secret_key","oidc_secret")}
             elif suffix == "pki/garage-test":
                 fields = tls_bundle("garage-test", "10.239.33.14")
                 fields.update({"rpc": secrets.token_hex(32), "admin": secrets.token_hex(32)})
