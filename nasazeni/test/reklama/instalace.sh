@@ -22,26 +22,10 @@ recipe=$(cd "$src" && sha256sum server.py sdk.lock zkouska.py instalace.sh | sha
 dir=$root/$recipe
 install -d -m0755 "$dir"
 if ! [[ -e $dir/overeno ]]; then
-    url=https://files.pythonhosted.org/packages/3d/aa/26d64642d808de4a652579ef950d7cd2d37f080a8babf9c67c6b75fc4c3f/uv-0.13.9-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-    wheel=$cache/uv-0.13.9.whl
-    if ! [[ -e $wheel ]]; then
-        curl --fail --retry 3 --proto '=https' -LsS "$url" -o "$wheel.part"
-        echo "d7f459fe4fd247d830351c75686d3996ace3c6f3f728eb0e85a30b7ada0cef19  $wheel.part" | sha256sum -c --status
-        mv -T "$wheel.part" "$wheel"
-    fi
-    echo "d7f459fe4fd247d830351c75686d3996ace3c6f3f728eb0e85a30b7ada0cef19  $wheel" | sha256sum -c --status
-    python3 - "$wheel" "$cache/uv" <<'PY'
-from zipfile import ZipFile
-from pathlib import Path
-import sys
-with ZipFile(sys.argv[1]) as z:
-    dst = Path(sys.argv[2])
-    dst.write_bytes(z.read(next(n for n in z.namelist() if n.endswith("/scripts/uv"))))
-    dst.chmod(0o700)
-PY
+    uv=$(bash "$src/../zaklad/uv.sh")
     export UV_CACHE_DIR="$cache/sdk" UV_NO_CONFIG=1 UV_NO_PROGRESS=1
-    "$cache/uv" venv --allow-existing --no-python-downloads --python /usr/bin/python3 "$dir/sdk"
-    "$cache/uv" pip sync --only-binary=:all: --require-hashes --python "$dir/sdk/bin/python" "$src/sdk.lock"
+    "$uv" venv --allow-existing --no-python-downloads --python /usr/bin/python3 "$dir/sdk"
+    "$uv" pip sync --only-binary=:all: --require-hashes --python "$dir/sdk/bin/python" "$src/sdk.lock"
     install -m0644 "$src/server.py" "$src/zkouska.py" "$dir/"
     systemd-run --quiet --pipe --wait --collect -p User=pol-ads-test -p PrivateNetwork=yes -p NoNewPrivileges=yes \
         -p PrivateTmp=yes -p ProtectSystem=strict -p InaccessiblePaths=/srv \
