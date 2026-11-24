@@ -130,4 +130,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except subprocess.TimeoutExpired as exc:
+        phase = {"clamscan": "antiviru", "dangerzone-cli": "rekonstrukce",
+                 "qpdf": "overeni-pdf", "pdfimages": "overeni-pdf"}.get(exc.cmd[0], "pripravy")
+        result("ceka", "casovy-limit-" + phase)

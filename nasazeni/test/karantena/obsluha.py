@@ -51,7 +51,11 @@ def main():
                                 report["otisk_vystupu"] = hashlib.file_digest(f,"sha256").hexdigest()
                         if not isinstance(report,dict):
                             raise ValueError("Neplatný typ protokolu")
-                    except (ValueError,subprocess.SubprocessError,OSError):
+                    except subprocess.TimeoutExpired:
+                        report={"stav":"ceka","duvod":"casovy-limit-cele-ulohy"}
+                    except subprocess.CalledProcessError as exc:
+                        report={"stav":"ceka","duvod":"chyba-offline-pracovnika","navrat":exc.returncode}
+                    except (ValueError,OSError):
                         report={"stav":"ceka","duvod":"chyba-offline-pracovnika"}
                     publish(src.name+".json",{"start":token,"soubor":src.name,"sha256":digest,"vysledek":report})
         time.sleep(2)
