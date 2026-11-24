@@ -584,6 +584,13 @@ class RuleTests(unittest.TestCase):
         self.assertEqual(len(report.errors), 1)
         self.assertIn("unknown database db_sklad", report.errors[0])
 
+    def test_garage_storage_setting_and_database_values(self) -> None:
+        report = cc.Report()
+        path = cc.ROOT / "nasazeni/test/objekty/garage.toml"
+        cc.check_names(path, 'db_engine = "sqlite"\ndata_dir = "/db_sklad"', self.canon, report)
+        self.assertEqual(len(report.errors), 1)
+        self.assertIn("unknown database db_sklad", report.errors[0])
+
     def test_main_exit_codes(self) -> None:
         clean, dirty = cc.Report(), cc.Report()
         dirty.error("x.md:1", "planted")
