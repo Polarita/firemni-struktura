@@ -231,6 +231,9 @@ karantena() {
         python3 nasazeni/test/paperless/prihlaseni.py "$fqdn" "$case" "$doc" "$field" | tee "$tmp/paperless-cteni.txt"
     "${inc[@]}" file push --project polarita "$tmp/paperless-cteni.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-cteni-$commit.txt"
     printf 'https://%s:8448/\n' "$fqdn" | "${guest[@]}" incus exec -T reditelstvi-test -- sh -ec 'umask 022; cat >/usr/local/share/.polarita-paperless-url.next; mv -T /usr/local/share/.polarita-paperless-url.next /usr/local/share/polarita-paperless-url'
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
+        python3 nasazeni/test/sanony/zkouska_knihy.py "https://$fqdn" | tee "$tmp/kniha-objektu.txt"
+    "${inc[@]}" file push --project polarita "$tmp/kniha-objektu.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/kniha-objektu-$commit.txt"
 }
 
 zalohy() {

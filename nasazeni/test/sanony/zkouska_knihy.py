@@ -1,0 +1,55 @@
+"""Ověří cestu syntetické zprávy z karantény přes archiv až do knihy objektu."""
+from datetime import datetime, date
+from hashlib import sha256
+import json
+from pathlib import Path
+import sys
+import time
+from uuid import NAMESPACE_URL, uuid5
+from zoneinfo import ZoneInfo
+
+from overeni import pripojeni, prihlasit
+
+
+def over(origin, password):
+    call = pripojeni(origin)
+    prihlasit(call, password)
+    api = "/lhutnik-test/api/"
+    case = json.loads(call("POST", api+"spisy", json.dumps({
+        "pozadavek":str(uuid5(NAMESPACE_URL, "polarita.test/spis-zkouska-revizni-knihy")), "branch_id":101
+    }).encode(), "application/json"))["case_id"]
+    pdf = Path(__file__).with_name("revize-vzor-test.pdf").read_bytes()
+    key = str(uuid5(NAMESPACE_URL, "polarita.test/kniha/" + case + "/" + sha256(pdf).hexdigest()))
+    receipt = json.loads(call("PUT", api+"sanony/"+case+"/"+key, pdf, "application/pdf"))
+    if receipt["case_id"] != case or receipt["priloha"] != key or receipt["bajtu"] != len(pdf):
+        raise RuntimeError("Potvrzení se liší od předané testovací zprávy.")
+    print(f"Spis {case} převzal syntetickou revizní zprávu.", flush=True)
+    deadline = time.monotonic() + 7200
+    while receipt["stav"] == "v-karantene":
+        if time.monotonic() >= deadline:
+            raise TimeoutError("Archiv nepotvrdil OCR ve vyhrazeném čase.")
+        time.sleep(30)
+        receipt = next(r for r in json.loads(call("GET", api+"sanony/"+case)) if r["priloha"] == key)
+    if receipt["stav"] != "ocr-hotovo" or not receipt["dokument"]:
+        raise RuntimeError("Syntetická revizní zpráva neprošla karanténou a OCR.")
+    route = api + "kniha/" + case
+    values = {"objekt":"TEST-HALA", "zarizeni":"TEST-R1", "revize":"2026-01-10",
+              "upozornit":"2026-11-01", "platnost":"2026-12-31", "priloha":key}
+    for _ in range(2):
+        response = json.loads(call("POST", route, json.dumps(values).encode(), "application/json"))
+        if response != {"stav":"ulozeno"}:
+            raise RuntimeError("Kniha nepotvrdila zápis.")
+    rows = [r for r in json.loads(call("GET", route)) if (r["objekt"],r["zarizeni"]) == ("TEST-HALA","TEST-R1")]
+    if len(rows) != 1 or any(rows[0][k] != v for k,v in values.items()) or rows[0]["dokument"] != receipt["dokument"]:
+        raise RuntimeError("Kniha nevrátila jeden zápis se zdrojovým dokumentem.")
+    today = datetime.now(ZoneInfo("Europe/Prague")).date()
+    state = "po-lhute" if today > date.fromisoformat(values["platnost"]) else (
+        "blizi-se" if today >= date.fromisoformat(values["upozornit"]) else "ve-lhute")
+    if rows[0]["stav"] != state:
+        raise RuntimeError("Stav neodpovídá termínům testovací zprávy.")
+    print(f"Dokument {receipt['dokument']} ze spisu {case} prošel karanténou a OCR. "
+          f"Kniha po opakovaném zápisu vrací jeden záznam TEST-HALA / TEST-R1 se stavem {state}.")
+
+
+if __name__ == "__main__":
+    over(sys.argv[1], sys.stdin.readline().rstrip("\r\n"))

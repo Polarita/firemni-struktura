@@ -8,11 +8,10 @@ import sys
 from urllib import error, parse, request
 from uuid import NAMESPACE_URL, uuid5
 
-def over(origin, password):
-    if not re.fullmatch(r"https://[a-z0-9.-]+\.ts\.net", origin) or not password:
+def pripojeni(origin):
+    if not re.fullmatch(r"https://[a-z0-9.-]+\.ts\.net", origin):
         raise ValueError("Chybí vstup ředitelství")
     browser = request.build_opener(request.HTTPCookieProcessor(CookieJar()))
-    api = "/lhutnik-test/api/"
 
     def call(method, path, content=None, mime=None, status=200, source=None):
         headers = {"Origin": origin if source is None else source}
@@ -28,10 +27,22 @@ def over(origin, password):
                 raise RuntimeError(f"{method} {path} vrátil HTTP {res.status}, očekáván {status}.")
             return res.read()
 
-    no_login = api + "sanony/POL-2026-00001/00000000-0000-4000-8000-000000000001"
-    call("PUT", no_login, b"%PDF-TEST", "application/pdf", 401)
+    return call
+
+
+def prihlasit(call, password):
+    if not password:
+        raise ValueError("Chybí testovací heslo")
     call("POST", "/prihlasit", parse.urlencode({"username":"spravce", "password":password}).encode(),
          "application/x-www-form-urlencoded")
+
+
+def over(origin, password):
+    api = "/lhutnik-test/api/"
+    call = pripojeni(origin)
+    no_login = api + "sanony/POL-2026-00001/00000000-0000-4000-8000-000000000001"
+    call("PUT", no_login, b"%PDF-TEST", "application/pdf", 401)
+    prihlasit(call, password)
     case = json.loads(call("POST", api+"spisy", json.dumps({
         "pozadavek":str(uuid5(NAMESPACE_URL, "polarita.test/web-spisy")), "branch_id":101}).encode(),
         "application/json"))["case_id"]
