@@ -82,7 +82,9 @@ with (work/"server.log").open("wb") as log:
                               stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT)
     try:
         wait_for(lambda: request("GET","sys/seal-status"))
-        init = request("PUT","sys/init",{"recovery_shares":1,"recovery_threshold":1,"secret_shares":1,"secret_threshold":1,"stored_shares":1})
+        init = json.loads(subprocess.check_output(["/var/tmp/bao","operator","init","-format=json",
+                                                  "-address=https://"+port,"-ca-cert="+str(work/"tls.crt"),
+                                                  "-recovery-shares=5","-recovery-threshold=3"]))
         wait_for(lambda: not request("GET","sys/seal-status")["sealed"])
         with (root/"openbao.snap").open("rb") as snapshot:
             request("POST","sys/storage/raft/snapshot",snapshot,init["root_token"])
