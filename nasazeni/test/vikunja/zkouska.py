@@ -82,7 +82,8 @@ with web.open(Request(action, data=urlencode({"username": "spravce", "password":
 if res.url.split("?", 1)[0] != callback or result.get("state") != [state] or len(result.get("code", [])) != 1:
     raise RuntimeError("Keycloak nepotvrdil návrat přihlášení")
 token = api("POST", "auth/openid/keycloak/callback", {"code": result["code"][0], "redirect_url": callback}, None)["token"]
-if api("GET", "user", token=token)["email"] != "spravce@polarita.test":
+account = api("GET", "user", token=token)
+if account["username"] != "spravce" or account["is_local_user"] or account["auth_provider"] != provider["name"]:
     raise RuntimeError("Úkolovník přihlásil jiného uživatele")
 # Jen dočasný projekt založený tímto během.
 project = api("PUT", "projects", {"title": "Kontrola instalace " + secrets.token_hex(6)}, token)["id"]
