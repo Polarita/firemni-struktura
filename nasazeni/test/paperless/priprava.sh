@@ -30,6 +30,10 @@ fi
 for dir in aplikace fronta socket; do
     if [[ ! -d $data/$dir ]]; then install -dm0750 "$data/$dir"; fi
 done
+# Připojený kořen musí zpřístupnit podadresáře účtu paperless (UID/GID 1000).
+# Posun identit na disku Incusu mapuje skupinu 1000 do stejné skupiny v kontejneru.
+chgrp 1000 "$data/aplikace"
+chmod 0750 "$data/aplikace"
 install -m0755 "$src/start.sh" "$src/broker.sh" "$work/conf/"
 install -m0644 "$src/ocr.py" "$work/conf/"
 cd "$work/tofu"
@@ -72,5 +76,6 @@ with socket.socket(socket.AF_UNIX) as s:
     s.sendall(b"*1\r\n$4\r\nPING\r\n")
     assert s.makefile("rb").readline() == b"+PONG\r\n"
 print("Účet Paperless dosáhl na svou frontu přes unixový socket.")'
+incus exec -T paperless-test --user 1000 --group 1000 -- test -x /var/lib/polarita-paperless
 incus exec -T paperless-test --user 1000 --group 1000 -- python3 /etc/polarita-paperless/ocr.py
 tofu plan -input=false -detailed-exitcode
