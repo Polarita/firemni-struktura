@@ -126,6 +126,10 @@ sudo -n bash nasazeni/test/zalohy/zkouska_obalky.sh "$dest/nasazeni/test/zalohy"
 "${guest[@]}" bash "$dest/nasazeni/test/zulip/spust.sh" "$fqdn"
 "${guest[@]}" bash "$dest/nasazeni/test/zulip/organizace.sh"
 sudo -n bash nasazeni/test/zulip/vstup.sh
+"${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/zulip/zkouska_prihlaseni.py "$fqdn" | tee "$tmp/zulip-oidc.txt"
+"${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-07
+"${inc[@]}" file push --project polarita "$tmp/zulip-oidc.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-07/zulip-oidc-$commit.txt"
+printf 'https://%s:8444/\n' "$fqdn" | "${inc[@]}" exec --project polarita -T polarita-hq -- incus exec -T reditelstvi-test -- install -m 0644 /dev/stdin /usr/local/share/polarita-zulip-url
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/sber.py" | tee -a "$tmp/restic.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/obnov.py" | tee -a "$tmp/restic.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/zalohy/retence.sh" | tee -a "$tmp/restic.txt"
