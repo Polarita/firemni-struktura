@@ -1,0 +1,10 @@
+[Unit]
+Description=Připojení zkušebního archivu po odemčení firemního úložiště
+After=polarita-zfs.service
+Requires=polarita-zfs.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/polarita/pripoj-archiv-test
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target

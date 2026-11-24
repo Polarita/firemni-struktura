@@ -81,11 +81,12 @@ python3 nasazeni/test/identita/overeni.py "https://$fqdn/identita" | tee "$tmp/i
 "${guest[@]}" python3 "$dest/nasazeni/test/mezipamet/overeni.py" | tee "$tmp/valkey.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/databaze/obnova.py" | tee "$tmp/obnova-databazi.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/pamet/instalace.sh" | tee "$tmp/znalosti.txt"
+"${guest[@]}" bash "$dest/nasazeni/test/archiv/instalace.sh" | tee "$tmp/archiv.txt"
 for step in proxy signatury priprava offline fronta; do
     "${guest[@]}" bash "$dest/nasazeni/test/karantena/$step.sh"
 done
 "${guest[@]}" python3 "$dest/nasazeni/test/karantena/zkouska.py" | tee "$tmp/karantena.txt"
-for proof in identita postgres databaze obnova-databazi znalosti valkey; do
+for proof in identita postgres databaze obnova-databazi znalosti valkey archiv; do
     "${inc[@]}" file push --project polarita "$tmp/$proof.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-05/$proof-$commit.txt"
 done
 for proof in trezor restart obnova hesla obnova-hesel pecet karantena; do

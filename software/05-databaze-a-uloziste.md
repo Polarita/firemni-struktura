@@ -10,6 +10,10 @@ Instalace obnoví logický export PostgreSQL do dočasné instance bez síťové
 
 Deset oblastí ve `/srv/polarita/vault` používá vlastní místní Git. Instalační heslo, údaje pro odemčení OpenBao a import Keycloaku patří do šifrovaného `/srv/polarita/data/bootstrap-test`. Při přechodu ze starší verze instalace pořídí ZFS snímek a porovná obsah a oprávnění před přesměrováním původních cest. Účet znalostního repozitáře tyto údaje nemůže číst. Centrální Gitea a její běhy CI mají vlastní přejímací zkoušku.
 
+### Ověřená archivní kopie deníku
+
+Na Ejpovicích hostitelská úloha uloží testovací list deníku po ověření pečeti a časového razítka. Dokument a průvodní záznam mají nastavený příznak neměnnosti. Kontrolní součet ze snímku chráněného příkazem `zfs hold` musí odpovídat originálu. Při opakování se stejným obsahem a agendou vrátí úloha tentýž dokument. Instalace zkouší čtení, přepsání a smazání pod účtem s právem číst archiv. Příjem z podatelny, účetnictví a telefonní ústředny se ověřuje při zapojování těchto služeb.
+
 ## 1. Seznam vybraného softwaru
 
 | Oblast | Vybraný software | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.7) | Odpovědný `ai` / garant |
