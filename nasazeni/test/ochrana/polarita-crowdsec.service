@@ -4,6 +4,7 @@ After=incus.service polarita-zfs.service
 RequiresMountsFor=/srv/polarita/infra/crowdsec-test
 [Service]
 Type=notify
+TimeoutStartSec=5min
 ExecStartPre=/bin/sh -ec 'test -d /var/lib/incus/storage-pools/default/custom/default_stalwart-mx-test-data/log; test -d /var/lib/incus/storage-pools/default/containers/caddy-test/rootfs/var/log/polarita'
 ExecStart=/srv/polarita/infra/crowdsec-test/bin/crowdsec -c /srv/polarita/infra/crowdsec-test/conf/config.yaml -no-capi
 Restart=on-failure

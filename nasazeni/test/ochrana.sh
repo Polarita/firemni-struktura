@@ -47,11 +47,16 @@ chmod 0600 "$creds"
 bin/crowdsec -c "$cfg" -no-capi -t
 install -m 0644 "$src/polarita-crowdsec.service" /etc/systemd/system/
 systemctl daemon-reload
-digest=$(sha256sum "$src"/* | sha256sum)
+# Do otisku patří obsah nasazované služby. Absolutní adresář se mění s každým vydáním.
+digest=$({
+    printf '%s\n' "$sha" "$index_sum"
+    (cd "$src" && sha256sum config.yaml acquis.yaml profiles.yaml caddy.yaml stalwart.yaml scenario.yaml polarita-crowdsec.service)
+} | sha256sum | cut -d' ' -f1)
 if [[ ! -f .applied || $(cat .applied) != "$digest" ]]; then systemctl restart polarita-crowdsec.service; fi
 systemctl enable --now polarita-crowdsec.service
 bin/cscli -c "$cfg" lapi status
-printf '%s\n' "$digest" >.applied
+printf '%s\n' "$digest" >.applied.next
+mv -T .applied.next .applied
 bouncer_version=0.0.38
 bouncer_sha=3cb7ca302438ede690849218d585dee6cbba7915982f79f3dd45024a9eced31e
 archive=balicky/bouncer.tgz
@@ -85,8 +90,14 @@ tmp.replace("conf/bouncer-local.yaml")
 PY
 install -m 0644 "$src/polarita-crowdsec-bouncer.service" /etc/systemd/system/
 systemctl daemon-reload
-if [[ ! -f .bouncer-applied || $(cat .bouncer-applied) != "$digest" ]]; then
+bouncer_digest=$({
+    printf '%s\n' "$bouncer_sha"
+    (cd "$src" && sha256sum bouncer.yaml firewall.sh polarita-crowdsec-bouncer.service)
+    sha256sum conf/bouncer-local.yaml
+} | sha256sum | cut -d' ' -f1)
+if [[ ! -f .bouncer-applied || $(cat .bouncer-applied) != "$bouncer_digest" ]]; then
     systemctl restart polarita-crowdsec-bouncer.service
 fi
 systemctl enable --now polarita-crowdsec-bouncer.service
-printf '%s\n' "$digest" >.bouncer-applied
+printf '%s\n' "$bouncer_digest" >.bouncer-applied.next
+mv -T .bouncer-applied.next .bouncer-applied
