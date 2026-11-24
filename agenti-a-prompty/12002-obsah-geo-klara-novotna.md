@@ -1,4 +1,4 @@
-# Karta ai zaměstnance č. 12002: Klára Novotná (ai) — Specialistka obsahu, SEO, GEO a reputace značky (`obsah-geo`) · Verze 3.14
+# Karta ai zaměstnance č. 12002: Klára Novotná (ai) — Specialistka obsahu, SEO, GEO a reputace značky (`obsah-geo`) · Verze 3.15
 
 ## 1. Osobní a organizační karta
 
@@ -135,7 +135,7 @@ Zahajujeme obsahovou a GEO strategii čisté společnosti Polarita s.r.o.
 
 ## 6. Zapojení do rozvojových balíčků `S1–S7` (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.14 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
+Balíčky `S1–S7` jsou ve Verzi 3.15 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
 
 * `Blok 15` (`S3`): spravuje obchodní texty knihy tarifů MRR.
 * `Blok 17` (`S5`): připravuje znění hlášek a odpovědí hlasové recepční ke schválení `15001`.
