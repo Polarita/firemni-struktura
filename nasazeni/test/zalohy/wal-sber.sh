@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 [[ $(hostname -s) == postgres-test && $EUID == 0 ]]
+exec 8>/run/polarita-wal.lock
+flock -w 1800 8
 pg=(runuser -u postgres --)
 sql=("${pg[@]}" psql -XqAt -v ON_ERROR_STOP=1 -d postgres)
 backrest=("${pg[@]}" pgbackrest --config=/etc/pgbackrest/polarita.conf --stanza=polarita)

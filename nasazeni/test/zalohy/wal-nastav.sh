@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 [[ $(hostname -s) == postgres-test && $EUID == 0 ]]
+exec 8>/run/polarita-wal.lock
+flock -w 1800 8
 data=/var/lib/polarita-postgres
 mountpoint -q "$data"
 install -d -m 0755 /etc/pgbackrest
