@@ -6,6 +6,11 @@ fqdn=${1:?Chybí jméno ředitelství}
 [[ $fqdn =~ ^[a-z0-9.-]+\.ts\.net$ ]]
 inside=(incus exec -T zulip-test --)
 work=/srv/polarita/infra/zulip-test/conf
+tmp=$(mktemp -d)
+trap 'rm -r -- "$tmp"' EXIT
+incus file pull valkey-test/run/secrets/valkey-cert "$tmp/valkey.crt"
+openssl verify -CAfile "$tmp/valkey.crt" -verify_ip 10.239.33.13 "$tmp/valkey.crt"
+install -m 0644 "$tmp/valkey.crt" "$work/valkey.crt"
 python3 "$src/identita.py" "$fqdn"
 bash "$src/nastav-frontu.sh"
 incus exec -T postgres-test -- runuser -u postgres -- psql -Xq -v ON_ERROR_STOP=1 -d postgres <<'SQL'

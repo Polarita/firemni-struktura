@@ -6,6 +6,7 @@ import socket
 import ssl
 import subprocess
 import sys
+import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "trezor"))
 import pristupy as p
@@ -70,6 +71,34 @@ def denied(client, reason, *args):
     raise RuntimeError("Valkey povolil cizí operaci")
 
 
+def load_zulip_acl(tls, password):
+    def active():
+        with Client(tls) as client:
+            client.cmd("AUTH", "zulip", password)
+            script = client.cmd("SCRIPT", "LOAD", "return 1").decode()
+            return client.cmd("EVALSHA", script, "0") == 1
+
+    try:
+        if active():
+            return
+    except ResponseError as error:
+        if error.args != ("NOPERM",):
+            raise
+    # Ověříme nový soubor před jediným restartem. Aplikačním účtům nepřísluší správa ACL.
+    subprocess.run(["incus", "exec", "-T", "valkey-test", "--", "grep", "-qE",
+                    r"^user zulip .*\+script\|load( |$)", "/run/secrets/valkey-acl"], check=True)
+    subprocess.run(["incus", "restart", "valkey-test"], check=True)
+    subprocess.run(["systemctl", "start", "polarita-openbao-agenti.service"], check=True)
+    for _ in range(60):
+        try:
+            if active():
+                return
+        except (ConnectionRefusedError, TimeoutError):
+            pass
+        time.sleep(1)
+    raise RuntimeError("Valkey nepotvrdil povolený skript účtu Zulipu")
+
+
 def main():
     if socket.gethostname().split(".")[0] != "polarita-hq" or os.geteuid() != 0:
         raise SystemExit("Zkouška patří do firemní VM")
@@ -101,6 +130,8 @@ def main():
                 p.expect_forbidden("GET", "test/data/valkey/" + other, token)
             finally:
                 p.request("POST", "auth/token/revoke-self", {}, token)
+            if name == "zulip":
+                load_zulip_acl(tls, password)
             with Client(tls) as c:
                 if c.cmd("AUTH", name, password) != b"OK" or c.cmd("PING") != b"PONG":
                     raise RuntimeError("Ověření účtu selhalo")

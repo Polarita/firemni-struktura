@@ -14,6 +14,4 @@ mv "$tmp/original.py" "$tmp/zerver/lib/redis_utils.py"
 mv "$tmp/zerver/lib/redis_utils.py" "$tmp/redis_utils.py"
 printf 'addcc82d55a89680b0c9e3ccb50974d727753007a0e4cce20f5e1cdf751d7f42  %s\n' "$tmp/redis_utils.py" | sha256sum -c
 python3 -m py_compile "$tmp/redis_utils.py"
-incus file pull valkey-test/run/secrets/valkey-cert "$tmp/valkey.crt"
-openssl verify -CAfile "$tmp/valkey.crt" -verify_ip 10.239.33.13 "$tmp/valkey.crt"
-install -m 0644 "$tmp/valkey.crt" "$tmp/redis_utils.py" "$work/conf/"
+install -m 0644 "$tmp/redis_utils.py" "$work/conf/"
