@@ -10,6 +10,7 @@ Environment=SSL_CERT_FILE=/etc/polarita-gitea/git-ca.crt
 Environment=GIT_SSL_CAINFO=/etc/polarita-gitea/git-ca.crt
 Environment=GOMEMLIMIT=80MiB
 ExecStart=/opt/polarita-runner/runner --config /etc/polarita-gitea/runner.yaml daemon --once
+TasksMax=144
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
