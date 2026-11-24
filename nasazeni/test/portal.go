@@ -156,6 +156,59 @@ func (p *portal) serveMetadata(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, res.Body)
 }
 
+type portalView struct {
+	Paperclip string
+	Decisions string
+	Chat      string
+	Dohled    bool
+	Metadata  bool
+	Git       bool
+	Vzor      bool
+	Signed    bool
+	Error     string
+}
+
+func overview() portalView {
+	_, vzorErr := os.Stat(vzor)
+	_, monitorErr := os.Stat(monitorFile)
+	metadataInfo, metadataErr := os.Stat(metadataSocket)
+	_, gitErr := os.Stat("/usr/local/share/polarita-gitea-oidc.ok")
+	chat, _ := os.ReadFile("/usr/local/share/polarita-zulip-url")
+	orchestrator, _ := os.ReadFile("/usr/local/share/polarita-paperclip-url")
+	decisions, _ := os.ReadFile("/usr/local/share/polarita-decisions-url")
+	return portalView{Metadata: metadataErr == nil && metadataInfo.Mode()&os.ModeSocket != 0, Decisions: strings.TrimSpace(string(decisions)), Paperclip: strings.TrimSpace(string(orchestrator)), Chat: strings.TrimSpace(string(chat)), Dohled: monitorErr == nil, Signed: true, Vzor: vzorErr == nil, Git: gitErr == nil}
+}
+
+func (p *portal) login(username, password, previous string) (string, int) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	now := time.Now()
+	for token, end := range p.sessions {
+		if !end.After(now) {
+			delete(p.sessions, token)
+		}
+	}
+	for len(p.failures) > 0 && now.Sub(p.failures[0]) > time.Minute {
+		p.failures = p.failures[1:]
+	}
+	if len(p.failures) >= 10 {
+		return "", http.StatusTooManyRequests
+	}
+	digest := sha256.Sum256([]byte(password))
+	if subtle.ConstantTimeCompare(digest[:], p.digest[:]) != 1 || username != "spravce" {
+		p.failures = append(p.failures, now)
+		return "", http.StatusUnauthorized
+	}
+	var b [32]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", http.StatusInternalServerError
+	}
+	token := hex.EncodeToString(b[:])
+	delete(p.sessions, previous)
+	p.sessions[token] = now.Add(2 * time.Hour)
+	return token, http.StatusOK
+}
+
 func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	peer, err := netip.ParseAddrPort(r.RemoteAddr)
 	if err != nil || !(peer.Addr().IsLoopback() || peer.Addr() == netip.MustParseAddr("10.239.31.10")) {
@@ -173,40 +226,14 @@ func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		p.metadata(w, r)
 		return
 	}
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	now := time.Now()
-	for token, end := range p.sessions {
-		if !end.After(now) {
-			delete(p.sessions, token)
-		}
-	}
-	for len(p.failures) > 0 && now.Sub(p.failures[0]) > time.Minute {
-		p.failures = p.failures[1:]
-	}
-	token := ""
+	var token string
 	if c, err := r.Cookie(cookieName); err == nil {
 		token = c.Value
 	}
-	_, signed := p.sessions[token]
-	_, vzorErr := os.Stat(vzor)
-	_, monitorErr := os.Stat(monitorFile)
-	metadataInfo, metadataErr := os.Stat(metadataSocket)
-	_, gitErr := os.Stat("/usr/local/share/polarita-gitea-oidc.ok")
-	chat, _ := os.ReadFile("/usr/local/share/polarita-zulip-url")
-	orchestrator, _ := os.ReadFile("/usr/local/share/polarita-paperclip-url")
-	decisions, _ := os.ReadFile("/usr/local/share/polarita-decisions-url")
-	view := struct {
-		Paperclip string
-		Decisions string
-		Chat      string
-		Dohled    bool
-		Metadata  bool
-		Git       bool
-		Vzor      bool
-		Signed    bool
-		Error     string
-	}{Metadata: metadataErr == nil && metadataInfo.Mode()&os.ModeSocket != 0, Decisions: strings.TrimSpace(string(decisions)), Paperclip: strings.TrimSpace(string(orchestrator)), Chat: strings.TrimSpace(string(chat)), Dohled: monitorErr == nil, Signed: signed, Vzor: vzorErr == nil, Git: gitErr == nil}
+	p.lock.Lock()
+	signed := time.Now().Before(p.sessions[token])
+	p.lock.Unlock()
+	var view portalView
 	switch {
 	case r.URL.Path == "/" && r.Method == "GET":
 	case r.URL.Path == "/prehled" && r.Method == "GET":
@@ -239,37 +266,33 @@ func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "/usr/local/share/konfigurator.html")
 		return
 	case r.URL.Path == "/prihlasit" && r.Method == "POST":
-		if len(p.failures) >= 10 {
-			w.Header().Set("Retry-After", "60")
-			http.Error(w, "Zkuste to za minutu.", 429)
-			return
-		}
 		r.Body = http.MaxBytesReader(w, r.Body, 4096)
 		if err := r.ParseForm(); err != nil {
 			http.Error(w, "Chybný formulář", 400)
 			return
 		}
-		digest := sha256.Sum256([]byte(r.PostForm.Get("password")))
-		if subtle.ConstantTimeCompare(digest[:], p.digest[:]) != 1 || r.PostForm.Get("username") != "spravce" {
-			p.failures = append(p.failures, now)
+		newToken, status := p.login(r.PostForm.Get("username"), r.PostForm.Get("password"), token)
+		switch status {
+		case http.StatusTooManyRequests:
+			w.Header().Set("Retry-After", "60")
+			http.Error(w, "Zkuste to za minutu.", status)
+			return
+		case http.StatusInternalServerError:
+			http.Error(w, "Přihlášení selhalo", status)
+			return
+		case http.StatusUnauthorized:
 			view.Error = "Jméno nebo heslo nesouhlasí."
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.WriteHeader(401)
-		} else {
-			var b [32]byte
-			if _, err := rand.Read(b[:]); err != nil {
-				http.Error(w, "Přihlášení selhalo", 500)
-				return
-			}
-			delete(p.sessions, token)
-			token = hex.EncodeToString(b[:])
-			p.sessions[token] = now.Add(2 * time.Hour)
-			http.SetCookie(w, &http.Cookie{Name: cookieName, Value: token, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: 7200})
+			w.WriteHeader(status)
+		default:
+			http.SetCookie(w, &http.Cookie{Name: cookieName, Value: newToken, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: 7200})
 			http.Redirect(w, r, "/prehled", 303)
 			return
 		}
 	case r.URL.Path == "/odhlasit" && r.Method == "POST":
+		p.lock.Lock()
 		delete(p.sessions, token)
+		p.lock.Unlock()
 		http.SetCookie(w, &http.Cookie{Name: cookieName, Path: "/", MaxAge: -1, Secure: true, HttpOnly: true, SameSite: http.SameSiteStrictMode})
 		http.Redirect(w, r, "/", 303)
 		return
@@ -278,6 +301,9 @@ func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if signed && r.Method == http.MethodGet {
+		view = overview()
+	}
 	if err := page.Execute(w, view); err != nil {
 		log.Print("Chyba při odesílání stránky")
 	}

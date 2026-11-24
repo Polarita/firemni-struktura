@@ -9,7 +9,15 @@ guest=("${inc[@]}" exec -T --project polarita polarita-hq --)
 [[ $("${guest[@]}" hostname -s) == polarita-hq ]]
 dest=/srv/polarita/infra/releases/$commit
 "${guest[@]}" install -d "$dest"
-git archive "$commit" | "${guest[@]}" tar -x -C "$dest"
+tmp=$(mktemp -d)
+vpn_tmp=
+trap 'rm -rf -- "$tmp"; if [[ -n $vpn_tmp ]]; then "${guest[@]}" rm -rf -- "$vpn_tmp"; fi' EXIT
+git archive --format=tar.gz --output="$tmp/zdroj-ci.tar.gz" "$commit"
+digest=$(sha256sum "$tmp/zdroj-ci.tar.gz")
+upload=$("${guest[@]}" mktemp "$dest/.zdroj-ci-XXXXXXXX")
+"${inc[@]}" file push --mode 0600 --project polarita "$tmp/zdroj-ci.tar.gz" "polarita-hq$upload"
+"${guest[@]}" bash -ec 'sum=$(sha256sum "$1"); [[ ${sum%% *} == "$3" ]]; mv -T "$1" "$2"' -- "$upload" "$dest/zdroj-ci.tar.gz" "${digest%% *}"
+"${guest[@]}" tar -xzf "$dest/zdroj-ci.tar.gz" -C "$dest"
 "${guest[@]}" bash "$dest/nasazeni/test/zaklad/pamet.sh"
 "${guest[@]}" python3 "$dest/nasazeni/test/pamet/soukrome.py"
 "${guest[@]}" bash "$dest/nasazeni/test/karantena/kvm-host.sh"
@@ -26,9 +34,6 @@ if ! "${guest[@]}" grep -qw no-kvmapf /proc/cmdline; then
     "${guest[@]}" grep -qw no-kvmapf /proc/cmdline
     "${guest[@]}" systemctl is-active --quiet polarita-bootstrap.service
 fi
-tmp=$(mktemp -d)
-vpn_tmp=
-trap 'rm -rf -- "$tmp"; if [[ -n $vpn_tmp ]]; then "${guest[@]}" rm -rf -- "$vpn_tmp"; fi' EXIT
 python3 nasazeni/test/inventura.py >"$tmp/inventura.json"
 "${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-01
 "${inc[@]}" file push --project polarita "$tmp/inventura.json" "polarita-hq/srv/polarita/workspace/dukazy/blok-01/inventura-$commit.json"
@@ -44,6 +49,7 @@ cil="$commit/$uuid/$guid/$fqdn/$aktivni"
 prubeh=nasazeni/test/prubeh.py
 
 portal() {
+    go test -count=1 nasazeni/test/portal{,_test}.go
     CGO_ENABLED=0 go build -trimpath -o "$tmp/portal" nasazeni/test/portal.go
     "${inc[@]}" file push --mode 0755 --project polarita "$tmp/portal" "polarita-hq$dest/portal"
     "${guest[@]}" "$dest/nasazeni/test/incus.sh"
@@ -73,6 +79,7 @@ sit() {
 }
 
 hesla() {
+    go test -count=1 nasazeni/test/portal{,_test}.go
     CGO_ENABLED=0 go build -trimpath -o "$tmp/agent" nasazeni/test/trezor/agent.go
     "${inc[@]}" file push --mode 0755 --project polarita "$tmp/agent" "polarita-hq$dest/agent"
     "${guest[@]}" bash "$dest/nasazeni/test/hesla/instalace.sh" "https://$fqdn/hesla" | tee "$tmp/hesla.txt"
@@ -130,18 +137,12 @@ identita() {
     "${guest[@]}" python3 "$dest/nasazeni/test/mezipamet/overeni.py" | tee "$tmp/valkey.txt"
 }
 
-git() {
+firemni_git() {
     "${guest[@]}" bash "$dest/nasazeni/test/git/spust.sh" | tee "$tmp/gitea.txt"
     "${guest[@]}" python3 "$dest/nasazeni/test/git/pripoj_identitu.py" | tee -a "$tmp/gitea.txt"
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/git/zkouska_prihlaseni.py "https://$fqdn" | tee -a "$tmp/gitea.txt"
     "${guest[@]}" python3 "$dest/nasazeni/test/git/repozitar.py" | tee -a "$tmp/gitea.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/git/fronta.sh" | tee -a "$tmp/gitea.txt"
-    git archive --format=tar.gz --output="$tmp/zdroj-ci.tar.gz" "$commit"
-    local digest upload
-    digest=$(sha256sum "$tmp/zdroj-ci.tar.gz")
-    upload=$("${guest[@]}" mktemp "$dest/.zdroj-ci-XXXXXXXX")
-    "${inc[@]}" file push --mode 0600 --project polarita "$tmp/zdroj-ci.tar.gz" "polarita-hq$upload"
-    "${guest[@]}" bash -ec 'sum=$(sha256sum "$1"); [[ ${sum%% *} == "$3" ]]; mv -T "$1" "$2"' -- "$upload" "$dest/zdroj-ci.tar.gz" "${digest%% *}"
     "${guest[@]}" bash "$dest/nasazeni/test/git/kontrola.sh" "$dest" | tee -a "$tmp/gitea.txt"
 }
 
@@ -242,7 +243,7 @@ predani() {
     "${guest[@]}" sh -ec 'ln -sfn "$1" /srv/polarita/infra/releases/.current-new; mv -Tf /srv/polarita/infra/releases/.current-new /srv/polarita/infra/releases/current' deploy "$dest"
 }
 
-kroky=(portal sit hesla postgres sluzby tym trezor databaze paperclip identita git rozhodnuti metadata obnova_databazi karantena zalohy dohled zulip obnova predani)
+kroky=(portal sit hesla postgres sluzby tym trezor databaze paperclip identita firemni_git rozhodnuti metadata obnova_databazi karantena zalohy dohled zulip obnova predani)
 over_vstup() {
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn"
 }
