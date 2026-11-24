@@ -14,7 +14,8 @@ for i in {1..120}; do
     sleep 1
 done
 bash "$src/podman.sh"
-incus exec -T "$vm" -- bash -se <"$src/pracovni-vm.sh"
+incus file push --mode=0700 "$src/pracovni-vm.sh" "$vm/run/polarita-priprav-pracovnika"
+incus exec -T "$vm" -- bash /run/polarita-priprav-pracovnika </dev/null
 incus file push --mode=0644 "$src/pracovnik.py" "$vm/opt/polarita/karantena.py"
 incus stop "$vm" --timeout 75
 trap - EXIT

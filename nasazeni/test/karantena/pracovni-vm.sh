@@ -43,3 +43,14 @@ for mount in /mnt/karantena-in /mnt/karantena-out /mnt/clamav-db; do mountpoint 
 dpkg-query -W -f='${Version}\n' dangerzone-full
 cd /home/karantena
 runuser -u karantena -- env XDG_RUNTIME_DIR=/run/user/17304 podman info --format '{{.Host.Security.Rootless}}' | grep -Fx true
+# Podepsaný převodní obraz z balíčku připrav už při instalaci, bez spuštění přílohy.
+runuser -u karantena -- env XDG_RUNTIME_DIR=/run/user/17304 python3 - <<'PY'
+from dangerzone.updater import installer
+from dangerzone.settings import Settings
+
+Settings().set("updater_check_all", False, autosave=True)
+installer.install()
+if installer.get_installation_strategy() != installer.Strategy.DO_NOTHING:
+    raise RuntimeError("Offline obraz Dangerzone není připravený")
+print("Podepsaný obraz Dangerzone je připravený pod účtem pracovníka.")
+PY
