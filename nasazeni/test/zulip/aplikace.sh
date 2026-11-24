@@ -43,6 +43,15 @@ fi
 incus exec -T zulip-test -- bash -ec '
 cd /home/zulip/deployments/current
 test -x manage.py && test -x /sbin/entrypoint.sh
-printf "%s  %s\n" addcc82d55a89680b0c9e3ccb50974d727753007a0e4cce20f5e1cdf751d7f42 zerver/lib/redis_utils.py | sha256sum -c
-printf "%s  %s\n" 69f76653777b14a11665a4aaab16d3f61ab1d0a8566478374e7a1d5c325d47e4 zproject/backends.py | sha256sum -c'
+# Po startu OCI může Incus přijmout exec ještě před dokončením obou instalací v entrypointu.
+for attempt in {1..60}; do
+    if sha256sum --status -c <<SUMS
+addcc82d55a89680b0c9e3ccb50974d727753007a0e4cce20f5e1cdf751d7f42  zerver/lib/redis_utils.py
+69f76653777b14a11665a4aaab16d3f61ab1d0a8566478374e7a1d5c325d47e4  zproject/backends.py
+SUMS
+    then exit 0; fi
+    sleep 1
+done
+echo "Zulip nenačetl ověřené úpravy klienta Valkey" >&2
+exit 1'
 tofu plan -input=false -detailed-exitcode
