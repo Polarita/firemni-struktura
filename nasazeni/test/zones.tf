@@ -35,7 +35,7 @@ resource "incus_network" "zone" {
       host-record=database.clamav.net,10.239.31.1
       dhcp-option=option:dns-server,10.239.31.1
     DNS
-  } : {}, each.key == "app_internal" && var.oidc_fqdn != "" ? {
+    } : {}, each.key == "app_internal" && var.oidc_fqdn != "" ? {
     "raw.dnsmasq" = <<-DNS
       no-resolv
       no-hosts
