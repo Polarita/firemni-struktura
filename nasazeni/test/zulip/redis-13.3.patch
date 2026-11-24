@@ -1,0 +1,44 @@
+--- a/zerver/lib/redis_utils.py
++++ b/zerver/lib/redis_utils.py
+@@ -29,7 +29,11 @@
+     return redis.StrictRedis(
+         host=settings.REDIS_HOST,
+         port=settings.REDIS_PORT,
++        username="zulip",
+         password=settings.REDIS_PASSWORD,
++        ssl=True,
++        ssl_ca_certs="/etc/polarita-zulip/valkey.crt",
++        ssl_check_hostname=True,
+         db=0,
+         decode_responses=False,
+     )
+@@ -52,8 +56,9 @@
+         token = secrets.token_hex(token_length // 2)
+     key = key_format.format(token=token)
+     with redis_client.pipeline() as pipeline:
+-        pipeline.set(key, orjson.dumps(data_to_store))
+-        pipeline.expire(key, expiration_seconds)
++        storage_key = REDIS_KEY_PREFIX + key
++        pipeline.set(storage_key, orjson.dumps(data_to_store))
++        pipeline.expire(storage_key, expiration_seconds)
+         pipeline.execute()
+ 
+     return key
+@@ -74,7 +79,7 @@
+         )
+     validate_key_fits_format(key, key_format)
+ 
+-    data = redis_client.get(key)
++    data = redis_client.get(REDIS_KEY_PREFIX + key)
+     if data is None:
+         return None
+     return orjson.loads(data)
+@@ -88,7 +93,7 @@
+         raise ZulipRedisKeyOfWrongFormatError(f"{key} does not match format {key_format}")
+ 
+ 
+-REDIS_KEY_PREFIX = ""
++REDIS_KEY_PREFIX = "zulip:"
+ 
+ 
+ def bounce_redis_key_prefix_for_testing(test_name: str) -> None:
