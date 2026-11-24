@@ -1,0 +1,23 @@
+[Unit]
+Description=SilverBullet nad schválenou znalostní pamětí TEST
+RequiresMountsFor=/opt/polarita-silverbullet /var/lib/polarita-znalosti
+After=local-fs.target
+[Service]
+Type=exec
+User=pol-silverbullet
+Group=pol-silverbullet
+WorkingDirectory=/var/lib/silverbullet
+StateDirectory=silverbullet
+Environment=SB_HOSTNAME=127.0.0.1
+Environment=SB_PORT=3000
+Environment=SB_DISABLE_SERVICE_WORKER=1
+ExecStart=/opt/polarita-silverbullet/silverbullet /var/lib/silverbullet
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+Restart=on-failure
+RestartSec=5
+[Install]
+WantedBy=multi-user.target
