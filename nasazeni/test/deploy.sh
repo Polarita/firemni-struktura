@@ -112,6 +112,14 @@ for step in proxy signatury priprava offline fronta; do
 done
 "${guest[@]}" python3 "$dest/nasazeni/test/karantena/zkouska.py" | tee "$tmp/karantena.txt"
 "${inc[@]}" file push --project polarita "$tmp/karantena.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-04/karantena-$commit.txt"
+"${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-06
+"${guest[@]}" bash "$dest/nasazeni/test/zalohy/instalace.sh"
+"${guest[@]}" python3 "$dest/nasazeni/test/zalohy/zkouska_pristupu.py" | tee "$tmp/restic.txt"
+"${guest[@]}" python3 "$dest/nasazeni/test/zalohy/sber.py" | tee -a "$tmp/restic.txt"
+"${guest[@]}" python3 "$dest/nasazeni/test/zalohy/obnov.py" | tee -a "$tmp/restic.txt"
+"${guest[@]}" bash "$dest/nasazeni/test/zalohy/retence.sh" | tee -a "$tmp/restic.txt"
+"${guest[@]}" bash "$dest/nasazeni/test/zalohy/naplanuj.sh"
+"${inc[@]}" file push --project polarita "$tmp/restic.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-06/restic-$commit.txt"
 # Starší vydání vytvořilo přímý vstup. Odstraň ho až po ověření nové cesty.
 if [[ $("${guest[@]}" incus config device get reditelstvi-test portal listen 2>/dev/null || true) == tcp:127.0.0.1:18182 ]]; then
     "${guest[@]}" incus config device remove reditelstvi-test portal

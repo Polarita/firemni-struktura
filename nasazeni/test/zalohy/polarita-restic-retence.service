@@ -1,0 +1,22 @@
+[Unit]
+Description=Místní retence obecných testovacích záloh 7 denních, 4 týdenní a 12 měsíčních
+RequiresMountsFor=/var/lib/restic-test
+ConditionPathIsMountPoint=/var/lib/restic-test
+ConditionPathExists=/var/lib/restic-test/data/polarita-test/firma/config
+[Service]
+Type=oneshot
+User=pol-restic
+Group=pol-restic
+LoadCredential=heslo:/etc/polarita-restic/sprava/heslo
+Environment=RESTIC_REPOSITORY=/var/lib/restic-test/data/polarita-test/firma
+Environment=GOMAXPROCS=1
+Environment=GOMEMLIMIT=85MiB
+ExecStart=/usr/bin/restic --no-cache --retry-lock=10m --password-file=%d/heslo forget --group-by=host,tags --keep-daily=7 --keep-weekly=4 --keep-monthly=12 --prune --max-repack-size=32M
+TimeoutStartSec=30min
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateNetwork=true
+ReadWritePaths=/var/lib/restic-test/data/polarita-test/firma
+UMask=0077

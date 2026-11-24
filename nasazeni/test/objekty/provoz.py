@@ -77,7 +77,11 @@ def process_calls(s3, now):
                 if error.response["ResponseMetadata"]["HTTPStatusCode"] == 404:
                     continue
                 raise
-            if meta.get("legal-hold", "").lower() == "true":
+            hold = meta.get("legal-hold", "").lower()
+            if hold not in ("","false","true") or (key.startswith("legal-hold/") and hold!="true"):
+                pending += 1
+                continue
+            if hold == "true":
                 try:
                     if hovory.transfer(s3, key, meta):
                         archived += 1

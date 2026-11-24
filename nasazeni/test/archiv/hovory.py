@@ -28,7 +28,7 @@ def reference(metadata, key):
     try:
         until = captured.date().replace(year=captured.year+int(years))
     except ValueError:
-        until = captured.date().replace(year=captured.year+int(years), day=28)
+        until = captured.date().replace(year=captured.year+int(years), month=3, day=1)
     record = {"rezim":"TEST", "agenda":AREA, "spis":case, "porizeno":captured.isoformat(),
               "retence_let":int(years), "uchovat_do":until.isoformat(), "casti":{}}
     for part,ext in PARTS:
@@ -70,6 +70,7 @@ def transfer(s3, key, metadata):
     record, encoded, record_id, paths, year = reference(metadata,key)
     with TemporaryDirectory(dir="/run") as directory:
         tmp = Path(directory)
+        files = []
         for part,ext in PARTS:
             digest = record["casti"][part]["sha256"]
             if verified_copy(year,digest,ext):
@@ -87,8 +88,20 @@ def transfer(s3, key, metadata):
                 with file.open("xb") as out:
                     for chunk in body.iter_chunks(1024*1024):
                         out.write(chunk)
+            with file.open("rb") as stream:
+                if hashlib.file_digest(stream,"sha256").hexdigest()!=digest:
+                    raise ValueError("Zdroj neodpovídá předanému otisku")
+            if ext=="wav":
+                with wave.open(str(file),"rb") as audio:
+                    if audio.getnchannels()!=2 or audio.getnframes()==0:
+                        raise ValueError("Nahrávka není stereo WAV")
+            else:
+                with file.open(encoding="utf-8") as text:
+                    while text.read(1024*1024):
+                        pass
+            files.append((file,ext,digest))
+        for file,ext,digest in files:
             uloz.store(file,AREA,ext,digest,year)
-            file.unlink()
         manifest = tmp/"predani.json"
         manifest.write_bytes(encoded)
         uloz.store(manifest,AREA,"json",record_id,year)
@@ -97,6 +110,7 @@ def transfer(s3, key, metadata):
         raise RuntimeError("Převzetí hovoru dosud nepotvrdil chráněný snímek")
     # Klíče obsahují otisk předání, takže různá verze hovoru má nový pár klíčů.
     # Neúplný nebo cizí pár se nikdy nepotvrdí jako převzatý.
+    present = []
     for part,ext in PARTS:
         try:
             obj = s3.get_object(Bucket="hovory",Key=paths[part])
@@ -107,7 +121,8 @@ def transfer(s3, key, metadata):
         with closing(obj["Body"]) as stream:
             if {k.lower():v for k,v in obj["Metadata"].items()} != metadata or hashlib.file_digest(stream,"sha256").hexdigest()!=record["casti"][part]["sha256"]:
                 raise ValueError("Obsah se po předání změnil")
-    for source_key in paths.values():
+        present.append(paths[part])
+    for source_key in present:
         s3.delete_object(Bucket="hovory",Key=source_key)
     return True
 
