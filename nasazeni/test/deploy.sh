@@ -24,3 +24,4 @@ sudo -n bash nasazeni/test/vstup.sh
 fqdn=$(tailscale status --json | python3 -c 'import json,sys;print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))')
 "${guest[@]}" cat /srv/polarita/vault/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn"
 "${guest[@]}" sh -ec 'ln -sfn "$1" /srv/polarita/infra/releases/.current-new; mv -Tf /srv/polarita/infra/releases/.current-new /srv/polarita/infra/releases/current' deploy "$dest"
+printf 'Ověřené přihlášení ve VPN: https://%s/\n' "$fqdn"

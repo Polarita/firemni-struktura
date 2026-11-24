@@ -32,7 +32,7 @@ type portal struct {
 func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
-	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("Referrer-Policy", "same-origin")
 	if r.Method == "POST" && r.Header.Get("Origin") != "" && r.Header.Get("Origin") != "https://"+r.Host {
 		http.Error(w, "Cizí původ požadavku", 403)
 		return

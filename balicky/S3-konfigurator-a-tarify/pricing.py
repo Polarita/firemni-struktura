@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Deterministic pricing kernel of package S3 (Version 3.2.2): MRR tariffs, turnkey packages,
+Deterministic pricing kernel of package S3 (Version 3.2.3): MRR tariffs, turnkey packages,
 labour rates, margin Hard-Stop and the partner commission matrix (N8).
-Deterministické cenové jádro balíčku S3 (Verze 3.2.2): tarify MRR, balíčky na klíč,
+Deterministické cenové jádro balíčku S3 (Verze 3.2.3): tarify MRR, balíčky na klíč,
 hodinové sazby, Hard-Stop marže a provizní matice partnerů (N8).
 
 EN: All amounts come from cenik.json (single source of truth; meta.approved tells whether 1001

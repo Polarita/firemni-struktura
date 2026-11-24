@@ -1,6 +1,6 @@
-# Blok 18 · Balíček S6 — Samo-dokumentující E2E testy a 30min vývojová smyčka UI · Verze 3.2.2
+# Blok 18 · Balíček S6 — Samo-dokumentující E2E testy a 30min vývojová smyčka UI · Verze 3.2.3
 
-Tento dokument je řídicím dokumentem **`Bloku 18`** Rozvojové Etapy II společnosti **Polarita s.r.o.** (balíček `S6` ze zásobníku `03-NAVRHY-BALICKU-NA-POZDEJI.md`, release `Polarita-3.2.2`). Definuje dvě navazující věci: *(1)* **živou ilustrovanou příručku** — každý end-to-end test klíčového firemního procesu v **`Playwright`** pořizuje během běhu v `Gitea Actions` popsané snímky obrazovky a generátor **`manual-builder`** z nich po každém úspěšném běhu na hlavní větvi skládá vždy aktuální provozní příručku (`Markdown → PDF`) pro zaškolení montérů, skladníků a partnerů `SUB`; *(2)* **řízenou 30minutovou vývojovou smyčku** výhradně pro ne-normové UI a tiskové sestavy nad **`metadata-schema-kernel`**, ve které `17001 programator` (*Worker*) připraví úpravu v odděleném klonu **`wt-worker`**, **`AigisCode`** + `17004 klicnik` (*Judge*) ji ověří v **`wt-judge`** a do **`Decisions`** dorazí náhled se screenshoty **`před → po`**. Blok 18 lze spustit až po `12/12 PASS` Go-Live Gate (`Blok 12`), nezávisí na `Blocích 13–17`, nezakládá žádného nového `ai` zaměstnance ani oddělení a celý běží uvnitř stropu **`470 USD / měsíc`**.
+Tento dokument je řídicím dokumentem **`Bloku 18`** Rozvojové Etapy II společnosti **Polarita s.r.o.** (balíček `S6` ze zásobníku `03-NAVRHY-BALICKU-NA-POZDEJI.md`, release `Polarita-3.2.3`). Definuje dvě navazující věci: *(1)* **živou ilustrovanou příručku** — každý end-to-end test klíčového firemního procesu v **`Playwright`** pořizuje během běhu v `Gitea Actions` popsané snímky obrazovky a generátor **`manual-builder`** z nich po každém úspěšném běhu na hlavní větvi skládá vždy aktuální provozní příručku (`Markdown → PDF`) pro zaškolení montérů, skladníků a partnerů `SUB`; *(2)* **řízenou 30minutovou vývojovou smyčku** výhradně pro ne-normové UI a tiskové sestavy nad **`metadata-schema-kernel`**, ve které `17001 programator` (*Worker*) připraví úpravu v odděleném klonu **`wt-worker`**, **`AigisCode`** + `17004 klicnik` (*Judge*) ji ověří v **`wt-judge`** a do **`Decisions`** dorazí náhled se screenshoty **`před → po`**. Blok 18 lze spustit až po `12/12 PASS` Go-Live Gate (`Blok 12`), nezávisí na `Blocích 13–17`, nezakládá žádného nového `ai` zaměstnance ani oddělení a celý běží uvnitř stropu **`470 USD / měsíc`**.
 
 Soubory balíčku: tento `README.md`, vzorový test [`priklad/karta-spisu.spec.ts`](priklad/karta-spisu.spec.ts), sdílená pomocná funkce [`priklad/krok.ts`](priklad/krok.ts) a pravidla fronty [`fronta-30min-smycka.md`](fronta-30min-smycka.md).
 
@@ -122,7 +122,7 @@ Zaveď a provozuj 30minutovou vývojovou smyčku podle balicky/S6-ziva-prirucka-
 
 ---
 
-## 5. Stav ve Verzi 3.2.2
+## 5. Stav ve Verzi 3.2.3
 
 **Hotové v této složce (dokumentace a vzory):**
 

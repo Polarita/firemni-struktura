@@ -23,6 +23,9 @@ def check(path, data, status, final_path, needle):
     except urllib.error.HTTPError as error:
         response = error
     with response:
+        # Prohlížeč při politice no-referrer může u POST odeslat Origin: null.
+        if response.headers.get("Referrer-Policy") != "same-origin":
+            raise SystemExit("Prohlížeč potřebuje původ pro odeslání přihlašovacího formuláře")
         if (response.code != status or response.url != origin + final_path
                 or needle not in response.read().decode()):
             raise SystemExit(f"Chyba testu {path}, HTTP {response.code}")

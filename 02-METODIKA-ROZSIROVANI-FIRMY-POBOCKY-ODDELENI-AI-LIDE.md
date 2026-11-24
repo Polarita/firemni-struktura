@@ -1,4 +1,4 @@
-# Metodika rozšiřování společnosti Polarita s.r.o. (2026 · Verze 3.2.2)
+# Metodika rozšiřování společnosti Polarita s.r.o. (2026 · Verze 3.2.3)
 
 **Kompletní provozní návod, kontrolní checklisty, šablony a prompty pro regionální partnerskou síť `Certified Partner SUB` (`100 % realizace + trvalé % z MRR`), zřizování nových poboček (v ČR i v zahraničí vč. `cz-sk-registry-kernel`, SIP klapek `Asterisk / Linphone`, `Zulip` kanálů, `Elektro WMS`, `PHE / SCRAP-CU / ISPOP`, `DTM ČR`, `Mapy.cz` okruhů a `fleet-gps-bridge`), nových oddělení, nových ai zaměstnanců (vč. `metadata-schema-kernel`, `Zulip` bot identity, `Clean Room`, `mutation_confirm` a `Eval Suite`) a přijímání (vč. JMHZ před zahájením práce a pravidel pro sledování zaměstnanců) i ukončování živých lidí**
 
