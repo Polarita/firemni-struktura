@@ -1,0 +1,10 @@
+[Unit]
+Description=Síťové oddělení testovací instance Paperclip
+Before=incus.service incus-startup.service
+After=local-fs.target
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/nft -f /etc/polarita/paperclip.nft
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target

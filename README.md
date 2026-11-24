@@ -16,6 +16,8 @@ Po zadání instalace projde ai bloky 0 až 12 v režimu **TEST**. Před změnou
 
 Odkaz **Otevřít můj účet v Keycloaku** vede do centrální identity. Přihlas se jako **spravce** stejným testovacím heslem. V účtu si můžeš prohlédnout svůj testovací profil a ukončit relaci.
 
+Po ověření přístupu se v přehledu objeví také odkaz **Otevřít řízení firmy v Paperclipu**. Je dostupný ve stejné VPN na portu `8445`. V přihlašovacím formuláři použij `spravce@polarita.test` a stejné testovací heslo jako v ředitelství.
+
 Po zprovoznění týmového chatu otevři Zulip ve firemní VPN na stejném jméně jako ředitelství s portem `8444`. Zvol **Ředitelství Polarity** a přihlas se testovacím účtem `spravce` přes Keycloak. Chat má osm soukromých kanálů útvarů. Přístup každého z dvaceti pracovních botů odpovídá jeho firemní kartě. Odkaz na chat se v přehledu objeví po úspěšném přihlášení správce. Instalace vloží do soukromého kanálu `17-it-secops` testovací zprávu s přílohou. Při zkoušce obnovy se kontroluje obsah přílohy i její vazba na původní zprávu.
 
 Po zprovoznění Checkmk ředitelství zpřístupní stránku **Stav firemních služeb**. U každé služby uvidíš poslední měření a čas v UTC.

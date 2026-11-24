@@ -1,0 +1,9 @@
+[Unit]
+Description=Předání ověřeného testovacího rozhraní na lokální službu Paperclip
+Requires=polarita-paperclip.service
+After=polarita-paperclip.service
+
+[Service]
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd 127.0.0.1:3100
+DynamicUser=yes
+NoNewPrivileges=yes

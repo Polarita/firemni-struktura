@@ -28,6 +28,8 @@ table inet polarita_test {
         iifname "data_vault" oifname "app_internal" ip saddr 10.239.33.12 ip daddr { 10.239.32.11, 10.239.32.13, 10.239.32.16, 10.239.32.18 } tcp sport 5432 ct state established counter accept
         iifname "app_internal" oifname "data_vault" ip saddr 10.239.32.16 ip daddr 10.239.33.13 tcp dport 6379 ct state new,established counter accept
         iifname "data_vault" oifname "app_internal" ip saddr 10.239.33.13 ip daddr 10.239.32.16 tcp sport 6379 ct state established counter accept
+        iifname "dmz_edge" oifname "app_internal" ip saddr 10.239.31.10 ip daddr 10.239.32.18 tcp dport 3100 ct state new,established counter accept
+        iifname "app_internal" oifname "dmz_edge" ip saddr 10.239.32.18 ip daddr 10.239.31.10 tcp sport 3100 ct state established counter accept
         iifname "dmz_edge" oifname "app_internal" ip saddr 10.239.31.10 ip daddr 10.239.32.16 tcp dport 80 ct state new,established counter accept
         iifname "app_internal" oifname "dmz_edge" ip saddr 10.239.32.16 ip daddr 10.239.31.10 tcp sport 80 ct state established counter accept
         iifname @zones counter drop

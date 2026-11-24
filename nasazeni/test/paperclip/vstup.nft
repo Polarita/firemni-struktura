@@ -1,0 +1,21 @@
+destroy table bridge polarita_paperclip
+table bridge polarita_paperclip {
+    chain do_aplikace {
+        type filter hook postrouting priority -50; policy accept;
+        oifname "polpaper0" ether type arp accept
+        oifname "polpaper0" ether type ip ip saddr 10.239.32.1 udp sport 67 udp dport 68 accept
+        oifname "polpaper0" ether type ip ip saddr 10.239.31.10 ip daddr 10.239.32.18 tcp dport 3100 accept
+        oifname "polpaper0" ether type ip ip saddr 10.239.33.10 tcp sport 8200 ct state established accept
+        oifname "polpaper0" ether type ip ip saddr 10.239.33.12 tcp sport 5432 ct state established accept
+        oifname "polpaper0" counter drop
+    }
+    chain z_aplikace {
+        type filter hook prerouting priority -280; policy accept;
+        iifname "polpaper0" ether type arp accept
+        iifname "polpaper0" ether type ip udp sport 68 udp dport 67 accept
+        iifname "polpaper0" ether type ip ip saddr 10.239.32.18 ip daddr 10.239.31.10 tcp sport 3100 accept
+        iifname "polpaper0" ether type ip ip saddr 10.239.32.18 ip daddr 10.239.33.10 tcp dport 8200 accept
+        iifname "polpaper0" ether type ip ip saddr 10.239.32.18 ip daddr 10.239.33.12 tcp dport 5432 accept
+        iifname "polpaper0" counter drop
+    }
+}

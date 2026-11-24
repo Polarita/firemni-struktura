@@ -80,6 +80,10 @@ fi
 "${guest[@]}" bash "$dest/nasazeni/test/paperclip/server.sh" "$fqdn" | tee "$tmp/paperclip.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/paperclip/spravce.sh" "$fqdn" | tee -a "$tmp/paperclip.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/paperclip/stage1.sh" | tee -a "$tmp/paperclip.txt"
+"${guest[@]}" bash "$dest/nasazeni/test/paperclip/vstup.sh"
+sudo -n bash nasazeni/test/port-vpn.sh 8445 >/dev/null
+"${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/paperclip/zkouska_vpn.py "$fqdn" | tee -a "$tmp/paperclip.txt"
+printf 'https://%s:8445/\n' "$fqdn" | "${inc[@]}" exec --project polarita -T polarita-hq -- incus exec -T reditelstvi-test -- sh -ec 'umask 022; cat >/usr/local/share/.polarita-paperclip-url.next; mv -T /usr/local/share/.polarita-paperclip-url.next /usr/local/share/polarita-paperclip-url'
 "${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-07
 "${inc[@]}" file push --project polarita "$tmp/paperclip.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-07/paperclip-$commit.txt"
 "${guest[@]}" touch /srv/polarita/infra/keycloak-test/conf/databaze-pripravena

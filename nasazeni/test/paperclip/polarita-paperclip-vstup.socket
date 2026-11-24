@@ -1,0 +1,11 @@
+[Unit]
+Description=Vstup pro Caddy do převzaté testovací instance Paperclip
+ConditionPathExists=/etc/polarita-paperclip/spravce-overen
+After=network-online.target
+
+[Socket]
+ListenStream=10.239.32.18:3100
+FreeBind=true
+
+[Install]
+WantedBy=sockets.target
