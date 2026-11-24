@@ -107,7 +107,7 @@ def check(src):
     sql(down, "pol_metadata_ddl")
     with tempfile.TemporaryDirectory() as tmp:
         file = Path(tmp)/"wrong.json"
-        for database, schema in [("db_keycloak","public"), ("db_erp_lhutnik","public"), ("db_paperclip","public")]:
+        for database, schema in [("keycloak","public"), ("db_erp_lhutnik","public"), ("db_paperclip","public")]:
             file.write_text(json.dumps({**data, "database":database, "schema":schema}))
             try:
                 load(file)
