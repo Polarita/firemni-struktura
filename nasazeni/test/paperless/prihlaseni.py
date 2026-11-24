@@ -77,6 +77,17 @@ with web.open(origin + "/api/profile/", timeout=30) as res:
     account = json.load(res)
 if account.get("email") != "spravce@polarita.test" or not any(a["provider"] == "keycloak" for a in account["social_accounts"]):
     raise RuntimeError("Archiv nepotvrdil účet správce z Keycloaku")
+if len(sys.argv) > 2:
+    case, doc_id, field_id = sys.argv[2:]
+    if not re.fullmatch(r"POL-[0-9]{4}-[0-9]{5}", case) or not doc_id.isdecimal() or not field_id.isdecimal():
+        raise ValueError("Chybné označení dokumentu")
+    with web.open(origin + "/api/documents/" + doc_id + "/", timeout=45) as res:
+        doc = json.load(res)
+    if (doc["id"] != int(doc_id) or doc["title"] != f"{case} – Předávací protokol TEST"
+            or not any(f["field"] == int(field_id) and f["value"] == case for f in doc["custom_fields"])
+            or "protokol" not in doc["content"].lower()):
+        raise RuntimeError("Přihlášený správce neobdržel očekávaný protokol se spisem")
+    print(f"Účet správce přečetl přes HTTPS dokument {doc_id} s výsledkem OCR a vazbou na spis {case}.")
 logout = origin + "/accounts/logout/"
 url, form = page(logout)
 if not form.csrf or url != logout:

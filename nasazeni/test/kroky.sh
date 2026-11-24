@@ -220,6 +220,13 @@ karantena() {
     "${inc[@]}" file push --project polarita "$tmp/karantena.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-04/karantena-$commit.txt"
     "${guest[@]}" python3 "$dest/nasazeni/test/paperless/vzor.py" | tee "$tmp/paperless-vzor.txt"
     "${inc[@]}" file push --project polarita "$tmp/paperless-vzor.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-vzor-$commit.txt"
+    local case doc field
+    case=$(sed -n 's/^Paperless uložil dokument [0-9]* ke spisu \(POL-[0-9]*-[0-9]*\) a přečetl.*/\1/p' "$tmp/paperless-vzor.txt")
+    [[ $case =~ ^POL-[0-9]{4}-[0-9]{5}$ ]]
+    read -r doc field < <("${guest[@]}" incus exec -T paperless-test -- /command/with-contenv /command/s6-setuidgid paperless python3 - "$case" <nasazeni/test/paperless/cteni.py)
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
+        python3 nasazeni/test/paperless/prihlaseni.py "$fqdn" "$case" "$doc" "$field" | tee "$tmp/paperless-cteni.txt"
+    "${inc[@]}" file push --project polarita "$tmp/paperless-cteni.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-cteni-$commit.txt"
     printf 'https://%s:8448/\n' "$fqdn" | "${guest[@]}" incus exec -T reditelstvi-test -- sh -ec 'umask 022; cat >/usr/local/share/.polarita-paperless-url.next; mv -T /usr/local/share/.polarita-paperless-url.next /usr/local/share/polarita-paperless-url'
 }
 
