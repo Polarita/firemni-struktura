@@ -72,5 +72,11 @@ if incus exec -T "$name" -- test -f "$restart"; then
 elif ! incus exec -T "$name" -- rc-service polarita-portal status; then
     incus exec -T "$name" -- rc-service polarita-portal start
 fi
-incus exec -T "$name" -- sh -ec 'for i in 1 2 3 4 5; do wget -qO /dev/null http://127.0.0.1:8080/ && exit 0; sleep 1; done; exit 1'
 incus exec -T "$name" -- rm -f "$restart"
+incus exec -T "$name" -- sh -ec '
+    for i in $(seq 1 90); do
+        if wget -q -T 3 -O /dev/null http://127.0.0.1:8080/; then exit 0; fi
+        sleep 2
+    done
+    echo "Ředitelství po spuštění neposkytlo přihlašovací stránku." >&2
+    exit 1'
