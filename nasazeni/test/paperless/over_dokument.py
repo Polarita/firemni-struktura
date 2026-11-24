@@ -14,6 +14,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "paperless.settings")
 import django
 django.setup()
 from django.conf import settings
+from django.db import transaction
 from documents.data_models import ConsumableDocument, DocumentMetadataOverrides, DocumentSource
 from documents.models import CustomField, CustomFieldInstance, Document, PaperlessTask
 from documents.tasks import consume_file
@@ -41,7 +42,7 @@ while True:
     attempt += 1
 if doc is None and task is None:
     folder = Path(tempfile.mkdtemp(prefix="polarita-vzor-", dir=settings.SCRATCH_DIR))
-    pdf = folder / "predavaci-protokol.pdf"
+    pdf = folder / ("prevzaty-sken.pdf" if prijem else "predavaci-protokol.pdf")
     pdf.write_bytes(data)
     consume_file.apply_async(task_id=task_id, kwargs={
         "input_doc": ConsumableDocument(source=DocumentSource.ApiUpload, original_file=pdf),
@@ -53,12 +54,30 @@ while doc is None and time.monotonic() < deadline:
         raise RuntimeError("Úloha OCR protokolu skončila chybou")
     time.sleep(5)
     doc = Document.objects.filter(checksum=checksum).first()
-# Při přechodu ze 3.17 lze doplnit prázdné pole pouze u vlastního zkušebního
-# importu, jehož dokončená úloha vrátila přesné ID kontrolovaného dokumentu.
-if not prijem and doc and doc.title == title and doc.owner_id is None:
-    original_task = PaperlessTask.objects.filter(task_id=task_id, status=PaperlessTask.Status.SUCCESS).first()
-    if original_task and (original_task.result_data or {}).get("document_id") == doc.pk:
-        CustomFieldInstance.objects.filter(document=doc, field=field, value_text__isnull=True).update(value_text=case)
+# Některé verze pipeline po OCR použijí název souboru a nepřenesou pole.
+# Vazbu lze doplnit jen u nového dokumentu prokazatelně vytvořeného touto úlohou.
+if doc and not CustomFieldInstance.objects.filter(document=doc, field=field, value_text=case).exists():
+    deadline = time.monotonic() + 60
+    own = PaperlessTask.objects.filter(task_id=task_id, status=PaperlessTask.Status.SUCCESS)
+    while not own.exists() and time.monotonic() < deadline:
+        time.sleep(2)
+    result = own.values_list("result_data", flat=True).first() or {}
+    if result.get("document_id") == doc.pk:
+        with transaction.atomic():
+            doc = Document.objects.select_for_update().get(pk=doc.pk, checksum=checksum)
+            defaults = {title, "predavaci-protokol" if not prijem else "prevzaty-sken"}
+            if doc.owner_id is not None or doc.title not in defaults:
+                raise RuntimeError("Název nebo vlastník dokumentu se změnil")
+            cf, _ = CustomFieldInstance.objects.get_or_create(document=doc, field=field,
+                                                               defaults={"value_text": case})
+            if cf.value_text not in (None, "", case):
+                raise RuntimeError("Dokument už má jiné číslo spisu")
+            if cf.value_text != case:
+                cf.value_text = case
+                cf.save(update_fields=["value_text"])
+            if doc.title != title:
+                doc.title = title
+                doc.save(update_fields=["title"])
 if doc is None or (not prijem and doc.title != title) or not CustomFieldInstance.objects.filter(document=doc, field=field, value_text=case).exists():
     raise RuntimeError("Chybí zkušební protokol s vazbou na spis")
 text = "".join(c for c in unicodedata.normalize("NFKD", doc.content.lower()) if not unicodedata.combining(c))
