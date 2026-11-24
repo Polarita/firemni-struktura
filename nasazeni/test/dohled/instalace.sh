@@ -30,6 +30,6 @@ for r in json.load(sys.stdin).get("resource_changes", []):
     if a in (["no-op"],["read"]) or (r["address"]=="incus_instance.dohled" and a in (["create"],["update"])): continue
     sys.exit("Neočekávaná změna "+r["address"])'
 tofu apply -input=false "$tmp/plan"
-incus exec -T checkmk-test -- bash -ec 'for i in {1..60}; do if test -S /run/systemd/private && mountpoint -q /omd/sites; then exit 0; fi; sleep 1; done; exit 1'
+incus exec -T checkmk-test -- bash -ec 'for i in {1..60}; do if test -S /run/systemd/private && mountpoint -q /opt/omd/sites; then exit 0; fi; sleep 1; done; exit 1'
 bash "$src/balicky.sh"
 tofu plan -input=false -detailed-exitcode

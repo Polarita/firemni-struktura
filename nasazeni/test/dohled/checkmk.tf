@@ -24,7 +24,7 @@ resource "incus_instance" "dohled" {
     type = "disk"
     properties = {
       source = "/srv/polarita/data/checkmk/test"
-      path   = "/omd/sites"
+      path   = "/opt/omd/sites"
       shift  = "true"
     }
   }
