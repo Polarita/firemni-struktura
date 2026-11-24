@@ -1,5 +1,6 @@
 """Inicializace testovacího Raftu a ověření oddělených rolí. Tajné hodnoty zůstávají v RAM."""
 import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -56,6 +57,9 @@ DATABASES = (
     "db_eshop", "db_akademie", "db_erp_lhutnik", "db_gdpr_zkousky", "db_hr_lide", "db_paperclip",
     "keycloak", "paperless", "vikunja", "gitea", "umami", "zulip", "stalwart", "chatwoot", "traccar",
 )
+CACHES = ("eshop", "akademie", "chatwoot", "zulip")
+FIXTURES["valkey-test"] = ["valkey-agent"]
+FIXTURES.update({"cache-" + name: ["valkey-klient-" + name] for name in CACHES})
 DATABASE_ACCESS = {"postgres-test": DATABASES, "keycloak-test": ("keycloak",)}
 # Skutečné údaje ISDS vydá až oprávněný proces s ověřeným časem a rozhodnutím.
 DENIED = ["isds-cteni", "isds-odesilani", "eet-vypnuto", "cizi-vzorek"]
@@ -129,6 +133,8 @@ def configure(root):
     for fixture in sorted({x for values in FIXTURES.values() for x in values} | set(DENIED)):
         policy += allow("test/data/" + fixture, "create", "update")
     policy += allow("test/metadata/pki/organizace-test", "read") + allow("test/data/pki/organizace-test", "create")
+    for suffix in ("pki/valkey-test", *("valkey/" + name for name in CACHES)):
+        policy += allow("test/metadata/" + suffix, "read") + allow("test/data/" + suffix, "create")
     for name in DATABASES:
         policy += allow("test/metadata/databaze/" + name, "read")
         policy += allow("test/data/databaze/" + name, "create")
@@ -136,6 +142,11 @@ def configure(root):
         acl = allow("auth/token/revoke-self", "update")
         for path in paths:
             acl += allow("test/data/" + path, "read")
+        if role == "valkey-test":
+            acl += allow("test/data/pki/valkey-test", "read")
+        for name in CACHES:
+            if role in ("valkey-test", "cache-" + name):
+                acl += allow("test/data/valkey/" + name, "read")
         if role == "pecet-test":
             acl += allow("test/data/pki/organizace-test", "read")
         for db in DATABASE_ACCESS.get(role, ()):
@@ -181,6 +192,25 @@ def initialize_seal(manager):
                 {"options": {"cas": 0}, "data": {"sada": json.dumps(new_bundle())}}, manager)
 
 
+def initialize_cache(manager):
+    from valkey_test import tls_bundle
+    for suffix in ("pki/valkey-test", *("valkey/" + name for name in CACHES)):
+        try:
+            meta = request("GET", "test/metadata/" + suffix, token=manager)["data"]
+            version = meta["versions"][str(meta["current_version"])]
+            if version.get("destroyed") or version.get("deletion_time"):
+                raise RuntimeError("Obnovte odstraněné tajemství Valkey")
+        except HTTPError as err:
+            if err.code != 404:
+                raise
+            if suffix == "pki/valkey-test":
+                fields = tls_bundle()
+            else:
+                password = secrets.token_urlsafe(32)
+                fields = {"heslo": password, "hash": hashlib.sha256(password.encode()).hexdigest()}
+            request("POST", "test/data/" + suffix, {"options": {"cas": 0}, "data": fields}, manager)
+
+
 def expect_forbidden(method, path, token, body=None):
     try:
         request(method, path, body, token)
@@ -195,6 +225,7 @@ def verify_roles():
     manager = login(recover("bao-sprava"))
     initialize_database_passwords(manager)
     initialize_seal(manager)
+    initialize_cache(manager)
     values = {}
     for fixture in sorted({x for paths in FIXTURES.values() for x in paths} | set(DENIED)):
         # Zkouška má vlastní pole a cesty pouze v samostatném testovacím KV.

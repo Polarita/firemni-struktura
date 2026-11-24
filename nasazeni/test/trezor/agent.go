@@ -20,6 +20,7 @@ const private = target + "/.polarita-agent"
 const tmpfs = 0x01021994
 
 type grant struct {
+	Caches    []string `json:"caches"`
 	Seal      bool     `json:"seal"`
 	Databases []string `json:"databases"`
 	RoleID    string   `json:"role_id"`
@@ -116,6 +117,23 @@ template {
 }
 `, tmp)
 		outputs["pecet"] = "pecet-test"
+	}
+	if len(g.Caches) > 0 {
+		acl := "user default off\n"
+		for _, name := range g.Caches {
+			if !regexp.MustCompile(`^[a-z]{1,20}$`).MatchString(name) {
+				return fmt.Errorf("neplatné jméno klienta Valkey")
+			}
+			acl += fmt.Sprintf("user %s reset on #{{ with secret \"test/data/valkey/%s\" }}{{ .Data.data.hash }}{{ end }} ~%s:* +ping +get +set +del +expire +ttl\n", name, name, name)
+		}
+		config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/valkey-acl", acl)
+		outputs["valkey-acl"] = "valkey-acl"
+		for _, field := range []string{"cert", "klic"} {
+			file := "valkey-" + field
+			template := fmt.Sprintf(`{{ with secret "test/data/pki/valkey-test" }}{{ .Data.data.%s }}{{ end }}`, field)
+			config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/"+file, template)
+			outputs[file] = file
+		}
 	}
 	for _, name := range g.Databases {
 		if !regexp.MustCompile(`^[a-z][a-z0-9_]{0,40}$`).MatchString(name) {
