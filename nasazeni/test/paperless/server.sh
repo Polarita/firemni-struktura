@@ -47,7 +47,10 @@ else
 fi
 install -m0755 "$src/web.sh" "$work/conf/web.sh.next"
 mv -T "$work/conf/web.sh.next" "$work/conf/web.sh"
-if [[ $restart == true ]]; then incus restart paperless-test; fi
+if [[ $restart == true ]]; then
+    incus restart paperless-test
+    python3 "$src/../trezor/agenti.py" --klient paperless-test
+fi
 "${inside[@]}" python3 - "$host" <<'PY'
 from http.client import HTTPConnection
 import sys, time

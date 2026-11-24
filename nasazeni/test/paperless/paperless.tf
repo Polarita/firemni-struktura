@@ -13,7 +13,7 @@ resource "incus_instance" "archiv" {
     "boot.autostart"      = "true"
     "limits.memory"       = "768MiB"
     "user.polarita.role"  = "paperless-test"
-    "oci.entrypoint"      = "/bin/bash /etc/polarita-paperless/start.sh"
+    "oci.entrypoint"      = "/s6-init"
     "security.privileged" = "false"
   }
   device {
@@ -25,6 +25,26 @@ resource "incus_instance" "archiv" {
       "security.ipv4_filtering" = "true"
       "security.ipv6_filtering" = "true"
       "security.mac_filtering"  = "true"
+    }
+  }
+  # Incus předá tomuto vstupu PID 1 potřebný pro následný exec původního /init.
+  device {
+    name = "init"
+    type = "disk"
+    properties = {
+      source   = "/srv/polarita/infra/paperless-test/conf/start.sh"
+      path     = "/s6-init"
+      readonly = "true"
+    }
+  }
+  device {
+    name = "runtime"
+    type = "disk"
+    properties = {
+      source         = "tmpfs:"
+      path           = "/run"
+      size           = "32MiB"
+      "initial.mode" = "0755"
     }
   }
   device {

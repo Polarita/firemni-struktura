@@ -11,11 +11,9 @@ url = (conf / "url").read_text().strip()
 host = urlsplit(url).hostname
 if not host or not re.fullmatch(r"[a-z0-9.-]+\.ts\.net", host) or url != f"https://{host}:8448":
     raise RuntimeError("Neplatná adresa archivu")
-# s6 kopíruje prostředí služeb do /run/s6/container_environment.
-runtime = Path("/run/s6")
-runtime.mkdir(mode=0o755, exist_ok=True)
-if subprocess.check_output(["findmnt", "-no", "FSTYPE", "-T", runtime], text=True).strip() != "tmpfs":
-    subprocess.run(["mount", "-t", "tmpfs", "-o", "size=32m,mode=0755,nosuid,nodev", "tmpfs", runtime], check=True)
+# s6 uchovává prostředí služeb v /run/s6 do ukončení instance.
+if os.getpid() != 1 or subprocess.check_output(["findmnt", "-no", "FSTYPE", "-T", "/run"], text=True).strip() != "tmpfs":
+    raise RuntimeError("Služba vyžaduje vlastní PID 1 a /run v paměti")
 
 
 def secret(key):
