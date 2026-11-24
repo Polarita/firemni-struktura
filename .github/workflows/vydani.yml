@@ -18,6 +18,7 @@ jobs:
           python -m venv "$RUNNER_TEMP/pdf-env"
           source "$RUNNER_TEMP/pdf-env/bin/activate"
           pip install -r nastroje/requirements.txt -r balicky/S1-generator-cistopisu/requirements.txt
+          python -m unittest discover -s nastroje
           python nastroje/check_consistency.py
           python nastroje/sync_prompt_core.py --check
           python nastroje/build_org_pdfs.py

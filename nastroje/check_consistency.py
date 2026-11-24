@@ -71,7 +71,7 @@ _SEP = r"[\s`*:]{1,5}"
 # CZ: Jeden vzor pro kontrolu i pro bump_version.py: všechny tvary, jimiž se zapisuje verze návrhu.
 VERSION_RE = re.compile(
     r"(?P<prefix>(?i:\bverz(?:e|i|í)\b)" + _SEP + r"|\bVersion\b" + _SEP + r"|Polarita-|(?i:\b(?:blueprint|návrh\w*)\s+v))"
-    r"(?P<number>\d+\.\d+(?:\.\d+)?)"
+    r"(?P<number>\d+(?:\.\d+)+)"
 )
 LINK_RE = re.compile(r"\]\(([^)\n]*)\)")
 REF_LINK_RE = re.compile(r"^ {0,3}\[[^\]\n]+\]:\s*(\S+)")
