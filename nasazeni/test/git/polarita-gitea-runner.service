@@ -1,0 +1,11 @@
+[Unit]
+Description=Izolovaná instance místního CI
+After=incus.service polarita-runner-sit.service
+Requires=incus.service polarita-runner-sit.service
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -ec 'if [ "$(/usr/bin/incus list gitea-runner-test -c s -f csv)" != RUNNING ]; then /usr/bin/incus start gitea-runner-test; fi'
+ExecStop=/usr/bin/incus stop gitea-runner-test --timeout 60
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target

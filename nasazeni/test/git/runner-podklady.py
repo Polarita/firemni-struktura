@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import shutil
 import socket
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from urllib.parse import urlsplit
 from urllib.request import urlopen
 import zipfile
@@ -65,6 +65,19 @@ def main():
     with zipfile.ZipFile(archive) as z, z.open("chrome-headless-shell-linux64/chrome-headless-shell") as f:
         if hashlib.file_digest(f, "sha256").hexdigest() != BINARY_SHA:
             raise RuntimeError("Nesouhlasí ověřený program headless Chromium")
+    browser = WORK / "prohlizec"
+    binary = "chrome-headless-shell-linux64/chrome-headless-shell"
+    if not matches(browser / binary, BINARY_SHA):
+        with TemporaryDirectory(dir=WORK) as tmp, zipfile.ZipFile(archive) as z:
+            stage = Path(tmp)
+            for entry in z.infolist():
+                name = Path(entry.filename)
+                if name.is_absolute() or ".." in name.parts or name.parts[:1] != ("chrome-headless-shell-linux64",):
+                    raise RuntimeError("Nečekaná cesta v dodavatelském archivu")
+                z.extract(entry, stage)
+            (stage / binary).chmod(0o755)
+            browser.mkdir(exist_ok=True)
+            (stage / "chrome-headless-shell-linux64").rename(browser / "chrome-headless-shell-linux64")
     print("Ověřeny dva offline balíky Pythonu a shodné sestavení prohlížeče pro tisk a test GUI.")
 
 

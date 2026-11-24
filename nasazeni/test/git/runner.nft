@@ -1,0 +1,15 @@
+destroy table bridge polarita_runner_test
+table bridge polarita_runner_test {
+    chain pre {
+        type filter hook prerouting priority -280; policy accept;
+        iifname "polrunner0" ether type arp arp saddr ip 10.239.32.14 arp daddr ip 10.239.32.13 accept
+        iifname "polrunner0" ether type ip ip saddr 10.239.32.14 ip daddr 10.239.32.13 tcp dport 443 accept
+        iifname "polrunner0" counter drop
+    }
+    chain post {
+        type filter hook postrouting priority -50; policy accept;
+        oifname "polrunner0" ether type arp arp saddr ip 10.239.32.13 arp daddr ip 10.239.32.14 accept
+        oifname "polrunner0" ether type ip ip saddr 10.239.32.13 ip daddr 10.239.32.14 tcp sport 443 ct state established accept
+        oifname "polrunner0" counter drop
+    }
+}

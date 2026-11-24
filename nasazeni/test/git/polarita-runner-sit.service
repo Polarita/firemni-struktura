@@ -1,0 +1,10 @@
+[Unit]
+Description=Izolace vyhrazeného runneru Gitea TEST
+Before=incus.service incus-startup.service
+After=local-fs.target
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/nft -f /etc/polarita/runner.nft
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target
