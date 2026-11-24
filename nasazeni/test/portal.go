@@ -84,7 +84,8 @@ const metadataPath = "/lhutnik-test/"
 const metadataSocket = "/run/polarita-metadata.sock"
 
 var metadataClient = &http.Client{
-	Timeout: 7 * time.Second,
+	// Databázový proces má na místní dotaz 15 sekund.
+	Timeout: 20 * time.Second,
 	Transport: &http.Transport{DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 		return (&net.Dialer{}).DialContext(ctx, "unix", metadataSocket)
 	}},
@@ -322,6 +323,6 @@ func main() {
 	}
 	p := &portal{sessions: make(map[string]time.Time)}
 	copy(p.digest[:], b)
-	server := &http.Server{Addr: "0.0.0.0:8080", Handler: p, ReadTimeout: 8 * time.Second, WriteTimeout: 8 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 8192}
+	server := &http.Server{Addr: "0.0.0.0:8080", Handler: p, ReadTimeout: 8 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 8192}
 	log.Fatal(server.ListenAndServe())
 }

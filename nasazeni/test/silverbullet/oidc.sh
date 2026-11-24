@@ -40,15 +40,18 @@ incus file push --mode=0644 "$src/polarita-silverbullet-oidc.service" silverbull
 "${inside[@]}" systemctl enable polarita-silverbullet-oidc
 "${inside[@]}" systemctl restart polarita-silverbullet-oidc
 "${inside[@]}" python3 - <<'PY'
+from time import monotonic, sleep
 from urllib.request import urlopen
-import time
-for attempt in range(30):
+# První TLS spojení s identitou při souběžném sestavení může vyžadovat
+# automatický restart proxy. Připravenost určuje až odpověď služby.
+deadline = monotonic() + 240
+while True:
     try:
-        with urlopen("http://10.239.32.19:4180/ping", timeout=2) as r:
+        with urlopen("http://10.239.32.19:4180/ping", timeout=4) as r:
             assert r.status == 200
         break
     except OSError:
-        if attempt == 29:
+        if monotonic() >= deadline:
             raise
-        time.sleep(1)
+        sleep(3)
 PY

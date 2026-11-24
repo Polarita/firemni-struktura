@@ -17,7 +17,7 @@ def main(origin, password):
     def send(method, dest, body=None, headers=None):
         req = request.Request(origin+dest, data=body, headers=headers or {}, method=method)
         try:
-            res = browser.open(req, timeout=12)
+            res = browser.open(req, timeout=35)
         except error.HTTPError as exc:
             res = exc
         with res:
@@ -35,10 +35,12 @@ def main(origin, password):
     body = json.dumps({"popis":label,"dny":3,"vyrizeno":False}).encode()
     headers = {"Content-Type":"application/json","Origin":origin}
     assert send("POST",route,body, {**headers, "Origin":"https://jiny.invalid"})[0] == 403
-    s, _, meta, raw = send("POST",route,body,headers)
-    assert s == 201 and meta["ETag"] == '"1"'
-    key = str(UUID(json.loads(raw)["id"]))
     try:
+        s, _, meta, raw = send("POST",route,body,headers)
+        if s != 201:
+            raise RuntimeError(f"Založení testovací lhůty vrátilo HTTP {s}.")
+        assert meta["ETag"] == '"1"'
+        key = str(UUID(json.loads(raw)["id"]))
         record = route+"/"+key
         assert send("PUT",record,body,headers)[0] == 428
         assert b'id="zaloz"' in send("GET", path + "spisy")[3]
@@ -59,7 +61,7 @@ def main(origin, password):
         cmd = ["sudo","-n","incus","exec","-T","--project","polarita","polarita-hq","--",
                "incus","exec","-T","postgres-test","--","runuser","-u","postgres","--",
                "psql","-XqAtw","-v","ON_ERROR_STOP=1","-d","db_erp_lhutnik"]
-        subprocess.run(cmd, input=f"DELETE FROM polarita_test_metadata.meta_termin WHERE id='{key}' AND popis='{label}';",
+        subprocess.run(cmd, input=f"DELETE FROM polarita_test_metadata.meta_termin WHERE popis='{label}';",
                        text=True, check=True)
     print("Přihlášení přes ředitelství otevřelo formulář, změna vyžadovala správný ETag a po odhlášení API opět odmítlo zápis.")
     print("Ředitelství založilo nebo načetlo stejný testovací spis a vyhledalo jej podle hlavního čísla i aliasu pobočky 101.")
