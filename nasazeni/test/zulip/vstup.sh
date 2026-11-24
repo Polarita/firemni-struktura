@@ -3,7 +3,7 @@ set -euo pipefail
 src=$(cd "$(dirname "$0")" && pwd)
 fqdn=$(bash "$src/../port-vpn.sh" 8444)
 url="https://$fqdn:8444"
-curl -fsS --max-time 15 "$url/api/v1/server_settings" | python3 -c '
+curl -fsS --retry 5 --retry-delay 4 --retry-max-time 110 --retry-connrefused --max-time 20 "$url/api/v1/server_settings" | python3 -c '
 import json,sys
 data=json.load(sys.stdin)
 providers=data.get("external_authentication_methods", [])
