@@ -1,4 +1,4 @@
-# Licenční a obchodní podmínky služby Polarita Elektro Cloud — osnova · Blok 19 (S7) · Verze 3.16
+# Licenční a obchodní podmínky služby Polarita Elektro Cloud — osnova · Blok 19 (S7) · Verze 3.17
 
 **Stav dokumentu: `DRAFT` — koncept k revizi `15001 pravni-specialista` a advokátem.** Nejde o platný právní dokument ani o právní radu; připravila jej `ai` jako podklad. Podmínky smějí být použity vůči zákazníkovi až po revizi advokátem a schválení `1001`. Doplňuje řídicí dokument [`README.md`](README.md) (kapitola 2, pravidla 6 a 7). Všechny částky, lhůty a procenta, které zadání balíčku `S7` nestanoví, jsou vedeny jako `NÁVRH — ke schválení 1001`.
 

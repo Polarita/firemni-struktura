@@ -1,4 +1,4 @@
-# Charta a provozní řád: Útvar 11 — Vedení a Governance společnosti (Statutární orgán & Exekutiva) · Verze 3.16
+# Charta a provozní řád: Útvar 11 — Vedení a Governance společnosti (Statutární orgán & Exekutiva) · Verze 3.17
 
 ## 1. Poslání útvaru
 Zajišťuje statutární zastupování a strategické směřování společnosti **Polarita s.r.o.**, odbornou garanci vyhrazených elektrických zařízení, rozklad obchodních cílů vlastníka na konkrétní, měřitelné úkoly pro **7 odborných oddělení (`12` až `18`)**, plynulou souhru mezi **20 ai zaměstnanci** a **živým realizačním týmem** a přípravu strukturovaných rozhodovacích podkladů pro lidského vlastníka (**Dual-Control**).
@@ -53,7 +53,7 @@ Zajišťuje statutární zastupování a strategické směřování společnosti
 
 ## 7. Rozvojové balíčky Etapy II a III (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.16 zapracovány jako samostatné `Bloky 13–19` (přehled a řídicí dokumenty: [`balicky/README.md`](../balicky/README.md)). Spouštějí se až po `12/12 PASS` Go-Live Gate, nemění složení oddělení ani rozpočty `ai` a oddělení se jich účastní takto:
+Balíčky `S1–S7` jsou ve Verzi 3.17 zapracovány jako samostatné `Bloky 13–19` (přehled a řídicí dokumenty: [`balicky/README.md`](../balicky/README.md)). Spouštějí se až po `12/12 PASS` Go-Live Gate, nemění složení oddělení ani rozpočty `ai` a oddělení se jich účastní takto:
 
 * **Všechny bloky `13–19`:** zahájení každého bloku i uzavření jeho `DoD` schvaluje `1001` v `Decisions`; `11001 ceo` koordinuje pořadí bloků podle obchodních priorit.
 * **`Blok 19` (`S7` Polarita Elektro Cloud):** `11001 ceo` průběžně měří kritéria brány `Go / No-Go` a připravuje rozhodovací protokol; verdikt `GO` podepisuje výhradně `1001`.

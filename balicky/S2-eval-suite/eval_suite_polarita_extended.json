@@ -2,7 +2,7 @@
   "meta": {
     "name": "eval_suite_polarita_extended",
     "version": "2.0",
-    "release_tag": "Polarita-3.16",
+    "release_tag": "Polarita-3.17",
     "description": "Rozšířená regresní sada Eval Suite 100+ (balíček S2) nad 20 základními chytáky Stage 1 / Stage 2.",
     "reference_day": "2027-03-15",
     "pass_threshold_pct": 100,

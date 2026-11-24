@@ -1,4 +1,4 @@
-# 01 — Operační systémy a úložiště (Server, pracovní stanice a mobilní zařízení) · Verze 3.16
+# 01 — Operační systémy a úložiště (Server, pracovní stanice a mobilní zařízení) · Verze 3.17
 
 Tento dokument definuje výchozí operační systémy pro realizaci čisté hybridní `ai`-first společnosti **Polarita s.r.o.** (pobočka `101` Praha — Centrála i budoucí pobočky `102`–`999`) — postavené na prověřených open-source stavebních kamenech, vlastních modulech oddělení `17` a plné multiplatformní svobodě koncových zařízení.
 
@@ -6,7 +6,7 @@ Tento dokument definuje výchozí operační systémy pro realizaci čisté hybr
 
 ## 1. Seznam vybraného softwaru
 
-| Vrstva / Zařízení | Vybraný software | Kanál / Edice | Role a použití v Polarita s.r.o. (Verze 3.16) | Odpovědný `ai` / garant |
+| Vrstva / Zařízení | Vybraný software | Kanál / Edice | Role a použití v Polarita s.r.o. (Verze 3.17) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Centrální server (`polarita-hq`) a pobočkové servery (`101+`)** | **Ubuntu Server** | `latest LTS` *(aktuální dlouhodobě podporovaná verze)* | Jednotný hostitelský operační systém uvnitř VM `polarita-hq` v projektu `polarita`; nese strom `/srv/polarita/` a virtualizační vrstvu `Incus (latest)`. | `17003` `spravce-site` *(kontrola `17004` `klicnik`)* |
 | **Úložiště VM** | **Ceph** ve vnějším clusteru, systémový disk s Ubuntu a šifrovaný datový pool **OpenZFS** uvnitř VM | podporované stabilní verze | Vnější Incus ukládá virtuální disky do poolu `zrcadlo`. Vnitřní správce pracuje s přiděleným datovým diskem a ověřuje šifrování, snímky a obnovu. | `17003` `spravce-site` |

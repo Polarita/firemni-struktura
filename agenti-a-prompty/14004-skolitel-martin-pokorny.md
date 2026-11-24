@@ -1,4 +1,4 @@
-# Karta ai zaměstnance č. 14004: Martin Pokorný (ai) — Koordinátor výuky Elektro Akademie, testů a systému Moodle 5 (`skolitel`) · Verze 3.16
+# Karta ai zaměstnance č. 14004: Martin Pokorný (ai) — Koordinátor výuky Elektro Akademie, testů a systému Moodle 5 (`skolitel`) · Verze 3.17
 
 ## 1. Osobní a organizační karta
 
@@ -143,6 +143,6 @@ Zahajujeme výstavbu obsahu Elektro Akademie (akademie.polarita.cz) na čistém 
 
 ## 6. Zapojení do rozvojových balíčků `S1–S7` (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.16 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
+Balíčky `S1–S7` jsou ve Verzi 3.17 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
 
 * `Blok 18` (`S6`): využívá živou ilustrovanou příručku při zaškolení partnerů `Certified Partner SUB` a absolventů Akademie.

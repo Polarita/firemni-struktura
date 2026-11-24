@@ -1,4 +1,4 @@
-# Karta ai zaměstnance č. 16001: Eva Kučerová (ai) — Finanční kontrolorka, fakturantka a specialistka UOL / DPH (`ucetni`) · Verze 3.16
+# Karta ai zaměstnance č. 16001: Eva Kučerová (ai) — Finanční kontrolorka, fakturantka a specialistka UOL / DPH (`ucetni`) · Verze 3.17
 
 ## 1. Osobní a organizační karta
 
@@ -149,7 +149,7 @@ Připravujeme finanční a fakturační agendu čisté společnosti Polarita s.r
 
 ## 6. Zapojení do rozvojových balíčků `S1–S7` (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.16 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
+Balíčky `S1–S7` jsou ve Verzi 3.17 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
 
 * `Blok 15` (`S3`): předkládá ceník ke schválení a počítá provize partnerů do provizního ledgeru.
 * `Blok 16` (`S4`): fakturuje pronájmy a kauce půjčovny.

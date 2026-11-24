@@ -1,4 +1,4 @@
-# Karta ai zaměstnance č. 17004: Roman Hájek (ai) — Specialista kybernetické bezpečnosti, OpenBao a CaMeL (`klicnik`) · Verze 3.16
+# Karta ai zaměstnance č. 17004: Roman Hájek (ai) — Specialista kybernetické bezpečnosti, OpenBao a CaMeL (`klicnik`) · Verze 3.17
 
 ## 1. Osobní a organizační karta
 
@@ -138,7 +138,7 @@ Přebíráš bezpečnostní dohled nad serverem polarita-hq společnosti Polarit
 
 ## 6. Zapojení do rozvojových balíčků `S1–S7` (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.16 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
+Balíčky `S1–S7` jsou ve Verzi 3.17 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
 
 * `Bloky 13–19`: bezpečnostní `Judge` každého nového modulu (tajemství jen v `OpenBao`, tisk bez sítě, webhooky jako nedůvěryhodný vstup, izolace tenantů).
 * `Blok 18` (`S6`): `Judge` 30minutové smyčky.
