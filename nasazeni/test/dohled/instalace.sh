@@ -35,5 +35,7 @@ bash "$src/balicky.sh"
 incus exec -T checkmk-test -- bash -se <"$src/lokalita.sh"
 bash "$src/watchdog.sh"
 bash "$src/sondy.sh"
+bash "$src/notifikace.sh"
 bash "$src/detekce.sh"
+python3 "$src/zkouska_vypadku.py"
 tofu plan -input=false -detailed-exitcode
