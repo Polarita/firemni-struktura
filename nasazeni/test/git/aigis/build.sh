@@ -25,7 +25,7 @@ echo 'c4fcfb277761be209d203ad5250cf0241b19e66d6e6fb0e9258a3ae7706675ee  Cargo.to
 sed 's/^kuzu = "0.11.3"$/kuzu = { version = "=0.11.3", default-features = false }/' Cargo.toml.pramen >Cargo.toml.next
 grep -Fxq 'kuzu = { version = "=0.11.3", default-features = false }' Cargo.toml.next
 if ! cmp -s Cargo.toml.next Cargo.toml; then mv -T Cargo.toml.next Cargo.toml; fi
-cargo rustc --release --frozen --offline --bin aigiscode \
+cargo rustc --package aigiscore --release --frozen --offline --bin aigiscode \
     --config 'source.crates-io.replace-with="polarita"' --config 'source.polarita.local-registry="/opt/polarita-vstup/registry"' \
     -- -C 'link-arg=-Wl,-rpath,$ORIGIN/lib'
 BUILD
