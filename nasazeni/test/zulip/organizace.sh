@@ -3,6 +3,8 @@ set -euo pipefail
 [[ $(hostname -s) == polarita-hq && $EUID == 0 ]]
 src=$(cd "$(dirname "$0")" && pwd)
 work=/srv/polarita/infra/zulip-test/conf
+exec 9>/srv/polarita/infra/zulip-test/.organizace
+flock 9
 inside=(incus exec -T zulip-test --)
 python3 - "$src/../../../agenti-a-prompty" "$work/pozice.json" <<'PY'
 import json,re,sys

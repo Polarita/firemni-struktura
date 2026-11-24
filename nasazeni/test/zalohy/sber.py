@@ -137,6 +137,13 @@ def collect(root):
                         raise RuntimeError("Garage změnila objekt během sběru")
                     listing.append({"klic":name,"soubor":filename,"metadata":reply["Metadata"],"typ":reply.get("ContentType","application/octet-stream")})
         (dst/"seznam.json").write_text(json.dumps(listing,ensure_ascii=False))
+    chat = root / "zulip"
+    chat.mkdir()
+    with snapshot("polarita_zfs/data/zulip") as source:
+        app = source / "aplikace"
+        shutil.copyfile(app / "zulip-secrets.conf", chat / "zulip-secrets.conf")
+        copytree(app / "uploads", chat / "uploads")
+    shutil.copyfile("/srv/polarita/infra/zulip-test/conf/pozice.json", chat / "pozice.json")
     infrastruktura.collect(root, snapshot)
     sums={str(f.relative_to(root)):hashfile(f) for f in root.rglob("*") if not f.is_symlink() and f.is_file()}
     (root/"soubory.sha256.json").write_text(json.dumps(sums,sort_keys=True))
