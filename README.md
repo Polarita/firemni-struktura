@@ -147,7 +147,7 @@ Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatn�
 
 ### `Blok 0` — Inventura pro instalaci
 
-Ověř projekt, umístění VM, její systém, disky, síť a volnou paměť. Eviduj již provedené práce. Zapiš vstupy pro testovací režim a pokračuj blokem 1. U připravené VM lze kontrolu zopakovat na Ejpovicích příkazem `python3 nasazeni/test/inventura.py`. Výstup obsahuje cílový stroj, oba disky, přidělené prostředky a výsledek ověření klíče vTPM.
+Na Ejpovicích spusť `sudo -n bash nasazeni/test/vm.sh`. Skript použije existující `polarita-hq`. Při první instalaci založí v projektu `polarita` jedinou VM s vTPM, systémovým diskem a samostatným datovým svazkem na poolu `zrcadlo`. Poté ověř její systém, disky, síť a volnou paměť. Eviduj již provedené práce. Zapiš vstupy pro testovací režim a pokračuj blokem 1. U připravené VM lze kontrolu zopakovat na Ejpovicích příkazem `python3 nasazeni/test/inventura.py`. Výstup obsahuje cílový stroj, oba disky, přidělené prostředky a výsledek ověření klíče vTPM.
 
 ### `Blok 1` — VM `polarita-hq`, její systém a úložiště a klientské stanice (`Fáze A · Vrstva 01 · Týdny 1–2`)
 
