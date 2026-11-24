@@ -93,6 +93,7 @@ git archive --format=tar.gz "$commit" | "${guest[@]}" install -m 0600 /dev/stdin
 "${guest[@]}" python3 "$dest/nasazeni/test/git/zdroj_ci.py" "$dest/zdroj-ci.tar.gz" | tee -a "$tmp/gitea.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/git/sken.sh"
 "${guest[@]}" python3 "$dest/nasazeni/test/git/zdroj_ci.py" "$dest/zdroj-ci.tar.gz" --zkouska-skenu | tee -a "$tmp/gitea.txt"
+"${guest[@]}" python3 "$dest/nasazeni/test/git/repozitar.py" --ochrana | tee -a "$tmp/gitea.txt"
 "${guest[@]}" incus exec -T reditelstvi-test -- touch /usr/local/share/polarita-gitea-oidc.ok
 "${guest[@]}" bash "$dest/nasazeni/test/objekty/zkouska.sh" | tee "$tmp/garage.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/databaze/obnova.py" | tee "$tmp/obnova-databazi.txt"

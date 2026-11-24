@@ -45,10 +45,18 @@ def main():
         if "--zkouska-skenu" in sys.argv:
             sample = tmp/"zkouska"
             git("clone","-q","--no-local",url,str(sample))
+            branch = "refs/heads/zkouska-detektoru-"+secrets.token_hex(8)
+            (sample/"kontrola.txt").write_text("Kontrola příjmu souboru v TEST.\n")
+            git("add","kontrola.txt",directory=sample)
+            git("-c","user.name=Polarita TEST","-c","user.email=instalace@polarita.test","commit","-qm","Čistý kontrolní vzorek",directory=sample)
+            clean = git("rev-parse","HEAD",directory=sample)
+            git("push","--quiet",url,"HEAD:"+branch,directory=sample)
+            if git("ls-remote",url,branch).split()[0] != clean:
+                raise RuntimeError("Čistý kontrolní vzorek nebyl přijat")
+            git("push","--quiet","--force-with-lease="+branch+":"+clean,url,":"+branch,directory=sample)
             (sample/"kontrola.txt").write_text("POLARITA_CI_FIXTURE="+secrets.token_hex(16)+"\n")
             git("add","kontrola.txt",directory=sample)
             git("-c","user.name=Polarita TEST","-c","user.email=instalace@polarita.test","commit","-qm","Neškodný vzorek detektoru",directory=sample)
-            branch = "refs/heads/zkouska-detektoru-"+secrets.token_hex(8)
             push = subprocess.run(["git","push",url,"HEAD:"+branch],cwd=sample,env=env,capture_output=True,text=True)
             if not push.returncode or "gitleaks nepovolil" not in push.stderr or git("ls-remote",url,branch):
                 raise RuntimeError("Serverová brána nepotvrdila odmítnutí testovacího vzorku")

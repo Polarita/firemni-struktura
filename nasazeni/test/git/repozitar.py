@@ -45,6 +45,19 @@ def configure():
     _, repo = api("GET",path)
     if not repo.get("has_actions") or not repo["private"]:
         raise RuntimeError("Gitea nepotvrdila soukromý repozitář s Actions")
+    if config.get("ochrana"):
+        for rule in ("main","release/**"):
+            _, rules = api("GET",path+"/branch_protections")
+            matches = [r for r in rules if r.get("rule_name") == rule]
+            policy = {"rule_name":rule, "enable_push":False, "required_approvals":1, "block_on_rejected_reviews":True,
+                      "protected_file_patterns":".gitea/workflows/**", "enable_status_check":True,
+                      "status_check_contexts":["kontrola-navrhu / kontrola (pull_request)"]}
+            if not matches:
+                api("POST",path+"/branch_protections",policy,(200,201))
+            _, rules = api("GET",path+"/branch_protections")
+            if not any(all(r.get(k)==v for k,v in policy.items()) for r in rules):
+                raise RuntimeError("Gitea nepotvrdila ochranu větve "+rule)
+        print("Gitea vyžaduje pro main a release/** kontrolu změny a výsledek CI. Přímý zápis je uzavřen.")
     if config.get("opakuj"):
         _, runs = api("GET", path+"/actions/runs?limit=1")
         if not runs.get("workflow_runs"):
@@ -66,7 +79,7 @@ def main():
     source = str(Path(__file__).resolve())
     subprocess.run(["incus","file","push","--mode=0644",source,"gitea-test/etc/polarita-gitea/"],check=True)
     subprocess.run(INSIDE + ["python3","/etc/polarita-gitea/repozitar.py"],
-                   input=json.dumps({"admin":ADMIN,"password":admin_password(),"opakuj":"--opakuj-ci" in sys.argv}).encode(),check=True)
+                   input=json.dumps({"admin":ADMIN,"password":admin_password(),"opakuj":"--opakuj-ci" in sys.argv,"ochrana":"--ochrana" in sys.argv}).encode(),check=True)
 
 
 if __name__ == "__main__":
