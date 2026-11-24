@@ -80,7 +80,7 @@ def transfer(s3, key, metadata):
                     return False
                 raise
             with obj["Body"] as body:
-                if (obj["Metadata"] != metadata or not 0 < obj["ContentLength"] <= 128*1024*1024):
+                if ({k.lower():v for k,v in obj["Metadata"].items()} != metadata or not 0 < obj["ContentLength"] <= 128*1024*1024):
                     raise ValueError("Části hovoru nemají shodné předávací údaje nebo přípustnou délku")
                 file = tmp/part
                 with file.open("xb") as out:
@@ -104,7 +104,7 @@ def transfer(s3, key, metadata):
                 continue
             raise
         with obj["Body"] as stream:
-            if obj["Metadata"] != metadata or hashlib.file_digest(stream,"sha256").hexdigest()!=record["casti"][part]["sha256"]:
+            if {k.lower():v for k,v in obj["Metadata"].items()} != metadata or hashlib.file_digest(stream,"sha256").hexdigest()!=record["casti"][part]["sha256"]:
                 raise ValueError("Obsah se po předání změnil")
     for source_key in paths.values():
         s3.delete_object(Bucket="hovory",Key=source_key)
