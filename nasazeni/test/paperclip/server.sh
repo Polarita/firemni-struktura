@@ -18,6 +18,10 @@ mountpoint -q /var/lib/paperclip
 chown paperclip-test:paperclip-test /var/lib/paperclip
 chmod 0700 /var/lib/paperclip
 install -d -m 0755 /etc/polarita-paperclip
+if ! getent ahostsv4 postgres.polarita.test >/dev/null; then
+    echo '10.239.33.12 postgres.polarita.test' >> /etc/hosts
+fi
+[[ $(getent ahostsv4 postgres.polarita.test | awk '{print $1}' | sort -u) == 10.239.33.12 ]]
 INNER
 incus file push --mode=0644 "$src/start.sh" paperclip-test/etc/polarita-paperclip/
 incus file push --mode=0644 "$src"/polarita-paperclip.{service,timer} paperclip-test/etc/systemd/system/
