@@ -1,11 +1,14 @@
 """Předá pouze očištěnou kopii známého testovacího protokolu ke skutečnému OCR."""
 import fcntl
 import hashlib
+import io
 import json
 from pathlib import Path
 import re
 import socket
 import subprocess
+import sys
+import time
 import uuid
 
 if socket.gethostname().split(".")[0] != "polarita-hq":
@@ -16,22 +19,48 @@ queue = Path("/srv/polarita/workspace/karantena")
 work = Path("/srv/polarita/infra/paperless-test")
 with (work / ".vzor").open("a") as lock:
     fcntl.flock(lock, fcntl.LOCK_EX)
-    fixture = proof.read_bytes()
-    for source in sorted((queue / "prijate").glob("*.pdf"), key=lambda path: path.stat().st_mtime_ns):
-        if not re.fullmatch(r"[0-9a-f]{32}\.pdf", source.name) or source.stat().st_size != len(fixture):
-            continue
-        if source.read_bytes() != fixture:
-            continue
-        report = json.loads((queue / "protokoly" / (source.name + ".json")).read_bytes())
-        if report.get("stav") == "ocisteno" and report.get("typ") == "pdf":
-            cleaned = queue / "vysledky" / source.name
-            break
+    # Obnova testovací pečeti vytvoří nové podepsané bajty. Rozpracovaná zkouška
+    # pokračuje se stejným ověřeným vstupem i v případě změny vzoru na portálu.
+    receipt = work / "vzor-prijem.json"
+    if receipt.exists():
+        chosen = json.loads(receipt.read_bytes())
     else:
-        raise RuntimeError("Chybí ověřená rekonstrukce testovacího protokolu")
+        fixture = proof.read_bytes()
+        original_hash = hashlib.sha256(fixture).hexdigest()
+        job = None
+        for known in sorted((queue / "prijate").glob("*.pdf"), key=lambda path: path.stat().st_mtime_ns):
+            if re.fullmatch(r"[0-9a-f]{32}\.pdf", known.name) and known.stat().st_size == len(fixture) and known.read_bytes() == fixture:
+                job = known.name
+                break
+        if job is None:
+            sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "karantena"))
+            from prijem import enqueue
+            job = enqueue(io.BytesIO(fixture), "pdf")
+        chosen = {"job":job, "zdroj_sha256":original_hash}
+        tmp = receipt.with_suffix(".next")
+        tmp.write_text(json.dumps(chosen) + "\n")
+        tmp.replace(receipt)
+    job = chosen["job"]
+    original_hash = chosen["zdroj_sha256"]
+    if not re.fullmatch(r"[0-9a-f]{32}\.pdf", job) or not re.fullmatch(r"[0-9a-f]{64}", original_hash):
+        raise RuntimeError("Poškozené potvrzení zkušebního vstupu")
+    source = queue / "prijate" / job
+    deadline = time.monotonic() + 2400
+    while not source.exists():
+        if (queue / "odmitnute" / job).exists() or time.monotonic() >= deadline:
+            raise RuntimeError("Karanténa nevydala čistý protokol")
+        time.sleep(5)
+    with source.open("rb") as accepted:
+        if hashlib.file_digest(accepted, "sha256").hexdigest() != original_hash:
+            raise RuntimeError("Karanténa přijala jiný vstup")
+    report = json.loads((queue / "protokoly" / (job + ".json")).read_bytes())
+    if report.get("stav") != "ocisteno" or report.get("typ") != "pdf":
+        raise RuntimeError("Chybí doklad úspěšné rekonstrukce PDF")
+    cleaned = queue / "vysledky" / job
     with cleaned.open("rb") as output:
         checksum = hashlib.file_digest(output, "sha256").hexdigest()
-    if checksum == hashlib.sha256(fixture).hexdigest():
-        raise RuntimeError("Karanténa vrátila původní PDF")
+    if checksum == original_hash or report.get("otisk_vystupu", checksum) != checksum:
+        raise RuntimeError("Otisk očištěného PDF neodpovídá rekonstrukci")
     request = str(uuid.uuid5(uuid.NAMESPACE_URL, "polarita.test/web-spisy"))
     case = subprocess.check_output(["incus", "exec", "-T", "postgres-test", "--",
         "runuser", "-u", "pol_metadata_read", "--", "psql", "-XAtqw", "-v", "ON_ERROR_STOP=1",
