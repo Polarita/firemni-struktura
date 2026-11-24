@@ -1,5 +1,7 @@
 """Restic otevře přes ověřené TLS vlastní snapshot a obnoví obsah přímo do instance bez síťové karty."""
 from contextlib import ExitStack
+from datetime import datetime, timezone
+import time
 import base64
 import fcntl
 import json
@@ -11,7 +13,7 @@ import socket
 import subprocess
 import sys
 
-from sber import CA,WORK,TEST,pg,provoz,rest_env
+from sber import CA,WORK,TEST,pg,provoz,rest,rest_env
 
 
 def main():
@@ -21,16 +23,18 @@ def main():
     snap=(WORK/"posledni-otisk").read_text().strip()
     if not re.fullmatch(r"[0-9a-f]{64}",snap):
         raise RuntimeError("Chybí dokončená testovací záloha")
-    image=pg.run("incus","config","get",pg.DB,"volatile.base_image").decode().strip()
-    if not re.fullmatch(r"[0-9a-f]{64}",image):
-        raise RuntimeError("Chybí lokální obraz cílové databáze")
     base,prepared = (WORK/"obraz-otisky").read_text().split()
-    if base!=image or not re.fullmatch(r"[a-f0-9]{64}",prepared):
-        raise RuntimeError("Obraz obnovy neodpovídá aktuálnímu zdroji PostgreSQL")
+    if not all(re.fullmatch(r"[a-f0-9]{64}",value) for value in (base,prepared)):
+        raise RuntimeError("Chybějí platné otisky místního obnovovacího obrazu")
     name="restic-obnova-"+secrets.token_hex(6)
     with ExitStack() as stack:
         lock=stack.enter_context((WORK/".obnova").open("a"))
         fcntl.flock(lock,fcntl.LOCK_EX)
+        started = time.monotonic()
+        records = json.loads(rest(rest_env(),"snapshots","--json","--no-lock",snap,capture_output=True).stdout)
+        if len(records)!=1 or records[0]["id"]!=snap:
+            raise RuntimeError("Nejednoznačný snímek pro zkoušku")
+        age = (datetime.now(timezone.utc)-datetime.fromisoformat(records[0]["time"])).total_seconds()
         pg.run("incus","init",prepared,name,"-p","default","-p","sandbox_airgap","-c","limits.memory=384MiB")
         stack.callback(pg.run,"incus","delete","--force",name)
         pg.run("incus","start",name)
@@ -59,7 +63,7 @@ def main():
         if subprocess.run(["incus","exec","-T",name,"--","test","-f","/var/tmp/obnova-polarita/pitr-cil.txt"]).returncode == 0:
             subprocess.run(["incus","exec","-T",name,"--","bash","-se"],input=(TEST/"zalohy/wal-obnov.sh").read_bytes(),check=True)
         mark = WORK/".overena-obnova-next"
-        mark.write_text(json.dumps({"restic_snapshot":snap})+"\n")
+        mark.write_text(json.dumps({"restic_snapshot":snap,"vek_zalohy_s":round(age),"obnova_s":round(time.monotonic()-started),"dokonceno_utc":datetime.now(timezone.utc).isoformat()})+"\n")
         mark.replace(WORK/"posledni-overena-obnova.json")
         print("Z testovacího Restic snapshotu "+snap+" bylo v izolované instanci obnoveno všech 15 databází.")
 

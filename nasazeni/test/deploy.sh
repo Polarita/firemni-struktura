@@ -119,6 +119,7 @@ done
 "${guest[@]}" bash "$dest/nasazeni/test/zalohy/instalace.sh"
 "${guest[@]}" bash "$dest/nasazeni/test/zalohy/obraz.sh"
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/zkouska_pristupu.py" | tee "$tmp/restic.txt"
+sudo -n bash nasazeni/test/zalohy/zkouska_obalky.sh "$dest/nasazeni/test/zalohy" | tee -a "$tmp/restic.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/dohled/instalace.sh" | tee "$tmp/dohled.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/sber.py" | tee -a "$tmp/restic.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/obnov.py" | tee -a "$tmp/restic.txt"
