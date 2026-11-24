@@ -1,0 +1,10 @@
+[Unit]
+Description=Příjem PDF ke spisu z přihlášeného portálu
+RequiresMountsFor=/srv/polarita/infra
+[Socket]
+ListenStream=/srv/polarita/infra/metadata-test/prijem.sock
+SocketMode=0600
+Accept=yes
+MaxConnections=4
+[Install]
+WantedBy=sockets.target

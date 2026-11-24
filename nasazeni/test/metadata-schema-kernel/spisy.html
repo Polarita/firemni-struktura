@@ -3,5 +3,7 @@
 <main><a href="/prehled">Ředitelství</a><h1>Spisy</h1>
 <section><h2>Nový testovací spis</h2><p>Pobočka 101 · Praha</p><button id="zaloz" type="button">Založit spis</button></section>
 <section><h2>Vyhledat spis</h2><form id="hledani"><label for="cislo">Číslo spisu nebo pobočkový alias</label><input id="cislo" required><button>Vyhledat</button></form></section>
-<output role="status" id="stav"></output><section id="karta" hidden><h2 id="oznaceni"></h2><dl><dt>Pobočkový alias</dt><dd id="alias"></dd><dt>Pobočka</dt><dd id="pobocka"></dd><dt>Založeno</dt><dd id="cas"></dd></dl></section></main>
+<output role="status" id="stav"></output><section id="karta" hidden><h2 id="oznaceni"></h2><dl><dt>Pobočkový alias</dt><dd id="alias"></dd><dt>Pobočka</dt><dd id="pobocka"></dd><dt>Založeno</dt><dd id="cas"></dd></dl><h3>Převzetí šanonů do 48 hodin</h3>
+<form id="sanony"><label for="sken">Sken ve formátu PDF (nejvýše 64 MiB)</label><input type="file" id="sken" accept="application/pdf,.pdf" required><button id="odeslat">Předat do karantény</button></form>
+<p id="prijem" role="status"></p><h4>Poslední potvrzení o převzetí</h4><ul id="prevzate"></ul></section></main>
 <script src="spisy.js" defer></script></html>

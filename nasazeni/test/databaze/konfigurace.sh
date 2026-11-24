@@ -53,6 +53,7 @@ cat >/etc/polarita-postgres/pg_hba.conf <<'CONF'
 local all postgres peer
 local db_erp_lhutnik pol_metadata_api peer
 local db_erp_lhutnik pol_metadata_read peer
+local db_erp_lhutnik pol_prijem_sanonu peer
 local db_paperclip pol_decisions_bridge peer
 local all all scram-sha-256
 host all postgres 0.0.0.0/0 reject

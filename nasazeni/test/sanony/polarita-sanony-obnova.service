@@ -1,0 +1,16 @@
+[Unit]
+RequiresMountsFor=/srv/polarita/workspace
+[Service]
+ExecStart=/usr/bin/python3 -I /srv/polarita/infra/karantena-test/bin/sanony/prijem.py --obnov
+RuntimeMaxSec=6min
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX
+PrivateNetwork=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+InaccessiblePaths=-/run/incus -/var/lib/incus -/srv/polarita/data -/srv/polarita/infra/openbao-test -/etc/polarita -/run/systemd/private -/run/dbus
+ReadWritePaths=/srv/polarita/workspace/karantena/vstup /srv/polarita/workspace/karantena/sanony

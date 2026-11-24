@@ -1,0 +1,9 @@
+[Unit]
+Description=Zápis potvrzení do registru převzatých šanonů
+[Socket]
+ListenStream=/run/polarita-sanony-registr.sock
+SocketMode=0600
+Accept=yes
+MaxConnections=8
+[Install]
+WantedBy=sockets.target

@@ -8,7 +8,7 @@ import sys
 from urllib.parse import urlsplit
 
 from model import load, unique
-from spisy import najdi, zaloz
+from spisy import najdi, prevzate_sanony, zaloz
 from zaznamy import Problem, read, write
 
 
@@ -52,6 +52,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         if self.command == "POST" and path == "/api/spisy":
             self.reply(200, zaloz(data, self.request_body()))
+            return
+        if self.command == "GET" and path.startswith("/api/sanony/"):
+            self.reply(200, prevzate_sanony(data, path.removeprefix("/api/sanony/")))
             return
         if self.command == "GET" and path.startswith("/api/spisy/"):
             self.reply(200, najdi(data, path.removeprefix("/api/spisy/")))

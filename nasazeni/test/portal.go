@@ -87,13 +87,56 @@ var cisloSpisu = regexp.MustCompile(`^POL-([1-9][0-9]{2}-)?[0-9]{4}-[0-9]{5}$`)
 
 const metadataSocket = "/run/polarita-metadata.sock"
 
-var metadataClient = &http.Client{
-	// Databázový proces má na místní dotaz 15 sekund.
-	Timeout: 20 * time.Second,
-	Transport: &http.Transport{DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-		return (&net.Dialer{}).DialContext(ctx, "unix", metadataSocket)
-	}},
-	CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse },
+var metadataClient = privateClient(metadataSocket, 20*time.Second)
+var sanonyClient = privateClient("/run/polarita-sanony.sock", 5*time.Minute)
+
+func privateClient(socket string, timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout: timeout,
+		Transport: &http.Transport{DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, "unix", socket)
+		}},
+		CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse },
+	}
+}
+
+var prijemPath = regexp.MustCompile(`^api/sanony/(POL-[0-9]{4}-[0-9]{5}/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$`)
+
+func prijmiSanon(w http.ResponseWriter, r *http.Request, path string) {
+	const limit = 64 << 20
+	if r.Method != http.MethodPut {
+		http.Error(w, "Nepodporovaná metoda", http.StatusMethodNotAllowed)
+		return
+	}
+	if r.ContentLength <= 0 || r.ContentLength > limit {
+		http.Error(w, "Zvolte neprázdné PDF do 64 MiB.", http.StatusRequestEntityTooLarge)
+		return
+	}
+	if r.Header.Get("Content-Type") != "application/pdf" {
+		http.Error(w, "Očekáván soubor PDF.", http.StatusUnsupportedMediaType)
+		return
+	}
+	ctl := http.NewResponseController(w)
+	until := time.Now().Add(5 * time.Minute)
+	ctl.SetReadDeadline(until)
+	ctl.SetWriteDeadline(until.Add(10 * time.Second))
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodPut, "http://localhost/"+path, http.MaxBytesReader(w, r.Body, limit))
+	if err != nil {
+		http.Error(w, "Neplatný požadavek", http.StatusBadRequest)
+		return
+	}
+	req.ContentLength = r.ContentLength
+	req.Header.Set("Content-Type", "application/pdf")
+	res, err := sanonyClient.Do(req)
+	if err != nil {
+		http.Error(w, "Příjem je dočasně nedostupný.", http.StatusServiceUnavailable)
+		return
+	}
+	defer res.Body.Close()
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(res.StatusCode)
+	io.CopyN(w, res.Body, 4096)
 }
 
 func (p *portal) metadata(w http.ResponseWriter, r *http.Request) {
@@ -130,6 +173,10 @@ func (p *portal) serveMetadata(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	path := strings.TrimPrefix(r.URL.EscapedPath(), metadataPath)
+	if match := prijemPath.FindStringSubmatch(path); match != nil {
+		prijmiSanon(w, r, match[1])
+		return
+	}
 	req, err := http.NewRequestWithContext(r.Context(), r.Method, "http://localhost/"+path, nil)
 	if err != nil {
 		http.Error(w, "Neplatná cesta", http.StatusBadRequest)

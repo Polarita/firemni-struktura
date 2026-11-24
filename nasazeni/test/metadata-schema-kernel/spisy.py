@@ -25,3 +25,12 @@ def najdi(data, oznaceni):
     if karta is None:
         raise Problem(404, "Spis nebyl nalezen.")
     return karta
+
+
+def prevzate_sanony(data, kod):
+    if not re.fullmatch(r"POL-[0-9]{4}-[0-9]{5}", kod):
+        raise Problem(400, "Neplatné číslo spisu.")
+    return query(data, """
+        SELECT coalesce(jsonb_agg(to_jsonb(p) ORDER BY p.prijato DESC,p.priloha), '[]'::jsonb)
+        FROM (SELECT * FROM polarita_test_spisy.potvrzeni_sanonu WHERE case_id=:'kod'
+              ORDER BY prijato DESC,priloha LIMIT 50) p;""", kod=kod)
