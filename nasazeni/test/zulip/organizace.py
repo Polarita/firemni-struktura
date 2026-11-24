@@ -7,7 +7,7 @@ from zerver.actions.create_realm import do_create_realm
 from zerver.actions.create_user import do_create_user
 from zerver.actions.streams import bulk_add_subscriptions
 from zerver.lib.streams import create_stream_if_needed
-from zerver.models import Attachment, Realm, Subscription, UserProfile
+from zerver.models import Attachment, Realm, Recipient, Subscription, UserProfile
 
 names = {"11":"11-vedeni","12":"12-marketing","13":"13-eshop-a-nakup","14":"14-elektro-a-zakazky",
          "15":"15-pravo-a-normy","16":"16-finance-a-kancelar","17":"17-it-secops","18":"18-hr-a-teren"}
@@ -50,6 +50,21 @@ for code,display in sorted(employees.items()):
     if not Subscription.objects.filter(user_profile=bot,recipient_id=channel.recipient_id,active=True).exists():
         raise ValueError("Chybí odběr kanálu pozice "+code)
 print("Zulip potvrdil správce, osm soukromých kanálů útvarů a dvacet nativních botů s odběrem svého kanálu.")
+
+monitor_email = "checkmk-bot@polarita.test"
+monitor_channel = channels["17"]
+monitor = UserProfile.objects.filter(realm=realm,delivery_email__iexact=monitor_email).first()
+if monitor is None:
+    monitor = do_create_user(monitor_email,None,realm,"Checkmk TEST",bot_type=UserProfile.INCOMING_WEBHOOK_BOT,
+                             bot_owner=owner,default_sending_stream=monitor_channel,
+                             add_initial_stream_subscriptions=False,acting_user=owner)
+if (not monitor.is_active or monitor.bot_owner_id != owner.id or monitor.bot_type != UserProfile.INCOMING_WEBHOOK_BOT
+        or monitor.default_sending_stream_id != monitor_channel.id):
+    raise RuntimeError("Neplatná identita příjmového bota Checkmk")
+bulk_add_subscriptions(realm,[monitor_channel],[monitor],acting_user=owner)
+if set(Subscription.objects.filter(user_profile=monitor,active=True,recipient__type=Recipient.STREAM)
+       .values_list("recipient_id",flat=True)) != {monitor_channel.recipient_id}:
+    raise RuntimeError("Nesouhlasí soukromý odběr monitoringu")
 
 # Nativní příloha a zpráva ve vyhrazeném testovacím tématu pro kontrolu obnovy.
 filename = "polarita-obnova-zulip-test-v1.txt"

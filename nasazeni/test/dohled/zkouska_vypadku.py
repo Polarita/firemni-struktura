@@ -3,6 +3,8 @@ import json
 import socket
 import subprocess
 import time
+import sys
+from datetime import datetime, timezone
 
 TEST="Polarita Zkusebni sluzba"
 UNIT="polarita-dohled-vzorek.socket"
@@ -55,6 +57,24 @@ def wait_delivery(start,wanted):
     raise RuntimeError("Neúplné doručení události "+wanted+" místním kanálům")
 
 
+def zulip_messages(after):
+    # Ověřujeme uložení v nativní databázi a správný kanál, téma i odesílatele.
+    if not isinstance(after,int) or after < 0:
+        raise ValueError("Neplatný začátek zkoušky")
+    topic = f"POL-{datetime.now(timezone.utc).year}-00000"
+    query = f"""select m.id, m.content from zulip.zerver_message m
+join zulip.zerver_userprofile u on u.id=m.sender_id
+join zulip.zerver_stream s on s.recipient_id=m.recipient_id and s.realm_id=u.realm_id
+where u.delivery_email='checkmk-bot@polarita.test' and u.bot_type=2 and s.name='17-it-secops'
+and s.invite_only and m.subject='{topic}' and m.id>{after}
+and m.content in ('Checkmk TEST · polarita-hq · {TEST} · CRITICAL (PROBLEM)',
+                  'Checkmk TEST · polarita-hq · {TEST} · OK (RECOVERY)')
+order by m.id desc limit 2"""
+    raw = run("incus","exec","-T","postgres-test","--","runuser","-u","postgres","--",
+              "psql","-XqAt","-v","ON_ERROR_STOP=1","-d","zulip","-c",query)
+    return [(int(row.partition("|")[0]),row.partition("|")[2]) for row in raw.decode().splitlines()]
+
+
 def main():
     if socket.gethostname().split(".")[0]!="polarita-hq":
         raise SystemExit("Zkouška musí běžet uvnitř ředitelství")
@@ -63,6 +83,9 @@ def main():
     # Před dalším výpadkem necháme odeznít historii předchozí zkoušky.
     wait_state(0, stable=True)
     start=len(events())
+    verify_chat = "--zulip" in sys.argv
+    if verify_chat:
+        before = max((row[0] for row in zulip_messages(0)), default=0)
     try:
         run("systemctl","stop",UNIT)
         run("systemctl","start","polarita-dohled-sber.service")
@@ -73,6 +96,16 @@ def main():
         run("systemctl","start","polarita-dohled-sber.service")
     wait_state(0)
     wait_delivery(start,"OK")
+    if verify_chat:
+        deadline = time.monotonic()+100
+        while time.monotonic() < deadline:
+            rows = list(reversed(zulip_messages(before)))
+            if len(rows)==2 and rows[0][1].endswith("CRITICAL (PROBLEM)") and rows[1][1].endswith("OK (RECOVERY)"):
+                print(f"Zulip v 17-it-secops uložil nové zprávy {rows[0][0]} (výpadek) a {rows[1][0]} (obnova).")
+                break
+            time.sleep(3)
+        else:
+            raise RuntimeError("Zulip nepotvrdil oba nové stavy služby ve správném pořadí")
     print("Checkmk zachytil skutečný výpadek a obnovení zkušební služby. Obě události dorazily zvlášť po SMTP a na místní testovací rozhraní Telegramu.")
 
 

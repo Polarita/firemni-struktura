@@ -135,6 +135,10 @@ sudo -n bash nasazeni/test/zalohy/zkouska_obalky.sh "$dest/nasazeni/test/zalohy"
 "${guest[@]}" bash "$dest/nasazeni/test/dohled/instalace.sh" | tee "$tmp/dohled.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/zulip/spust.sh" "$fqdn"
 "${guest[@]}" bash "$dest/nasazeni/test/zulip/organizace.sh"
+"${guest[@]}" bash "$dest/nasazeni/test/zulip/dohled.sh" "$fqdn"
+"${guest[@]}" python3 "$dest/nasazeni/test/dohled/zkouska_vypadku.py" --zulip | tee "$tmp/zulip-alert.txt"
+"${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-07
+"${inc[@]}" file push --project polarita "$tmp/zulip-alert.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-07/checkmk-zulip-$commit.txt"
 sudo -n bash nasazeni/test/zulip/vstup.sh
 "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/zulip/zkouska_prihlaseni.py "$fqdn" | tee "$tmp/zulip-oidc.txt"
 "${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-07

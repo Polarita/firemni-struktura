@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import smtplib
+import socket
 import sys
 from urllib.request import ProxyHandler,Request,build_opener
 
@@ -32,5 +33,13 @@ elif plugin=="polarita_telegram":
     with build_opener(ProxyHandler({})).open(request,timeout=5) as reply:
         if not json.load(reply).get("ok"):
             raise RuntimeError("Testovací pager nepotvrdil příjem")
+elif plugin=="polarita_zulip":
+    with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as conn:
+        conn.settimeout(22)
+        conn.connect("/opt/omd/sites/.zulip-webhook.sock")
+        conn.sendall(event.encode()+b"\n")
+        with conn.makefile("rb") as response:
+            if response.readline(8) != b"OK\n":
+                raise RuntimeError("Webhook Zulipu nepotvrdil událost")
 else:
     raise SystemExit("Neznámý místní kanál")

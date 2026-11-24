@@ -67,6 +67,7 @@ FIXTURES.update({"s3-" + name: ["objekty-klient-" + name] for name in BUCKETS})
 FIXTURES["gitea-test"] = ["gitea-agent"]
 FIXTURES["paperclip-test"] = ["paperclip-agent"]
 FIXTURES["zulip-test"] = ["zulip-agent"]
+FIXTURES["dohled-zulip"] = ["dohled-zulip-agent"]
 FIXTURES["zulip-fronta-test"] = ["zulip-fronta-agent"]
 DATABASE_ACCESS = {"paperclip-test": ("db_paperclip",), "zulip-test": ("zulip",), "postgres-test": DATABASES, "keycloak-test": ("keycloak",), "gitea-test": ("gitea",)}
 # Skutečné údaje ISDS vydá až oprávněný proces s ověřeným časem a rozhodnutím.
@@ -145,6 +146,7 @@ def configure(root):
         policy += allow("test/metadata/" + suffix, "read") + allow("test/data/" + suffix, "create")
     for suffix in ("pki/gitea-test", "pki/garage-test", "paperclip/aplikace", "zulip/fronta", "zulip/aplikace", *("objekty/" + name for name in BUCKETS)):
         policy += allow("test/metadata/" + suffix, "read") + allow("test/data/" + suffix, "create")
+    policy += allow("test/data/zulip/checkmk", "create")
     for name in DATABASES:
         policy += allow("test/metadata/databaze/" + name, "read")
         policy += allow("test/data/databaze/" + name, "create")
@@ -163,6 +165,8 @@ def configure(root):
             acl += allow("test/data/zulip/fronta", "read")
         if role == "zulip-test":
             acl += allow("test/data/zulip/aplikace", "read") + allow("test/data/valkey/zulip", "read")
+        if role == "dohled-zulip":
+            acl += allow("test/data/zulip/checkmk", "read")
         if role == "gitea-test":
             acl += allow("test/data/pki/gitea-test", "read")
         if role == "garage-test":

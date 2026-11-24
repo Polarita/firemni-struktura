@@ -88,14 +88,17 @@ def app_status(port, path):
     with build_opener(ProxyHandler({})).open(request, timeout=8) as response:
         if response.geturl() != request.full_url or response.headers.get_content_type() != "application/json":
             raise ValueError("Nečekaná odpověď aplikace")
-        return json.load(response)
+        body = json.load(response)
+        if not isinstance(body, dict):
+            raise ValueError("Aplikace nevrátila objekt JSON")
+        return body
 
 
 def zulip():
     data = app_status(8444, "/api/v1/server_settings")
     auth = data.get("external_authentication_methods", [])
     ok = (data.get("result") == "success" and data.get("realm_name") == "Ředitelství Polarity"
-          and any(provider.get("name") == "oidc:polarita" for provider in auth))
+          and isinstance(auth, list) and any(isinstance(provider,dict) and provider.get("name") == "oidc:polarita" for provider in auth))
     return state(ok, "Firemní chat odpovídá s OIDC" if ok else "Nesouhlasí organizace nebo přihlášení chatu")
 
 
