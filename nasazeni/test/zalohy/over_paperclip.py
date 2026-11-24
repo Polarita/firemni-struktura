@@ -17,11 +17,40 @@ def query(sql):
     return result.stdout.splitlines()
 
 
+def over_zdroj(repozitar, plan):
+    source = plan["zdroj_gitea"]
+    commit, tree = source["commit"], source["tree"]
+    if not all(re.fullmatch(r"[0-9a-f]{40}", value) for value in (commit, tree)):
+        raise ValueError("Chybí jednoznačná revize zdrojových pravidel")
+    git = ["git", "--git-dir=" + str(repozitar)]
+    if subprocess.check_output(git + ["rev-parse", commit + "^{tree}"], text=True).strip() != tree:
+        raise RuntimeError("Obnovená Gitea neobsahuje strom instrukcí")
+    def blob(path):
+        return subprocess.check_output(git + ["cat-file", "blob", f"{commit}:{path}"])
+
+    canon = json.loads(blob("nastroje/kanon.json"))
+    files = subprocess.check_output(git + ["ls-tree", "-r", "--name-only", tree, "--",
+                                          "agenti-a-prompty", "oddeleni"], text=True).splitlines()
+    shared = blob("agenti-a-prompty/00-SPOLECNE-JADRO-PROMPTU.md")
+    expected = {}
+    for item in canon["agents"]:
+        code = item["id"]
+        charter, = (name for name in files if name.startswith("oddeleni/" + item["department"] + "-"))
+        card, = (name for name in files if name.startswith("agenti-a-prompty/" + code + "-"))
+        expected[code] = hashlib.sha256(b"\n\n".join((shared, blob(charter), blob(card)))).hexdigest()
+    actual = {agent["id"]: agent["prompt_sha256"] for agent in plan["agents"]}
+    if len(expected) != 20 or expected != actual:
+        raise RuntimeError("Instrukce rolí se liší od úplných souborů obnovené Gitey")
+    print("Obnovená Gitea potvrdila revizi a úplné znění pravidel pro všech dvacet pozic Paperclipu.")
+
+
 def verify(root):
     data = root / "paperclip"
     if not data.exists() and query("SELECT to_regclass('public.agents') IS NULL") == ["t"]:
         return  # Snímek ze starší verze bez Paperclipu.
     plan = json.loads((data / "pozice.json").read_bytes())
+    if "zdroj_gitea" in plan:
+        over_zdroj(root / "gitea/spravce/firemni-struktura-test.git", plan)
     company = (plan["company"], plan["budget_cents"])
     rows = query("""
         SELECT json_build_array(c.name, c.budget_monthly_cents, a.metadata->>'polaritaId',
