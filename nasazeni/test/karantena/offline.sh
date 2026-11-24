@@ -13,7 +13,7 @@ if [[ $(incus list "$vm" -c s -f csv) != STOPPED ]]; then
 fi
 python3 "$src/balicek.py" "$work/priprava"
 incus start "$vm"
-trap 'incus stop "$vm" --timeout 60 </dev/null' EXIT
+trap 'incus stop "$vm" --timeout 180 </dev/null' EXIT
 for i in {1..120}; do
     if incus exec -T "$vm" -- true 2>/dev/null; then break; fi
     sleep 1

@@ -63,7 +63,7 @@ def worker():
         raise RuntimeError("Chybí identita pracovní VM")
     # Držíme společný zámek instalace i zpracování. Po přerušení služby obnovíme pracovní VM.
     if inc("list", NAME, "-f", "csv", "-c", "s").strip() == b"RUNNING":
-        inc("stop", NAME, "--timeout", "90", timeout=105)
+        inc("stop", NAME, "--timeout", "180", timeout=210)
     inc("start", NAME)
     try:
         for _ in range(120):
@@ -76,7 +76,7 @@ def worker():
             raise RuntimeError("Nedokončený start pracovní VM")
         yield
     finally:
-        inc("stop", NAME, "--timeout", "90", timeout=105)
+        inc("stop", NAME, "--timeout", "180", timeout=210)
 
 
 def process(source):
