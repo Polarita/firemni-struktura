@@ -9,6 +9,7 @@ flock 9
 python3 "$src/runner-podklady.py"
 nft -c -f "$src/runner.nft"
 install -d -m 0755 /etc/polarita
+install -m 0644 "$src/runner-chromium.apparmor" /etc/polarita/runner-chromium.apparmor
 install -m 0644 "$src/runner.nft" /etc/polarita/runner.nft
 install -m 0644 "$src"/polarita-{runner-sit,gitea-runner}.service /etc/systemd/system/
 systemctl daemon-reload
@@ -55,6 +56,8 @@ python3 --version'
 bin=/srv/polarita/infra/gitea-test/bin/gitea-runner-6.0.1-linux-amd64
 echo "37be79b1e72e31e3e02004ee1d768a0bc23224b9520351f46bb7157de7433fbd  $bin" | sha256sum --check --status
 incus file push --mode=0755 "$bin" "$vm/opt/polarita-runner/runner"
+apparmor_parser -r -n 'incus-gitea-runner-test_<var-lib-incus>' /etc/polarita/runner-chromium.apparmor
+"${inside[@]}" ln -sfn /opt/polarita-prohlizec/chrome-headless-shell-linux64/chrome-headless-shell /usr/local/bin/chromium
 "${inside[@]}" /opt/polarita-runner/runner --version
 "${inside[@]}" runuser -u pol-ci -- bash -ec '
 set -euo pipefail
@@ -66,6 +69,9 @@ python3 -m venv "$d/venv"
 c=/opt/polarita-prohlizec/chrome-headless-shell-linux64/chrome-headless-shell
 "$c" --version
 if ldd "$c" | grep -F "not found"; then exit 1; fi
+echo "<p>Polarita CI</p>" >"$d/test.html"
+timeout 60 "$c" --disable-gpu --disable-dev-shm-usage --user-data-dir="$d/chrome" --print-to-pdf="$d/test.pdf" "file://$d/test.html"
+"$d/venv/bin/python" -c '\''from pypdf import PdfReader; import sys; assert "Polarita CI" in PdfReader(sys.argv[1]).pages[0].extract_text()'\'' "$d/test.pdf"
 '
 systemctl enable --now polarita-gitea-runner.service
 tofu plan -input=false -detailed-exitcode

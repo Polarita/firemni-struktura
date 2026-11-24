@@ -1,0 +1,9 @@
+abi <abi/5.0>,
+include <tunables/global>
+
+# Stejný mechanismus jako distribuční profil Ubuntu pro Chrome. Platí pouze
+# v AppArmor namespace CI a pro ověřený binární soubor připojený jen ke čtení.
+profile polarita-ci-chromium /opt/polarita-prohlizec/chrome-headless-shell-linux64/chrome-headless-shell flags=(unconfined) {
+  userns,
+  @{exec_path} mr,
+}
