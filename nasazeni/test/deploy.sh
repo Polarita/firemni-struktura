@@ -67,6 +67,7 @@ CGO_ENABLED=0 go build -trimpath -o "$tmp/agent" nasazeni/test/trezor/agent.go
 "${guest[@]}" bash "$dest/nasazeni/test/git/instalace.sh" "https://$fqdn/git/"
 "${guest[@]}" bash "$dest/nasazeni/test/git/runner.sh"
 "${guest[@]}" bash "$dest/nasazeni/test/git/vstup.sh" "https://$fqdn/git/"
+"${guest[@]}" bash "$dest/nasazeni/test/paperclip/priprava.sh"
 "${guest[@]}" bash "$dest/nasazeni/test/zulip/fronta.sh"
 "${guest[@]}" bash "$dest/nasazeni/test/zulip/aplikace.sh" "$fqdn"
 sudo -n bash nasazeni/test/trezor/prijemce.sh

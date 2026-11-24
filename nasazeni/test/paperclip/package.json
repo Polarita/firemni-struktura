@@ -1,0 +1,8 @@
+{
+  "name": "polarita-paperclip-test",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "@paperclipai/server": "2026.1117.0"
+  }
+}
