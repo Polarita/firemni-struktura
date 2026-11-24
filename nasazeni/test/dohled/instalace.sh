@@ -32,4 +32,5 @@ for r in json.load(sys.stdin).get("resource_changes", []):
 tofu apply -input=false "$tmp/plan"
 incus exec -T checkmk-test -- bash -ec 'for i in {1..60}; do if test -S /run/systemd/private && mountpoint -q /opt/omd/sites; then exit 0; fi; sleep 1; done; exit 1'
 bash "$src/balicky.sh"
+incus exec -T checkmk-test -- bash -se <"$src/lokalita.sh"
 tofu plan -input=false -detailed-exitcode
