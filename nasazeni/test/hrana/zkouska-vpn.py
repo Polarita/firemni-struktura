@@ -21,6 +21,19 @@ def hs(*args):
     return inside("headscale-test", "/ko-app/headscale", *args, "-o", "json")
 
 
+def remove_client(name):
+    try:
+        run("incus", "delete", "--force", name, timeout=180)
+    except subprocess.TimeoutExpired:
+        # Démon může po odpojení klienta stále dokončovat tutéž operaci.
+        deadline = time.monotonic() + 180
+        while time.monotonic() < deadline:
+            if name not in run("incus", "list", name, "-c", "n", "-f", "csv").decode().splitlines():
+                return
+            time.sleep(3)
+        raise
+
+
 def delete_nodes(user_id):
     for node in json.loads(hs("nodes", "list")) or []:
         if str(node["user"]["id"]) == str(user_id):
@@ -61,10 +74,15 @@ def connect(name, user_id, ca, clients):
             tailscaled --config=/run/klient.json --tun=userspace-networking --state=/run/tailscaled.state >/run/test-vpn.log 2>&1 </dev/null &
             echo $! >/run/test-vpn.pid
         """)
+        status = {}
         try:
-            for _ in range(45):
-                result = subprocess.run(["incus", "exec", "-T", name, "--", "tailscale", "status", "--json"],
-                                        capture_output=True, timeout=10)
+            deadline = time.monotonic() + 180
+            while time.monotonic() < deadline:
+                try:
+                    result = subprocess.run(["incus", "exec", "-T", name, "--", "tailscale", "status", "--json"],
+                                            capture_output=True, timeout=20)
+                except subprocess.TimeoutExpired:
+                    continue
                 status = json.loads(result.stdout or "{}")
                 if status.get("BackendState") == "Running":
                     break
@@ -100,7 +118,7 @@ def main(clients):
         for name in names:
             run("incus", "init", "images:alpine/3.24", name, "-p", "default", "-p", "dmz_edge",
                 "-c", "user.polarita.role=docasny-klient-vpn")
-            cleanup.callback(run, "incus", "delete", "--force", name)
+            cleanup.callback(remove_client, name)
             run("incus", "start", name)
             ips.append(connect(name, user_id, ca, clients))
         for i, name in enumerate(names):
