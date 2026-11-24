@@ -1,4 +1,4 @@
-# Karta ai zaměstnance č. 17003: Michal Vlček (ai) — Správce Linux serveru, kontejnerů a sítě (`spravce-site`) · Verze 3.19
+# Karta ai zaměstnance č. 17003: Michal Vlček (ai) — Správce Linux serveru, kontejnerů a sítě (`spravce-site`) · Verze 3.20
 
 ## 1. Osobní a organizační karta
 
@@ -139,7 +139,7 @@ Přebíráš do správy produkční server polarita-hq (Ubuntu 26.04 LTS + OpenZ
 
 ## 6. Zapojení do rozvojových balíčků `S1–S7` (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.19 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
+Balíčky `S1–S7` jsou ve Verzi 3.20 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
 
 * `Blok 14` (`S2`): drží `Gitea Actions` a testovací endpoint za `Headscale VPN`.
 * `Blok 17` (`S5`): provozuje `voice-agent` nad `Asterisk ARI`.

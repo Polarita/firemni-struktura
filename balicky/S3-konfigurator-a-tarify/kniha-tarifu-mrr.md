@@ -1,4 +1,4 @@
-# GTM kniha tarifů MRR — paušál „Elektro Správa SVJ a Firem“ · Verze 3.19
+# GTM kniha tarifů MRR — paušál „Elektro Správa SVJ a Firem“ · Verze 3.20
 
 Obchodní kniha pro `12001 marketing`, `12002 obsah-geo`, `14005 zakazky` a živé obchodníky. Popisuje, **co který tarif obsahuje a jak se prodává**. Částky zde záměrně nejsou — jediným zdrojem cen je [`cenik.json`](./cenik.json) a z něj generovaný [`prehled-cen.md`](./prehled-cen.md) (stav `SCHVÁLENO 1001`, 15. 11. 2026).
 

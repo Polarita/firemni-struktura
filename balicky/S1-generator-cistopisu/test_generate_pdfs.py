@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Tests of the PDF generator of package S1 (Version 3.19).
-Testy generátoru PDF balíčku S1 (Verze 3.19).
+Tests of the PDF generator of package S1 (Version 3.20).
+Testy generátoru PDF balíčku S1 (Verze 3.20).
 
 Usage / Použití:  python -m unittest -v test_generate_pdfs
 
