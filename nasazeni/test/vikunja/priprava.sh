@@ -59,12 +59,7 @@ with ZipFile(archive) as z:
 PY
 cd "$work/tofu"
 install -m0644 "$src/vikunja.tf" "$src/../incus/providers.tf" "$src/../incus/.terraform.lock.hcl" .
-mirror=/srv/polarita/infra/hrana/.terraform/providers
-if [[ -d $mirror ]] && cmp -s .terraform.lock.hcl /srv/polarita/infra/hrana/.terraform.lock.hcl; then
-    tofu init -input=false -lockfile=readonly -plugin-dir="$mirror"
-else
-    tofu init -input=false -lockfile=readonly
-fi
+bash "$src/../incus/tofu-init.sh"
 tofu validate
 tofu plan -input=false -out="$tmp/plan"
 tofu show -json "$tmp/plan" | python3 -c '

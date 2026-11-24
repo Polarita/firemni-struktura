@@ -20,7 +20,7 @@ systemctl enable --now polarita-runner-sit.service
 nft -f /etc/polarita/runner.nft
 cd "$work/tofu"
 install -m 0644 "$src/runner.tf" "$src/../incus/providers.tf" "$src/../incus/.terraform.lock.hcl" .
-tofu init -input=false -lockfile=readonly
+bash "$src/../incus/tofu-init.sh"
 tofu validate
 plan=$(mktemp)
 trap 'rm -- "$plan"' EXIT

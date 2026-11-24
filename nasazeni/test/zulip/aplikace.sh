@@ -25,7 +25,7 @@ cd "$work/tofu"
 install -m 0644 "$src/aplikace.tf" "$src/../incus/providers.tf" "$src/../incus/.terraform.lock.hcl" .
 tmp=$(mktemp -d)
 trap 'rm -r -- "$tmp"' EXIT
-tofu init -input=false -lockfile=readonly
+bash "$src/../incus/tofu-init.sh"
 tofu validate
 tofu plan -input=false -out="$tmp/plan"
 tofu show -json "$tmp/plan" | python3 -c '

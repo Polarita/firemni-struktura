@@ -22,7 +22,7 @@ incus image info polarita-keycloak-test-26.8.2 | grep -Fx 'Fingerprint: e26c9eb6
 cd "$work/tofu"
 export TF_VAR_identity_url="$url"
 install -m 0644 "$src/keycloak.tf" "$src/../incus/providers.tf" "$src/../incus/.terraform.lock.hcl" .
-tofu init -input=false -lockfile=readonly
+bash "$src/../incus/tofu-init.sh"
 tofu validate
 plan=$(mktemp)
 trap 'rm -f "$plan"' EXIT

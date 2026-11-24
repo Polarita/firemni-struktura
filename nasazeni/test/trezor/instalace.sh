@@ -9,7 +9,7 @@ flock 9
 bash "$src/obraz.sh"
 cd "$work/tofu"
 install -m 0644 "$src/trezor.tf" "$src/../incus/providers.tf" "$src/../incus/.terraform.lock.hcl" .
-tofu init -input=false -lockfile=readonly
+bash "$src/../incus/tofu-init.sh"
 tofu validate
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT

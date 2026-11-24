@@ -21,7 +21,7 @@ incus image info "$alias" | grep -Fx 'Fingerprint: 6141c4009e3d7012a2faa1ac6f371
 cd "$work/tofu"
 export TF_VAR_vaultwarden_url="$domain"
 install -m 0644 "$src/vaultwarden.tf" "$src/../incus/providers.tf" "$src/../incus/.terraform.lock.hcl" .
-tofu init -input=false -lockfile=readonly
+bash "$src/../incus/tofu-init.sh"
 tofu validate
 plan=$(mktemp)
 trap 'rm -f "$plan"' EXIT

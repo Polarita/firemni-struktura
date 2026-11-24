@@ -14,7 +14,7 @@ install -d -m 0750 /srv/polarita/data/postgres/test
 cd "$work/tofu"
 export TF_VAR_postgres_image=local:polarita-postgres-test-$(sha256sum "$src/postgres.lock.json" | cut -c1-16)
 install -m 0644 "$src/postgres.tf" "$src/../incus/providers.tf" "$src/../incus/.terraform.lock.hcl" .
-tofu init -input=false -lockfile=readonly
+bash "$src/../incus/tofu-init.sh"
 tofu validate
 plan=$(mktemp)
 trap 'rm -f "$plan"' EXIT

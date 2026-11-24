@@ -15,7 +15,7 @@ if ! incus image info "$image" >/dev/null 2>&1; then
 fi
 cd "$work/tofu"
 install -m 0644 "$src/pecet.tf" "$src/../incus/providers.tf" "$src/../incus/.terraform.lock.hcl" .
-tofu init -input=false -lockfile=readonly
+bash "$src/../incus/tofu-init.sh"
 tofu validate
 plan=$(mktemp)
 trap 'rm -f "$plan"' EXIT

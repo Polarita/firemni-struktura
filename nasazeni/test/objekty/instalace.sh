@@ -28,7 +28,7 @@ install -m 0644 "$src/garage.tf" "$src/../incus/providers.tf" "$src/../incus/.te
 image=$(sed -nE 's/^ *image *= *"local:([[:xdigit:]]{64})"$/\1/p' "$src/garage.tf")
 [[ $image =~ ^[0-9a-f]{64}$ ]]
 if ! incus image info "$image" >/dev/null 2>&1; then incus image copy "images:$image" local:; fi
-tofu init -input=false -lockfile=readonly
+bash "$src/../incus/tofu-init.sh"
 tofu validate
 tofu plan -input=false -out="$tmp/plan"
 tofu show -json "$tmp/plan" | python3 -c '

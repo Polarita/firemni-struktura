@@ -21,7 +21,7 @@ for pair in headscale.yaml:config.yaml policy.hujson:policy.hujson derp.yaml:der
     fi
 done
 tofu fmt -check
-tofu init -input=false -lockfile=readonly
+bash "$src/incus/tofu-init.sh"
 tofu validate
 plan=$(mktemp)
 trap 'rm -f "$plan"' EXIT

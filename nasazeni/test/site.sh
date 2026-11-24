@@ -29,7 +29,7 @@ DNS
 fi
 install -m 644 "$src/zones.tf" zones.tf
 tofu fmt -check
-tofu init -input=false -lockfile=readonly
+bash "$src/incus/tofu-init.sh"
 tofu validate
 plan=$(mktemp)
 trap 'rm -f "$plan"' EXIT

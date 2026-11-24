@@ -20,7 +20,7 @@ fingerprint=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["target"])
 cd "$work/tofu"
 install -m 0644 "$src/valkey.tf" "$src/../incus/providers.tf" "$src/../incus/.terraform.lock.hcl" .
 export TF_VAR_valkey_image="local:$fingerprint"
-tofu init -input=false -lockfile=readonly
+bash "$src/../incus/tofu-init.sh"
 tofu validate
 plan=$(mktemp)
 trap 'rm -f "$plan"' EXIT

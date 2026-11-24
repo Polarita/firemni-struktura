@@ -44,12 +44,7 @@ export TF_VAR_image TF_VAR_broker_image
 TF_VAR_image=$(fingerprint polarita-paperless-3.5.1)
 TF_VAR_broker_image=$(fingerprint polarita-valkey-9.2.0)
 [[ $(incus image get-property "$TF_VAR_broker_image" id) == valkey/valkey@sha256:084a129b7e05269af288ddc9bc1a57eb9d1e3c879fd8cf2a28566187234f2693 ]]
-mirror=/srv/polarita/infra/hrana/.terraform/providers
-if [[ -d $mirror ]] && cmp -s .terraform.lock.hcl /srv/polarita/infra/hrana/.terraform.lock.hcl; then
-    tofu init -input=false -lockfile=readonly -plugin-dir="$mirror"
-else
-    tofu init -input=false -lockfile=readonly
-fi
+bash "$src/../incus/tofu-init.sh"
 tofu validate
 plan=$(mktemp)
 trap 'rm -f "$plan"' EXIT

@@ -26,7 +26,7 @@ for file in start.sh plan.ndjson config.json; do
     mv -f "conf/$file.next" "conf/$file"
 done
 tofu fmt -check
-tofu init -input=false -lockfile=readonly
+bash "$src/incus/tofu-init.sh"
 tofu validate
 tofu plan -input=false -out="$tmp/plan"
 tofu show -json "$tmp/plan" | python3 -c '
