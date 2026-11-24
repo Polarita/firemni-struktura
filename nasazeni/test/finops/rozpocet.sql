@@ -4,7 +4,7 @@ SELECT pg_advisory_xact_lock(hashtextextended('polarita.finops.migrace',0));
 DO $$
 DECLARE role_name text;
 BEGIN
-    IF current_database() <> 'db_paperclip' AND current_database() !~ '^pol_finops_zk_[a-f0-9]{32}$' THEN RAISE EXCEPTION 'Neplatný cíl FinOps'; END IF;
+    IF current_database() <> 'db_paperclip' THEN RAISE EXCEPTION 'Neplatný cíl FinOps'; END IF;
     FOREACH role_name IN ARRAY ARRAY['pol_finops_owner','pol_finops_propose','pol_finops_call','pol_finops_release','pol_finops_read']
     LOOP
         IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname=role_name) THEN
