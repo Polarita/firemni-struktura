@@ -90,6 +90,8 @@ jobs:
         working-directory: balicky/S2-eval-suite
         run: |
           python3 -m unittest test_eval_suite
+          python3 run_eval_suite.py --mode dry-run --suite base --no-history --out-dir "$POLARITA_CI_WORK/eval-stage1" --audio-dir "$POLARITA_CI_WORK/eval-audio"
+          python3 -c 'import glob,json,os; (path,)=glob.glob(os.environ["POLARITA_CI_WORK"]+"/eval-stage1/*.json"); r=json.load(open(path)); assert (r["verdict"],r["total"],r["passed"],r["evidence"])==("VERIFIED_PASS",20,20,"REFERENCE_POLICY")'
           python3 run_eval_suite.py --no-history --out-dir "$POLARITA_CI_WORK/eval-out" --audio-dir "$POLARITA_CI_WORK/eval-audio"
 
       - name: S3 pricing kernel & build sync / Cenové jádro a shoda sestavení
