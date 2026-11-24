@@ -2,6 +2,7 @@
 # APT ověřuje balíky v polarita-hq, cílový kontejner instalaci dokončí bez sítě.
 set -euo pipefail
 [[ $(hostname -s) == polarita-hq ]]
+src=$(cd "$(dirname "$0")" && pwd)
 target=$1
 shift
 [[ $target == zulip-fronta-test || $target == checkmk-test || $target == postgres-test || $target == gitea-test || $target == gitea-runner-test || $target == aigis-build-test || $target == restic-test || $target =~ ^restic-obnova-[a-f0-9]{12}$ ]]
@@ -30,4 +31,30 @@ stage=$("${inside[@]}" mktemp -d "$stage_root/polarita-deb-XXXXXXXX")
 [[ $stage == "$stage_root"/polarita-deb-* ]]
 "${inside[@]}" install -d -m 0755 "$stage/lists/partial"
 tar -cf - -C "$tmp/deb" . | "${inside[@]}" tar -xf - -C "$stage"
-"${inside[@]}" sh -ec 'd=$1; trap '\''rm -r -- "$d"'\'' EXIT; DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o "Dir::State::Lists=$d/lists" -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts=- install "$d"/*.deb' install "$stage"
+incus file push --mode=0755 "$src/instaluj-deb.sh" "$target$stage/instaluj-deb.sh"
+if [[ $stage_root == /run ]]; then
+    "${inside[@]}" sh "$stage/instaluj-deb.sh" "$stage"
+    exit 0
+fi
+# Delší instalace musí pokračovat i po odpojení klienta Incus.
+unit=polarita-balicky-${stage##*/}
+if ! "${inside[@]}" systemd-run --quiet --unit="$unit" --property=Type=exec --property=RemainAfterExit=yes \
+        /bin/sh "$stage/instaluj-deb.sh" "$stage"; then
+    # Odpověď se mohla ztratit až po registraci služby.
+    "${inside[@]}" systemctl cat "$unit.service" >/dev/null
+fi
+for ((i=0; i<480; i++)); do
+    if state=$("${inside[@]}" systemctl show "$unit.service" --value -p SubState); then
+        case $state in
+            exited)
+                "${inside[@]}" systemctl stop "$unit.service"
+                exit 0 ;;
+            failed|dead)
+                "${inside[@]}" journalctl -u "$unit.service" -n 30 --no-pager
+                exit 1 ;;
+        esac
+    fi
+    sleep 15
+done
+printf 'Instalace balíků %s v %s stále čeká na výsledek.\n' "$unit" "$target" >&2
+exit 1
