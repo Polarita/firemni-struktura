@@ -48,3 +48,7 @@ with (work / ".vzor").open("a") as lock:
         subprocess.run(["incus", "exec", "-T", "paperless-test", "--", "/command/with-contenv",
             "/command/s6-setuidgid", "paperless", "python3", inside, case, checksum],
             stdin=pdf, check=True, timeout=1800)
+    proof_file = work / "vzor-overen.json"
+    tmp = proof_file.with_suffix(".next")
+    tmp.write_text(json.dumps({"case_id": case, "sha256": checksum, "job": source.name}) + "\n")
+    tmp.replace(proof_file)

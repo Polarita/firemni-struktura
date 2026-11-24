@@ -12,8 +12,9 @@ from django.contrib.auth.models import Permission
 from django.db import transaction
 from documents.models import CustomFieldInstance, Document
 
-case = sys.argv[1]
-if os.getuid() != 1000 or not re.fullmatch(r"POL-[0-9]{4}-[0-9]{5}", case):
+case, checksum = sys.argv[1:]
+if (os.getuid() != 1000 or not re.fullmatch(r"POL-[0-9]{4}-[0-9]{5}", case)
+        or not re.fullmatch(r"[a-f0-9]{64}", checksum)):
     raise RuntimeError("Neplatný zkušební spis")
 with transaction.atomic():
     account = SocialAccount.objects.select_related("user").get(
@@ -21,7 +22,7 @@ with transaction.atomic():
     user = account.user
     if user.has_usable_password():
         raise RuntimeError("Archiv očekává testovací účet přihlášený pouze přes Keycloak")
-    doc = Document.objects.select_for_update().get(title=f"{case} – Předávací protokol TEST")
+    doc = Document.objects.select_for_update().get(checksum=checksum, title=f"{case} – Předávací protokol TEST")
     cf = CustomFieldInstance.objects.get(document=doc, field__name="case_id", value_text=case)
     if doc.owner_id not in (None, user.pk):
         raise RuntimeError("Zkušební protokol má jiného vlastníka")
