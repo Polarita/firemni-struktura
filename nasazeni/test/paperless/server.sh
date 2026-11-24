@@ -19,31 +19,35 @@ systemctl restart polarita-paperless-sit.service
 incus file pull postgres-test/var/lib/polarita-postgres/pki/server.crt "$tmp/postgres.crt"
 incus file pull gitea-test/etc/polarita-gitea/git-ca.crt "$tmp/oidc.crt"
 printf 'https://%s:8448\n' "$host" >"$tmp/url"
+bash "$src/hosts.sh" "$host" "$work/conf"
+[[ $(incus config get paperless-test user.polarita.role) == paperless-test ]]
+state=$(incus query /1.0/instances/paperless-test/state | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])')
+if [[ $state == Stopped ]]; then
+    incus start paperless-test
+fi
+# Po studeném startu je /run v RAM a agent musí znovu dodat strojové údaje.
+if ! "${inside[@]}" sh -ec 'test -s /run/secrets/pg-paperless && test -s /run/secrets/paperless-secret && test -s /run/secrets/paperless-oidc_secret'; then
+    python3 "$src/../trezor/agenti.py" --klient paperless-test
+fi
 bash "$src/../git/obnov-proxy.sh"
 python3 "$src/../identita/sluzba_oidc.py" "$host" paperless
-bash "$src/hosts.sh" "$host" "$work/conf"
 # Převezme novou tabulku také při aktualizaci už běžící instance.
 "${inside[@]}" sh -ec 'cmp -s /etc/polarita-paperless/hosts /etc/hosts || mount --bind /etc/polarita-paperless/hosts /etc/hosts'
 "${inside[@]}" python3 -c 'import socket, sys; assert {r[4][0] for r in socket.getaddrinfo(sys.argv[1],443)} == {"10.239.32.13"}' "$host"
-restart=false
-for file in postgres.crt oidc.crt url polarita_settings.py web.py; do
+reload="$work/.web-reload"
+# Při první instalaci čeká PID 1 na web.sh. Publikuj ho až po všech konfiguracích.
+for file in postgres.crt oidc.crt url polarita_settings.py web.py web.sh; do
     from="$tmp/$file"
-    case $file in *.py) from="$src/$file" ;; esac
-    if ! cmp -s "$from" "$work/conf/$file"; then
-        install -m0644 "$from" "$work/conf/$file.next"
+    mode=0644
+    case $file in *.py|web.sh) from="$src/$file" ;; esac
+    if [[ $file == web.sh ]]; then mode=0755; fi
+    if ! cmp -s "$from" "$work/conf/$file" || [[ $file == web.sh && ! -x $work/conf/web.sh ]]; then
+        if [[ -x $work/conf/web.sh ]]; then touch "$reload"; fi
+        install -m"$mode" "$from" "$work/conf/$file.next"
         mv -T "$work/conf/$file.next" "$work/conf/$file"
-        restart=true
     fi
 done
-# První start čeká na zveřejnění web.sh. Při aktualizaci převezme služba novou konfiguraci po restartu.
-if [[ -x $work/conf/web.sh ]]; then
-    if ! cmp -s "$src/web.sh" "$work/conf/web.sh"; then restart=true; fi
-else
-    restart=false
-fi
-install -m0755 "$src/web.sh" "$work/conf/web.sh.next"
-mv -T "$work/conf/web.sh.next" "$work/conf/web.sh"
-if [[ $restart == true ]]; then
+if [[ -e $reload ]]; then
     incus restart paperless-test
     python3 "$src/../trezor/agenti.py" --klient paperless-test
 fi
@@ -68,3 +72,4 @@ while True:
     time.sleep(4)
 print("Anonymní čtení dokumentů vyžaduje přihlášení do Paperless.")
 PY
+if [[ -e $reload ]]; then unlink "$reload"; fi
