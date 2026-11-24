@@ -2,12 +2,10 @@
 Description=Přístup správce k webové paměti přes Keycloak TEST
 After=network-online.target polarita-silverbullet.service
 [Service]
-User=pol-silverbullet
-Group=pol-silverbullet
+User=pol-pamet-oidc
+Group=pol-pamet-oidc
 EnvironmentFile=/etc/polarita-silverbullet/proxy.env
-LoadCredential=client:/etc/polarita-silverbullet/client
-LoadCredential=cookie:/etc/polarita-silverbullet/cookie
-ExecStart=/opt/polarita-silverbullet/oauth2-proxy --provider=oidc --client-id=oauth2-proxy-silverbullet --client-secret-file=%d/client --cookie-secret-file=%d/cookie --oidc-issuer-url=${ISSUER} --redirect-url=${CALLBACK} --provider-ca-file=/etc/polarita-silverbullet/git-ca.crt --authenticated-emails-file=/etc/polarita-silverbullet/ucty --code-challenge-method=S256 "--scope=openid email profile" --http-address=10.239.32.19:4180 --upstream=http://127.0.0.1:3000/ --proxy-prefix=/pamet/oauth2 --cookie-name=__Secure-pol-vault --cookie-path=/pamet --cookie-secure=true --cookie-httponly=true --cookie-samesite=lax --skip-provider-button=true --reverse-proxy --trusted-proxy-ip=10.239.31.10/32 --pass-basic-auth=false --pass-user-headers=false --request-logging=false --auth-logging=false
+ExecStart=/opt/polarita-silverbullet/oauth2-proxy --provider=oidc --client-id=oauth2-proxy-silverbullet --client-secret-file=/etc/polarita-silverbullet/pristup/client --cookie-secret-file=/etc/polarita-silverbullet/pristup/cookie --oidc-issuer-url=${ISSUER} --redirect-url=${CALLBACK} --provider-ca-file=/etc/polarita-silverbullet/git-ca.crt --authenticated-emails-file=/etc/polarita-silverbullet/ucty --code-challenge-method=S256 "--scope=openid email profile" --http-address=10.239.32.19:4180 --upstream=http://127.0.0.1:3000/ --proxy-prefix=/pamet/oauth2 --cookie-name=__Secure-pol-vault --cookie-path=/pamet --cookie-secure=true --cookie-httponly=true --cookie-samesite=lax --skip-provider-button=true --reverse-proxy --trusted-proxy-ip=10.239.31.10/32 --pass-basic-auth=false --pass-user-headers=false --request-logging=false --auth-logging=false
 NoNewPrivileges=yes
 PrivateTmp=yes
 PrivateDevices=yes

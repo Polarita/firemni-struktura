@@ -34,6 +34,7 @@ ctx = ssl.create_default_context(cafile="/etc/polarita-silverbullet/git-ca.crt")
 with urlopen(sys.argv[1]+"/.well-known/openid-configuration",context=ctx,timeout=8) as res:
     assert json.load(res)["issuer"] == sys.argv[1]
 PY
+"${inside[@]}" bash -se <"$src/pristup.sh"
 incus file push --mode=0644 "$src/polarita-silverbullet-oidc.service" silverbullet-test/etc/systemd/system/
 "${inside[@]}" systemctl daemon-reload
 "${inside[@]}" systemctl enable polarita-silverbullet-oidc

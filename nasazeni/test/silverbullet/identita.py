@@ -40,7 +40,7 @@ value = api("GET", path + "/client-secret", token)["value"]
 if not value or "\n" in value:
     raise RuntimeError("Chybí klíč klienta")
 inside = ["incus", "exec", "-T", "silverbullet-test", "--"]
-# Soubor s tajemstvím převezme pouze systemd jako přihlašovací údaj služby.
+# Zdrojové soubory patří rootovi. Instalační krok zpřístupní kopii pouze účtu přihlašovací služby.
 subprocess.run(inside + ["sh","-ec", """umask 077
 cd /etc/polarita-silverbullet
 cat >client.next
