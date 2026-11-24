@@ -20,6 +20,11 @@ incus file pull postgres-test/var/lib/polarita-postgres/pki/server.crt "$tmp/pos
 incus file pull gitea-test/etc/polarita-gitea/git-ca.crt "$tmp/oidc.crt"
 printf 'https://%s:8448\n' "$host" >"$tmp/url"
 bash "$src/hosts.sh" "$host" "$work/conf"
+# /s6-init je soubor připojený Incusem při startu. Starší verze ještě nepřebírala /etc/hosts.
+if ! cmp -s "$src/start.sh" "$work/conf/start.sh" || [[ ! -x $work/conf/start.sh ]]; then
+    install -m0755 "$src/start.sh" "$work/conf/start.sh.next"
+    mv -T "$work/conf/start.sh.next" "$work/conf/start.sh"
+fi
 [[ $(incus config get paperless-test user.polarita.role) == paperless-test ]]
 state=$(incus query /1.0/instances/paperless-test/state | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])')
 if [[ $state == Stopped ]]; then
@@ -72,4 +77,26 @@ while True:
     time.sleep(4)
 print("Anonymní čtení dokumentů vyžaduje přihlášení do Paperless.")
 PY
+# Připravenost zahrnuje i DNS a TLS pro přihlášení po startu nové instance.
+"${inside[@]}" /command/with-contenv /command/s6-setuidgid paperless python3 - "$host" <<'CHECK'
+import socket, sys, time
+import requests
+
+host = sys.argv[1]
+issuer = f"https://{host}/identita/realms/polarita"
+deadline = time.monotonic() + 120
+while True:
+    try:
+        if {r[4][0] for r in socket.getaddrinfo(host, 443)} != {"10.239.32.13"}:
+            raise RuntimeError("Archiv nerozpoznal soukromou adresu Keycloaku.")
+        response = requests.get(issuer + "/.well-known/openid-configuration", timeout=(10, 30), allow_redirects=False)
+        if response.status_code == 200 and response.json().get("issuer") == issuer:
+            break
+    except (socket.gaierror, requests.RequestException):
+        pass
+    if time.monotonic() >= deadline:
+        raise RuntimeError("Archiv po spuštění nepotvrdil poskytovatele přihlášení.")
+    time.sleep(4)
+print("Archiv po spuštění ověřil adresu a TLS poskytovatele přihlášení.")
+CHECK
 if [[ -e $reload ]]; then unlink "$reload"; fi
