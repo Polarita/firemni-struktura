@@ -1,6 +1,6 @@
-# Tarify SaaS edice Polarita Elektro Cloud — struktura · Blok 19 (S7) · Verze 3.9
+# Tarify SaaS edice Polarita Elektro Cloud — struktura · Blok 19 (S7) · Verze 3.10
 
-Tento dokument popisuje **strukturu** tří tarifů (`Solo RT` / `Elektro Tým` / `Elektro Firma`). Doplňuje řídicí dokument [`README.md`](README.md) (kapitola 2, pravidlo 5). **Neobsahuje žádnou cenu ani číselný limit** — zadání balíčku `S7` je nestanoví, proto jsou všechny vedeny jako `NÁVRH — ke schválení 1001` a doplní je `1001` až po splnění brány `Go / No-Go`. Tarify nejsou zveřejněny ani nabízeny; Polarita Elektro Cloud ve Verzi 3.9 není spuštěn.
+Tento dokument popisuje **strukturu** tří tarifů (`Solo RT` / `Elektro Tým` / `Elektro Firma`). Doplňuje řídicí dokument [`README.md`](README.md) (kapitola 2, pravidlo 5). **Neobsahuje žádnou cenu ani číselný limit** — zadání balíčku `S7` je nestanoví, proto jsou všechny vedeny jako `NÁVRH — ke schválení 1001` a doplní je `1001` až po splnění brány `Go / No-Go`. Tarify nejsou zveřejněny ani nabízeny; Polarita Elektro Cloud ve Verzi 3.10 není spuštěn.
 
 ---
 

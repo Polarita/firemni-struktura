@@ -1,4 +1,4 @@
-# Vzor digitálního předávacího protokolu půjčovny · Blok 16 · Verze 3.9
+# Vzor digitálního předávacího protokolu půjčovny · Blok 16 · Verze 3.10
 
 Vzor pro modul `pujcovna-meridel`. Protokol vzniká v PWA `portal-spolupracovniku`, sází se v `Typst` do PDF, opatří se serverovou pečetí `pyHanko` s časovým razítkem a uloží se ke spisu výpůjčky. Proměnné ve složených závorkách doplní systém; hodnoty bez schválení `1001` (ceník, výše kauce, minimální počet fotografií) jsou `NÁVRH — ke schválení 1001` a tento vzor žádné částky neobsahuje.
 

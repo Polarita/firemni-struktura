@@ -1,4 +1,4 @@
-# 06 — Zálohování odolné proti ransomwaru (`3-2-1-1-0` + týdenní datová obnova + čtvrtletní DR drill) a monitoring · Verze 3.9
+# 06 — Zálohování odolné proti ransomwaru (`3-2-1-1-0` + týdenní datová obnova + čtvrtletní DR drill) a monitoring · Verze 3.10
 
 Tento dokument definuje zálohovací a dohledovou vrstvu společnosti **Polarita s.r.o.** (oddělení `17` — `17003 spravce-site` pod kontrolou `17004 klicnik`) — víceúrovňovou ochranu dat, automatické každotýdenní ověření datové obnovitelnosti záloh všech `6` doménových i `9` servisních databází, čtvrtletní end-to-end zkoušku obnovy celé infrastruktury na čistý stroj (*Full Bare-Metal / VM DR Drill*) a distribuovaný monitoring s acyklickým pořadím nasazení a okamžitým out-of-band varováním na mobil i počítač.
 
@@ -10,7 +10,7 @@ V režimu TEST instalační ai zřídí záložní server, obnovovací instanci 
 
 ## 1. Seznam vybraného softwaru
 
-| Oblast | Vybraný software | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.9) | Odpovědný `ai` / garant |
+| Oblast | Vybraný software | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.10) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Šifrované geograficky oddělené zálohování (proti ransomwaru)** | **Restic** + **Restic REST Server** *(režim `--append-only`)* | `latest` | Klientsky šifrované, deduplikované zálohování `/srv/polarita/` přes privátní VPN `Headscale` na druhý fyzicky oddělený server v jiné lokalitě. Serverová komponenta **`Restic REST Server (--append-only)`** zaručuje, že klient na `polarita-hq` má jen `append-only` přístup a nemůže přes něj smazat či přepsat dřívější zálohy. Retenci (`forget/prune`) spouští výhradně místní úloha na záložním uzlu; správcovský přístup k záložnímu uzlu má jen `1001` vlastním klíčem, který není uložen na `polarita-hq`. | `17003` `spravce-site` *(kontrola klíčů `17004` `klicnik`)* |
 | **Lokální atomické snapshoty úložiště** | **Sanoid** *(nad `OpenZFS`; u větve `ext4 / LVM thin` blokové snapshoty `LVM thin` / API hypervizoru)* | `latest` | Automatická správa 15minutových, hodinových, denních a měsíčních snapshotů `OpenZFS` (a u větve `ext4 / LVM thin` blokových snapshotů `LVM thin` či API hypervizoru) pro rychlý návrat stavu při nepovedené aktualizaci nebo lidské chybě se změřenou dobou návratu. | `17003` `spravce-site` |
@@ -47,7 +47,7 @@ V režimu TEST instalační ai zřídí záložní server, obnovovací instanci 
 
 ```text
 V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
-Jsi správce serveru (17003 spravce-site). Nasaď na centrálním serveru polarita-hq a záložním serveru v druhé lokalitě zálohovací architekturu 3-2-1-1-0 pomocí Sanoid (latest), pgBackRest/pg_dump (latest) a Restic + Restic REST Server (--append-only):
+Jsi správce serveru (17003 spravce-site). V TEST nasaď Sanoid, pgBackRest/pg_dump a Restic do polarita-hq na Ejpovicích. Samostatná vnitřní instance restic-test přijímá zálohy přes Restic REST Server --append-only. Pro produkční ochranu 3-2-1-1-0 přidej po převzetí fyzicky nezávislý cíl ve druhé lokalitě.
 
 0. V TEST vytvoř oddělený záložní uzel uvnitř polarita-hq a použij automaticky vytvořené strojové údaje. Pro fyzicky nezávislý produkční cíl po převzetí platí následující postup: záložní uzel v druhé fyzické lokalitě (viz požadavky na stroj v kap. 1 README) připrav v samostatné relaci vedené jednatelem 1001 jeho vlastním správcovským klíčem, který se nikdy neukládá na polarita-hq — čistý Ubuntu Server latest LTS, hardening SSH, Incus, žádné jiné kontejnerové prostředí — a připoj jej do privátní VPN Headscale. Z polarita-hq se na záložní uzel nesmí jít přihlásit jako správce.
 1. Lokální snapshoty úložiště:
