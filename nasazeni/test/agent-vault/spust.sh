@@ -23,7 +23,9 @@ case ${1:-} in
         # Připoj jen běžící unixový socket PostgreSQL. Pracovní proces nemá přístup do Incusu ani do jeho sítě.
         pid=$(incus query /1.0/instances/postgres-test/state | python3 -c 'import json,sys; print(int(json.load(sys.stdin)["pid"]))')
         [[ $pid =~ ^[1-9][0-9]*$ && -S /proc/$pid/root/run/postgresql/.s.PGSQL.5432 ]]
-        common+=(-p "BindReadOnlyPaths=/proc/$pid/root/run/postgresql:/run/polarita-agent-vault-pg")
+        install -dm0700 /run/polarita-agent-vault-cil
+        ln -sfn "/proc/$pid/root/run/postgresql/.s.PGSQL.5432" /run/polarita-agent-vault-cil/.socket-next
+        mv -Tf /run/polarita-agent-vault-cil/.socket-next /run/polarita-agent-vault-cil/socket
         cred=/srv/polarita/data/bootstrap-test/agent-vault
         if [[ $1 == index ]]; then
             exec "${run[@]}" "${common[@]}" -p "LoadCredential=postgres:$cred/index" "${python[@]}" "$@"

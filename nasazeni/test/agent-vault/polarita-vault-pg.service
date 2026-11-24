@@ -1,0 +1,10 @@
+[Unit]
+Description=Přenos místního PostgreSQL spojení z Vaultu do databázové instance
+Requires=polarita-vault-pg.socket
+[Service]
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd --exit-idle-time=20s /run/polarita-agent-vault-cil/socket
+RestrictAddressFamilies=AF_UNIX
+NoNewPrivileges=yes
+PrivateNetwork=yes
+ProtectSystem=strict
+ProtectHome=yes

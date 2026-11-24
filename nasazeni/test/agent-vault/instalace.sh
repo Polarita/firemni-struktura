@@ -35,6 +35,9 @@ if ! [[ -s $dir/pripraveno ]]; then
 fi
 incus exec -T postgres-test -- runuser -u postgres -- psql -Xq -v ON_ERROR_STOP=1 -d db_erp_lhutnik <"$src/index.sql"
 python3 "$src/pristup.py"
+install -m0644 "$src"/polarita-vault-pg.{service,socket} /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now polarita-vault-pg.socket
 # Přenes jen role a schválené názvy. Karty obsahující osobní údaje se do Vaultu nekopírují.
 seed=$(mktemp -d)
 trap 'rm -r -- "$seed"' EXIT

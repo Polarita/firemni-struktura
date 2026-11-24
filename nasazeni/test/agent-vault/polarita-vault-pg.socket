@@ -1,0 +1,11 @@
+[Unit]
+Description=Místní socket databáze pro znalostní účty Polarity
+[Socket]
+ListenStream=/run/polarita-agent-vault-pg/.s.PGSQL.5432
+SocketUser=root
+SocketGroup=polarita-pamet
+SocketMode=0660
+DirectoryMode=0755
+RemoveOnStop=yes
+[Install]
+WantedBy=sockets.target
