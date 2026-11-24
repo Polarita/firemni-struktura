@@ -1,5 +1,5 @@
 # Vlastní zdroj agentových dat přijímá čtecí výstup z VM přes Incus.
-all_hosts += ["polarita-hq"]
+all_hosts += ["polarita-hq|tcp"]
 ipaddresses.update({"polarita-hq":"127.0.0.1"})
 datasource_programs.insert(0, {
     "condition": {"host_name": ["polarita-hq"]},
