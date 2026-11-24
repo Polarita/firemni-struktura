@@ -9,7 +9,7 @@ flock 8
 url=https://files.pythonhosted.org/packages/3d/aa/26d64642d808de4a652579ef950d7cd2d37f080a8babf9c67c6b75fc4c3f/uv-0.13.9-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 sum=d7f459fe4fd247d830351c75686d3996ace3c6f3f728eb0e85a30b7ada0cef19
 wheel=$cache/uv-0.13.9.whl
-if ! echo "$sum  $wheel" | sha256sum --status -c - 2>/dev/null; then
+if [[ ! -f $wheel ]] || ! echo "$sum  $wheel" | sha256sum --status -c - >/dev/null 2>&1; then
     curl --fail --retry 3 --max-time 120 --proto '=https' -LsS "$url" -o "$wheel.part"
     echo "$sum  $wheel.part" | sha256sum --status -c -
     mv -T "$wheel.part" "$wheel"

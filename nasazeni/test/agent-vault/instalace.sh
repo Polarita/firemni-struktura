@@ -12,7 +12,7 @@ rev=761b726dd34fb83930e26aab4e9ac3899aa1fa78
 base=https://huggingface.co/Xenova/multilingual-e5-small/resolve/$rev
 model() {
     local file=$1 sum=$2 dst=$root/model/${1##*/}
-    if ! echo "$sum  $dst" | sha256sum --status -c - 2>/dev/null; then
+    if [[ ! -f $dst ]] || ! echo "$sum  $dst" | sha256sum --status -c - >/dev/null 2>&1; then
         curl --proto '=https' -fLsS --retry 3 --max-time 300 "$base/$file" -o "$dst.part"
         echo "$sum  $dst.part" | sha256sum --status -c -
         chmod 0644 "$dst.part"
@@ -55,3 +55,10 @@ install -m0755 "$src/spust.sh" /usr/local/sbin/agent_vault
 python3 "$src/role.py" "$seed"
 ln -sfn /usr/local/sbin/agent_vault /usr/local/bin/agent_vault
 python3 "$src/zkouska.py"
+dest=$(cd "$src/../../.." && pwd)
+python3 "$src/puvod.py" "$dest"
+rev=${dest##*/}
+[[ $rev =~ ^[0-9a-f]{40}$ ]]
+printf 'Ověřeno v TEST na polarita-hq. Znalostní účet 11001 ve stavu SHADOW přečetl schválené podklady a měl zablokován zápis. Role 17005 uložila předávku a ADR. Český dotaz našel odpovědný útvar přes místní E5 a PostgreSQL pgvector. Zdroj instalační revize %s je ověřený proti soukromé Gitea.
+' "$rev" |
+    /usr/local/sbin/agent_vault log "overeni-pameti-$rev"
