@@ -41,8 +41,12 @@ existing=false
 if incus info stalwart-mx-test >/dev/null 2>&1; then existing=true; fi
 tofu apply -input=false "$tmp/plan"
 digest=$(sha256sum conf/* | sha256sum)
-if ! incus info stalwart-mx-test | grep -qi '^Status: RUNNING'; then
+state=$(incus query /1.0/instances/stalwart-mx-test/state | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])')
+if [[ $state == Stopped ]]; then
     incus start stalwart-mx-test
+elif [[ $state != Running ]]; then
+    echo "Neočekávaný stav SMTP kontejneru: $state" >&2
+    exit 1
 elif "$existing" && { [[ ! -f .applied || $(cat .applied) != "$digest" ]] ||
     ! incus exec stalwart-mx-test -- openssl x509 -checkend 604800 -noout -in /var/lib/stalwart/tls/mx.crt >/dev/null; }; then
     incus restart stalwart-mx-test

@@ -6,6 +6,8 @@ table inet polarita_test {
     }
     chain forwarding {
         type filter hook forward priority -20; policy accept;
+        # Provoz mezi dvěma porty stejného DMZ mostu dále filtruje tabulka CrowdSec.
+        iifname "dmz_edge" oifname "dmz_edge" accept
         iifname "dmz_edge" oifname "app_internal" ip saddr 10.239.31.10 ip daddr 10.239.32.10 tcp dport 8080 ct state new,established counter accept
         iifname "app_internal" oifname "dmz_edge" ip saddr 10.239.32.10 ip daddr 10.239.31.10 tcp sport 8080 ct state established counter accept
         iifname @zones counter drop

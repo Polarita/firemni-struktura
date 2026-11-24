@@ -1,0 +1,33 @@
+common:
+  daemonize: true
+  log_media: stdout
+  log_level: info
+config_paths:
+  config_dir: /srv/polarita/infra/crowdsec-test/conf
+  data_dir: /srv/polarita/infra/crowdsec-test/data
+  simulation_path: /srv/polarita/infra/crowdsec-test/conf/simulation.yaml
+  hub_dir: /srv/polarita/infra/crowdsec-test/conf/hub
+  index_path: /srv/polarita/infra/crowdsec-test/conf/hub/.index.json
+crowdsec_service:
+  acquisition_path: /srv/polarita/infra/crowdsec-test/conf/acquis.yaml
+  parser_routines: 1
+cscli:
+  output: human
+  color: "no"
+db_config:
+  type: sqlite
+  db_path: /srv/polarita/infra/crowdsec-test/data/crowdsec.db
+  flush:
+    max_items: 5000
+    max_age: 7d
+api:
+  client:
+    credentials_path: /srv/polarita/infra/crowdsec-test/conf/local_api_credentials.yaml
+  server:
+    listen_uri: 127.0.0.1:18280
+    profiles_path: /srv/polarita/infra/crowdsec-test/conf/profiles.yaml
+prometheus:
+  enabled: true
+  level: full
+  listen_addr: 127.0.0.1
+  listen_port: 18281

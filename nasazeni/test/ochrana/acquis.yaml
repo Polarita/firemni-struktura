@@ -1,0 +1,11 @@
+source: file
+filenames:
+  - /var/lib/incus/storage-pools/default/containers/caddy-test/rootfs/var/log/polarita/*.json
+labels:
+  type: polarita-caddy
+---
+source: file
+filenames:
+  - /var/lib/incus/storage-pools/default/custom/default_stalwart-mx-test-data/log/smtp.*
+labels:
+  type: polarita-stalwart

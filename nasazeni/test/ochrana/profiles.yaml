@@ -1,0 +1,7 @@
+name: testovaci_hrana
+filters:
+  - Alert.Remediation == true && Alert.GetScope() == "Ip" && Alert.GetScenario() == "polarita/opakovane-odmitnuti"
+decisions:
+  - type: ban
+    duration: 5m
+on_success: break

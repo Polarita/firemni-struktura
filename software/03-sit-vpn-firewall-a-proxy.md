@@ -1,4 +1,4 @@
-# 03 — Síť, privátní mesh VPN, správa DNS, firewall, reverzní proxy a poštovní/SIP hrana · Verze 3.3.1
+# 03 — Síť, privátní mesh VPN, správa DNS, firewall, reverzní proxy a poštovní/SIP hrana · Verze 3.3.2
 
 Tento dokument definuje síťovou vrstvu společnosti **Polarita s.r.o.** — oddělení veřejného provozu zákazníků od privátní firemní sítě pro jednatele (`1001`), spolupracovníky (`1002+`) a pobočky (`101`–`999`), bezpečnou hranu poštovního serveru **`Stalwart Mail`** a odchozí registraci ústředny **`Asterisk`** bez veřejných příchozích SIP portů, centralizovanou správu všech domén a vícevrstvou ochranu bez licenčních poplatků za uživatele.
 
@@ -6,7 +6,7 @@ Tento dokument definuje síťovou vrstvu společnosti **Polarita s.r.o.** — od
 
 ## 1. Seznam vybraného softwaru
 
-| Oblast | Vybraný software | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.3.1) | Odpovědný `ai` / garant |
+| Oblast | Vybraný software | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.3.2) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Správa veřejného DNS a ochrana domén** | **Cloudflare DNS** | `Standard / Free` *(řízeno přes API a `OpenTofu`)* | Centrální správa všech firemních domén (`polarita.cz`, `polarita.eu` a dalších) v jednom účtu zdarma, podpora `DNSSEC`, `CAA`, `SPF`, `DKIM`, `DMARC`, `MTA-STS`, DDoS ochrany veřejných webů a omezených API tokenů pro automatické vystavování HTTPS certifikátů (`DNS-01`). | `17003` `spravce-site` *(kontrola `17004` `klicnik`)* |
 | **Veřejná reverzní proxy a HTTPS (`dmz_edge`)** | **Caddy** *(s DNS modulem Cloudflare a `trusted_proxies`)* | `latest` *(v izolovaném kontejneru `Incus`)* | Jediná HTTP/HTTPS služba vystavená do internetu na portech `80` a `443` v zóně `dmz_edge` (spolu s odděleným příchozím MX relayem **`Stalwart Mail`** na `25/tcp` a `Headscale` STUN `3478/udp`). Automaticky obstarává TLS certifikáty, směruje provoz na storefronty/aplikace v `app_internal` (`polarita.cz`, `polarita.eu`, `akademie.polarita.cz`), veřejný OIDC endpoint `auth.polarita.cz/realms/...` (při blokaci `/admin` mimo VPN!), `wss://ocpp.polarita.cz` pro wallboxy a privátní subdomény `*.int.polarita.cz` (za VPN + ACME DNS-01; `Caddy` je uzlem VPN a interní vhosty obsluhuje jen na adrese VPN). Routy služeb z vyšších bloků (`auth.polarita.cz` v `Bloku 5`, `ocpp.polarita.cz` v `Bloku 8`, weby v `Bloku 9`) se přidávají až s danou službou. | `17003` `spravce-site` *(spolupráce `17002` `webmaster`)* |
@@ -49,6 +49,8 @@ Testovací ředitelství přijímá spojení ze stávající firemní VPN přes 
 Vlastní Headscale běží v samostatné instanci ve stejné VM. Instalační zkouška používá privátní jméno `vpn.polarita.test` a vlastní mapu DERP se samostatným uzlem pro STUN. Zónu pro zkoušku obsluhuje DNS na mostu `dmz_edge`. Dva dočasné klienty dostanou důvěru k testovacímu serveru automaticky. Osobní zařízení při testování ředitelství dál používají současnou VPN. Soubor `/srv/polarita/backups/headscale/posledni.tar` obsahuje poslední místní export databáze, strojových klíčů a konfigurace. Před jeho nahrazením instalace ověří integritu SQLite na rozbalené kopii. [Zkouška VPN](../nasazeni/test/hrana/zkouska-vpn.py) · [Místní export](../nasazeni/test/hrana/zaloha.sh)
 
 Testovací MX na adrese `10.239.31.12:25` v zóně `dmz_edge` používá vlastní svazek RocksDB. Při startu kontejneru dočasné rozhraní na loopbacku načte konfiguraci a zkontroluje prázdný seznam poštovních domén. V běžném režimu naslouchá pouze SMTP. Instalační zkouška vyžaduje ověřený certifikát pro `mx.polarita.test`, odmítnutí místního i cizího příjemce a odpovídající dva záznamy v protokolu. [Nasazení MX](../nasazeni/test/mx.sh) · [Zkouška SMTP](../nasazeni/test/mx/zkouska.py)
+
+Lokální CrowdSec ve VM čte protokoly Caddy a Stalwart. Bouncer aktualizuje sadu IPv4 pro vybrané porty SMTP, VPN a STUN na mostu DMZ. V protokolu HTTP zůstávají stavový kód, čas, metoda a adresa síťové protistrany. Privátní SSH tunel ředitelství vystupuje jako loopback, a proto se jeho společná adresa při chybě přihlášení vynechává. Adresy běžných klientů portálu za tunelem tímto pravidlem individuálně blokovat nelze. Veřejná brána a přenos rozhodnutí do Cloudflare patří k připojení správy veřejné zóny. [Lokální ochrana](../nasazeni/test/ochrana.sh) · [Zkouška blokace](../nasazeni/test/ochrana/zkouska.py)
 
 ### Prompt 1 — Technické záznamy v `Cloudflare DNS` a správa přes `OpenTofu` beze změny veřejných záznamů (`pro 17003 spravce-site` + `17004 klicnik`)
 

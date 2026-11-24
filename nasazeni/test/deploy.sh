@@ -30,6 +30,9 @@ fqdn=$(tailscale status --json | python3 -c 'import json,sys;print(json.load(sys
 "${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-03
 "${guest[@]}" "$dest/nasazeni/test/mx.sh" | tee "$tmp/mx.txt"
 "${inc[@]}" file push --project polarita "$tmp/mx.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-03/mx-$commit.txt"
+"${guest[@]}" "$dest/nasazeni/test/ochrana.sh"
+"${guest[@]}" python3 "$dest/nasazeni/test/ochrana/zkouska.py" | tee "$tmp/ochrana.txt"
+"${inc[@]}" file push --project polarita "$tmp/ochrana.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-03/ochrana-$commit.txt"
 if command -v dig >/dev/null; then
     bash nasazeni/test/hrana/inventura-dns.sh >"$tmp/dns.txt"
     "${inc[@]}" file push --project polarita "$tmp/dns.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-03/verejne-dns-$commit.txt"

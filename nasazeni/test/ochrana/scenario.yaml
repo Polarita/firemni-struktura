@@ -1,0 +1,16 @@
+type: leaky
+name: polarita/opakovane-odmitnuti
+description: Opakované požadavky odmítnuté poštovní nebo webovou bránou
+filter: >-
+  (evt.Meta.log_type == 'polarita_smtp_relay_denied' ||
+    (evt.Meta.log_type == 'polarita_http' && evt.Meta.http_status == '401')) &&
+  evt.Meta.source_ip != '' && evt.Meta.source_ip not in
+    ['127.0.0.1', '::1', '10.239.31.1', '10.239.31.10', '10.239.31.11', '10.239.31.12']
+groupby: evt.Meta.source_ip
+capacity: 6
+leakspeed: 30s
+blackhole: 2m
+labels:
+  service: edge
+  type: bruteforce
+  remediation: true

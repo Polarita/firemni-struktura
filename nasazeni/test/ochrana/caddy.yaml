@@ -1,0 +1,16 @@
+name: polarita/caddy
+description: HTTP stav a síťová adresa protistrany ověřená serverovým socketem.
+filter: >-
+  evt.Line.Labels.type == 'polarita-caddy' &&
+  UnmarshalJSON(evt.Line.Raw, evt.Unmarshaled, 'web') in ['', nil] &&
+  evt.Unmarshaled.web.request != nil
+onsuccess: next_stage
+statics:
+  - meta: source_ip
+    expression: evt.Unmarshaled.web.request.remote_ip
+  - meta: service
+    value: http
+  - meta: log_type
+    value: polarita_http
+  - meta: http_status
+    expression: int(evt.Unmarshaled.web.status)

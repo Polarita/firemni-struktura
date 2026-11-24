@@ -404,7 +404,11 @@ def check_names(path: Path, text: str, canon: dict, report: Report) -> None:
     zones = set(canon["network_zones"])
     suffix = path.suffix.lower()
     for number, line in enumerate(normalize(text).split("\n"), 1):
-        for name in re.findall(r"(?<![A-Za-z0-9_])db_[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*(?![A-Za-z0-9_])", line):
+        database_text = line
+        if where == "nasazeni/test/ochrana/config.yaml":
+            # CrowdSec calls its configuration keys db_config and db_path.
+            database_text = re.sub(r"^\s*(?:db_config|db_path)\s*:", "", line)
+        for name in re.findall(r"(?<![A-Za-z0-9_])db_[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*(?![A-Za-z0-9_])", database_text):
             if name not in databases:
                 report.error(f"{where}:{number}", f"unknown database {name}")
         # EN: Link targets are anchors of headings ("#12-neco"), not channels. / CZ: Cíle odkazů jsou kotvy nadpisů, ne kanály.

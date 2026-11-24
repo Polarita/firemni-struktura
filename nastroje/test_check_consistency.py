@@ -577,6 +577,13 @@ class RuleTests(unittest.TestCase):
         self.assertFalse(any("broken relative link" in e for e in report.errors))
         self.assertTrue(any("forbidden term" in e for e in report.errors))
 
+    def test_crowdsec_yaml_database_keys(self) -> None:
+        report = cc.Report()
+        path = cc.ROOT / "nasazeni/test/ochrana/config.yaml"
+        cc.check_names(path, "db_config:\n  db_path: /var/db_sklad.sqlite", self.canon, report)
+        self.assertEqual(len(report.errors), 1)
+        self.assertIn("unknown database db_sklad", report.errors[0])
+
     def test_main_exit_codes(self) -> None:
         clean, dirty = cc.Report(), cc.Report()
         dirty.error("x.md:1", "planted")

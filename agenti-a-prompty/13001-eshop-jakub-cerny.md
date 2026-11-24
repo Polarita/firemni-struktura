@@ -1,4 +1,4 @@
-# Karta ai zaměstnance č. 13001: Jakub Černý (ai) — Manažer e-shopu, zákaznické péče, expedice a RMA (`eshop`) · Verze 3.3.1
+# Karta ai zaměstnance č. 13001: Jakub Černý (ai) — Manažer e-shopu, zákaznické péče, expedice a RMA (`eshop`) · Verze 3.3.2
 
 ## 1. Osobní a organizační karta
 
@@ -146,7 +146,7 @@ Připravujeme e-shop polarita.eu čisté společnosti Polarita s.r.o. (nasazuje 
 
 ## 6. Zapojení do rozvojových balíčků `S1–S7` (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.3.1 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
+Balíčky `S1–S7` jsou ve Verzi 3.3.2 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
 
 * `Blok 13` (`S1`): dodává `S/N` a `PHE` z `Elektro WMS` do Výrobního pasu rozváděče.
 * `Blok 16` (`S4`): garant dílenského kiosku nad skladem `MAIN-101`.

@@ -1,0 +1,16 @@
+mode: nftables
+update_frequency: 2s
+api_url: http://127.0.0.1:18280/
+api_key: __LOCAL_KEY__
+log_mode: stdout
+log_level: info
+disable_ipv6: true
+blacklists_ipv4: blokovane
+supported_decisions_types: [ban]
+nftables:
+  ipv4:
+    enabled: true
+    set-only: true
+    table: polarita_crowdsec
+  ipv6:
+    enabled: false

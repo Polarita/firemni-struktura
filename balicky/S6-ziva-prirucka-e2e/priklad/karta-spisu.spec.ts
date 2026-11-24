@@ -1,11 +1,11 @@
 /**
  * EN: SAMPLE ONLY — NOT EXECUTED. This spec is a pattern for Block 18 (package S6,
- *     Polarita-3.3.1). It has never been run: the application under test and the test
+ *     Polarita-3.3.2). It has never been run: the application under test and the test
  *     environment do not exist yet (greenfield design, server `polarita-hq` is not
  *     built). All selectors, screen texts and the seed record are illustrative and
  *     must be adapted to the real application before the first run.
  * CZ: POUZE VZOR — NEBYL SPUŠTĚN. Tento test je vzorem pro Blok 18 (balíček S6,
- *     Polarita-3.3.1). Nikdy neběžel: testovaná aplikace ani testovací prostředí zatím
+ *     Polarita-3.3.2). Nikdy neběžel: testovaná aplikace ani testovací prostředí zatím
  *     neexistují (greenfield návrh, server `polarita-hq` není postaven). Všechny
  *     selektory, texty obrazovek a záznam ze seedu jsou ilustrační a před prvním
  *     během se musí přizpůsobit skutečné aplikaci.

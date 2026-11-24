@@ -1,0 +1,14 @@
+name: polarita/stalwart
+description: Odmítnuté přeposlání v protokolu testovacího MX.
+filter: evt.Line.Labels.type == 'polarita-stalwart'
+onsuccess: next_stage
+grok:
+  pattern: '^%{TIMESTAMP_ISO8601:timestamp} INFO Relay not allowed \(smtp\.relay-not-allowed\) listenerId = "smtp", localPort = 25, remoteIp = %{IP:remote},'
+  apply_on: Line.Raw
+statics:
+  - meta: source_ip
+    expression: evt.Parsed.remote
+  - meta: service
+    value: smtp
+  - meta: log_type
+    value: polarita_smtp_relay_denied

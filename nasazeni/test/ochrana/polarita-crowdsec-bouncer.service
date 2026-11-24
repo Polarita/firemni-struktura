@@ -1,0 +1,19 @@
+[Unit]
+Description=Blokování IPv4 na testovacím mostu DMZ Polarity
+Requires=polarita-crowdsec.service
+After=polarita-crowdsec.service polarita-zones.service incus.service
+[Service]
+Type=simple
+ExecStartPre=+/srv/polarita/infra/crowdsec-test/bin/firewall.sh
+ExecStart=/srv/polarita/infra/crowdsec-test/bin/crowdsec-firewall-bouncer -c /srv/polarita/infra/crowdsec-test/conf/bouncer-local.yaml
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+ProtectHome=yes
+ProtectSystem=strict
+CapabilityBoundingSet=CAP_NET_ADMIN
+PrivateTmp=yes
+IPAddressDeny=any
+IPAddressAllow=localhost
+[Install]
+WantedBy=multi-user.target
