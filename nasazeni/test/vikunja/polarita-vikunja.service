@@ -1,0 +1,25 @@
+[Unit]
+Description=Úkolovník Vikunja Polarita TEST
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/var/lib/vikunja
+StartLimitIntervalSec=0
+[Service]
+User=pol-vikunja
+Group=pol-vikunja
+WorkingDirectory=/var/lib/vikunja
+RuntimeDirectory=polarita-vikunja
+RuntimeDirectoryMode=0700
+UMask=0077
+Environment=SSL_CERT_FILE=/etc/polarita-vikunja/git-ca.crt
+ExecStart=/usr/bin/python3 /etc/polarita-vikunja/start.py
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/vikunja
+LimitCORE=0
+[Install]
+WantedBy=multi-user.target

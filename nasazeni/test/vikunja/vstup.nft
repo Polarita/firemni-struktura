@@ -1,0 +1,7 @@
+destroy table bridge polarita_web_ukoly
+table bridge polarita_web_ukoly {
+    chain vstup {
+        type filter hook postrouting priority -45; policy accept;
+        meta obrname "app_internal" ether type ip ip daddr 10.239.32.20 tcp dport 3456 ip saddr != 10.239.31.10 counter drop
+    }
+}

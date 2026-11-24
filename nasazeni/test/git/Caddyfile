@@ -12,7 +12,7 @@ https://{$POLARITA_GIT_HOST} {
     tls internal
     route {
         @identita {
-            remote_ip 127.0.0.1 10.239.32.13 10.239.32.16 10.239.32.19
+            remote_ip 127.0.0.1 10.239.32.13 10.239.32.16 10.239.32.19 10.239.32.20
             path /identita/realms/polarita/.well-known/openid-configuration /identita/realms/polarita/protocol/openid-connect/token /identita/realms/polarita/protocol/openid-connect/certs /identita/realms/polarita/protocol/openid-connect/userinfo
         }
         reverse_proxy @identita 10.239.32.11:8080

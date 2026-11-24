@@ -26,6 +26,14 @@ http://:8080 {
 	bind 127.0.0.1
 	header +Via "1.1 polarita-caddy"
 	route {
+		@ukoly header_regexp Host ^[a-z0-9.-]+[.]ts[.]net:8447$
+		handle @ukoly {
+			reverse_proxy 10.239.32.20:3456 {
+				header_up Cookie "vikunja_refresh_token={http.request.cookie.vikunja_refresh_token}"
+				header_up X-Forwarded-Proto https
+			}
+		}
+		request_header Cookie "(^|; *)vikunja_refresh_token=[^;]*" ""
 		@pamet header_regexp Host ^[a-z0-9.-]+[.]ts[.]net:8446$
 		handle @pamet {
 			route {
