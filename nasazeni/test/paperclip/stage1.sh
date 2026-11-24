@@ -35,3 +35,40 @@ PY
 ln -sfn "${report##*/}" "$dst/.stage1-next"
 mv -Tf "$dst/.stage1-next" "$dst/posledni-stage1"
 INNER
+# Provozní protokol je dostupný i v pracovním adresáři role ai-provoz.
+workspace=/srv/polarita/workspace/ai-finops/eval-suite
+install -d -m 0750 "$workspace"
+pending=$(mktemp -d -p "$workspace" .stage1.XXXXXXXX)
+trap 'rm -r -- "$pending"' EXIT
+for ext in json md; do
+    "${inside[@]}" runuser -u paperclip-test -- bash -ec '
+        cd /var/lib/paperclip/eval/posledni-stage1
+        files=(eval-report-dry-run-*."$1")
+        [[ ${#files[@]} == 1 && -f ${files[0]} && ! -L ${files[0]} ]]
+        cat -- "${files[0]}"
+    ' -- "$ext" >"$pending/protokol.$ext"
+done
+stamp=$(python3 - "$pending/protokol.json" <<'PY'
+from datetime import datetime
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as stream:
+    report = json.load(stream)
+if (report["suite"], report["mode"], report["evidence"], report["passed"], report["total"],
+    report["failed"], report["verdict"]) != ("base","dry-run","REFERENCE_POLICY",20,20,0,"VERIFIED_PASS"):
+    raise SystemExit("Pracovní kopie nemá úplný výsledek Stage 1")
+print(datetime.fromisoformat(report["started_utc"]).strftime("%Y%m%dT%H%M%S%fZ"))
+PY
+)
+chmod 0750 "$pending"
+chmod 0640 "$pending"/protokol.{json,md}
+target=stage1-$stamp
+if [[ -d "$workspace/$target" ]]; then
+    cmp "$pending/protokol.json" "$workspace/$target/protokol.json"
+    cmp "$pending/protokol.md" "$workspace/$target/protokol.md"
+else
+    mv -T "$pending" "$workspace/$target"
+    trap - EXIT
+fi
+ln -sfn "$target" "$workspace/.posledni-stage1-next"
+mv -Tf "$workspace/.posledni-stage1-next" "$workspace/posledni-stage1"
+echo "Protokol Stage 1 je ve $workspace/$target."
