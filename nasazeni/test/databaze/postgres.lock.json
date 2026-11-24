@@ -1,0 +1,23 @@
+{
+  "postgresql_major": 18,
+  "base": "0feacf077c306d8c1fe37b18ee14154d21100fa39ddc99bf8b48dd6c43141a50",
+  "packages": {
+    "postgresql-18": "18.6-0ubuntu0.26.04.1",
+    "postgresql-18-pgvector": "0.8.1-2",
+    "pgbouncer": "1.25.1-1"
+  },
+  "compatibility": [
+    ["Keycloak", "18.x je přímo testovaná verze", "https://www.keycloak.org/server/db"],
+    ["Zulip", "Server 13.x podporuje 14 až 18", "https://zulip.readthedocs.io/en/stable/production/upgrade.html"],
+    ["Vikunja", "18 v CI", "https://vikunja.io/docs/installing/"],
+    ["Moodle", "5.2 vyžaduje nejméně 16", "https://moodledev.io/general/releases/5.2"],
+    ["Gitea", "nejméně 12", "https://docs.gitea.com/installation/database-prep/"],
+    ["Umami", "nejméně 12.14", "https://docs.umami.is/docs/install"],
+    ["Paperless-ngx", "nejméně 14 a podpora podle Django", "https://docs.paperless-ngx.com/administration/"],
+    ["Stalwart", "podporovaný backend, chybí výčet hlavních verzí", "https://stalw.art/docs/storage/backends/postgresql/"],
+    ["Traccar", "podporovaný JDBC backend, chybí výčet hlavních verzí", "https://www.traccar.org/postgresql/"],
+    ["Medusa", "cloud používá 16, pro vlastní instalaci ověřit migrace", "https://docs.medusajs.com/cloud/migrate-self-hosted"],
+    ["Paperclip", "externí PostgreSQL přes Drizzle, příklad s 17", "https://github.com/paperclipai/docs/blob/main/deploy/database.md"],
+    ["Chatwoot", "PostgreSQL s rozšířením pgvector, ověřit aplikační migrace", "https://github.com/chatwoot/chatwoot/blob/develop/docker-compose.production.yaml"]
+  ]
+}

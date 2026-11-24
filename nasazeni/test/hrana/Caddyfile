@@ -26,6 +26,13 @@ http://:8080 {
 	bind 127.0.0.1
 	header +Via "1.1 polarita-caddy"
 	route {
+		redir /identita /identita/realms/polarita/account/ 302
+		@identita path /identita/realms/polarita /identita/realms/polarita/* /identita/resources/*
+		reverse_proxy @identita 10.239.32.11:8080 {
+			header_up Cookie "(^|; *)__Host-polarita-test=[^;]*" ""
+			header_up X-Forwarded-Proto https
+		}
+		respond /identita/* 404
 		redir /hesla /hesla/ 308
 		@sprava path /hesla/admin /hesla/admin/*
 		respond @sprava 404

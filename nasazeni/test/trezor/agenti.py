@@ -15,6 +15,8 @@ CLIENTS = {
     "stalwart-mx-test": ("10.239.31.12", 2000, 2000, "stalwart-mx"),
     "reditelstvi-test": ("10.239.32.10", 65534, 65533, "reditelstvi"),
     "vaultwarden-test": ("10.239.33.11", 0, 0, "vaultwarden-agent"),
+    "keycloak-test": ("10.239.32.11", 1000, 0, "keycloak-agent"),
+    "postgres-test": ("10.239.33.12", 0, 0, "postgres-agent"),
     "openbao-test": ("10.239.33.10", 986, 986, "openbao-agent"),
 }
 TARGET = "/opt/polarita-openbao"
@@ -51,7 +53,8 @@ def deliver(name, manager):
     cidr = ip + "/32"
     secret = p.request("POST", base + "/secret-id",
                        {"cidr_list": [cidr], "token_bound_cidrs": [cidr]}, manager)["data"]["secret_id"]
-    payload = {"role_id": rid, "secret_id": secret, "uid": uid, "gid": gid, "path": fixture}
+    payload = {"role_id": rid, "secret_id": secret, "uid": uid, "gid": gid, "path": fixture,
+               "databases": p.DATABASE_ACCESS.get(name, ())}
     run("incus", "exec", "-T", name, "--user", "0", "--group", "0", "--",
         TARGET + "/agent", data=json.dumps(payload).encode())
     token = p.login(p.credentials(name, manager))

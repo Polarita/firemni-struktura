@@ -20,11 +20,12 @@ const private = target + "/.polarita-agent"
 const tmpfs = 0x01021994
 
 type grant struct {
-	RoleID   string `json:"role_id"`
-	SecretID string `json:"secret_id"`
-	Path     string `json:"path"`
-	UID      int    `json:"uid"`
-	GID      int    `json:"gid"`
+	Databases []string `json:"databases"`
+	RoleID    string   `json:"role_id"`
+	SecretID  string   `json:"secret_id"`
+	Path      string   `json:"path"`
+	UID       int      `json:"uid"`
+	GID       int      `json:"gid"`
 }
 
 func memoryDirectory() error {
@@ -104,6 +105,21 @@ template {
   contents = "{{ with secret \"test/data/%s\" }}{{ .Data.data.vzorek }}{{ end }}"
 }
 `, tmp, tmp, tmp, g.Path)
+	outputs := map[string]string{"hodnota": "polarita-test"}
+	for _, name := range g.Databases {
+		if !regexp.MustCompile(`^[a-z][a-z0-9_]{0,40}$`).MatchString(name) {
+			return fmt.Errorf("neplatný název databáze")
+		}
+		file := "pg-" + name
+		config += fmt.Sprintf(`template {
+  destination = "%s/%s"
+  perms = "0400"
+  error_on_missing_key = true
+  contents = "{{ with secret \"test/data/databaze/%s\" }}{{ .Data.data.heslo }}{{ end }}"
+}
+`, tmp, file, name)
+		outputs[file] = file
+	}
 	if err := os.WriteFile(tmp+"/agent.hcl", []byte(config), 0400); err != nil {
 		return err
 	}
@@ -114,14 +130,19 @@ template {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("OpenBao Agent: %w", err)
 	}
-	value, err := os.ReadFile(tmp + "/hodnota")
-	if err != nil || len(bytes.TrimSpace(value)) == 0 {
-		return fmt.Errorf("agent nevrátil hodnotu do tmpfs")
+	for source, dest := range outputs {
+		value, err := os.ReadFile(tmp + "/" + source)
+		if err != nil || len(bytes.TrimSpace(value)) == 0 {
+			return fmt.Errorf("agent nevrátil hodnotu do tmpfs")
+		}
+		if err := os.Chown(tmp+"/"+source, g.UID, g.GID); err != nil {
+			return err
+		}
+		if err := os.Rename(tmp+"/"+source, target+"/"+dest); err != nil {
+			return err
+		}
 	}
-	if err := os.Chown(tmp+"/hodnota", g.UID, g.GID); err != nil {
-		return err
-	}
-	return os.Rename(tmp+"/hodnota", target+"/polarita-test")
+	return nil
 }
 
 func main() {

@@ -109,7 +109,19 @@ def main():
                         raise
                     break
             else:
-                return 0
+                role = p.login(p.credentials("keycloak-test", manager))
+                try:
+                    try:
+                        p.request("GET", "test/data/databaze/keycloak", token=role)
+                    except HTTPError as err:
+                        if err.code == 404:
+                            return 0
+                        if err.code != 403:
+                            raise
+                    else:
+                        return 0
+                finally:
+                    p.request("POST", "auth/token/revoke-self", {}, role)
         if "--kontrola" in sys.argv:
             return 42
         shares = json.load(sys.stdin)

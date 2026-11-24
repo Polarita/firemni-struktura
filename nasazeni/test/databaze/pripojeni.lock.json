@@ -1,0 +1,62 @@
+{
+  "db_eshop": {
+    "aplikace": "direct",
+    "pool_mode": "session"
+  },
+  "db_akademie": {
+    "aplikace": "direct",
+    "pool_mode": "session"
+  },
+  "db_erp_lhutnik": {
+    "aplikace": "pool",
+    "pool_mode": "transaction"
+  },
+  "db_gdpr_zkousky": {
+    "aplikace": "pool",
+    "pool_mode": "transaction"
+  },
+  "db_hr_lide": {
+    "aplikace": "pool",
+    "pool_mode": "transaction"
+  },
+  "db_paperclip": {
+    "aplikace": "direct",
+    "pool_mode": "session"
+  },
+  "keycloak": {
+    "aplikace": "direct",
+    "pool_mode": "session"
+  },
+  "paperless": {
+    "aplikace": "direct",
+    "pool_mode": "session"
+  },
+  "vikunja": {
+    "aplikace": "direct",
+    "pool_mode": "session"
+  },
+  "gitea": {
+    "aplikace": "direct",
+    "pool_mode": "session"
+  },
+  "umami": {
+    "aplikace": "direct",
+    "pool_mode": "session"
+  },
+  "zulip": {
+    "aplikace": "direct",
+    "pool_mode": "session"
+  },
+  "stalwart": {
+    "aplikace": "direct",
+    "pool_mode": "session"
+  },
+  "chatwoot": {
+    "aplikace": "direct",
+    "pool_mode": "session"
+  },
+  "traccar": {
+    "aplikace": "direct",
+    "pool_mode": "session"
+  }
+}

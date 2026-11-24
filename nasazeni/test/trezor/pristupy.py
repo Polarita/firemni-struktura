@@ -48,7 +48,14 @@ FIXTURES = {
     "isds-podatelna-bridge": ["stav-podatelny"],
     "openbao-test": ["openbao-agent"],
     "vaultwarden-test": ["vaultwarden-agent"],
+    "postgres-test": ["postgres-agent"],
+    "keycloak-test": ["keycloak-agent"],
 }
+DATABASES = (
+    "db_eshop", "db_akademie", "db_erp_lhutnik", "db_gdpr_zkousky", "db_hr_lide", "db_paperclip",
+    "keycloak", "paperless", "vikunja", "gitea", "umami", "zulip", "stalwart", "chatwoot", "traccar",
+)
+DATABASE_ACCESS = {"postgres-test": DATABASES, "keycloak-test": ("keycloak",)}
 # Skutečné údaje ISDS vydá až oprávněný proces s ověřeným časem a rozhodnutím.
 DENIED = ["isds-cteni", "isds-odesilani", "eet-vypnuto", "cizi-vzorek"]
 HTTP = None
@@ -120,10 +127,15 @@ def configure(root):
     policy += allow("sys/generate-root-token/update", "update")
     for fixture in sorted({x for values in FIXTURES.values() for x in values} | set(DENIED)):
         policy += allow("test/data/" + fixture, "create", "update")
+    for name in DATABASES:
+        policy += allow("test/metadata/databaze/" + name, "read")
+        policy += allow("test/data/databaze/" + name, "create")
     for role, paths in FIXTURES.items():
         acl = allow("auth/token/revoke-self", "update")
         for path in paths:
             acl += allow("test/data/" + path, "read")
+        for db in DATABASE_ACCESS.get(role, ()):
+            acl += allow("test/data/databaze/" + db, "read")
         put("sys/policies/acl/" + role, {"policy": acl})
         put("auth/approle/role/" + role, {"token_policies": [role], "token_no_default_policy": True,
             "token_ttl": "120s", "token_max_ttl": "120s", "secret_id_num_uses": 1, "secret_id_ttl": "120s"})
@@ -135,6 +147,20 @@ def configure(root):
         "token_bound_cidrs": ["10.239.33.1/32"]})
     if not (VAULT / "bao-sprava.cred").exists():
         protect("bao-sprava", credentials(MAINT, root))
+
+
+def initialize_database_passwords(manager):
+    for name in DATABASES:
+        try:
+            metadata = request("GET", "test/metadata/databaze/" + name, token=manager)["data"]
+            version = metadata["versions"][str(metadata["current_version"])]
+            if version.get("destroyed") or version.get("deletion_time"):
+                raise RuntimeError("Obnovte odstraněné tajemství databáze " + name)
+        except HTTPError as err:
+            if err.code != 404:
+                raise
+            request("POST", "test/data/databaze/" + name,
+                    {"options": {"cas": 0}, "data": {"heslo": secrets.token_urlsafe(32)}}, manager)
 
 
 def expect_forbidden(method, path, token, body=None):
@@ -149,6 +175,7 @@ def expect_forbidden(method, path, token, body=None):
 
 def verify_roles():
     manager = login(recover("bao-sprava"))
+    initialize_database_passwords(manager)
     values = {}
     for fixture in sorted({x for paths in FIXTURES.values() for x in paths} | set(DENIED)):
         # Zkouška má vlastní pole a cesty pouze v samostatném testovacím KV.
