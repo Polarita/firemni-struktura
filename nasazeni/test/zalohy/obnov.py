@@ -57,7 +57,14 @@ def main():
         payload = {"seal":base64.b64encode(seal).decode(),"manager":provoz.p.recover("bao-sprava")}
         subprocess.run(["incus","exec","-T",name,"--","python3","/run/obnov_raft.py"],
                        input=json.dumps(payload).encode(), check=True, timeout=180)
-        pg.inside(name,"bash","-ec","set -o pipefail; gzip -dc /var/tmp/obnova-polarita/cluster.sql.gz | runuser -u postgres -- psql -Xq -v ON_ERROR_STOP=1 -U obnova_test -d postgres >/dev/null")
+        # Import zapisuje do dočasného izolovaného clusteru. Po jeho dokončení vynutíme zápis celého WAL.
+        pg.run("incus","exec","-T",name,"--","bash","-ec", """
+set -euo pipefail
+psql=(runuser -u postgres -- psql -Xq -v ON_ERROR_STOP=1 -U obnova_test -d postgres)
+gzip -dc /var/tmp/obnova-polarita/cluster.sql.gz |
+    runuser -u postgres -- env PGOPTIONS='-c synchronous_commit=off' psql -Xq -v ON_ERROR_STOP=1 -U obnova_test -d postgres >/dev/null
+"${psql[@]}" -c CHECKPOINT >/dev/null
+""", timeout=1800)
         saved=pg.inside(name,"cat","/var/tmp/obnova-polarita/postgres.sha256").decode().strip()
         if pg.proof(name,"obnova_test").hex()!=saved:
             raise RuntimeError("Schémata databází, účty nebo identita po obnově nesouhlasí")
