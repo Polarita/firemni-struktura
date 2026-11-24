@@ -1,0 +1,13 @@
+runner:
+  file: /var/lib/polarita-ci/registrace/.runner
+  capacity: 1
+  timeout: 50m
+  labels:
+    - polarita-incus:host
+  envs:
+    GIT_SSL_CAINFO: /etc/polarita-gitea/git-ca.crt
+    SSL_CERT_FILE: /etc/polarita-gitea/git-ca.crt
+cache:
+  enabled: false
+host:
+  workdir_parent: /var/lib/polarita-ci/ulohy

@@ -1,0 +1,18 @@
+[Unit]
+Description=Jediná testovací úloha v izolovaném pracovníku Gitea
+After=network-online.target
+[Service]
+User=pol-ci
+Group=pol-ci
+WorkingDirectory=/var/lib/polarita-ci
+Environment=HOME=/var/lib/polarita-ci
+Environment=SSL_CERT_FILE=/etc/polarita-gitea/git-ca.crt
+Environment=GIT_SSL_CAINFO=/etc/polarita-gitea/git-ca.crt
+Environment=GOMEMLIMIT=80MiB
+ExecStart=/opt/polarita-runner/runner --config /etc/polarita-gitea/runner.yaml daemon --once
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/polarita-ci
+UMask=0077
