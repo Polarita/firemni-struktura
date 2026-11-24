@@ -1,0 +1,8 @@
+[Unit]
+Description=Každou minutu ověř signál z VM i Checkmk
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=2s
+[Install]
+WantedBy=timers.target

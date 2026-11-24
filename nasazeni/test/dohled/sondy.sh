@@ -11,6 +11,7 @@ After=incus.service
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/python3 $src/sbirej.py
+ExecStartPost=/usr/bin/python3 $src/signal.py
 TimeoutStartSec=60s
 UMask=0077
 UNIT

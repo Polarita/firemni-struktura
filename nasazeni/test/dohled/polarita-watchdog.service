@@ -1,0 +1,13 @@
+[Unit]
+Description=Lokální dohled nad srdcem VM a aktuálností jádra Checkmk
+[Service]
+Type=oneshot
+User=pol-watchdog
+Group=pol-watchdog
+ExecStart=/usr/bin/python3 /usr/local/lib/polarita-watchdog/watchdog.py
+ProtectSystem=strict
+ProtectHome=true
+PrivateNetwork=true
+NoNewPrivileges=true
+StateDirectory=polarita-watchdog
+UMask=0077
