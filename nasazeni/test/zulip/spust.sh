@@ -22,7 +22,10 @@ BEGIN
 END $$;
 ALTER DATABASE zulip OWNER TO zulip;
 SQL
-incus file pull gitea-test/var/lib/gitea/vstup/data/caddy/pki/authorities/local/root.crt "$work/identita.crt"
+incus file pull gitea-test/var/lib/gitea/vstup/data/caddy/pki/authorities/local/root.crt "$tmp/identita.crt"
+openssl x509 -in "$tmp/identita.crt" -noout -checkend 0
+install -m 0644 "$tmp/identita.crt" "$work/.identita.crt.next"
+mv -T "$work/.identita.crt.next" "$work/identita.crt"
 "${inside[@]}" install -m 0644 /etc/polarita-zulip/identita.crt /usr/local/share/ca-certificates/polarita-oidc.crt
 "${inside[@]}" update-ca-certificates
 "${inside[@]}" python3 - "$fqdn" <<'PY'
