@@ -220,6 +220,7 @@ karantena() {
     "${inc[@]}" file push --project polarita "$tmp/karantena.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-04/karantena-$commit.txt"
     "${guest[@]}" python3 "$dest/nasazeni/test/paperless/vzor.py" | tee "$tmp/paperless-vzor.txt"
     "${inc[@]}" file push --project polarita "$tmp/paperless-vzor.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-vzor-$commit.txt"
+    printf 'https://%s:8448/\n' "$fqdn" | "${guest[@]}" incus exec -T reditelstvi-test -- sh -ec 'umask 022; cat >/usr/local/share/.polarita-paperless-url.next; mv -T /usr/local/share/.polarita-paperless-url.next /usr/local/share/polarita-paperless-url'
 }
 
 zalohy() {
