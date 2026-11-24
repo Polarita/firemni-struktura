@@ -1,6 +1,7 @@
 """Zapíše jednorázový CI účet pouze pro soukromý testovací repozitář."""
 import fcntl
 from pathlib import Path
+import re
 import socket
 import subprocess
 from pripoj_identitu import CLI
@@ -27,12 +28,15 @@ with Path("/run/polarita-gitea-registrace.lock").open("a") as lock:
         if not (16 <= len(token) <= 160) or any(x < 33 or x > 126 for x in token):
             raise RuntimeError("Gitea nevydala registrační token repozitáře")
         cmd = ["runuser","-u","pol-ci","--","env","HOME=/var/lib/polarita-ci","SSL_CERT_FILE=/etc/polarita-gitea/git-ca.crt",
+               "sh","-ec",'IFS= read -r GITEA_RUNNER_REGISTRATION_TOKEN; export GITEA_RUNNER_REGISTRATION_TOKEN; exec "$@"',"registrace",
                "/opt/polarita-runner/runner","--config","/etc/polarita-gitea/runner.yaml","register",
                "--no-interactive","--ephemeral","--name","polarita-ci-test","--labels","polarita-incus:host",
-               "--instance",url,"--token-file","/dev/stdin"]
+               "--instance",url]
         res = subprocess.run(inside+cmd,input=token+b"\n",capture_output=True)
         if res.returncode:
-            raise RuntimeError(f"Registrace pracovníka selhala s kódem {res.returncode}")
+            detail = (res.stderr + res.stdout).replace(token,b"[skryto]").decode(errors="replace")
+            detail = re.sub(r"[A-Za-z0-9_+/=-]{24,}", "[skryto]", detail)
+            raise RuntimeError(f"Registrace pracovníka selhala s kódem {res.returncode}: {detail[-700:]}")
         subprocess.run(inside+["systemctl","start","gitea-ci.service"],check=True)
         subprocess.run(inside+["systemctl","is-active","--quiet","gitea-ci.service"],check=True)
         print("Jednorázový pracovník je registrovaný pouze pro "+scope+".")

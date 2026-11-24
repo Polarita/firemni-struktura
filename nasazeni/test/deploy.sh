@@ -89,6 +89,8 @@ python3 nasazeni/test/identita/overeni.py "https://$fqdn/identita" | tee "$tmp/i
 "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/git/zkouska_prihlaseni.py "https://$fqdn" | tee -a "$tmp/gitea.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/git/repozitar.py" | tee -a "$tmp/gitea.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/git/registrace.py" | tee -a "$tmp/gitea.txt"
+git archive --format=tar.gz "$commit" | "${guest[@]}" install -m 0600 /dev/stdin "$dest/zdroj-ci.tar.gz"
+"${guest[@]}" python3 "$dest/nasazeni/test/git/zdroj_ci.py" "$dest/zdroj-ci.tar.gz" | tee -a "$tmp/gitea.txt"
 "${guest[@]}" incus exec -T reditelstvi-test -- touch /usr/local/share/polarita-gitea-oidc.ok
 "${guest[@]}" bash "$dest/nasazeni/test/objekty/zkouska.sh" | tee "$tmp/garage.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/databaze/obnova.py" | tee "$tmp/obnova-databazi.txt"
