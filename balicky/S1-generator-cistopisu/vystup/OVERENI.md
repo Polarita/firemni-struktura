@@ -4,7 +4,7 @@
 - **Příkaz:** `python3 generate_pdfs.py` → návratový kód `0`, **`15` dokumentů v `8` sestavách, `69` stran** (`generate_pdfs.py --check` → `VERIFIED_PASS: 15/15`)
 - **Testy:** `python3 -m unittest test_generate_pdfs` → všechny testy skončí `OK` (včetně tisku zkušebního PDF, escapování HTML a zneškodnění značek v dosazovaných hodnotách)
 - **Co kontrola pokrývá:** úplnost proměnných šablona ↔ data oběma směry, platná hlavička PDF, žádná nevyplněná proměnná v textu PDF, manifest s otisky `SHA-256`; v textu vygenerovaných PDF není žádné číslo předpisu, paragrafu ani označení normy.
-- **Co kontrola nepokrývá:** právní a normovou správnost textů. Šablony jsou ukázkové vzory bez odkazů na konkrétní předpisy a normy; závazné znění vznikne v `Bloku 13` převodem právního minima potvrzeného advokátem v `Bloku 8` (nová znění posoudí `15001 pravni-specialista` a potvrdí advokát). Nepokrývá ani běh v zóně `sandbox_airgap`.
+- **Co kontrola nepokrývá:** právní a normovou správnost textů. Šablony jsou ukázkové vzory bez odkazů na konkrétní předpisy a normy; závazné znění vznikne v `Bloku 13` převodem právního minima potvrzeného advokátem po převzetí systému (nová znění posoudí `15001 pravni-specialista` a potvrdí advokát). Nepokrývá ani běh v zóně `sandbox_airgap`.
 - Všechna PDF v této složce nesou vodoznak **VZOR** a obsahují fiktivní data.
 - Sloupec „Proměnných“ odpovídá aktuálním šablonám a datům (`generate_pdfs.py --check` → `VERIFIED_PASS: 15/15`). Počty stran a otisky `SHA-256` v tabulce i v manifestech pocházejí z běhu uvedeného výše a po každé změně šablon nebo dat se obnovují novým během generátoru.
 

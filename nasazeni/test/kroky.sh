@@ -175,6 +175,7 @@ obnova_databazi() {
     "${guest[@]}" python3 "$dest/nasazeni/test/databaze/obnova.py" | tee "$tmp/obnova-databazi.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/pamet/instalace.sh" | tee "$tmp/znalosti.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/agent-vault/instalace.sh" | tee -a "$tmp/znalosti.txt"
+    "${guest[@]}" bash "$dest/nasazeni/test/den-1/instalace.sh" | tee -a "$tmp/znalosti.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/silverbullet/instalace.sh" | tee -a "$tmp/znalosti.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/silverbullet/vstup.sh" | tee -a "$tmp/znalosti.txt"
     sudo -n bash nasazeni/test/port-vpn.sh 8446 >/dev/null
