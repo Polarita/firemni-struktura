@@ -38,18 +38,10 @@ python3 "$src/pristup.py"
 install -m0644 "$src"/polarita-vault-pg.{service,socket} /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now polarita-vault-pg.socket
-# Přenes jen role a schválené názvy. Karty obsahující osobní údaje se do Vaultu nekopírují.
+# Účet znalostí čte výřez provozní charty a registr rolí.
 seed=$(mktemp -d)
 trap 'rm -r -- "$seed"' EXIT
-install -dm0755 "$seed/nastroje" "$seed/oddeleni"
-python3 - "$src/../../../nastroje/kanon.json" "$seed/nastroje/kanon.json" <<'PYTHON'
-import json,sys
-from pathlib import Path
-data=json.loads(Path(sys.argv[1]).read_text())
-rows=[{k:a[k] for k in ("id","sysid","department")} for a in data["agents"]]
-Path(sys.argv[2]).write_text(json.dumps({"agents":rows,"company":{"branch":data["company"]["branch"]}}))
-PYTHON
-for f in "$src"/../../../oddeleni/*.md; do head -n1 "$f" >"$seed/oddeleni/${f##*/}"; done
+python3 "$dir/zaklad.py" --priprav "$src/../../.." "$seed"
 chmod 0755 "$seed"
 runuser -u polarita-pamet -- /usr/bin/python3 -Es "$dir/zaklad.py" "$seed"
 ln -sfn "$recipe" "$root/.current-next"
@@ -57,7 +49,7 @@ mv -Tf "$root/.current-next" "$root/current"
 install -m0755 "$src/spust.sh" /usr/local/sbin/agent_vault
 python3 "$src/role.py" "$seed"
 ln -sfn /usr/local/sbin/agent_vault /usr/local/bin/agent_vault
-python3 "$src/zkouska.py"
+python3 "$src/zkouska.py" "$seed/oddeleni"
 dest=$(cd "$src/../../.." && pwd)
 python3 "$src/puvod.py" "$dest"
 rev=${dest##*/}

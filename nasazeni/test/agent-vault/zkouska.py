@@ -1,6 +1,8 @@
 """Ověřuje běžné CLI se skutečnými identitami, trvalým Gitem a databází."""
 import json
+from pathlib import Path
 import subprocess
+import sys
 
 def call(role,*args,body=b"",success=True):
     p = subprocess.run(["runuser","-u","pol-vault-"+role,"--","/usr/local/bin/agent_vault",*args],
@@ -15,6 +17,13 @@ def main():
     charters = [f"02-Oddeleni-a-Procesy/utvar-{n}.md" for n in range(11,19)]
     if not set(charters+["00-Meta/pobocky.md","08-Deniky-a-Predavky/sablona-predavky.md"]).issubset(pages):
         raise RuntimeError("Neúplné organizační podklady")
+    for number in range(11,19):
+        doc, = Path(sys.argv[1]).glob(f"{number}-*.md")
+        _, operational = doc.read_text().split("\n\n",1)
+        path = f"02-Oddeleni-a-Procesy/charta-{number}.md"
+        if not call("11001","get-context",path)["text"].endswith(operational):
+            raise RuntimeError(f"Čtecí účet nezískal úplnou provozní část charty útvaru {number}.")
+    print("Účet CEO přečetl všech osm provozních chart. Postupy, ukazatele, vstupy a výstupy souhlasí se zdroji.")
     if "CZ-101" not in call("11001","get-context","00-Meta/pobocky.md")["text"]:
         raise RuntimeError("Chybí pražská centrála")
     for path in ("test-login/heslo","../data/bootstrap-test","00-Meta/../../.git/config"):
@@ -32,7 +41,8 @@ def main():
         if saved!=again or body not in call("11001","get-context",saved["cesta"])["text"]:
             raise RuntimeError("Předávka nebo rozhodnutí nejsou trvalé a opakovatelné.")
     matches = call("11001","search","Kdo obstarává materiál a řídí zásoby internetového obchodu?","--limit","3")
-    if charters[2] not in [r["cesta"] for r in matches["vysledky"]] or any(not -1<=r["shoda"]<=1 for r in matches["vysledky"]):
+    expected = {charters[2], "02-Oddeleni-a-Procesy/charta-13.md"}
+    if expected.isdisjoint(r["cesta"] for r in matches["vysledky"]) or any(not -1<=r["shoda"]<=1 for r in matches["vysledky"]):
         raise RuntimeError("Český sémantický dotaz nenašel odpovědné obchodní oddělení")
     print("Agent CEO v SHADOW přečetl pobočku CZ-101 a osm útvarů. Zápisy CEO, cizí cesta a syntetický osobní údaj byly odmítnuty.")
     print("Role 17005 uložila předávku a ADR do Gitu. Opakování zachovalo revizi a účet CEO oba výsledky přečetl.")
