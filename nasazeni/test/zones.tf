@@ -23,6 +23,7 @@ resource "incus_network" "zone" {
       local=/polarita.test/
       host-record=vpn.polarita.test,10.239.31.10
       host-record=stun.polarita.test,10.239.31.11
+      host-record=database.clamav.net,10.239.31.1
       dhcp-option=option:dns-server,10.239.31.1
     DNS
   } : {})

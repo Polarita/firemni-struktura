@@ -12,7 +12,7 @@ from urllib.error import HTTPError
 from urllib.request import HTTPSHandler, ProxyHandler, Request, build_opener
 
 WORK = Path("/srv/polarita/infra/openbao-test")
-VAULT = Path("/srv/polarita/vault/openbao-test")
+VAULT = Path("/srv/polarita/data/bootstrap-test/openbao-test")
 BASE = "https://10.239.33.10:8200/v1/"
 MAINT = "sprava-test"
 FIXTURES = {
@@ -49,6 +49,7 @@ FIXTURES = {
     "openbao-test": ["openbao-agent"],
     "vaultwarden-test": ["vaultwarden-agent"],
     "postgres-test": ["postgres-agent"],
+    "pecet-test": ["pecet-agent"],
     "keycloak-test": ["keycloak-agent"],
 }
 DATABASES = (
@@ -127,6 +128,7 @@ def configure(root):
     policy += allow("sys/generate-root-token/update", "update")
     for fixture in sorted({x for values in FIXTURES.values() for x in values} | set(DENIED)):
         policy += allow("test/data/" + fixture, "create", "update")
+    policy += allow("test/metadata/pki/organizace-test", "read") + allow("test/data/pki/organizace-test", "create")
     for name in DATABASES:
         policy += allow("test/metadata/databaze/" + name, "read")
         policy += allow("test/data/databaze/" + name, "create")
@@ -134,6 +136,8 @@ def configure(root):
         acl = allow("auth/token/revoke-self", "update")
         for path in paths:
             acl += allow("test/data/" + path, "read")
+        if role == "pecet-test":
+            acl += allow("test/data/pki/organizace-test", "read")
         for db in DATABASE_ACCESS.get(role, ()):
             acl += allow("test/data/databaze/" + db, "read")
         put("sys/policies/acl/" + role, {"policy": acl})
@@ -163,6 +167,20 @@ def initialize_database_passwords(manager):
                     {"options": {"cas": 0}, "data": {"heslo": secrets.token_urlsafe(32)}}, manager)
 
 
+def initialize_seal(manager):
+    from pecet_test import new_bundle
+    try:
+        meta = request("GET", "test/metadata/pki/organizace-test", token=manager)["data"]
+        version = meta["versions"][str(meta["current_version"])]
+        if version.get("destroyed") or version.get("deletion_time"):
+            raise RuntimeError("Obnovte testovací identitu pečeti")
+    except HTTPError as err:
+        if err.code != 404:
+            raise
+        request("POST", "test/data/pki/organizace-test",
+                {"options": {"cas": 0}, "data": {"sada": json.dumps(new_bundle())}}, manager)
+
+
 def expect_forbidden(method, path, token, body=None):
     try:
         request(method, path, body, token)
@@ -176,6 +194,7 @@ def expect_forbidden(method, path, token, body=None):
 def verify_roles():
     manager = login(recover("bao-sprava"))
     initialize_database_passwords(manager)
+    initialize_seal(manager)
     values = {}
     for fixture in sorted({x for paths in FIXTURES.values() for x in paths} | set(DENIED)):
         # Zkouška má vlastní pole a cesty pouze v samostatném testovacím KV.

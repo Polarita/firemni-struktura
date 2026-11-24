@@ -13,6 +13,7 @@ guest=("${inc[@]}" exec -T --project polarita polarita-hq --)
 dest=/srv/polarita/infra/releases/$commit
 "${guest[@]}" install -d "$dest"
 git archive "$commit" | "${guest[@]}" tar -x -C "$dest"
+"${guest[@]}" python3 "$dest/nasazeni/test/pamet/soukrome.py"
 tmp=$(mktemp -d)
 vpn_tmp=$("${guest[@]}" mktemp -d /run/polarita-vpn-test-XXXXXXXX)
 trap 'rm -rf "$tmp"; "${guest[@]}" rm -rf -- "$vpn_tmp"' EXIT
@@ -25,7 +26,7 @@ CGO_ENABLED=0 go build -trimpath -o "$tmp/portal" nasazeni/test/portal.go
 "${guest[@]}" curl -fsS --retry 4 --retry-connrefused -o /dev/null http://127.0.0.1:18184/
 sudo -n bash nasazeni/test/vstup.sh
 fqdn=$(tailscale status --json | python3 -c 'import json,sys;print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))')
-"${guest[@]}" cat /srv/polarita/vault/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn"
+"${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn"
 "${inc[@]}" file push --project polarita "$(command -v tailscale)" "$(command -v tailscaled || echo /usr/sbin/tailscaled)" "polarita-hq$vpn_tmp/"
 "${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-03
 "${guest[@]}" "$dest/nasazeni/test/mx.sh" | tee "$tmp/mx.txt"
@@ -46,8 +47,9 @@ CGO_ENABLED=0 go build -trimpath -o "$tmp/agent" nasazeni/test/trezor/agent.go
 "${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-05
 "${guest[@]}" bash "$dest/nasazeni/test/databaze/postgres.sh" | tee "$tmp/postgres.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/identita/instalace.sh" "https://$fqdn/identita"
+"${guest[@]}" bash "$dest/nasazeni/test/pecet/instalace.sh"
 sudo -n bash nasazeni/test/trezor/prijemce.sh
-if "${guest[@]}" test -e /srv/polarita/vault/openbao-test/inicializovano; then
+if "${guest[@]}" test -e /srv/polarita/data/bootstrap-test/openbao-test/inicializovano; then
     sudo -n python3 nasazeni/test/trezor/rozsireni.py "$dest/nasazeni/test/trezor"
 fi
 "${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-04
@@ -56,12 +58,21 @@ fi
 "${guest[@]}" touch /srv/polarita/infra/keycloak-test/conf/databaze-pripravena
 "${guest[@]}" bash "$dest/nasazeni/test/trezor/zkouska-startu.sh" | tee "$tmp/restart.txt"
 sudo -n python3 nasazeni/test/trezor/zkouska-obnovy.py "$dest/nasazeni/test/trezor" | tee "$tmp/obnova.txt"
+"${guest[@]}" python3 "$dest/nasazeni/test/pecet/zkouska.py" | tee "$tmp/pecet.txt"
+sum=$("${guest[@]}" sha256sum /srv/polarita/workspace/dukazy/blok-04/pecet/predavaci-protokol.pdf)
+"${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/pecet/portal.py "https://$fqdn" "${sum%% *}" | tee -a "$tmp/pecet.txt"
 python3 nasazeni/test/identita/overeni.py "https://$fqdn/identita" | tee "$tmp/identita.txt"
-"${guest[@]}" cat /srv/polarita/vault/test-login/heslo | python3 nasazeni/test/identita/prihlaseni.py "https://$fqdn/identita" | tee -a "$tmp/identita.txt"
-for proof in identita postgres databaze; do
+"${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/identita/prihlaseni.py "https://$fqdn/identita" | tee -a "$tmp/identita.txt"
+"${guest[@]}" python3 "$dest/nasazeni/test/databaze/obnova.py" | tee "$tmp/obnova-databazi.txt"
+"${guest[@]}" bash "$dest/nasazeni/test/pamet/instalace.sh" | tee "$tmp/znalosti.txt"
+for step in kvm-host proxy signatury priprava offline fronta; do
+    "${guest[@]}" bash "$dest/nasazeni/test/karantena/$step.sh"
+done
+"${guest[@]}" python3 "$dest/nasazeni/test/karantena/zkouska.py" | tee "$tmp/karantena.txt"
+for proof in identita postgres databaze obnova-databazi znalosti; do
     "${inc[@]}" file push --project polarita "$tmp/$proof.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-05/$proof-$commit.txt"
 done
-for proof in trezor restart obnova hesla obnova-hesel; do
+for proof in trezor restart obnova hesla obnova-hesel pecet karantena; do
     "${inc[@]}" file push --project polarita "$tmp/$proof.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-04/$proof-$commit.txt"
 done
 # Starší vydání vytvořilo přímý vstup. Odstraň ho až po ověření nové cesty.

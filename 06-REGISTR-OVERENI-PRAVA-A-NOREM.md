@@ -1,4 +1,4 @@
-# Právní a normová báze: pravidla a registr otevřených bodů — Polarita s.r.o. (Verze 3.6)
+# Právní a normová báze: pravidla a registr otevřených bodů — Polarita s.r.o. (Verze 3.7)
 
 > V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem. Podrobný postup uvádí [README](./README.md).
 

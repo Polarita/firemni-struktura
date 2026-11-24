@@ -1,0 +1,8 @@
+[Unit]
+Description=Opakování nedokončených očistných úloh
+[Timer]
+OnCalendar=hourly
+Persistent=true
+Unit=polarita-karantena.service
+[Install]
+WantedBy=timers.target

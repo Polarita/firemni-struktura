@@ -142,7 +142,7 @@ def client(register_new):
             raise
     else:
         raise RuntimeError("Cizí adresa získala registraci")
-    password = Path("/srv/polarita/vault/test-login/heslo").read_bytes().rstrip(b"\r\n")
+    password = Path("/srv/polarita/data/bootstrap-test/test-login/heslo").read_bytes().rstrip(b"\r\n")
     master = pbkdf2_hmac("sha256", password, EMAIL.encode(), ITERATIONS)
     stretched = b"".join(HKDFExpand(hashes.SHA256(), 32, label).derive(master) for label in (b"enc", b"mac"))
     authentication = b64(pbkdf2_hmac("sha256", master, password, 1))

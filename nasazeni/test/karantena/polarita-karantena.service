@@ -1,0 +1,9 @@
+[Unit]
+Description=Očista příloh v izolovaném pracovním stroji
+After=incus.service polarita-zfs.service
+RequiresMountsFor=/srv/polarita/data/airgap-spool /srv/polarita/workspace
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /srv/polarita/infra/karantena-test/bin/zpracovani.py --opakovat
+UMask=0077
+TimeoutStartSec=infinity

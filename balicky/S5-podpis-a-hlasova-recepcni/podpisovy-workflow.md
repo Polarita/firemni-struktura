@@ -1,4 +1,4 @@
-# Podpisový workflow — dvoustranný elektronický podpis smluv (`esign-bridge`) · Blok 17 · Verze 3.6
+# Podpisový workflow — dvoustranný elektronický podpis smluv (`esign-bridge`) · Blok 17 · Verze 3.7
 
 Tento dokument popisuje krok za krokem tok dvoustranného podpisu Smlouvy o dílo, Změnového listu víceprací a servisní smlouvy `Elektro Správa SVJ a Firem` (MRR). Doplňuje řídicí dokument [README.md](README.md) (pravidla 1–10). Jde o návrh: konektor `esign-bridge` není naprogramován ani nasazen a smlouva s poskytovatelem podpisu není uzavřena.
 
@@ -12,7 +12,7 @@ Tento dokument popisuje krok za krokem tok dvoustranného podpisu Smlouvy o díl
 
 ## 1. Předpoklady před prvním použitím
 
-| Předpoklad | Kdo | Stav ve Verzi 3.6 |
+| Předpoklad | Kdo | Stav ve Verzi 3.7 |
 | :--- | :--- | :--- |
 | Smlouva s poskytovatelem podpisu a zpracovatelská smlouva podle GDPR | `1001` *(posouzení `15001`)* | Neuzavřeno — `NÁVRH — ke schválení 1001` |
 | Matice úrovní podpisu podle typu listiny (prostý / zaručený / kvalifikovaný) | `15001` + `1001` | `NÁVRH — ke schválení 1001` |

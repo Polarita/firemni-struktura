@@ -3,7 +3,7 @@
 set -euo pipefail
 [[ $(hostname -s) == polarita-hq ]]
 work=/srv/polarita/infra/openbao-test
-dir=/srv/polarita/vault/openbao-test
+dir=/srv/polarita/data/bootstrap-test/openbao-test
 exec 9>"$work/.start-lock"
 flock 9
 [[ ! -e $work/uzamceno ]] || exit 0

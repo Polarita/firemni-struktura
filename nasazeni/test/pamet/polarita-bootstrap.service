@@ -1,0 +1,11 @@
+[Unit]
+Description=Šifrované instalační údaje testovací firmy
+Requires=polarita-zfs.service
+After=polarita-zfs.service
+Before=incus.service polarita-openbao-start.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/polarita/pripoj-bootstrap
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target

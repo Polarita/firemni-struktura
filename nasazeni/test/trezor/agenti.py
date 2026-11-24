@@ -15,6 +15,7 @@ CLIENTS = {
     "stalwart-mx-test": ("10.239.31.12", 2000, 2000, "stalwart-mx"),
     "reditelstvi-test": ("10.239.32.10", 65534, 65533, "reditelstvi"),
     "vaultwarden-test": ("10.239.33.11", 0, 0, "vaultwarden-agent"),
+    "pecet-test": ("10.239.32.12", 65534, 65534, "pecet-agent"),
     "keycloak-test": ("10.239.32.11", 1000, 0, "keycloak-agent"),
     "postgres-test": ("10.239.33.12", 0, 0, "postgres-agent"),
     "openbao-test": ("10.239.33.10", 986, 986, "openbao-agent"),
@@ -54,7 +55,7 @@ def deliver(name, manager):
     secret = p.request("POST", base + "/secret-id",
                        {"cidr_list": [cidr], "token_bound_cidrs": [cidr]}, manager)["data"]["secret_id"]
     payload = {"role_id": rid, "secret_id": secret, "uid": uid, "gid": gid, "path": fixture,
-               "databases": p.DATABASE_ACCESS.get(name, ())}
+               "databases": p.DATABASE_ACCESS.get(name, ()), "seal": name == "pecet-test"}
     run("incus", "exec", "-T", name, "--user", "0", "--group", "0", "--",
         TARGET + "/agent", data=json.dumps(payload).encode())
     token = p.login(p.credentials(name, manager))
@@ -69,6 +70,14 @@ def deliver(name, manager):
     print(f"{name}: OpenBao Agent vykreslil povolené tajemství do /run/secrets.", flush=True)
 
 
+def deliver_with_token(name, credentials):
+    manager = p.login(credentials)
+    try:
+        deliver(name, manager)
+    finally:
+        p.request("POST", "auth/token/revoke-self", {}, manager)
+
+
 if __name__ == "__main__":
     if run("hostname", "-s").strip() != b"polarita-hq":
         sys.exit("Úloha patří do polarita-hq")
@@ -81,9 +90,6 @@ if __name__ == "__main__":
             for name in CLIENTS:
                 install(name)
         p.HTTP = p.build_opener(p.ProxyHandler({}), p.HTTPSHandler(context=p.ssl.create_default_context(cafile=str(p.WORK / "ca.crt"))))
-        manager = p.login(p.recover("bao-sprava"))
-        try:
-            with ThreadPoolExecutor(max_workers=2) as pool:
-                list(pool.map(lambda n: deliver(n, manager), CLIENTS))
-        finally:
-            p.request("POST", "auth/token/revoke-self", {}, manager)
+        credentials = p.recover("bao-sprava")
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            list(pool.map(lambda name: deliver_with_token(name, credentials), CLIENTS))

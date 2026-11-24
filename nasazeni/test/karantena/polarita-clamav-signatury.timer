@@ -1,0 +1,8 @@
+[Unit]
+Description=Ověření dostupnosti nových signatur ClamAV
+[Timer]
+OnCalendar=*-*-* 05,17:15:00
+RandomizedDelaySec=15m
+Persistent=true
+[Install]
+WantedBy=timers.target

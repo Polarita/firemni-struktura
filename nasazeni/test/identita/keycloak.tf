@@ -51,7 +51,7 @@ resource "incus_instance" "identita" {
     name = "realm"
     type = "disk"
     properties = {
-      source   = "/srv/polarita/vault/keycloak-test/import"
+      source   = "/srv/polarita/data/bootstrap-test/keycloak-test/import"
       path     = "/opt/keycloak/data/import"
       readonly = "true"
       shift    = "true"

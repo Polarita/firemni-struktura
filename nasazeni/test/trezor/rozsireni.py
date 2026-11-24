@@ -12,7 +12,7 @@ status = subprocess.run(runner + ["--kontrola"], check=False).returncode
 if status != 42:
     sys.exit(status)
 directory = Path("/etc/polarita-test-obnova")
-envelope = subprocess.check_output(guest + ["cat", "/srv/polarita/vault/openbao-test/obnova-podily.cms"])
+envelope = subprocess.check_output(guest + ["cat", "/srv/polarita/data/bootstrap-test/openbao-test/obnova-podily.cms"])
 shares = json.loads(subprocess.run(
     ["openssl", "cms", "-decrypt", "-binary", "-inform", "DER", "-recip", str(directory / "test.crt"),
      "-inkey", str(directory / "test.key")], input=envelope, capture_output=True, check=True).stdout)

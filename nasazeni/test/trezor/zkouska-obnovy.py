@@ -15,7 +15,7 @@ directory = Path("/etc/polarita-test-obnova")
 
 
 def decrypt(name):
-    archive = subprocess.check_output(guest + ["cat", "/srv/polarita/vault/openbao-test/" + name])
+    archive = subprocess.check_output(guest + ["cat", "/srv/polarita/data/bootstrap-test/openbao-test/" + name])
     return subprocess.run(["openssl", "cms", "-decrypt", "-binary", "-inform", "DER",
                            "-recip", str(directory / "test.crt"), "-inkey", str(directory / "test.key")],
                           input=archive, capture_output=True, check=True).stdout
@@ -31,7 +31,7 @@ os.umask(0o077)
 with tempfile.TemporaryDirectory(dir=directory) as tmp:
     work = Path(tmp)
     for name in ("pecet.cms", "obnova-podily.cms"):
-        (work / name).write_bytes(subprocess.check_output(guest + ["cat", "/srv/polarita/vault/openbao-test/" + name]))
+        (work / name).write_bytes(subprocess.check_output(guest + ["cat", "/srv/polarita/data/bootstrap-test/openbao-test/" + name]))
     with subprocess.Popen(guest + ["cat", "/srv/polarita/backups/openbao/posledni.tar"], stdout=subprocess.PIPE) as source:
         with source.stdout:
             subprocess.run(["openssl", "cms", "-encrypt", "-stream", "-binary", "-aes-256-gcm",

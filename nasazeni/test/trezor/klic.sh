@@ -3,7 +3,7 @@ set -euo pipefail
 [[ $(hostname -s) == polarita-hq ]]
 umask 077
 work=/srv/polarita/infra/openbao-test
-dir=/srv/polarita/vault/openbao-test
+dir=/srv/polarita/data/bootstrap-test/openbao-test
 install -d -m 0700 "$dir"
 cd "$dir"
 test -s "$work/test-obnova.crt"

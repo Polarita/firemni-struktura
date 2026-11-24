@@ -1,0 +1,8 @@
+[Unit]
+Description=Aktualizace antivirových signatur karantény Polarity
+After=incus.service polarita-clamav-proxy.service
+Requires=polarita-clamav-proxy.service
+[Service]
+Type=oneshot
+ExecStart=/srv/polarita/infra/karantena-test/aktualizuj.sh
+TimeoutStartSec=12min

@@ -20,6 +20,7 @@ const private = target + "/.polarita-agent"
 const tmpfs = 0x01021994
 
 type grant struct {
+	Seal      bool     `json:"seal"`
 	Databases []string `json:"databases"`
 	RoleID    string   `json:"role_id"`
 	SecretID  string   `json:"secret_id"`
@@ -106,6 +107,16 @@ template {
 }
 `, tmp, tmp, tmp, g.Path)
 	outputs := map[string]string{"hodnota": "polarita-test"}
+	if g.Seal {
+		config += fmt.Sprintf(`template {
+  destination = "%s/pecet"
+  perms = "0400"
+  error_on_missing_key = true
+  contents = "{{ with secret \"test/data/pki/organizace-test\" }}{{ .Data.data.sada }}{{ end }}"
+}
+`, tmp)
+		outputs["pecet"] = "pecet-test"
+	}
 	for _, name := range g.Databases {
 		if !regexp.MustCompile(`^[a-z][a-z0-9_]{0,40}$`).MatchString(name) {
 			return fmt.Errorf("neplatný název databáze")
@@ -123,7 +134,7 @@ template {
 	if err := os.WriteFile(tmp+"/agent.hcl", []byte(config), 0400); err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 85*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "/opt/polarita-openbao/bao", "agent", "-config="+tmp+"/agent.hcl", "-log-level=warn")
 	cmd.Stderr = os.Stderr

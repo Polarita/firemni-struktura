@@ -1,4 +1,4 @@
-# Karta ai zaměstnance č. 15001: Tereza Jelínková (ai) — Specialistka smluvní, legislativní a GDPR kontroly (`pravni-specialista`) · Verze 3.6
+# Karta ai zaměstnance č. 15001: Tereza Jelínková (ai) — Specialistka smluvní, legislativní a GDPR kontroly (`pravni-specialista`) · Verze 3.7
 
 ## 1. Osobní a organizační karta
 
@@ -147,7 +147,7 @@ Zahajujeme právní a compliance agendu čisté společnosti Polarita s.r.o.
 
 ## 6. Zapojení do rozvojových balíčků `S1–S7` (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.6 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
+Balíčky `S1–S7` jsou ve Verzi 3.7 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
 
 * `Blok 13` (`S1`): právní revize všech 15 šablon (s advokátem).
 * `Blok 14` (`S2`): nezávislý `Judge` právních scénářů.

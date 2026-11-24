@@ -21,8 +21,8 @@ if ! incus exec "$name" -- ip -4 addr show dev eth0 | grep -q 'inet 10\.239\.32\
     incus restart "$name"
 fi
 umask 077
-install -d -m 700 /srv/polarita/vault/test-login
-cd /srv/polarita/vault/test-login
+install -d -m 700 /srv/polarita/data/bootstrap-test/test-login
+cd /srv/polarita/data/bootstrap-test/test-login
 # Link publikuje až úplný soubor, také při dvou souběžných instalacích.
 python3 - <<'PY'
 import os, secrets, tempfile

@@ -10,7 +10,7 @@ exec 9>"$work/.lock"
 flock 9
 install -m 0644 "$src/start.sh" /srv/polarita/infra/postgres-test/ca.crt "$work/conf/"
 chmod 0755 "$work/conf"
-install -d -m 0700 /srv/polarita/vault/keycloak-test
+install -d -m 0700 /srv/polarita/data/bootstrap-test/keycloak-test
 python3 "$src/realm.py" "$url"
 if ! incus image info polarita-keycloak-test-26.8.2 >/dev/null 2>&1; then
     if ! incus remote list -c n -f csv | grep -Fxq quay; then

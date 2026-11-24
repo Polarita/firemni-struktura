@@ -24,7 +24,7 @@ clients = {
 }
 
 def main():
-    import_dir = Path("/srv/polarita/vault/keycloak-test/import")
+    import_dir = Path("/srv/polarita/data/bootstrap-test/keycloak-test/import")
     url = urlparse(sys.argv[1])
     if url.scheme != "https" or url.path != "/identita" or not url.hostname:
         raise RuntimeError("Chybný veřejný název realmu")
@@ -34,7 +34,7 @@ def main():
     target = import_dir / "polarita-realm.json"
     if target.exists():
         return
-    password = Path("/srv/polarita/vault/test-login/heslo").read_bytes().rstrip(b"\r\n")
+    password = Path("/srv/polarita/data/bootstrap-test/test-login/heslo").read_bytes().rstrip(b"\r\n")
     salt = secrets.token_bytes(32)
     iterations = 210000
     hashed = hashlib.pbkdf2_hmac("sha512", password, salt, iterations, dklen=64)
