@@ -1,4 +1,5 @@
 """Vydá jednorázové přístupy podle zdrojové IP a spustí skutečný OpenBao Agent uvnitř každé instance."""
+import argparse
 from concurrent.futures import ThreadPoolExecutor
 import fcntl
 import hashlib
@@ -34,12 +35,12 @@ def run(*cmd, data=None):
                           timeout=120, check=True).stdout
 
 
-def install(name):
+def install(name, agent):
     config = json.loads(run("incus", "query", "/1.0/instances/" + name))
     if config["expanded_devices"]["eth0"]["ipv4.address"] != CLIENTS[name][0]:
         raise RuntimeError("Nesouhlasí adresa příjemce " + name)
     for source, dest, mode in [(p.WORK / "bin/bao", "bao", "0755"),
-                                (p.WORK / "bin/agent", "agent", "0755"),
+                                (agent, "agent", "0755"),
                                 (p.WORK / "ca.crt", "ca.crt", "0644")]:
         # Hostitel vidí soubor přes namespace běžící instance pouze pro porovnání.
         # Nemá důvěru v symlinky uvnitř instance, pro čtení i zápis používá API Incus.
@@ -90,15 +91,21 @@ def deliver_with_token(name, credentials):
 if __name__ == "__main__":
     if run("hostname", "-s").strip() != b"polarita-hq":
         sys.exit("Úloha patří do polarita-hq")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--install", action="store_true")
+    parser.add_argument("--klient", choices=sorted(CLIENTS))
+    parser.add_argument("--spoustec", type=Path, default=p.WORK / "bin/agent")
+    options = parser.parse_args()
+    clients = [options.klient] if options.klient else CLIENTS
     os.umask(0o077)
     if (p.WORK / "uzamceno").exists():
         sys.exit(0)
     with (p.WORK / ".agenti-lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        if "--install" in sys.argv:
-            for name in CLIENTS:
-                install(name)
+        if options.install:
+            for name in clients:
+                install(name, options.spoustec)
         p.HTTP = p.build_opener(p.ProxyHandler({}), p.HTTPSHandler(context=p.ssl.create_default_context(cafile=str(p.WORK / "ca.crt"))))
         credentials = p.recover("bao-sprava")
         with ThreadPoolExecutor(max_workers=2) as pool:
-            list(pool.map(lambda name: deliver_with_token(name, credentials), CLIENTS))
+            list(pool.map(lambda name: deliver_with_token(name, credentials), clients))
