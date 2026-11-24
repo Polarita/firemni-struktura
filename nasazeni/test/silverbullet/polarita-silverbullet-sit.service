@@ -1,0 +1,10 @@
+[Unit]
+Description=Omezení webového vstupu SilverBullet na proxy ředitelství
+Before=incus.service incus-startup.service
+After=local-fs.target
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/nft -f /etc/polarita/silverbullet.nft
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target

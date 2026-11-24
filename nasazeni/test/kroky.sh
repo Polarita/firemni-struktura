@@ -176,6 +176,12 @@ obnova_databazi() {
     "${guest[@]}" bash "$dest/nasazeni/test/pamet/instalace.sh" | tee "$tmp/znalosti.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/agent-vault/instalace.sh" | tee -a "$tmp/znalosti.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/silverbullet/instalace.sh" | tee -a "$tmp/znalosti.txt"
+    "${guest[@]}" bash "$dest/nasazeni/test/silverbullet/vstup.sh" | tee -a "$tmp/znalosti.txt"
+    sudo -n bash nasazeni/test/port-vpn.sh 8446 >/dev/null
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
+        python3 nasazeni/test/silverbullet/zkouska_prihlaseni.py "$fqdn" | tee -a "$tmp/znalosti.txt"
+    printf 'https://%s:8446/pamet/\n' "$fqdn" | "${guest[@]}" incus exec -T reditelstvi-test -- sh -ec 'umask 022; cat >/usr/local/share/.polarita-silverbullet-url.next; mv -T /usr/local/share/.polarita-silverbullet-url.next /usr/local/share/polarita-silverbullet-url'
+
     "${guest[@]}" bash "$dest/nasazeni/test/archiv/instalace.sh" | tee "$tmp/archiv.txt"
     for proof in identita postgres databaze obnova-databazi znalosti valkey garage archiv gitea; do
         "${inc[@]}" file push --project polarita "$tmp/$proof.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-05/$proof-$commit.txt"
