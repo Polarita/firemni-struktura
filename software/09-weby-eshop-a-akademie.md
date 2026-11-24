@@ -4,6 +4,8 @@ Tento dokument definuje zákaznickou, obchodní, skladovou, expediční, vzděl�
 
 ---
 
+Testovací náhled v ředitelství používá cestu `/web-test/`. Zdroj a statický výstup sestavuje instalátor ve `/srv/polarita/apps/web-polarita-cz/` uvnitř `polarita-hq`. Přihlášený správce ověří tři měsíční tarify, ceny jednorázových instalací, konfigurátor a cestu z návodu ke skutečnému formuláři pro PDF. Text návodu upravuje redakce v Markdownu. Ceník pochází z veřejné projekce balíčku S3.
+
 ## 1. Seznam vybraného softwaru
 
 | Oblast | Vybraný software / Stavební kámen | Kanál / Licence | Role a použití v Polarita s.r.o. (Verze 3.19) | Odpovědný `ai` / garant |

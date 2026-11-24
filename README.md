@@ -44,6 +44,8 @@ Po ověření přihlášení do Paperless a načtení rastrového protokolu z ka
 
 Na kartě testovacího spisu otevři **Převzetí šanonů do 48 hodin**, vyber zkušební PDF do 64 MiB a stiskni **Předat do karantény**. Karta zobrazí čas převzetí a termín za 48 hodin. Opakování stejného požadavku zachová původní potvrzení. Zpracování probíhá na pozadí. Po kontrole a rekonstrukci v izolované karanténě převezme Paperless očištěné PDF a karta zobrazí výsledek OCR. Správce před předáním digitální knihy ještě zkontroluje obsah a lhůty.
 
+V přehledu ředitelství vede **Otevřít firemní web a ceník** na testovací web společnosti. Měsíční tarify a rozsahy cen jednorázových instalací se sestavují z veřejného výřezu schváleného ceníku. Z webu otevřeš konfigurátor a návod pro předání revizních PDF ke spisu.
+
 Na kartě otevři **Časová osa spisu**. Nejnovější událost je nahoře. Tlačítkem **Načíst starší události** můžeš projít historii založení, převzetí skenů, zpracování příloh a zápisů revizí. U dříve zpracovaných příloh je na ose jen ten čas, který systém zaznamenal.
 
 V části **Digitální kniha objektu** otevři u převzatého dokumentu odkaz do archivu. Podle revizní zprávy můžeš zapsat zařízení, den provedení revize, začátek připomenutí a konec platnosti. Karta ukáže stav každého zařízení a odkaz na jeho podklad. Pro automatickou zkoušku instalace používá vlastní spis, objekt `TEST-HALA` a zařízení `TEST-R1`.

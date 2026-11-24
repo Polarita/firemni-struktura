@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+:root { font-family: "Segoe UI", system-ui, sans-serif; color: #172b29; background: #f8f8f1; font-size: 105%; }
+body { margin: 0; }
+header, main, footer { width: min(72rem, 100% - 2.5rem); margin-inline: auto; }
+header, footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding-block: 1.2rem; }
+header { border-bottom: 2px solid #163e36; }
+footer { margin-top: 4rem; border-top: 1px solid #8d9b90; color: #41554a; }
+nav { display: flex; gap: 1.3rem; flex-wrap: wrap; }
+a { text-decoration: underline; text-underline-offset: .2em; color: #145442; }
+a:hover { color: #092e23; }
+a:focus-visible, summary:focus-visible { outline: 3px solid #ae511d; outline-offset: 4px; }
+.brand { font-size: 1.5rem; font-weight: 750; letter-spacing: -.035em; color: #163e36; text-decoration: none; }
+h1, h2, h3 { text-wrap: balance; line-height: 1.1; }
+h1 { font-family: Georgia, serif; font-weight: 500; font-size: clamp(2.6rem, 6vw, 5.1rem); margin: .3em 0; max-width: 17ch; letter-spacing: -.045em; }
+h2 { font-size: clamp(1.55rem,3vw,2.3rem); margin: 0 0 1rem; font-weight: 600; letter-spacing: -.035em; }
+h3 { font-size: 1.2rem; font-weight: 650; }
+p, li { line-height: 1.6; max-width: 70ch; }
+p { margin: .65em 0; }
+section { margin-block: 3rem; }
+.intro { margin-block: 3.5rem; }
+.cta { display: inline-block; background: #1e5144; color: white; padding: .65rem 1rem; margin-top: .55rem; text-decoration: none; font-weight: 650; }
+.cta:hover { background: #123b31; color: white; }
+.tarify { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1px; border: 1px solid #9aa89e; background: #9aa89e; }
+.tarify article { padding: 1.3rem; background: #fffef8; }
+.cena { display: block; font-size: 1.8rem; font-variant-numeric: tabular-nums; font-weight: 675; margin-block: .75rem; letter-spacing: -.04em; }
+ul, ol { padding-left: 1.4rem; }
+ul { list-style: disc; } ol { list-style: decimal; }
+li { margin: .45rem 0; }
+details { border-top: 1px solid #abb4a9; padding-block: .7rem; }
+summary { cursor:pointer; font-weight: 600; }
+.skip { position:absolute; left:-100vw; } .skip:focus { left:1rem; top:1rem; background:white; padding:.6rem; }

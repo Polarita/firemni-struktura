@@ -278,6 +278,14 @@ obnova() {
     "${guest[@]}" bash "$dest/nasazeni/test/zalohy/naplanuj.sh"
 }
 
+web() {
+    "${guest[@]}" bash "$dest/nasazeni/test/web/instalace.sh" | tee "$tmp/web.txt"
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
+        python3 nasazeni/test/web/over_portal.py "https://$fqdn" | tee -a "$tmp/web.txt"
+    "${guest[@]}" install -d -m0750 /srv/polarita/workspace/dukazy/blok-09
+    "${inc[@]}" file push --project polarita "$tmp/web.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/web-$commit.txt"
+}
+
 predani() {
     "${guest[@]}" systemctl start polarita-dohled-sber.service
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn" --dohled --paperclip --zulip --decisions
@@ -290,7 +298,7 @@ predani() {
     "${guest[@]}" sh -ec 'ln -sfn "$1" /srv/polarita/infra/releases/.current-new; mv -Tf /srv/polarita/infra/releases/.current-new /srv/polarita/infra/releases/current' deploy "$dest"
 }
 
-kroky=(portal sit hesla postgres sluzby tym trezor databaze paperclip identita firemni_git rozhodnuti metadata obnova_databazi karantena zalohy dohled zulip obnova predani)
+kroky=(portal sit hesla postgres sluzby tym trezor databaze paperclip identita firemni_git rozhodnuti metadata obnova_databazi karantena zalohy dohled zulip obnova web predani)
 over_vstup() {
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn"
 }

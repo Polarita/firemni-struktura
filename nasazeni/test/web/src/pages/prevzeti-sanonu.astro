@@ -1,0 +1,12 @@
+---
+import Web from "../layouts/Web.astro";
+import { Content } from "../clanky/predani.md";
+const faq = [
+  ["Kdy začíná lhůta 48 hodin?", "Lhůta začíná časem prvního potvrzeného převzetí PDF na kartě spisu."],
+  ["Kde najdu dokončený dokument?", "Otevřete potvrzení na kartě stejného spisu. Po uložení do archivu v něm přibude odkaz na dokument."]
+];
+const schema = [{"@type":"FAQPage","mainEntity":faq.map(([name,text])=>({"@type":"Question",name,"acceptedAnswer":{"@type":"Answer",text}}))}];
+---
+<Web title="Digitální převzetí šanonů" description="Příprava PDF, předání ke konkrétnímu spisu a kontrola potvrzení do 48 hodin." schema={schema}>
+<div class="intro"><h1>Digitální převzetí šanonů</h1><p>Předejte správě objektu revizní zprávy, výkresy a protokoly. Každý sken zůstává dohledatelný pod číslem svého spisu.</p><a class="cta" href="/lhutnik-test/spisy">Otevřít spisy a předat PDF</a></div>
+<section><Content/></section><section><h2>Po předání</h2>{faq.map(([question,answer])=><details><summary>{question}</summary><p>{answer}</p></details>)}</section></Web>
