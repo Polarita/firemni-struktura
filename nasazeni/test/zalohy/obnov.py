@@ -56,6 +56,9 @@ def main():
         if subprocess.run(["incus","exec","-T",name,"--","test","-f","/var/tmp/obnova-polarita/pitr-cil.txt"]).returncode == 0:
             subprocess.run(["bash",str(TEST/"incus/balicky.sh"),name,"pgbackrest=2.58.0-1"],check=True,stdout=subprocess.DEVNULL)
             subprocess.run(["incus","exec","-T",name,"--","bash","-se"],input=(TEST/"zalohy/wal-obnov.sh").read_bytes(),check=True)
+        mark = WORK/".overena-obnova-next"
+        mark.write_text(json.dumps({"restic_snapshot":snap})+"\n")
+        mark.replace(WORK/"posledni-overena-obnova.json")
         print("Z testovacího Restic snapshotu "+snap+" bylo v izolované instanci obnoveno všech 15 databází.")
 
 

@@ -1,0 +1,8 @@
+[Unit]
+Description=Odpověď kontrolní služby
+[Service]
+ExecStart=/usr/bin/echo "POLARITA OK"
+StandardInput=socket
+StandardOutput=socket
+DynamicUser=true
+NoNewPrivileges=true

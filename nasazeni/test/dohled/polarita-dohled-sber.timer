@@ -1,0 +1,8 @@
+[Unit]
+Description=Obnova hodnot sond Checkmk
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=60s
+AccuracySec=2s
+[Install]
+WantedBy=timers.target

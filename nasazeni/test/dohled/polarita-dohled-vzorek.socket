@@ -1,0 +1,8 @@
+[Unit]
+Description=Zkušební služba pro ověření poplachu a návratu do provozu
+[Socket]
+ListenStream=127.0.0.1:18419
+Accept=yes
+MaxConnections=8
+[Install]
+WantedBy=sockets.target
