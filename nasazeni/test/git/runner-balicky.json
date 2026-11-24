@@ -2,7 +2,6 @@
   "fonts-dejavu-core": "2.37-8build1",
   "git": "1:2.53.0-1ubuntu1.1",
   "gitleaks": "8.16.0-1build2",
-  "golang-go": "2:1.26~1",
   "libasound2t64": "1.2.15.3-1ubuntu1.1",
   "libatk-bridge2.0-0t64": "2.60.4-0ubuntu0.1",
   "libatk1.0-0t64": "2.60.4-0ubuntu0.1",
