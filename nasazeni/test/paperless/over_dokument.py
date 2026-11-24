@@ -45,7 +45,7 @@ if doc is None and task is None:
     pdf.write_bytes(data)
     consume_file.apply_async(task_id=task_id, kwargs={
         "input_doc": ConsumableDocument(source=DocumentSource.ApiUpload, original_file=pdf),
-        "overrides": DocumentMetadataOverrides(filename=pdf.name, title=title, custom_fields={str(field.pk): case}),
+        "overrides": DocumentMetadataOverrides(filename=pdf.name, title=title, custom_fields={field.pk: case}),
     }, headers={"trigger_source": PaperlessTask.TriggerSource.API_UPLOAD})
 deadline = time.monotonic() + 1650
 while doc is None and time.monotonic() < deadline:
@@ -53,6 +53,12 @@ while doc is None and time.monotonic() < deadline:
         raise RuntimeError("Úloha OCR protokolu skončila chybou")
     time.sleep(5)
     doc = Document.objects.filter(checksum=checksum).first()
+# Při přechodu ze 3.17 lze doplnit prázdné pole pouze u vlastního zkušebního
+# importu, jehož dokončená úloha vrátila přesné ID kontrolovaného dokumentu.
+if not prijem and doc and doc.title == title and doc.owner_id is None:
+    original_task = PaperlessTask.objects.filter(task_id=task_id, status=PaperlessTask.Status.SUCCESS).first()
+    if original_task and (original_task.result_data or {}).get("document_id") == doc.pk:
+        CustomFieldInstance.objects.filter(document=doc, field=field, value_text__isnull=True).update(value_text=case)
 if doc is None or (not prijem and doc.title != title) or not CustomFieldInstance.objects.filter(document=doc, field=field, value_text=case).exists():
     raise RuntimeError("Chybí zkušební protokol s vazbou na spis")
 text = "".join(c for c in unicodedata.normalize("NFKD", doc.content.lower()) if not unicodedata.combining(c))
