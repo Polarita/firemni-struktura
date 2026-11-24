@@ -9,6 +9,9 @@ bash "$src/zdroje.sh"
 install -dm0755 "$work/conf" "$work/tofu"
 exec 9>"$work/.instalace"
 flock 9
+# Rozbalení kořenového disku a zkouška OCR sdílejí I/O s běhy Chromium a karantény.
+exec 8>/run/polarita-test-zatez.lock
+flock 8
 [[ $(findmnt -no SOURCE --mountpoint /srv/polarita/data) == polarita_zfs/data ]]
 if ! zfs list -Ho name "$dataset" >/dev/null 2>&1; then
     [[ ! -e $data ]]
