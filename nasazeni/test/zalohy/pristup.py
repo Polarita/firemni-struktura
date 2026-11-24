@@ -34,8 +34,8 @@ def initialize():
                 stage.chmod(0o600)
                 os.link(stage,dest)
     stored=bcrypt.hashpw(credential("restic-http").encode(),bcrypt.gensalt(rounds=10))
-    subprocess.run(["incus","exec","-T","restic-test","--","install","-m","0640","-o","root","-g","pol-restic",
-                    "/dev/stdin","/etc/polarita-restic/.htpasswd-next"],input=b"polarita-test:"+stored+b"\n",check=True)
+    subprocess.run(["incus","exec","-T","restic-test","--","sh","-ec",
+                    "umask 077; cd /etc/polarita-restic; cat >.htpasswd-next; chgrp pol-restic .htpasswd-next; chmod 0640 .htpasswd-next"],input=b"polarita-test:"+stored+b"\n",check=True)
     subprocess.run(["incus","exec","-T","restic-test","--","mv","-T","/etc/polarita-restic/.htpasswd-next",
                     "/etc/polarita-restic/htpasswd"],check=True)
 
