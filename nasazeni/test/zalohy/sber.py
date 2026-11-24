@@ -5,6 +5,7 @@ import gzip
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import secrets
 import shutil
@@ -81,6 +82,12 @@ def collect(root):
     if pg.proof(pg.DB,"postgres").hex()!=original:
         raise RuntimeError("Během sběru se změnila struktura databází")
     (root/"postgres.sha256").write_text(original+"\n")
+    point = pg.inside(pg.DB, "bash", "-se", data=(TEST/"zalohy/wal-sber.sh").read_bytes()).decode().splitlines()[-1]
+    if not re.fullmatch(r"polarita_[0-9a-f]{32} [0-9A-F]+/[0-9A-F]+ [0-9A-F]+/[0-9A-F]+", point):
+        raise RuntimeError("Chybí cílový bod obnovy v potvrzeném WAL segmentu")
+    (root/"pitr-cil.txt").write_text(point+"\n")
+    with snapshot("polarita_zfs/data/postgres") as src:
+        subprocess.run(["tar","-cf",str(root/"pgbackrest.tar"),"-C",str(src/"test/pgbackrest"),"."],check=True)
     with snapshot("polarita_zfs/vault") as src:
         target=root/"znalosti"
         target.mkdir()

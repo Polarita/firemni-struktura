@@ -53,6 +53,9 @@ def main():
         saved=pg.inside(name,"cat","/var/tmp/obnova-polarita/postgres.sha256").decode().strip()
         if pg.proof(name,"obnova_test").hex()!=saved:
             raise RuntimeError("Schémata databází, účty nebo identita po obnově nesouhlasí")
+        if subprocess.run(["incus","exec","-T",name,"--","test","-f","/var/tmp/obnova-polarita/pitr-cil.txt"]).returncode == 0:
+            subprocess.run(["bash",str(TEST/"incus/balicky.sh"),name,"pgbackrest=2.58.0-1"],check=True,stdout=subprocess.DEVNULL)
+            subprocess.run(["incus","exec","-T",name,"--","bash","-se"],input=(TEST/"zalohy/wal-obnov.sh").read_bytes(),check=True)
         print("Z testovacího Restic snapshotu "+snap+" bylo v izolované instanci obnoveno všech 15 databází.")
 
 
