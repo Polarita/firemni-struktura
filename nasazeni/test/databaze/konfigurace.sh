@@ -45,6 +45,7 @@ maintenance_work_mem = '16MB'
 max_wal_size = '256MB'
 max_parallel_workers = 1
 timezone = 'UTC'
+include_if_exists = '/etc/polarita-postgres/archivace.conf'
 log_statement = 'none'
 log_min_error_statement = 'panic'
 CONF
