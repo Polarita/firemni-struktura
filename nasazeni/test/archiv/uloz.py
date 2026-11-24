@@ -46,8 +46,10 @@ def archive_dir(path):
 
 def store(source, area, extension, expected_hash, year):
     check_host()
-    if area not in AREAS or extension not in ("pdf", "isdoc", "zfo", "wav") or not 2000 <= year <= 9999:
+    if area not in AREAS or extension not in ("pdf", "isdoc", "zfo", "wav", "txt", "json") or not 2000 <= year <= 9999:
         raise ValueError("Neznámá agenda, rok nebo formát")
+    if extension in ("txt", "json") and area != "hovory-legal-hold-10let":
+        raise ValueError("Přepis a předávací údaje patří do spisového archivu hovorů")
     archive_dir(DATA / area)
     parent = DATA / area / str(year)
     archive_dir(parent)

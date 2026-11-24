@@ -22,3 +22,4 @@ install -m 0644 "$src/polarita-archiv-test.service" /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now polarita-archiv-test.service
 python3 "$src/zkouska.py"
+python3 "$src/zkouska_hovoru.py"
