@@ -37,15 +37,6 @@ resource "incus_instance" "chat" {
     }
   }
   device {
-    name = "hosts"
-    type = "disk"
-    properties = {
-      source   = "/srv/polarita/infra/zulip-test/conf/hosts"
-      path     = "/etc/hosts"
-      readonly = "true"
-    }
-  }
-  device {
     name = "data"
     type = "disk"
     properties = {

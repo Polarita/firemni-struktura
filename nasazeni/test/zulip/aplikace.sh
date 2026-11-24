@@ -17,25 +17,6 @@ running_update=false
 if [[ $(incus list zulip-test --format csv -c s) == RUNNING ]] && ! cmp -s "$src/start.sh" "$work/conf/start.sh"; then
     running_update=true
 fi
-# Incus připojuje vlastní /etc/hosts OCI kontejneru ze svého uživatelského prostoru.
-# Vlastní soubor připojí OpenTofu jen tomuto klientovi OIDC.
-cat >"$work/conf/.hosts.next" <<HOSTS
-127.0.0.1 localhost
-127.0.1.1 zulip-test
-::1 localhost ip6-localhost ip6-loopback
-fe00::0 ip6-localnet
-ff00::0 ip6-mcastprefix
-ff02::1 ip6-allnodes
-ff02::2 ip6-allrouters
-10.239.32.13 $TF_VAR_fqdn
-HOSTS
-chmod 0644 "$work/conf/.hosts.next"
-if ! cmp -s "$work/conf/.hosts.next" "$work/conf/hosts"; then
-    mv -T "$work/conf/.hosts.next" "$work/conf/hosts"
-    if [[ $(incus list zulip-test --format csv -c s) == RUNNING ]]; then running_update=true; fi
-else
-    unlink "$work/conf/.hosts.next"
-fi
 install -m 0644 "$src/start.sh" "$work/conf/"
 install -m 0644 /srv/polarita/infra/postgres-test/ca.crt "$work/conf/postgres.crt"
 TF_VAR_image=$(incus image list polarita-zulip-13.3-0 --format json | python3 -c 'import json,sys; (r,)=json.load(sys.stdin); print(r["fingerprint"])')

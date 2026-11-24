@@ -1,3 +1,12 @@
+variable "oidc_fqdn" {
+  type    = string
+  default = ""
+  validation {
+    condition     = var.oidc_fqdn == "" || can(regex("^[a-z0-9.-]+[.]ts[.]net$", var.oidc_fqdn))
+    error_message = "Vydavatel testovací identity musí mít DNS jméno ve firemní VPN."
+  }
+}
+
 locals {
   # Relativní k adrese uvedené v předinstalační inventuře.
   networks = {
@@ -25,6 +34,13 @@ resource "incus_network" "zone" {
       host-record=stun.polarita.test,10.239.31.11
       host-record=database.clamav.net,10.239.31.1
       dhcp-option=option:dns-server,10.239.31.1
+    DNS
+  } : {}, each.key == "app_internal" && var.oidc_fqdn != "" ? {
+    "raw.dnsmasq" = <<-DNS
+      no-resolv
+      no-hosts
+      local=/#/
+      host-record=${var.oidc_fqdn},10.239.32.13
     DNS
   } : {})
 }

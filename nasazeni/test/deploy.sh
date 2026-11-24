@@ -34,12 +34,12 @@ trap 'rm -rf "$tmp"; "${guest[@]}" rm -rf -- "$vpn_tmp"' EXIT
 CGO_ENABLED=0 go build -trimpath -o "$tmp/portal" nasazeni/test/portal.go
 "${inc[@]}" file push --mode 0755 --project polarita "$tmp/portal" "polarita-hq$dest/portal"
 "${guest[@]}" "$dest/nasazeni/test/incus.sh"
-"${guest[@]}" "$dest/nasazeni/test/site.sh"
+fqdn=$(tailscale status --json | python3 -c 'import json,sys;print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))')
+"${guest[@]}" "$dest/nasazeni/test/site.sh" "$fqdn"
 "${guest[@]}" "$dest/nasazeni/test/portal.sh" "$dest/portal"
 "${guest[@]}" "$dest/nasazeni/test/hrana.sh"
 "${guest[@]}" curl -fsS --retry 4 --retry-connrefused -o /dev/null http://127.0.0.1:18184/
 sudo -n bash nasazeni/test/vstup.sh
-fqdn=$(tailscale status --json | python3 -c 'import json,sys;print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))')
 "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn"
 "${inc[@]}" file push --project polarita "$(command -v tailscale)" "$(command -v tailscaled || echo /usr/sbin/tailscaled)" "polarita-hq$vpn_tmp/"
 "${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-03

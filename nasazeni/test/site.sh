@@ -15,6 +15,18 @@ systemctl daemon-reload
 systemctl enable polarita-zones.service
 systemctl start polarita-zones.service
 nft -f /etc/polarita/zones.nft
+if [ "$#" -gt 0 ]; then
+    python3 - "$1" <<'DNS'
+import json, re, sys
+from pathlib import Path
+if not re.fullmatch(r"[a-z0-9.-]+[.]ts[.]net",sys.argv[1]):
+    raise SystemExit("Neplatné jméno vydavatele identity")
+p = Path("oidc.auto.tfvars.json")
+tmp = p.with_suffix(".next")
+tmp.write_text(json.dumps({"oidc_fqdn":sys.argv[1]}) + "\n")
+tmp.replace(p)
+DNS
+fi
 install -m 644 "$src/zones.tf" zones.tf
 tofu fmt -check
 tofu init -input=false -lockfile=readonly
@@ -31,7 +43,7 @@ for resource in json.load(sys.stdin).get("resource_changes", []):
         continue
     if resource["address"].startswith(("incus_network.zone[", "incus_profile.zone[")) and actions == ["create"]:
         continue
-    if resource["address"] == "incus_network.zone[\"dmz_edge\"]" and actions == ["update"]:
+    if resource["address"] in ("incus_network.zone[\"dmz_edge\"]", "incus_network.zone[\"app_internal\"]") and actions == ["update"]:
         before = dict(resource["change"]["before"]["config"])
         after = dict(resource["change"]["after"]["config"])
         before.pop("raw.dnsmasq", None)
