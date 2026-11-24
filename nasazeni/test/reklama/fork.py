@@ -12,7 +12,13 @@ def build(directory):
     def git(*args, **kwargs):
         return subprocess.check_output(["git","-c","core.hooksPath=/dev/null",*args],cwd=directory,text=True,**kwargs).strip()
     git("init","-q","-b","main")
-    git("fetch","-q","--no-tags","https://github.com/Draivix/aidvertaiser.git",UPSTREAM)
+    bundle = Path("/var/cache/polarita-reklama-test")/f"aidvertaiser-{UPSTREAM}.bundle"
+    if bundle.exists():
+        git("bundle","verify",str(bundle))
+        git("fetch","-q","--no-tags",str(bundle),"refs/heads/zdroj")
+    else:
+        git("-c","http.lowSpeedLimit=512","-c","http.lowSpeedTime=45","fetch","-q","--no-tags",
+            "https://github.com/Draivix/aidvertaiser.git",UPSTREAM)
     if git("rev-parse","FETCH_HEAD") != UPSTREAM or 'license = "MIT"' not in git("show",UPSTREAM+":pyproject.toml"):
         raise RuntimeError("Nesouhlasí původ nebo licence předlohy.")
     # Původní plná historie je v rodiči. Do distribuovaného TEST stromu vstupují pouze schválené soubory.

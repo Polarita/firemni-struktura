@@ -151,6 +151,7 @@ rozhodnuti() {
     "${guest[@]}" bash "$dest/nasazeni/test/paperclip/stage1.sh" | tee -a "$tmp/paperclip.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/decisions/instalace.sh" | tee -a "$tmp/paperclip.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/decisions/paperclip.sh" "$fqdn" | tee -a "$tmp/paperclip.txt"
+    bash nasazeni/test/reklama/podklad.sh
     "${guest[@]}" bash "$dest/nasazeni/test/reklama/instalace.sh" | tee -a "$tmp/paperclip.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/finops/instalace.sh" "$fqdn" | tee -a "$tmp/paperclip.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/paperclip/vstup.sh"
