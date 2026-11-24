@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 import csv
 import json
 import os
+import re
 from pathlib import Path
 import smtplib
 import socket
@@ -109,6 +110,15 @@ def mx():
         return state(welcome==220 and ehlo==250 and client.has_extn("starttls"),"SMTP port 25 nabízí STARTTLS")
 
 
+def queue():
+    body=inside("stalwart-mx-test","curl","--noproxy","*","-fsS","--max-time","5","http://127.0.0.1:19090/metrics/prometheus")
+    match=re.search(r"^(?:stalwart_queue_messages|stalwart_queue_count|queue_count)\s+([0-9]+)(?:\.0+)?$",body,re.M)
+    if not match:
+        raise ValueError("Chybí číselná metrika fronty")
+    count=int(match[1])
+    return (2 if count>=100 else 1 if count>=25 else 0,f"queued={count};25;100",f"Počet zpráv v odchozí frontě {count}")
+
+
 def rocks():
     inside("stalwart-mx-test","test","-s","/var/lib/stalwart/rocksdb/CURRENT")
     row=inside("stalwart-mx-test","df","-Pk","/var/lib/stalwart/rocksdb").splitlines()[-1].split()
@@ -128,7 +138,7 @@ def sample():
 
 PROBES={"OpenZFS":pool,"RAM":memory,"CPU":cpu,"Incus":instances,"Sitova rozhrani":interfaces,
         "OpenBao":bao,"Caddy TLS":proxy,"PostgreSQL":postgres,"PgBouncer":pgbouncer,
-        "Valkey TLS":valkey,"Garage":garage,"MX SMTP":mx,"MX RocksDB":rocks,
+        "Valkey TLS":valkey,"Garage":garage,"MX SMTP":mx,"MX fronta":queue,"MX RocksDB":rocks,
         "Stari zalohy":lambda:age("/srv/polarita/infra/restic-test/posledni-otisk",30),
         "Posledni obnova":lambda:age("/srv/polarita/infra/restic-test/posledni-overena-obnova.json",8*24),
         "Zkusebni sluzba":sample}
