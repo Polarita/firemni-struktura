@@ -21,8 +21,10 @@ systemctl enable --now apache2
 systemctl reload apache2
 omd start "$site"
 omd status "$site"
+body=$(mktemp)
+trap 'rm -f -- "$body"' EXIT
 for i in {1..30}; do
-    if curl --noproxy '*' --fail --silent --location --max-time 5 "http://127.0.0.1/$site/check_mk/login.py" | grep -iq 'name="\(_username\|username\)"'; then
+    if curl --noproxy '*' --fail --silent --location --max-time 5 --output "$body" "http://127.0.0.1/$site/check_mk/login.py" && grep -iq 'name="\(_username\|username\)"' "$body"; then
         echo 'Webové přihlášení lokality Checkmk odpovědělo v oddělené aplikační instanci.'
         exit 0
     fi

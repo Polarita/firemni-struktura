@@ -1,5 +1,4 @@
 """Očekává skutečné přechody Checkmk po zastavení a obnovení jediné zkušební služby."""
-from pathlib import Path
 import json
 import socket
 import subprocess
@@ -34,7 +33,7 @@ def wait_state(expected):
         # Pasivní lokální kontroly vyhodnotí skutečný Check_MK aktivní sběr.
         command=f"[{now}] SCHEDULE_FORCED_SVC_CHECK;polarita-hq;Check_MK;{now}\n"
         run("incus","exec","-T",TARGET,"--","runuser","-u","polarita","--","sh","-c",
-            "cat >/omd/sites/polarita/tmp/run/nagios.cmd",input=command.encode())
+            'pipe=/omd/sites/polarita/tmp/run/nagios.cmd; test -p "$pipe" && cat >"$pipe"',input=command.encode())
         time.sleep(5)
         table=json.loads(inside("runuser","-u","polarita","--","python3","/usr/local/lib/polarita-dohled/livestatus.py"))
         row=table.get(TEST,{})
