@@ -1,0 +1,9 @@
+[Unit]
+Description=Přístupy Zulipu k RabbitMQ a Memcached z OpenBao
+After=rabbitmq-server.service
+Requires=rabbitmq-server.service
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/lib/polarita-zulip/pristup-fronty.py
+RemainAfterExit=yes
+UMask=0077

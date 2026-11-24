@@ -1,0 +1,6 @@
+[Unit]
+Description=Převzetí údajů týmového chatu po spuštění VM
+[Path]
+PathExists=/run/secrets/polarita-test
+[Install]
+WantedBy=multi-user.target
