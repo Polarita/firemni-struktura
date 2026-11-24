@@ -16,6 +16,7 @@ from tempfile import TemporaryDirectory
 from urllib.request import Request
 
 from pristup import CA, REPO, credential
+import infrastruktura
 TEST = Path(__file__).resolve().parent.parent
 sys.path.insert(0,str(TEST/"objekty"))
 import provoz
@@ -136,6 +137,7 @@ def collect(root):
                         raise RuntimeError("Garage změnila objekt během sběru")
                     listing.append({"klic":name,"soubor":filename,"metadata":reply["Metadata"],"typ":reply.get("ContentType","application/octet-stream")})
         (dst/"seznam.json").write_text(json.dumps(listing,ensure_ascii=False))
+    infrastruktura.collect(root, snapshot)
     sums={str(f.relative_to(root)):hashfile(f) for f in root.rglob("*") if not f.is_symlink() and f.is_file()}
     (root/"soubory.sha256.json").write_text(json.dumps(sums,sort_keys=True))
     return len(sums)
