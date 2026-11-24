@@ -16,7 +16,7 @@ fi
 info=$(incus query "/1.0/images/aliases/$alias")
 fingerprint=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["target"])' <<<"$info")
 [[ $fingerprint =~ ^[0-9a-f]{64}$ ]]
-incus image info "$fingerprint" | grep -Fq "id: valkey/valkey@sha256:$digest"
+[[ $(incus image get-property "$fingerprint" id) == "valkey/valkey@sha256:$digest" ]]
 cd "$work/tofu"
 install -m 0644 "$src/valkey.tf" "$src/../incus/providers.tf" "$src/../incus/.terraform.lock.hcl" .
 export TF_VAR_valkey_image="local:$fingerprint"

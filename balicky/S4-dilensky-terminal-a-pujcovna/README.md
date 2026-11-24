@@ -108,7 +108,7 @@ Jsi hlavní vývojář (17001 programator) ve spolupráci s 14005 zakazky (kalen
 - `kusove-overeni-checklist.md` — checklist kusového ověření bez čísel článků a mezních hodnot; ty doplní registr `15002`.
 - `predavaci-protokol-pujcovna.md` — vzor digitálního protokolu předání a vrácení s proměnnou `{{kauce}}`.
 
-**Vyžaduje živý server `polarita-hq` (zatím neexistuje — nic z toho není nasazeno ani otestováno):**
+**Přejímací zkoušky terminálu a půjčovny ve VM `polarita-hq`**
 
 - Vývoj, testy a nasazení PWA `dilensky-terminal` a modulu `pujcovna-meridel`, migrace schémat a rozšíření `cad-urs-engine`.
 - Hardware: dotyková stanice kiosku, čtečka kódů, čtečka čipů a tiskárna štítků (výběr typů je `NÁVRH — ke schválení 1001`).

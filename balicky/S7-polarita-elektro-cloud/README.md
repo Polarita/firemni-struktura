@@ -140,6 +140,6 @@ Tento prompt smí být spuštěn až po podpisu GO a po prošlých testech izola
 **Podmíněno bránou `Go / No-Go` (neprovedeno):**
 
 - Pořízení a stavba SaaS klastru, rozšíření `metadata-schema-kernel` o tenanty, měření tokenů, klientský portál a onboarding pilotního tenanta.
-- Měření brány samotné — vyžaduje 12–18 měsíců ostrého provozu na serveru `polarita-hq`, který zatím neexistuje (greenfield návrh).
+- Měření brány samotné — vyžaduje 12–18 měsíců ostrého provozu na serveru `polarita-hq` po převzetí do produkce.
 
 Polarita Elektro Cloud ve Verzi 3.8 **není spuštěn, nasazen ani nabízen zákazníkům**; neexistuje žádný tenant, klastr ani uzavřená smlouva. Blok 19 se spustí nejdříve po splnění brány a podpisu `1001`.

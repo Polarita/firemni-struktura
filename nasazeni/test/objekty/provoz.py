@@ -1,5 +1,5 @@
 """Přístup aplikací do Garage přes TLS a SigV4. Do protokolu se vypisují pouze výsledky."""
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from datetime import datetime, timezone, timedelta
 import json
 import os
@@ -59,7 +59,8 @@ def expire(s3, now):
         for item in page.get("Contents", []):
             key = item["Key"]
             try:
-                meta = s3.head_object(Bucket="hovory", Key=key)["Metadata"]
+                headers = s3.head_object(Bucket="hovory", Key=key)["Metadata"]
+                meta = {name.lower(): value for name, value in headers.items()}
             except ClientError as error:
                 if error.response["ResponseMetadata"]["HTTPStatusCode"] == 404:
                     continue
@@ -96,7 +97,7 @@ def verify(keys):
     run = secrets.token_hex(12)
     now = datetime.now(timezone.utc)
     for bucket, creds in keys.items():
-        with client(creds) as s3:
+        with closing(client(creds)) as s3:
             data = ("Polarita TEST " + run).encode()
             other = next(x for x in keys if x != bucket)
             name = "zkouska/" + run + ".txt"
@@ -109,7 +110,7 @@ def verify(keys):
                 rejected(s3.list_objects_v2, 403, Bucket=other, MaxKeys=1)
             finally:
                 s3.delete_object(Bucket=bucket, Key=name)
-    with client(keys["hovory"]) as s3:
+    with closing(client(keys["hovory"])) as s3:
         for suffix in ("audio", "prepis"):
             name = "zkouska/" + run + "-" + suffix
             s3.put_object(Bucket="hovory", Key=name, Body=b"TEST",
@@ -127,7 +128,7 @@ def main():
     if sys.argv[1:] == ["--expirace"]:
         with manager() as admin:
             key = key_for("hovory", admin)
-        with client(key) as s3:
+        with closing(client(key)) as s3:
             expire(s3, datetime.now(timezone.utc))
         return
     if sys.argv[1:]:

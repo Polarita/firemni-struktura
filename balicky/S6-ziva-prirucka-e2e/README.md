@@ -137,4 +137,4 @@ Zaveď a provozuj 30minutovou vývojovou smyčku podle balicky/S6-ziva-prirucka-
 - Vývoj modulu `manual-builder`, první vygenerování příručky a její uložení do Vaultu `07-IT-a-Architektura`.
 - Zprovoznění 30min smyčky (`wt-worker` / `wt-judge`, pravidla `AigisCode`, položky v `Decisions`) a ověření podmínek z kapitoly 4.
 
-Server `polarita-hq` zatím neexistuje (greenfield návrh); nic z Bloku 18 proto není nasazené, spuštěné ani otestované na živém systému. Položky vedené jako `NÁVRH — ke schválení 1001`: číselný limit rozsahu změny na iteraci, rozdělení 30 minut mezi role, počet souběžných požadavků a umístění fronty (vše v `fronta-30min-smycka.md`) a kanál distribuce školicí kopie příručky.
+Přijetí Bloku 18 vyžaduje spuštění vzorového scénáře v ředitelství a záznam výsledku do protokolu. Položky vedené jako `NÁVRH — ke schválení 1001`: číselný limit rozsahu změny na iteraci, rozdělení 30 minut mezi role, počet souběžných požadavků a umístění fronty (vše v `fronta-30min-smycka.md`) a kanál distribuce školicí kopie příručky.

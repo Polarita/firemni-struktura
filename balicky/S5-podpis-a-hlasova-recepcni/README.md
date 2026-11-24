@@ -157,7 +157,7 @@ Jsi nezávislý verifikátor Judge (17004 klicnik) spolu s právní specialistko
 
 **Připraveno k nasazení — vyžaduje živý server `polarita-hq` a další kroky (zatím neprovedeno):**
 
-- Zdrojový kód `esign-bridge` a `voice-agent` v této složce není; vznikne podle Promptů 1 a 2. Nic z Bloku 17 není nasazeno ani otestováno na živém serveru (greenfield návrh, server zatím neexistuje).
+- Zdrojový kód `esign-bridge` a `voice-agent` v této složce není; vznikne podle Promptů 1 a 2. Před převzetím Bloku 17 dolož zkoušku obou služeb ve VM `polarita-hq`.
 - Smlouva s poskytovatelem podpisu (`Signi` / `BankID`) včetně zpracovatelské smlouvy není uzavřena; poskytovatel, tarif i ceny jsou `NÁVRH — ke schválení 1001`.
 - Matice úrovní podpisu, výše podlimitu hlasové recepční, parametry eskalačního řetězce, platnost podpisového odkazu a volba TTS / LLM jsou `NÁVRH — ke schválení 1001`.
 - Latence přepisu po promluvách (`Faster-Whisper` v `sandbox_airgap`), kvalita české syntézy řeči a spolehlivost buzení pohotovostního RT jsou neověřené; ověří je až cvičné hovory na živé ústředně `Asterisk`.
