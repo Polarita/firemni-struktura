@@ -72,9 +72,27 @@ def main():
                     os.chown(path,owner.pw_uid,owner.pw_gid,follow_symlinks=False)
                 clone.chmod(0o700)
                 clone.rename(target)
-            check = subprocess.check_output(["runuser","-u",account,"--","git","-C",str(target),
+            # Pracovní účet nemusí procházet jiná firemní data ve workspace.
+            parent = Path("/var/lib/polarita-git-test")
+            parent.mkdir(mode=0o711,exist_ok=True)
+            parent.chmod(0o711)
+            mount = parent / target.name
+            mount.mkdir(mode=0o700,exist_ok=True)
+            unit = subprocess.check_output(["systemd-escape","--path","--suffix=mount",str(mount)],text=True).strip()
+            content = (f"[Unit]\nDescription=Samostatný klon {name} pro TEST\nRequiresMountsFor={target}\n"
+                       f"[Mount]\nWhat={target}\nWhere={mount}\nType=none\nOptions=bind,nodev,nosuid\n"
+                       "[Install]\nWantedBy=multi-user.target\n")
+            unit_path = Path("/etc/systemd/system") / unit
+            if not unit_path.exists() or unit_path.read_text() != content:
+                unit_path.write_text(content)
+                unit_path.chmod(0o644)
+                subprocess.run(["systemctl","daemon-reload"],check=True)
+            subprocess.run(["systemctl","enable","--now",unit],check=True)
+            if not os.path.samefile(mount,target):
+                raise RuntimeError("Nesouhlasí soukromý pohled na klon")
+            check = subprocess.check_output(["runuser","-u",account,"--","git","-C",str(mount),
                                               "rev-parse","--absolute-git-dir"],text=True).strip()
-            if check != str(target/".git") or not (target/".git").is_dir():
+            if check != str(mount/".git") or not (target/".git").is_dir():
                 raise RuntimeError("Klon používá nesamostatnou databázi Gitu")
         if os.path.samefile(workspace/"wt-judge/.git",workspace/"wt-worker/.git"):
             raise RuntimeError("Klony sdílejí databázi Gitu")
