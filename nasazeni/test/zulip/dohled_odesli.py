@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 import re
+import socket
+import struct
 import sys
 from urllib.parse import urlencode
 
@@ -37,6 +39,10 @@ def send(event):
 
 
 if __name__ == "__main__":
+    with socket.fromfd(0,socket.AF_UNIX,socket.SOCK_STREAM) as peer:
+        _, uid, _ = struct.unpack("3i", peer.getsockopt(socket.SOL_SOCKET,socket.SO_PEERCRED,struct.calcsize("3i")))
+        if uid != int(os.environ["POLARITA_NOTIFY_UID"]):
+            raise SystemExit("Oznámení nepochází od účtu lokality Checkmk")
     line = sys.stdin.buffer.readline(2049)
     if not line.endswith(b"\n") or len(line)>2048:
         raise SystemExit("Neplatná délka oznámení")

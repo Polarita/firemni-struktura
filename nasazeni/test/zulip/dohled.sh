@@ -10,6 +10,11 @@ install -m 0644 "$src/dohled_odesli.py" /usr/local/lib/polarita-dohled/
 python3 "$src/dohled_klic.py"
 group=$(stat -c %g /srv/polarita/data/checkmk/test/polarita/var)
 [[ $group =~ ^[1-9][0-9]*$ && $(incus exec -T checkmk-test -- id -g polarita) == "$group" ]]
+# Oprávnění na idmapovaném svazku a přihlašovací údaje živého procesu mají různé mapování.
+pid=$(incus query /1.0/instances/checkmk-test/state | python3 -c 'import json,sys;print(json.load(sys.stdin)["pid"])')
+site_uid=$(incus exec -T checkmk-test -- id -u polarita)
+sender_uid=$(awk -v uid="$site_uid" '$1 <= uid && uid < $1+$3 {print $2+uid-$1}' "/proc/$pid/uid_map")
+[[ $sender_uid =~ ^[1-9][0-9]*$ ]]
 install -d -m 0700 "$work"
 cat >"$work/polarita-zulip-alert.socket" <<UNIT
 [Unit]
@@ -30,6 +35,7 @@ Description=Doručení události Checkmk do testovacího chatu
 [Service]
 DynamicUser=yes
 Environment=POLARITA_WEB=$host
+Environment=POLARITA_NOTIFY_UID=$sender_uid
 LoadCredentialEncrypted=zulip-webhook:/srv/polarita/data/bootstrap-test/openbao-test/zulip-webhook.cred
 StandardInput=socket
 StandardOutput=socket
