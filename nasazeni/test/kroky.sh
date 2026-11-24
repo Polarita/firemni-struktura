@@ -193,10 +193,6 @@ obnova_databazi() {
     "${inc[@]}" file push --project polarita "$tmp/paperless-server.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-server-$commit.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/vikunja/server.sh" "$fqdn"
     "${guest[@]}" bash "$dest/nasazeni/test/hrana/obnov-vstup.sh"
-    sudo -n bash nasazeni/test/port-vpn.sh 8448 >/dev/null
-    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
-        python3 nasazeni/test/paperless/prihlaseni.py "$fqdn" | tee "$tmp/paperless-prihlaseni.txt"
-    "${inc[@]}" file push --project polarita "$tmp/paperless-prihlaseni.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-prihlaseni-$commit.txt"
     sudo -n bash nasazeni/test/port-vpn.sh 8447 >/dev/null
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/vikunja/zkouska.py "$fqdn" --nastenky | tee "$tmp/vikunja.txt"
@@ -220,6 +216,10 @@ karantena() {
     "${inc[@]}" file push --project polarita "$tmp/karantena.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-04/karantena-$commit.txt"
     "${guest[@]}" python3 "$dest/nasazeni/test/paperless/vzor.py" | tee "$tmp/paperless-vzor.txt"
     "${inc[@]}" file push --project polarita "$tmp/paperless-vzor.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-vzor-$commit.txt"
+    sudo -n bash nasazeni/test/port-vpn.sh 8448 >/dev/null
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
+        python3 nasazeni/test/paperless/prihlaseni.py "$fqdn" | tee "$tmp/paperless-prihlaseni.txt"
+    "${inc[@]}" file push --project polarita "$tmp/paperless-prihlaseni.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-prihlaseni-$commit.txt"
     local case checksum doc field
     read -r case checksum < <("${guest[@]}" python3 -c 'import json; d=json.load(open("/srv/polarita/infra/paperless-test/vzor-overen.json")); print(d["case_id"], d["sha256"])')
     read -r doc field < <("${guest[@]}" incus exec -T paperless-test -- /command/with-contenv /command/s6-setuidgid paperless python3 - "$case" "$checksum" <nasazeni/test/paperless/cteni.py)
