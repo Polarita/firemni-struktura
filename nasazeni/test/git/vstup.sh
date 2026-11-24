@@ -60,3 +60,6 @@ with urlopen(u+"/.well-known/openid-configuration", context=ctx, timeout=7) as r
     assert json.load(r)["issuer"]==u
 print("Gitea přečetla discovery Keycloaku přes interní HTTPS se shodným veřejným názvem.")
 PY
+
+incus file push --mode=0644 "$src/zkouska_site.py" gitea-runner-test/etc/polarita-gitea/
+incus exec -T gitea-runner-test -- runuser -u pol-ci -- python3 /etc/polarita-gitea/zkouska_site.py "$name"
