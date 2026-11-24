@@ -6,6 +6,7 @@ resource "incus_instance" "dohled" {
     "boot.autostart"     = "true"
     "limits.memory"      = "1GiB"
     "limits.memory.swap" = "512MiB"
+    "limits.processes"   = "384"
     "user.polarita.role" = "checkmk-test"
   }
   device {
