@@ -47,6 +47,7 @@ FIXTURES = {
     "18001-personalista": ["agent-18001"],
     "isds-podatelna-bridge": ["stav-podatelny"],
     "openbao-test": ["openbao-agent"],
+    "vaultwarden-test": ["vaultwarden-agent"],
 }
 # Skutečné údaje ISDS vydá až oprávněný proces s ověřeným časem a rozhodnutím.
 DENIED = ["isds-cteni", "isds-odesilani", "eet-vypnuto", "cizi-vzorek"]
@@ -114,6 +115,9 @@ def configure(root):
         put("sys/auth/approle", {"type": "approle"})
 
     policy = allow("auth/token/revoke-self", "update") + allow("sys/storage/raft/snapshot", "read")
+    # I s tímto oprávněním vyžaduje změna rolí tři obnovovací podíly z Ejpovic.
+    policy += allow("sys/generate-root-token/attempt", "read", "update", "delete")
+    policy += allow("sys/generate-root-token/update", "update")
     for fixture in sorted({x for values in FIXTURES.values() for x in values} | set(DENIED)):
         policy += allow("test/data/" + fixture, "create", "update")
     for role, paths in FIXTURES.items():
@@ -129,7 +133,8 @@ def configure(root):
     put("auth/approle/role/" + MAINT, {"token_policies": [MAINT], "token_no_default_policy": True,
         "token_ttl": "4m", "token_max_ttl": "4m", "secret_id_bound_cidrs": ["10.239.33.1/32"],
         "token_bound_cidrs": ["10.239.33.1/32"]})
-    protect("bao-sprava", credentials(MAINT, root))
+    if not (VAULT / "bao-sprava.cred").exists():
+        protect("bao-sprava", credentials(MAINT, root))
 
 
 def expect_forbidden(method, path, token, body=None):

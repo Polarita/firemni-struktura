@@ -21,4 +21,4 @@ incus exec openbao-test -- test ! -e /run/openbao-seal/klíč
 trap - EXIT
 incus exec openbao-test -- test ! -e /run/openbao-seal/klíč
 systemctl start polarita-openbao-agenti.service
-echo 'Restart trezoru odstranil tajemství z tmpfs. Úmyslný zámek vydržel. Po odemčení TPM dostalo pět služeb své údaje a ověřilo shodu.'
+echo 'Restart trezoru odstranil tajemství z tmpfs. Úmyslný zámek vydržel. Po odemčení TPM každá připojená služba získala své údaje a ověřila shodu.'

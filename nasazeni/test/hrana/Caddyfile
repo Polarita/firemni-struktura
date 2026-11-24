@@ -25,7 +25,16 @@ http://:8080 {
 	import protokol reditelstvi
 	bind 127.0.0.1
 	header +Via "1.1 polarita-caddy"
-	reverse_proxy 10.239.32.10:8080
+	route {
+		redir /hesla /hesla/ 308
+		@sprava path /hesla/admin /hesla/admin/*
+		respond @sprava 404
+		reverse_proxy /hesla/* 10.239.33.11:8080 {
+			header_up Cookie "(^|; *)__Host-polarita-test=[^;]*" ""
+			header_up X-Forwarded-Proto https
+		}
+		reverse_proxy 10.239.32.10:8080
+	}
 }
 
 https://vpn.polarita.test:8443 {

@@ -14,6 +14,7 @@ CLIENTS = {
     "headscale-test": ("10.239.31.11", 0, 0, "headscale"),
     "stalwart-mx-test": ("10.239.31.12", 2000, 2000, "stalwart-mx"),
     "reditelstvi-test": ("10.239.32.10", 65534, 65533, "reditelstvi"),
+    "vaultwarden-test": ("10.239.33.11", 0, 0, "vaultwarden-agent"),
     "openbao-test": ("10.239.33.10", 986, 986, "openbao-agent"),
 }
 TARGET = "/opt/polarita-openbao"

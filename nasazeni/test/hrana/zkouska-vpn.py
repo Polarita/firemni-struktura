@@ -28,6 +28,14 @@ def delete_nodes(user_id):
 
 
 def connect(name, user_id, ca, clients):
+    # Alpine zakládá /run při bootu. Testovací přístup ukládáme až na tmpfs.
+    inside(name, "sh", "-ec", """
+        for i in $(seq 1 30); do
+            if grep -q ' /run tmpfs ' /proc/mounts; then exit 0; fi
+            sleep 1
+        done
+        exit 1
+    """)
     for binary in ("tailscale", "tailscaled"):
         run("incus", "file", "push", "--mode=0755", str(clients / binary),
             f"{name}/usr/local/bin/{binary}")
