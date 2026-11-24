@@ -1,0 +1,7 @@
+destroy table bridge polarita_web_archiv
+table bridge polarita_web_archiv {
+    chain vstup {
+        type filter hook postrouting priority -45; policy accept;
+        meta obrname "app_internal" ether type ip ip daddr 10.239.32.21 tcp dport 8000 ip saddr != 10.239.31.10 counter drop
+    }
+}

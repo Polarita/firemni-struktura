@@ -189,6 +189,8 @@ obnova_databazi() {
     printf 'https://%s:8446/pamet/\n' "$fqdn" | "${guest[@]}" incus exec -T reditelstvi-test -- sh -ec 'umask 022; cat >/usr/local/share/.polarita-silverbullet-url.next; mv -T /usr/local/share/.polarita-silverbullet-url.next /usr/local/share/polarita-silverbullet-url'
 
     "${guest[@]}" install -dm0750 /srv/polarita/workspace/dukazy/blok-08
+    "${guest[@]}" bash "$dest/nasazeni/test/paperless/server.sh" "$fqdn" | tee "$tmp/paperless-server.txt"
+    "${inc[@]}" file push --project polarita "$tmp/paperless-server.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-server-$commit.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/vikunja/server.sh" "$fqdn"
     "${guest[@]}" bash "$dest/nasazeni/test/hrana/obnov-vstup.sh"
     sudo -n bash nasazeni/test/port-vpn.sh 8447 >/dev/null
