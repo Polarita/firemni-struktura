@@ -58,8 +58,25 @@ def publish(folder):
                 or any((ROOT / dest / job).exists() for dest in ("prijate", "odmitnute", "ceka"))):
             pdf.unlink()
         else:
-            os.replace(pdf, INCOMING / job)
-        sync_dir(INCOMING)
+            # Systemd zpřístupňuje frontu a příjem jako dva samostatné bind mounty.
+            # Pojmenovaný vstup vznikne až po kontrole celé kopie uvnitř cílového mountu.
+            with tempfile.NamedTemporaryFile(dir=INCOMING, prefix=".prijem-", delete=False) as dest:
+                temporary = Path(dest.name)
+                try:
+                    digest = hashlib.sha256()
+                    with pdf.open("rb") as source:
+                        while chunk := source.read(1024**2):
+                            digest.update(chunk)
+                            dest.write(chunk)
+                    if digest.hexdigest() != meta["sha256"] or dest.tell() != meta["bajtu"]:
+                        raise RuntimeError("Obsah připravené přílohy se změnil")
+                    dest.flush()
+                    os.fsync(dest.fileno())
+                    temporary.replace(INCOMING / job)
+                finally:
+                    temporary.unlink(missing_ok=True)
+            sync_dir(INCOMING)
+            pdf.unlink()
     shutil.rmtree(folder)
     sync_dir(PENDING)
     return receipt
