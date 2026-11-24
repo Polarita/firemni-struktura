@@ -48,6 +48,19 @@ def proof(name, user):
     return hashlib.sha256(b"\x00".join(checks)).digest()
 
 
+def start_restore_cluster(name):
+    inside(name, "bash", "-ec", """
+for i in {1..60}; do if mountpoint -q /run && test -S /run/systemd/private; then break; fi; sleep 1; done
+test "$(ls /sys/class/net)" = lo
+install -d -m 0700 -o postgres -g postgres /var/lib/postgresql/obnova
+install -d -m 0755 -o postgres -g postgres /run/postgresql
+runuser -u postgres -- /usr/lib/postgresql/18/bin/initdb -D /var/lib/postgresql/obnova --username=obnova_test --encoding=UTF8 --locale=C.UTF-8 --auth-local=peer --auth-host=scram-sha-256 >/dev/null
+printf 'local all obnova_test peer map=obnova\\nlocal all all peer\\n' >/var/lib/postgresql/obnova/pg_hba.conf
+echo 'obnova postgres obnova_test' >/var/lib/postgresql/obnova/pg_ident.conf
+runuser -u postgres -- /usr/lib/postgresql/18/bin/pg_ctl -D /var/lib/postgresql/obnova -o "-c listen_addresses='' -c shared_buffers=16MB -c max_connections=12" -l /var/lib/postgresql/obnova/restore.log -w start
+""")
+
+
 def main():
     if run("hostname", "-s").strip() != b"polarita-hq":
         sys.exit("Zkouška patří do firemní VM")
@@ -76,16 +89,7 @@ def main():
         run("incus", "init", image, name, "-p", "default", "-p", "sandbox_airgap", "-c", "limits.memory=320MiB")
         stack.callback(run, "incus", "delete", "-f", name)
         run("incus", "start", name)
-        inside(name, "bash", "-ec", """
-for i in {1..60}; do if mountpoint -q /run && test -S /run/systemd/private; then break; fi; sleep 1; done
-test "$(ls /sys/class/net)" = lo
-install -d -m 0700 -o postgres -g postgres /var/lib/postgresql/obnova
-install -d -m 0755 -o postgres -g postgres /run/postgresql
-runuser -u postgres -- /usr/lib/postgresql/18/bin/initdb -D /var/lib/postgresql/obnova --username=obnova_test --encoding=UTF8 --locale=C.UTF-8 --auth-local=peer --auth-host=scram-sha-256 >/dev/null
-printf 'local all obnova_test peer map=obnova\\nlocal all all peer\\n' >/var/lib/postgresql/obnova/pg_hba.conf
-echo 'obnova postgres obnova_test' >/var/lib/postgresql/obnova/pg_ident.conf
-runuser -u postgres -- /usr/lib/postgresql/18/bin/pg_ctl -D /var/lib/postgresql/obnova -o "-c listen_addresses='' -c shared_buffers=16MB -c max_connections=12" -l /var/lib/postgresql/obnova/restore.log -w start
-""")
+        start_restore_cluster(name)
         with subprocess.Popen(["incus", "exec", "-T", name, "--", "runuser", "-u", "postgres", "--",
                                "psql", "-Xq", "-v", "ON_ERROR_STOP=1", "-U", "obnova_test", "-d", "postgres"],
                               stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) as restore:

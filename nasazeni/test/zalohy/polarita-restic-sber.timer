@@ -1,0 +1,7 @@
+[Unit]
+Description=Noční místní šifrovaná záloha TEST
+[Timer]
+OnCalendar=*-*-* 01:00:00 Europe/Prague
+Persistent=true
+[Install]
+WantedBy=timers.target

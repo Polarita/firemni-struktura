@@ -1,0 +1,7 @@
+[Unit]
+Description=Nedělní izolovaná obnova TEST uvnitř polarita-hq
+[Timer]
+OnCalendar=Sun *-*-* 03:00:00 Europe/Prague
+Persistent=true
+[Install]
+WantedBy=timers.target
