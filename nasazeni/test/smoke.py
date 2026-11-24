@@ -51,7 +51,7 @@ for flag, port in (("--paperclip", 8445), ("--zulip", 8444)):
             raise SystemExit("V přehledu správce chybí odkaz na " + expected)
         print("Přehled přihlášeného správce obsahuje odkaz na " + expected)
 if "--decisions" in sys.argv:
-    match = re.search(re.escape('href="' + origin + ':8445/approvals/') +
+    match = re.search(re.escape('href="' + origin + ':8445/') + r'[A-Z][A-Z0-9]{0,15}/approvals/' +
                       r'([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})">Vyzkoušet rozhodnutí ve vzorovém spisu</a>', overview)
     if not match:
         raise SystemExit("V přehledu správce chybí odkaz na vzorové rozhodnutí v Paperclipu")

@@ -26,13 +26,15 @@ store=/srv/polarita/data/paperclip
 install -m 0600 "$manifest" "$store/.rozhodnuti.next"
 mv -T "$store/.rozhodnuti.next" "$store/rozhodnuti.json"
 echo 'Paperclip zapsal obě nativní volby správce TEST. Oddělená databázová služba ověřila jeho identitu a celý diff. Potvrzení změnilo první spis a zamítnutí zachovalo druhý.'
-url=$(python3 - "$manifest" "$fqdn" <<'PY'
+prefix=$("${sql[@]}" -c "SELECT c.issue_prefix FROM public.companies c JOIN polarita.test_vazba v ON v.company=c.id WHERE v.obsah #>> '{polarita,spis}'='TEST-POL-0000-00013'")
+[[ $prefix =~ ^[A-Z][A-Z0-9]{0,15}$ ]]
+url=$(python3 - "$manifest" "$fqdn" "$prefix" <<'PY'
 from pathlib import Path
 import json
 import sys
 from uuid import UUID
 item,=(r for r in json.loads(Path(sys.argv[1]).read_text()) if r['obsah']['polarita']['spis']=='TEST-POL-0000-00013')
-print(f"https://{sys.argv[2]}:8445/approvals/{UUID(item['approval'])}")
+print(f"https://{sys.argv[2]}:8445/{sys.argv[3]}/approvals/{UUID(item['approval'])}")
 PY
 )
 printf '%s\n' "$url" | incus exec -T reditelstvi-test -- sh -ec '
