@@ -66,12 +66,19 @@ def main():
     for name, instructions in DOCS.items():
         area = ROOT / name
         area.mkdir(mode=0o750, exist_ok=True)
-        os.chown(area, account.pw_uid, gid)
+        if area.is_symlink():
+            raise RuntimeError("Oblast znalostí musí být samostatný adresář")
+        os.chown(area, account.pw_uid, gid, follow_symlinks=False)
         page = area / "README.md"
-        if not page.exists():
-            page.write_text(f"# {name}\n\n{instructions}\n")
-            page.chmod(0o640)
-            os.chown(page, account.pw_uid, gid)
+        try:
+            fd = os.open(page, os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_WRONLY, 0o640)
+        except FileExistsError:
+            if page.is_symlink() or not page.is_file():
+                raise RuntimeError("Úvod oblasti musí být běžný soubor")
+        else:
+            with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                os.fchown(stream.fileno(), account.pw_uid, gid)
+                stream.write(f"# {name}\n\n{instructions}\n")
         initial.append(str(page.relative_to(ROOT)))
     branches = git("branch", "--format=%(refname)")
     if not branches:
