@@ -31,7 +31,7 @@ for item in json.load(sys.stdin).get("resource_changes", []):
 tofu apply -input=false "$plan"
 vm=gitea-runner-test
 inside=(incus exec -T "$vm" --)
-"${inside[@]}" sh -ec 'for i in $(seq 1 60); do if test -S /run/systemd/private && mountpoint -q /opt/polarita-wheels; then exit 0; fi; sleep 1; done; exit 1'
+"${inside[@]}" sh -ec 'for i in $(seq 1 60); do if test -S /run/dbus/system_bus_socket && systemctl is-active --quiet systemd-networkd && mountpoint -q /opt/polarita-wheels; then exit 0; fi; sleep 1; done; exit 1'
 incus file push --mode=0644 "$src/10-runner.network" "$vm/etc/systemd/network/05-polarita-runner.network"
 "${inside[@]}" networkctl reload
 "${inside[@]}" networkctl reconfigure eth0
