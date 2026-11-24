@@ -13,7 +13,7 @@ def registruj(data):
     result = subprocess.run(["psql", "-XqAtw", "-d", "db_erp_lhutnik", "-v", "ON_ERROR_STOP=1",
             "-v", "kod="+case, "-v", "id="+key, "-v", "sha="+sha, "-v", "bajtu="+str(size)],
         input="SELECT polarita_test_spisy.prijmi_sanon(:'kod',:'id'::uuid,:'sha',:'bajtu'::integer);",
-        capture_output=True, check=True, text=True, timeout=15)
+        capture_output=True, check=True, text=True, timeout=60)
     return json.loads(result.stdout)
 
 if __name__ == "__main__":

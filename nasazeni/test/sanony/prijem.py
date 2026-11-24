@@ -35,7 +35,7 @@ def locked():
 def publish(folder):
     meta = json.loads((folder / "prijem.json").read_bytes())
     with socket.socket(socket.AF_UNIX) as conn:
-        conn.settimeout(25)
+        conn.settimeout(100)
         conn.connect(REGISTER)
         conn.sendall(json.dumps(meta).encode()+b"\n")
         with conn.makefile("rb") as result:
@@ -143,7 +143,8 @@ class Handler(BaseHTTPRequestHandler):
             code, result = e.code, {}
         except ValueError:
             code, result = 400, {}
-        except (OSError, RuntimeError, KeyError):
+        except (OSError, RuntimeError, KeyError) as exc:
+            print("Registrace přílohy:", type(exc).__name__, file=sys.stderr, flush=True)
             code, result = 503, {}
         body = json.dumps(result).encode()
         self.send_response(code)
