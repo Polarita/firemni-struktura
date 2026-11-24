@@ -57,6 +57,26 @@ def main():
     ids = {(a.get("metadata") or {}).get("polaritaId") for a in rows}
     if len(rows) != 20 or len(ids) != 20 or None in ids or sum(a["budgetMonthlyCents"] for a in rows) != 39950:
         raise RuntimeError("Rozhraní správce nepotvrdilo 20 pozic a provozní kvóty")
+    if "--decisions" in sys.argv:
+        approvals = visit("/api/companies/" + company["id"] + "/approvals")
+        states = {}
+        for item in approvals:
+            sample = (item.get("payload") or {}).get("polarita") or {}
+            number = sample.get("spis")
+            if number not in ("TEST-POL-0000-00011", "TEST-POL-0000-00012", "TEST-POL-0000-00013"):
+                continue
+            if number in states or item["type"] != "request_board_approval":
+                raise RuntimeError("Nejednoznačná položka nativní fronty TEST")
+            detail = visit("/api/approvals/" + item["id"])
+            if (detail["payload"] != item["payload"] or sample.get("test") is not True
+                    or sample.get("pred") != {"stav":"rozpracován", "verze":1}
+                    or sample.get("po") != {"stav":"ke kontrole", "verze":2}):
+                raise RuntimeError("Přihlášený správce nevidí celý diff")
+            states[number] = detail["status"]
+        if (len(states) != 3 or states["TEST-POL-0000-00011"] != "approved" or
+                states["TEST-POL-0000-00012"] != "rejected"):
+            raise RuntimeError("Přes VPN nebyly dostupné všechny tři vzory Decisions")
+        print("V nativní frontě správce otevřel tři vzory, jejich diff a oba výsledky hlasování.")
     visit("/api/auth/sign-out", {})
     check_signed_out()
     print("Přes VPN se správce přihlásil do Paperclipu, otevřel organizaci s 20 pozicemi a úspěšně se odhlásil.")

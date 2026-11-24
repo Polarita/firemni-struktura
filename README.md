@@ -18,6 +18,8 @@ Odkaz **Otevřít můj účet v Keycloaku** vede do centrální identity. Přihl
 
 Po ověření přístupu se v přehledu objeví také odkaz **Otevřít řízení firmy v Paperclipu**. Je dostupný ve stejné VPN na portu `8445`. V přihlašovacím formuláři použij `spravce@polarita.test` a stejné testovací heslo jako v ředitelství.
 
+Ve frontě **Approvals** v Paperclipu otevři **Vyzkoušet rozhodnutí ve vzorovém spisu · TEST-POL-0000-00013**. Uvidíš původní stav, navrženou změnu a čísla obou verzí. **Approve** změní testovací spis na „ke kontrole“. **Reject** zachová „rozpracován“. Jednu volbu můžeš vyzkoušet kdykoli. Instalace si potvrzení i zamítnutí prověřuje na dvou jiných vzorech a tvoje rozhodnutí zachová i při dalším nasazení.
+
 Po zprovoznění týmového chatu otevři Zulip ve firemní VPN na stejném jméně jako ředitelství s portem `8444`. Zvol **Ředitelství Polarity** a přihlas se testovacím účtem `spravce` přes Keycloak. Chat má osm soukromých kanálů útvarů. Přístup každého z dvaceti pracovních botů odpovídá jeho firemní kartě. Odkaz na chat se v přehledu objeví po úspěšném přihlášení správce. Instalace vloží do soukromého kanálu `17-it-secops` testovací zprávu s přílohou. Při zkoušce obnovy se kontroluje obsah přílohy i její vazba na původní zprávu.
 
 Po zprovoznění Checkmk ředitelství zpřístupní stránku **Stav firemních služeb**. U každé služby uvidíš poslední měření a čas v UTC. V bloku 7 se přidají sondy přihlášení Zulipu a dostupnosti Paperclipu. Výpadek i obnovu služby zapisuje Checkmk do soukromého kanálu **17-it-secops** v Zulipu. Instalační zkouška ověřuje obě zprávy také po obnově ze zálohy.

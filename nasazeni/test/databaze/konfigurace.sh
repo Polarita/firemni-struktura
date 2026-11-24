@@ -51,6 +51,7 @@ log_min_error_statement = 'panic'
 CONF
 cat >/etc/polarita-postgres/pg_hba.conf <<'CONF'
 local all postgres peer
+local db_paperclip pol_decisions_bridge peer
 local all all scram-sha-256
 host all postgres 0.0.0.0/0 reject
 host all postgres ::/0 reject
