@@ -4,8 +4,8 @@ resource "incus_instance" "dohled" {
   profiles = ["default", "app_internal"]
   config = {
     "boot.autostart"     = "true"
-    "limits.memory"      = "768MiB"
-    "limits.memory.swap" = "false"
+    "limits.memory"      = "1GiB"
+    "limits.memory.swap" = "512MiB"
     "user.polarita.role" = "checkmk-test"
   }
   device {

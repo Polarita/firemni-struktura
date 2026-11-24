@@ -19,7 +19,11 @@ omd config "$site" set AUTOSTART on
 apachectl configtest
 systemctl enable --now apache2
 systemctl reload apache2
-omd start "$site"
+if ! omd status "$site" >/dev/null; then
+    # Při částečném běhu vrací start některých již běžících démonů nenulový kód.
+    # O přijetí rozhodne následná kontrola všech procesů lokality.
+    omd start "$site" || omd status "$site" >/dev/null
+fi
 omd status "$site"
 body=$(mktemp)
 trap 'rm -f -- "$body"' EXIT
