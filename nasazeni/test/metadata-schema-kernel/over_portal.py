@@ -51,6 +51,11 @@ def main(origin, password):
         assert status == 200 and karta["branch_id"] == 101
         for field in ("case_id", "alias"):
             assert json.loads(send("GET", path + "api/spisy/" + karta[field])[3]) == karta
+        book = path + "api/kniha/" + karta["case_id"]
+        status, _, _, book_rows = send("GET", book)
+        assert status == 200 and isinstance(json.loads(book_rows), list)
+        assert send("POST", book, b"{}", headers)[0] == 400
+        assert send("POST", book, b"{}", {**headers, "Origin":"https://jiny.invalid"})[0] == 403
         s, _, meta, raw = send("PUT",record,body,{**headers,"If-Match":'"1"'})
         assert s == 200 and meta["ETag"] == '"2"' and json.loads(raw)["id"] == key
         assert send("PUT",record,body,{**headers,"If-Match":'"1"'})[0] == 412
