@@ -4,6 +4,7 @@ from pathlib import Path
 import re
 import shutil
 import sqlite3
+import subprocess
 import tarfile
 import tempfile
 
@@ -46,4 +47,20 @@ def verify(root):
             raise RuntimeError("Chybí aktivní manifest příchozí pošty RocksDB")
         if not any(name.startswith(base) and name.endswith(".sst") for name in mx.getnames()):
             raise RuntimeError("V obnoveném RocksDB chybí tabulky úložiště")
-    print("Obnovené stavy OpenTofu a inventář Incusu obsahují firemní služby. SQLite Headscale prošla kontrolou integrity, RocksDB MX má manifest a tabulky.")
+        with tempfile.TemporaryDirectory() as tmp:
+            database=Path(tmp)/"rocksdb"
+            database.mkdir()
+            for item in mx.getmembers():
+                relative=item.name.removeprefix(base)
+                if not item.name.startswith(base) or not item.isfile() or not relative:
+                    continue
+                name=Path(relative)
+                if name.is_absolute() or ".." in name.parts:
+                    raise RuntimeError("Neplatná cesta v obnovené databázi MX")
+                path=database/name
+                path.parent.mkdir(parents=True,exist_ok=True)
+                with mx.extractfile(item) as source,path.open("xb") as out:
+                    shutil.copyfileobj(source,out)
+            subprocess.run(["ldb","--db="+str(database),"--ignore_unknown_options","checkconsistency"],
+                           check=True,stdout=subprocess.DEVNULL)
+    print("Obnovené stavy OpenTofu a inventář Incusu obsahují firemní služby. SQLite Headscale prošla kontrolou integrity, obnovené RocksDB MX prošlo nativní kontrolou konzistence.")

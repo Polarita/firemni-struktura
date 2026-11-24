@@ -5,7 +5,7 @@ set -euo pipefail
 src=$(cd "$(dirname "$0")" && pwd)
 base=$(incus config get postgres-test volatile.base_image)
 [[ $base =~ ^[a-f0-9]{64}$ ]]
-packages=(git=1:2.53.0-1ubuntu1.1 pgbackrest=2.58.0-1)
+packages=(git=1:2.53.0-1ubuntu1.1 pgbackrest=2.58.0-1 rocksdb-tools=9.11.2-1)
 key=$(printf '%s\n' "$base" "${packages[@]}" | sha256sum | cut -c1-20)
 alias=polarita-restic-obnova-$key
 work=/srv/polarita/infra/restic-test

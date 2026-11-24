@@ -51,14 +51,11 @@ def check():
         ["incus", "exec", INSTANCE, "--", "cat", "/proc/net/tcp", "/proc/net/tcp6"],
         text=True,
     )
-    listeners = {(address,int(port,16)) for line in ports.splitlines()
-                 if len(cols := line.split()) > 3 and cols[3]=="0A"
-                 for address,port in [cols[1].split(":")]}
-    # /proc/net/tcp uvádí IPv4 oktety v opačném pořadí. Na síti smí být pouze SMTP.
-    if listeners != {("00000000",25),("0100007F",19090)}:
-        raise RuntimeError(f"Neočekávaná vazba TCP služby MX: {sorted(listeners)}")
-    print("SMTP je dostupné na portu 25 a telemetrie výhradně na místním loopbacku.")
-
+    listeners = {int(cols[1].split(":")[1], 16) for line in ports.splitlines()
+                 if len(cols := line.split()) > 3 and cols[3] == "0A"}
+    if listeners != {25}:
+        raise RuntimeError(f"Naslouchající TCP porty: {sorted(listeners)}")
+    print("V kontejneru naslouchá pouze SMTP na portu 25.")
 
 
 if __name__ == "__main__":
