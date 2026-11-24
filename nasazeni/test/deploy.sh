@@ -14,6 +14,7 @@ guest=("${inc[@]}" exec -T --project polarita polarita-hq --)
 dest=/srv/polarita/infra/releases/$commit
 "${guest[@]}" install -d "$dest"
 git archive "$commit" | "${guest[@]}" tar -x -C "$dest"
+"${guest[@]}" bash "$dest/nasazeni/test/zaklad/pamet.sh"
 "${guest[@]}" python3 "$dest/nasazeni/test/pamet/soukrome.py"
 "${guest[@]}" bash "$dest/nasazeni/test/karantena/kvm-host.sh"
 if ! "${guest[@]}" grep -qw no-kvmapf /proc/cmdline; then
@@ -98,11 +99,7 @@ python3 nasazeni/test/identita/overeni.py "https://$fqdn/identita" | tee "$tmp/i
 "${guest[@]}" python3 "$dest/nasazeni/test/git/repozitar.py" | tee -a "$tmp/gitea.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/git/fronta.sh" | tee -a "$tmp/gitea.txt"
 git archive --format=tar.gz "$commit" | "${guest[@]}" install -m 0600 /dev/stdin "$dest/zdroj-ci.tar.gz"
-"${guest[@]}" python3 "$dest/nasazeni/test/git/zdroj_ci.py" "$dest/zdroj-ci.tar.gz" | tee -a "$tmp/gitea.txt"
-"${guest[@]}" bash "$dest/nasazeni/test/git/sken.sh"
-"${guest[@]}" python3 "$dest/nasazeni/test/git/zdroj_ci.py" "$dest/zdroj-ci.tar.gz" --zkouska-skenu | tee -a "$tmp/gitea.txt"
-"${guest[@]}" python3 "$dest/nasazeni/test/git/repozitar.py" --ochrana --kandidat "$dest/revize-ci.json" | tee -a "$tmp/gitea.txt"
-"${guest[@]}" python3 "$dest/nasazeni/test/git/over_ci.py" "$dest/revize-ci.json" | tee -a "$tmp/gitea.txt"
+"${guest[@]}" bash "$dest/nasazeni/test/git/kontrola.sh" "$dest" | tee -a "$tmp/gitea.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/paperclip/spravce.sh" "$fqdn" "$dest/revize-ci.json" | tee -a "$tmp/paperclip.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/paperclip/stage1.sh" | tee -a "$tmp/paperclip.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/decisions/instalace.sh" | tee -a "$tmp/paperclip.txt"

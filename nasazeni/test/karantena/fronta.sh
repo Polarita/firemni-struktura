@@ -6,6 +6,8 @@ work=/srv/polarita/infra/karantena-test
 vm=karantena-test
 exec 9>"$work/.instalace"
 flock 9
+exec 8>/run/polarita-test-zatez.lock
+flock 8
 [[ $(incus list "$vm" -c s -f csv) == STOPPED ]]
 incus start "$vm"
 trap 'incus stop "$vm" --timeout 180 </dev/null' EXIT
