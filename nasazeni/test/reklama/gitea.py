@@ -14,13 +14,14 @@ from urllib.parse import urlsplit
 
 OWNER = "spravce"
 REPO = "polarita-ads-mcp"
+DESCRIPTION = "Místní auditovaný reklamní MCP server pro testování."
 
 def create():
     secret = json.load(sys.stdin)
     host = urlsplit(Path("/etc/polarita-gitea/url").read_text().strip()).hostname
     auth = base64.b64encode((secret["admin"]+":"+secret["password"]).encode()).decode()
     def api(method, path, data=None, expected=(200,)):
-        c = http.client.HTTPSConnection(host,context=ssl.create_default_context(cafile="/etc/polarita-gitea/git-ca.crt"), timeout=20)
+        c = http.client.HTTPSConnection(host,context=ssl.create_default_context(cafile="/etc/polarita-gitea/git-ca.crt"), timeout=120)
         try:
             c.request(method,"/git/api/v1"+path,json.dumps(data) if data else None,
                       {"Content-Type":"application/json","Authorization":"Basic "+auth,"Sudo":OWNER})
@@ -37,11 +38,11 @@ def create():
     status, repo = api("GET",path,expected=(200,404))
     if status == 404:
         api("POST","/user/repos",{"name":REPO,"private":True,"auto_init":False,"default_branch":"main",
-            "description":"Místní auditovaný reklamní MCP server pro testování."},(201,))
+            "description":DESCRIPTION},(201,))
         _, repo = api("GET",path)
     if repo["full_name"] != OWNER+"/"+REPO or not repo["private"]:
         raise RuntimeError("Nesouhlasí vlastník nebo viditelnost")
-    if status == 404 and repo.get("has_actions"):
+    if repo.get("has_actions") and repo.get("description") == DESCRIPTION:
         api("PATCH",path,{"has_actions":False})
     if api("GET",path)[1].get("has_actions"):
         raise RuntimeError("Fork nemá spouštět cizí workflow")
@@ -92,7 +93,13 @@ def publish():
 if __name__ == "__main__":
     host = socket.gethostname().split(".")[0]
     if host == "gitea-test":
-        create()
+        for attempt in range(3):
+            try:
+                create()
+                break
+            except (TimeoutError, http.client.RemoteDisconnected, ConnectionResetError):
+                if attempt == 2:
+                    raise
     elif host == "polarita-hq" and os.geteuid()==0:
         publish()
     else:
