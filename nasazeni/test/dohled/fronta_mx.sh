@@ -9,5 +9,5 @@ systemd-run --quiet --pipe --wait --collect -p PrivateNetwork=yes -p ProtectSyst
     -p "ReadOnlyPaths=$db" /bin/bash -ec '
         set -euo pipefail
         t=$(mktemp -d)
-        exec java -XX:+UseSerialGC -Xms8m -Xmx48m -cp "/opt/polarita-rocksdb/*:/opt/polarita-rocksdb" RocksSonda fronta "$1" "$t/cache"
+        exec java -Djava.library.path=/opt/polarita-rocksdb -XX:+UseSerialGC -Xms8m -Xmx48m -cp "/opt/polarita-rocksdb/*:/opt/polarita-rocksdb" RocksSonda fronta "$1" "$t/cache"
     ' fronta "$db"

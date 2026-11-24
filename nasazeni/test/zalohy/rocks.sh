@@ -23,6 +23,22 @@ if [[ ! -f $dir/rocksdbjni.jar ]] || ! printf '%s  %s\n' "$digest" "$dir/rocksdb
     chmod 0644 "$tmp/lib.jar"
     mv -T "$tmp/lib.jar" "$dir/rocksdbjni.jar"
 fi
+# Minutová sonda načítá hotovou knihovnu. Při každém měření by jinak rozbalovala 17 MB.
+native=librocksdbjni-linux64.so
+native_digest=265c656af5c6502cb8d71db1a74858509f706cc47f1a5b6f603c736d11ce677d
+if [[ ! -f $dir/$native ]] || ! printf '%s  %s\n' "$native_digest" "$dir/$native" | sha256sum --status -c; then
+    python3 - "$dir" "$native" <<'EXTRACT'
+from pathlib import Path
+import shutil, sys, zipfile
+root, name = Path(sys.argv[1]), sys.argv[2]
+with zipfile.ZipFile(root / "rocksdbjni.jar") as jar:
+    with jar.open(name) as src, (root / (name + ".next")).open("wb") as out:
+        shutil.copyfileobj(src, out)
+EXTRACT
+    printf '%s  %s\n' "$native_digest" "$dir/$native.next" | sha256sum -c
+    chmod 0644 "$dir/$native.next"
+    mv -T "$dir/$native.next" "$dir/$native"
+fi
 DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=120 -y --no-install-recommends install openjdk-21-jdk-headless=21.0.13.1+2-1~26.04.1
 classes=$(mktemp -d "$dir/.javac-XXXXXXXX")
 trap 'rm -r -- "${classes:?}"; if [[ -n ${tmp:-} ]]; then rm -r -- "$tmp"; fi' EXIT
