@@ -4,12 +4,13 @@ import csv
 import json
 import os
 from pathlib import Path
+import re
 import smtplib
 import socket
 import ssl
 import subprocess
 import time
-from urllib.request import HTTPSHandler, ProxyHandler, build_opener
+from urllib.request import HTTPSHandler, ProxyHandler, Request, build_opener
 
 
 def run(*args):
@@ -46,7 +47,8 @@ def instances():
     rows = list(csv.reader(run("incus","list","--format","csv","-c","ns").splitlines()))
     expected = {"caddy-test","headscale-test","stalwart-mx-test","openbao-test","vaultwarden-test",
                 "postgres-test","valkey-test","garage-test","gitea-test","gitea-runner-test",
-                "reditelstvi-test","keycloak-test","pecet-test","clamav-signatury-test","restic-test","checkmk-test"}
+                "reditelstvi-test","keycloak-test","pecet-test","clamav-signatury-test","restic-test","checkmk-test",
+                "zulip-test","zulip-fronta-test","paperclip-test"}
     missing = expected-set(name for name,status in rows if status=="RUNNING")
     if "karantena-test" not in dict(rows):
         missing.add("karantena-test")
@@ -75,6 +77,32 @@ def proxy():
         remain=ssl.cert_time_to_seconds(tls.getpeercert()["notAfter"])-time.time()
     hours=remain/3600
     return state(hours>1,f"TLS pro vpn.polarita.test zbývá {hours:.1f} h",f"expiry={int(remain)}s")
+
+
+def app_status(port, path):
+    # Použij tutéž trasu přes Caddy, kterou uvnitř VM obsluhuje vstup z VPN.
+    fqdn = json.loads(Path("/srv/polarita/infra/incus/oidc.auto.tfvars.json").read_bytes())["oidc_fqdn"]
+    if not re.fullmatch(r"[a-z0-9.-]+[.]ts[.]net", fqdn):
+        raise ValueError("Chybné jméno ředitelství")
+    request = Request("http://127.0.0.1:18184" + path, headers={"Host": f"{fqdn}:{port}"})
+    with build_opener(ProxyHandler({})).open(request, timeout=8) as response:
+        if response.geturl() != request.full_url or response.headers.get_content_type() != "application/json":
+            raise ValueError("Nečekaná odpověď aplikace")
+        return json.load(response)
+
+
+def zulip():
+    data = app_status(8444, "/api/v1/server_settings")
+    auth = data.get("external_authentication_methods", [])
+    ok = (data.get("result") == "success" and data.get("realm_name") == "Ředitelství Polarity"
+          and any(provider.get("name") == "oidc:polarita" for provider in auth))
+    return state(ok, "Firemní chat odpovídá s OIDC" if ok else "Nesouhlasí organizace nebo přihlášení chatu")
+
+
+def paperclip():
+    data = app_status(8445, "/api/health")
+    ok = data.get("status") == "ok" and data.get("deploymentMode") == "authenticated"
+    return state(ok, "Orchestrátor přijímá přihlášené uživatele" if ok else "Orchestrátor nepotvrdil ověřovaný provoz")
 
 
 def postgres():
@@ -134,7 +162,7 @@ def sample():
 
 PROBES={"OpenZFS":pool,"RAM":memory,"CPU":cpu,"Incus":instances,"Sitova rozhrani":interfaces,
         "OpenBao":bao,"Caddy TLS":proxy,"PostgreSQL":postgres,"PgBouncer":pgbouncer,
-        "Valkey TLS":valkey,"Garage":garage,"MX SMTP":mx,"MX fronta":queue,"MX RocksDB":rocks,
+        "Zulip":zulip,"Paperclip":paperclip,"Valkey TLS":valkey,"Garage":garage,"MX SMTP":mx,"MX fronta":queue,"MX RocksDB":rocks,
         "Stari zalohy":lambda:age("/srv/polarita/infra/restic-test/posledni-otisk",30),
         "Posledni obnova":lambda:age("/srv/polarita/infra/restic-test/posledni-overena-obnova.json",8*24),
         "Zkusebni sluzba":sample}
