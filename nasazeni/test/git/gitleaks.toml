@@ -1,0 +1,8 @@
+title = "Polarita TEST"
+[extend]
+useDefault = true
+
+[[rules]]
+id = "polarita-test-kontrola"
+description = "Neškodná kontrolní hodnota pro přejímku"
+regex = '''(?:POLARITA_CI_FIXTURE=)[0-9a-f]{32}'''

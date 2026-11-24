@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+while read -r old new ref; do
+    [[ $new =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || exit 1
+    if [[ $new =~ ^0+$ ]]; then continue; fi
+    if ! timeout 90 gitleaks detect --no-banner --redact --config=/etc/polarita-gitea/gitleaks.toml \
+        --source=. --log-opts="$new --not --all" >/dev/null 2>&1; then
+        echo 'Polarita TEST: gitleaks nepovolil přijetí změny.' >&2
+        exit 1
+    fi
+done

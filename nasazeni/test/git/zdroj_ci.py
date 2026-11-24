@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import pwd
 import shutil
+import secrets
 import socket
 import subprocess
 import sys
@@ -41,6 +42,18 @@ def main():
         def git(*args, directory=tmp):
             return subprocess.check_output(["git",*args],cwd=directory,env=env,text=True).strip()
         head = git("ls-remote",url,"refs/heads/main")
+        if "--zkouska-skenu" in sys.argv:
+            sample = tmp/"zkouska"
+            git("clone","-q","--no-local",url,str(sample))
+            (sample/"kontrola.txt").write_text("POLARITA_CI_FIXTURE="+secrets.token_hex(16)+"\n")
+            git("add","kontrola.txt",directory=sample)
+            git("-c","user.name=Polarita TEST","-c","user.email=instalace@polarita.test","commit","-qm","Neškodný vzorek detektoru",directory=sample)
+            branch = "refs/heads/zkouska-detektoru-"+secrets.token_hex(8)
+            push = subprocess.run(["git","push",url,"HEAD:"+branch],cwd=sample,env=env,capture_output=True,text=True)
+            if not push.returncode or "gitleaks nepovolil" not in push.stderr or git("ls-remote",url,branch):
+                raise RuntimeError("Serverová brána nepotvrdila odmítnutí testovacího vzorku")
+            print("Gitea prostřednictvím gitleaks odmítla push s neškodnou kontrolní hodnotou. Větev nevznikla.")
+            return
         if not head:
             src = tmp/"zdroj"
             src.mkdir()
