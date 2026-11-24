@@ -1,0 +1,14 @@
+[Unit]
+Description=Místní příjem zpráv SMTP a testovacího Telegram API
+After=network.target
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/lib/polarita-dohled/prijem_test.py
+StateDirectory=polarita-alert-test
+DynamicUser=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+UMask=0077
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target
