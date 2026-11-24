@@ -1,14 +1,21 @@
 #!/bin/bash
 set -euo pipefail
 cd /home/zulip/deployments/current
-module=zerver/lib/redis_utils.py
-before=96183681492a8c5295fcc6588c47c4ecaaec478c12ca6f135677e2b9761a7203
-after=addcc82d55a89680b0c9e3ccb50974d727753007a0e4cce20f5e1cdf751d7f42
-if ! printf '%s  %s\n' "$after" "$module" | sha256sum -c --status; then
-    printf '%s  %s\n' "$before" "$module" | sha256sum -c --status
-    printf '%s  %s\n' "$after" /etc/polarita-zulip/redis_utils.py | sha256sum -c --status
-    install -m 0644 /etc/polarita-zulip/redis_utils.py "$module"
-fi
+install_module() {
+    local module=$1 before=$2 after=$3
+    local replacement=/etc/polarita-zulip/${module##*/}
+    if ! printf '%s  %s\n' "$after" "$module" | sha256sum -c --status; then
+        printf '%s  %s\n' "$before" "$module" | sha256sum -c --status
+        printf '%s  %s\n' "$after" "$replacement" | sha256sum -c --status
+        install -m 0644 "$replacement" "$module"
+    fi
+}
+install_module zerver/lib/redis_utils.py \
+    96183681492a8c5295fcc6588c47c4ecaaec478c12ca6f135677e2b9761a7203 \
+    addcc82d55a89680b0c9e3ccb50974d727753007a0e4cce20f5e1cdf751d7f42
+install_module zproject/backends.py \
+    1c7f5a9ce395969f9150786b22a540c30a2fb29453db19bda703da7a4ddecd80 \
+    69f76653777b14a11665a4aaab16d3f61ab1d0a8566478374e7a1d5c325d47e4
 while [[ ! -s /run/secrets/pg-zulip || ! -s /run/secrets/zulip__secret_key ||
          ! -s /run/secrets/zulip__social_auth_oidc_secret || ! -f /etc/polarita-zulip/pripraveno ]]; do sleep 3; done
 export SECRETS_postgres_password_FILE=/run/secrets/pg-zulip

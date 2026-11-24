@@ -1,0 +1,12 @@
+--- a/zproject/backends.py
++++ b/zproject/backends.py
+@@ -97,3 +97,3 @@
+ from zerver.lib.rate_limiter import RateLimitedObject, client_is_exempt_from_rate_limiting
+-from zerver.lib.redis_utils import get_dict_from_redis, get_redis_client, put_dict_in_redis
++from zerver.lib.redis_utils import REDIS_KEY_PREFIX, get_dict_from_redis, get_redis_client, put_dict_in_redis
+ from zerver.lib.request import RequestNotes
+@@ -1933,3 +1933,3 @@
+         if delete_stored_data:
+-            redis_client.delete(key)
++            redis_client.delete(REDIS_KEY_PREFIX + key)
+ 
