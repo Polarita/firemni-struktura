@@ -26,6 +26,9 @@ export SETTING_REDIS_HOST=10.239.33.13 SETTING_MEMCACHED_LOCATION=10.239.32.17:1
 export SETTING_RABBITMQ_HOST=10.239.32.17 SETTING_RABBITMQ_USERNAME=zulip
 export CONFIG_application_server__queue_workers_multiprocess=false CONFIG_application_server__nginx_worker_processes=1
 export ZULIP_AUTH_BACKENDS=GenericOpenIdConnectBackend LOADBALANCER_IPS=10.239.31.10
-export ZULIP_CUSTOM_SETTINGS="SOCIAL_AUTH_OIDC_ENABLED_IDPS = {'polarita': {'oidc_url': 'https://$POLARITA_WEB/identita/realms/polarita', 'display_name': 'Ředitelství Polarity', 'client_id': 'zulip', 'secret': get_secret('social_auth_oidc_secret'), 'auto_signup': False}}"
+# Interní vydavatel OIDC má na privátním mostu vlastní ověřený certifikát.
+# Ostatní cíle dál používají běžné nastavení odchozího proxy serveru Zulipu.
+export ZULIP_CUSTOM_SETTINGS="SOCIAL_AUTH_OIDC_PROXIES = {'https://$POLARITA_WEB': ''}
+SOCIAL_AUTH_OIDC_ENABLED_IDPS = {'polarita': {'oidc_url': 'https://$POLARITA_WEB/identita/realms/polarita', 'display_name': 'Ředitelství Polarity', 'client_id': 'zulip', 'secret': get_secret('social_auth_oidc_secret'), 'auto_signup': False}}"
 export AUTO_BACKUP_ENABLED=false TRUST_GATEWAY_IP=false
 exec /sbin/entrypoint.sh app:run
