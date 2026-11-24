@@ -17,6 +17,9 @@ case ${1:-} in
     get-context) exec "${run[@]}" "${common[@]}" "${python[@]}" "$@" ;;
     log|adr) exec "${run[@]}" "${common[@]}" -p ReadWritePaths=/srv/polarita/vault "${python[@]}" "$@" ;;
     search|index)
+        # Jediná aktivní inference sdílí dostupnou paměť VM mezi dvaceti rolemi.
+        exec 8>/run/polarita-agent-vault-model.lock
+        flock 8
         # Připoj jen běžící unixový socket PostgreSQL. Pracovní proces nemá přístup do Incusu ani do jeho sítě.
         pid=$(incus query /1.0/instances/postgres-test/state | python3 -c 'import json,sys; print(int(json.load(sys.stdin)["pid"]))')
         [[ $pid =~ ^[1-9][0-9]*$ && -S /proc/$pid/root/run/postgresql/.s.PGSQL.5432 ]]
