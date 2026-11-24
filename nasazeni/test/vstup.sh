@@ -12,9 +12,39 @@ fqdn=$(tailscale status --json | python3 -c 'import json,sys; print(json.load(sy
 relay=/etc/polarita-test-relay
 install -d -m 700 "$relay"
 cd "$relay"
+exec 9>.instalace.lock
+flock 9
+
+# Otisk zaznamenáme až po úspěšném použití jednotky i jejích vstupů.
+spust_sluzbu() {
+    local unit=$1 target digest
+    shift
+    target=/etc/systemd/system/$unit
+    cat >"$unit.next"
+    digest=$(sha256sum -- "$unit.next" "$@" | sha256sum | cut -d' ' -f1)
+    if ! cmp -s "$unit.next" "$target"; then
+        install -m0644 "$unit.next" "$target.next"
+        touch "$unit.reload"
+        mv -T "$target.next" "$target"
+    fi
+    if [[ -f $unit.reload || $(systemctl show "$unit" -p NeedDaemonReload --value) == yes ]]; then
+        systemctl daemon-reload
+    fi
+    systemctl enable "$unit"
+    if [[ -f $unit.reload || ! -f $unit.applied || $(cat "$unit.applied") != "$digest" ]]; then
+        systemctl restart "$unit"
+    else
+        systemctl start "$unit"
+    fi
+    systemctl is-active --quiet "$unit"
+    printf '%s\n' "$digest" >"$unit.applied.next"
+    mv -T "$unit.applied.next" "$unit.applied"
+    rm -f -- "$unit.reload" "$unit.next"
+}
 if [[ ! -e key ]]; then ssh-keygen -q -t ed25519 -N '' -C polarita-test-relay -f key; fi
 # Hostitelský klíč pochází přímo z konzole ověřené VM.
-printf '%s %s\n' "$ip" "$("${guest[@]}" cat /etc/ssh/ssh_host_ed25519_key.pub)" >known_hosts
+printf '%s %s\n' "$ip" "$("${guest[@]}" cat /etc/ssh/ssh_host_ed25519_key.pub)" >known_hosts.next
+mv -T known_hosts.next known_hosts
 "${guest[@]}" sh -eu -c '
 if ! id polarita-relay >/dev/null 2>&1; then
     useradd -m -s /usr/sbin/nologin polarita-relay
@@ -22,12 +52,23 @@ fi
 install -d -m 700 -o polarita-relay -g polarita-relay /home/polarita-relay/.ssh
 '
 printf 'restrict,port-forwarding,permitopen="127.0.0.1:18184",command="/bin/false" %s\n' "$(cat key.pub)" |
-    "${guest[@]}" sh -c 'umask 077; cat >/home/polarita-relay/.ssh/authorized_keys; chown polarita-relay:polarita-relay /home/polarita-relay/.ssh/authorized_keys'
+    "${guest[@]}" sh -c 'umask 077; cd /home/polarita-relay/.ssh && cat >authorized_keys.next && chown polarita-relay:polarita-relay authorized_keys.next && mv -T authorized_keys.next authorized_keys'
 # Uživatel smí jen místní forwarding na jediný port aplikace.
 gateway=$(ip -4 route get "$ip" | awk '{for(i=1;i<=NF;i++) if ($i=="src") print $(i+1)}')
-printf '%s\n' 'Match User polarita-relay' "    AllowUsers polarita-relay@$gateway" '    AllowTcpForwarding local' '    AllowStreamLocalForwarding no' '    PermitOpen 127.0.0.1:18184' '    MaxSessions 0' 'Match all' |
-    "${guest[@]}" sh -ec 'cat >/etc/ssh/sshd_config.d/60-polarita-relay.conf; sshd -t; systemctl reload ssh'
-cat >/etc/systemd/system/polarita-test-tunnel.service <<UNIT
+printf '%s\n' 'Match User polarita-relay' "    AllowUsers polarita-relay@$gateway" '    AllowTcpForwarding local' '    AllowStreamLocalForwarding no' '    PermitOpen 127.0.0.1:18184' '    MaxSessions 0' 'Match all' >relay-ssh.conf
+"${guest[@]}" sh -ec '
+    file=/etc/ssh/sshd_config.d/60-polarita-relay.conf
+    cat >"$file.next"
+    if cmp -s "$file.next" "$file"; then rm -f "$file.next"; else
+        touch /run/polarita-relay-ssh.reload
+        mv -T "$file.next" "$file"
+    fi
+    if test -e /run/polarita-relay-ssh.reload; then
+        sshd -t
+        systemctl reload ssh
+        rm -f /run/polarita-relay-ssh.reload
+    fi' <relay-ssh.conf
+spust_sluzbu polarita-test-tunnel.service key.pub known_hosts relay-ssh.conf <<UNIT
 [Unit]
 Description=Privatni spojeni k testovacimu reditelstvi
 After=network-online.target
@@ -38,20 +79,20 @@ RestartSec=4
 [Install]
 WantedBy=multi-user.target
 UNIT
-systemctl daemon-reload
-systemctl enable polarita-test-tunnel.service
-systemctl restart polarita-test-tunnel.service
-curl --retry 8 --retry-all-errors --retry-delay 1 -fsS -o /dev/null http://127.0.0.1:18183/
+curl --connect-timeout 4 --max-time 25 --retry-max-time 180 --retry 8 --retry-all-errors --retry-delay 2 -fsS -o /dev/null http://127.0.0.1:18183/
 # Ostatní pravidla Serve se zachovají. Obsazená cesta patří jiné službě.
-tailscale serve status --json | python3 -c '
+vpn_state=$(tailscale serve status --json | python3 -c '
 import json, sys
 d=json.load(sys.stdin)
 web=d.get("Web",{}).get(sys.argv[1]+":443",{}).get("Handlers",{})
 tcp=d.get("TCP",{}).get("443",{})
 if (tcp and not tcp.get("HTTPS")) or ("/" in web and web["/"].get("Proxy")!="http://127.0.0.1:18183"):
     sys.exit("HTTPS vstup používá jiná služba")
-' "$fqdn"
-tailscale serve --bg --yes --https=443 http://127.0.0.1:18183
+print("aktivni" if tcp.get("HTTPS") and "/" in web else "pripravit")
+' "$fqdn")
+if [[ $vpn_state == pripravit ]]; then
+    tailscale serve --bg --yes --https=443 http://127.0.0.1:18183
+fi
 cat >landing.html <<HTML
 <!doctype html><html lang="cs"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0;url=https://$fqdn/"><title>Ředitelství Polarity</title><h1>Ředitelství Polarity</h1><a href="https://$fqdn/">Otevřít zabezpečené přihlášení</a></html>
 HTML
@@ -71,7 +112,7 @@ frontend portal_vpn
     http-request return status 200 content-type "text/html; charset=utf-8" file $relay/landing.html
 CFG
 haproxy -c -f "$relay/landing.cfg"
-cat >/etc/systemd/system/polarita-test-vstup.service <<UNIT
+spust_sluzbu polarita-test-vstup.service landing.cfg landing.html <<UNIT
 [Unit]
 Description=Vstup do reditelstvi pres firemni VPN
 After=tailscaled.service network-online.target
@@ -82,6 +123,3 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 UNIT
-systemctl daemon-reload
-systemctl enable polarita-test-vstup.service
-systemctl restart polarita-test-vstup.service
