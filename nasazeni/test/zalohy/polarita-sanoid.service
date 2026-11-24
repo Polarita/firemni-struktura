@@ -1,0 +1,11 @@
+[Unit]
+Description=Pravidelné snímky pěti firemních datasetů uvnitř polarita-hq
+After=zfs-mount.service
+RequiresMountsFor=/srv/polarita/vault
+[Service]
+Type=oneshot
+CacheDirectory=polarita-sanoid
+RuntimeDirectory=polarita-sanoid
+Environment=TZ=UTC
+ExecStart=/usr/sbin/sanoid --configdir=/etc/sanoid/polarita-test --cache-dir=/var/cache/polarita-sanoid --run-dir=/run/polarita-sanoid --cron
+TimeoutStartSec=10min

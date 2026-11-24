@@ -113,6 +113,8 @@ done
 "${guest[@]}" python3 "$dest/nasazeni/test/karantena/zkouska.py" | tee "$tmp/karantena.txt"
 "${inc[@]}" file push --project polarita "$tmp/karantena.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-04/karantena-$commit.txt"
 "${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-06
+"${guest[@]}" bash "$dest/nasazeni/test/zalohy/snimky.sh" | tee "$tmp/sanoid.txt"
+"${inc[@]}" file push --project polarita "$tmp/sanoid.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-06/sanoid-$commit.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/zalohy/instalace.sh"
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/zkouska_pristupu.py" | tee "$tmp/restic.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/sber.py" | tee -a "$tmp/restic.txt"
