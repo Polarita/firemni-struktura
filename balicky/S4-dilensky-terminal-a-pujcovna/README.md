@@ -1,6 +1,6 @@
-# Blok 16 · Balíček S4 — Dotykový Dílenský terminál rozváděčů a Půjčovna měřidel · Verze 3.18
+# Blok 16 · Balíček S4 — Dotykový Dílenský terminál rozváděčů a Půjčovna měřidel · Verze 3.19
 
-Tento dokument řídí **Blok 16** Rozvojové Etapy II společnosti **Polarita s.r.o.** (release `Polarita-3.18`). Balíček `S4` přidává dvě věci: dotykový kiosk `dilensky-terminal` pro kompletaci a kusové ověření rozváděčů na dílně centrálního skladu `MAIN-101` a modul `pujcovna-meridel` pro B2B pronájem měřidel, mobilních staveništních rozváděčů a elektrocentrál.
+Tento dokument řídí **Blok 16** Rozvojové Etapy II společnosti **Polarita s.r.o.** (release `Polarita-3.19`). Balíček `S4` přidává dvě věci: dotykový kiosk `dilensky-terminal` pro kompletaci a kusové ověření rozváděčů na dílně centrálního skladu `MAIN-101` a modul `pujcovna-meridel` pro B2B pronájem měřidel, mobilních staveništních rozváděčů a elektrocentrál.
 
 Blok 16 lze spustit až po `12/12 PASS` Go-Live Gate (Blok 12) a nezávisí na Blocích 13–15 ani 17–18. Navazuje na čtyři hotové vrstvy: **Blok 8** (`centralni-lhutnik-a-objekty` — bezkolizní kalendář zdrojů `N4`, Lhůtník kalibrací, `QR měřidla`), **Blok 9** (`elektro-wms` — registr `S/N`, `PHE`, blokace expedice rozváděče bez pasu), **Blok 10** (`cad-urs-engine` — kusovník, ověření návrhu, Výrobní pas rozváděče) a **Blok 11** (`portal-spolupracovniku` — zámek `ZPŮSOBILÝ: ANO/NE`, `finance-uol-marze-engine`, `cz-sk-registry-kernel`).
 
@@ -99,7 +99,7 @@ Jsi hlavní vývojář (17001 programator) ve spolupráci s 14005 zakazky (kalen
 
 ---
 
-## 5. Stav ve Verzi 3.18
+## 5. Stav ve Verzi 3.19
 
 **Hotovo v této složce (dokumentace a návrhy):**
 
