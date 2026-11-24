@@ -24,15 +24,17 @@ def main():
     image=pg.run("incus","config","get",pg.DB,"volatile.base_image").decode().strip()
     if not re.fullmatch(r"[0-9a-f]{64}",image):
         raise RuntimeError("Chybí lokální obraz cílové databáze")
+    base,prepared = (WORK/"obraz-otisky").read_text().split()
+    if base!=image or not re.fullmatch(r"[a-f0-9]{64}",prepared):
+        raise RuntimeError("Obraz obnovy neodpovídá aktuálnímu zdroji PostgreSQL")
     name="restic-obnova-"+secrets.token_hex(6)
     with ExitStack() as stack:
         lock=stack.enter_context((WORK/".obnova").open("a"))
         fcntl.flock(lock,fcntl.LOCK_EX)
-        pg.run("incus","init",image,name,"-p","default","-p","sandbox_airgap","-c","limits.memory=384MiB")
+        pg.run("incus","init",prepared,name,"-p","default","-p","sandbox_airgap","-c","limits.memory=384MiB")
         stack.callback(pg.run,"incus","delete","--force",name)
         pg.run("incus","start",name)
         pg.start_restore_cluster(name)
-        subprocess.run(["bash",str(TEST/"incus/balicky.sh"),name,"git=1:2.53.0-1ubuntu1.1"],check=True,stdout=subprocess.DEVNULL)
         pg.inside(name,"install","-d","-m","0700","/var/tmp/obnova-polarita")
         with subprocess.Popen(["restic","--cacert",CA,"--no-cache","dump",snap,"/"],env=rest_env(),
                               stdin=subprocess.DEVNULL,stdout=subprocess.PIPE) as dump:
@@ -55,7 +57,6 @@ def main():
         if pg.proof(name,"obnova_test").hex()!=saved:
             raise RuntimeError("Schémata databází, účty nebo identita po obnově nesouhlasí")
         if subprocess.run(["incus","exec","-T",name,"--","test","-f","/var/tmp/obnova-polarita/pitr-cil.txt"]).returncode == 0:
-            subprocess.run(["bash",str(TEST/"incus/balicky.sh"),name,"pgbackrest=2.58.0-1"],check=True,stdout=subprocess.DEVNULL)
             subprocess.run(["incus","exec","-T",name,"--","bash","-se"],input=(TEST/"zalohy/wal-obnov.sh").read_bytes(),check=True)
         mark = WORK/".overena-obnova-next"
         mark.write_text(json.dumps({"restic_snapshot":snap})+"\n")

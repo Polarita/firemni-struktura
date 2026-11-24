@@ -117,6 +117,7 @@ done
 "${inc[@]}" file push --project polarita "$tmp/sanoid.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-06/sanoid-$commit.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/zalohy/wal-instalace.sh"
 "${guest[@]}" bash "$dest/nasazeni/test/zalohy/instalace.sh"
+"${guest[@]}" bash "$dest/nasazeni/test/zalohy/obraz.sh"
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/zkouska_pristupu.py" | tee "$tmp/restic.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/dohled/instalace.sh" | tee "$tmp/dohled.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/sber.py" | tee -a "$tmp/restic.txt"
