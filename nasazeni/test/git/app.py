@@ -43,7 +43,7 @@ groups = {
 }
 config.read_dict(groups)
 with tempfile.NamedTemporaryFile(dir=config_dir, mode="w", delete=False) as out:
-    out.write("APP_NAME = Polarita TEST\nRUN_USER = gitea-test\nRUN_MODE = prod\n")
+    out.write("APP_NAME = Polarita TEST\nWORK_PATH = /var/lib/gitea/data\nRUN_USER = gitea-test\nRUN_MODE = prod\n")
     config.write(out)
     os.fchmod(out.fileno(), 0o400)
     tmp = out.name
