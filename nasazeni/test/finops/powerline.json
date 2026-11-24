@@ -1,0 +1,8 @@
+{
+  "theme": "dark", "style": "minimal",
+  "segments": {
+    "directory": {"enabled": true, "showBasename": true},
+    "git": {"enabled": false}, "session": {"enabled": false}, "today": {"enabled": false},
+    "block": {"enabled": false}, "context": {"enabled": false}, "model": {"enabled": false}
+  }
+}

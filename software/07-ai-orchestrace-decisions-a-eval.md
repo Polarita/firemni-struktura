@@ -71,6 +71,8 @@ Jsi správce serveru (17003 spravce-site; do založení agentů infrastrukturní
    - Vyviň jako vlastní rozšíření Polarity nad Paperclip (registr 06, N-10 — souhrnná stopka napříč 20 ai není funkcí hotového nástroje) rozpočet 470 USD/měsíc: jmenovitý podíl každého agenta se dělí na 85 % provozní kvóty agenta (tvrdý limit agenta, u 11001 z 35 USD tedy 29,75 USD; součet 399,50 USD) a 15 % do sdílené rezervy P1 (70,50 USD). Tři prahy: (1) 100 % provozní kvóty agenta -> placená volání tohoto agenta se zastaví do schválení v Decisions; (2) čerpání rezervy P1 jen po schválení 1001 v Decisions na návrh 11001 — 17005 rezervu pouze technicky uvolní a nikdy ji nesmí uvolnit sám sobě; (3) 100 % celofiremního stropu 470 USD -> zastaví se placená volání všech až do mutation_confirm. Přidej varování při 80 % a živý výstup do claude-powerline-rust; měsíční běh Eval Suite účtuj na kvótu 17005. Náklady stavby (Instalační koordinátor, subagenti, oponent Judge) do stropu 470 USD nepatří (samostatný rozpočet stavby z Bloku 0); strop platí jen pro API modelů, reklama má samostatnou kartu a limit.
 ```
 
+V TEST čte stavový řádek `polarita-powerline` aktuální kvóty Paperclipu a místní rezervace v PostgreSQL. Běží pod účtem `pol_finops_read` uvnitř `postgres-test`. Volba `--json` vrátí údaje všech dvaceti pozic. Částky JSON jsou v amerických centech, účetní měsíc používá UTC. Zbývající částku po vyúčtování uvolní rezervační služba. Zkouška P1 v Paperclipu zanechá dohledatelné rozhodnutí správce o jednom centu pro vzorový úkol.
+
 ### Prompt 2 — `metadata-schema-kernel`, čistý kontext `Worker / Judge` (`wt-worker / wt-judge`), `Draivix/aigiscode` a fork `polarita-ads-mcp` (`pro 17003`, `17001` a `17004`)
 
 ```text
