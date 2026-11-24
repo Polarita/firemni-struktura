@@ -57,7 +57,6 @@ GRANT SELECT ON polarita_test_metadata.meta_termin TO pol_metadata_read, pol_met
 GRANT INSERT (popis,dny,vyrizeno), UPDATE (popis,dny,vyrizeno,version) ON polarita_test_metadata.meta_termin TO pol_metadata_api;
 SQL
 "${db[@]}" <"$src/spisy.sql"
-install -m0644 "$src/spisy.html" "$src/spisy.js" "$src/vystup/"
 ln -sfn "$src" "$base/.current.next"
 mv -Tf "$base/.current.next" "$base/current"
 install -m 0644 "$src/polarita-metadata.service" /etc/systemd/system/polarita-metadata.service

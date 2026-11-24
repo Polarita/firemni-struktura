@@ -23,7 +23,7 @@ def form(data):
 <html lang="cs"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{title}</title><style>body{{font:1rem system-ui;max-width:36rem;margin:2rem auto;padding:0 1rem}}
 label, output{{display:block;margin:1rem 0}} input:not([type=checkbox]){{width:100%;padding:.4rem;box-sizing:border-box}}</style>
-<h1>{title}</h1><form data-entity="{data["entity"]}">{''.join(fields)}<button>Uložit</button></form>
+<p><a href="./spisy">Spisy</a></p><h1>{title}</h1><form data-entity="{data["entity"]}">{''.join(fields)}<button>Uložit</button></form>
 <output aria-live="polite"></output><script src="./formular.js" defer></script></html>
 """
 
@@ -33,6 +33,8 @@ def generate(source, target):
     up, down = migrations(data)
     files = {"up.sql": up, "down.sql": down, "index.html": form(data),
              "formular.js": Path(__file__).with_name("formular.js").read_text()}
+    for asset in ("spisy.html", "spisy.js"):
+        files[asset] = Path(__file__).with_name(asset).read_text()
     for filename, value in [("entity.json", data), ("openapi.json", openapi(data)), ("tool.json", tool(data))]:
         files[filename] = json.dumps(value, ensure_ascii=False, indent=2) + "\n"
     # Porušený nebo jiný výstup nepřepisujeme. Celá sada má jednu revizi.
