@@ -46,9 +46,12 @@ def instances():
     rows = list(csv.reader(run("incus","list","--format","csv","-c","ns").splitlines()))
     expected = {"caddy-test","headscale-test","stalwart-mx-test","openbao-test","vaultwarden-test",
                 "postgres-test","valkey-test","garage-test","gitea-test","gitea-runner-test",
-                "reditelstvi-test","keycloak-test","pecet-test","karantena-test","clamav-signatury-test","restic-test","checkmk-test"}
+                "reditelstvi-test","keycloak-test","pecet-test","clamav-signatury-test","restic-test","checkmk-test"}
     missing = expected-set(name for name,status in rows if status=="RUNNING")
-    return state(not missing,("Nedostupné "+", ".join(sorted(missing))) if missing else f"Běží všech {len(expected)} služebních instancí",f"running={sum(s=='RUNNING' for _,s in rows)}")
+    if "karantena-test" not in dict(rows):
+        missing.add("karantena-test")
+    run("systemctl","is-active","--quiet","polarita-karantena.path","polarita-karantena.timer")
+    return state(not missing,("Nedostupné "+", ".join(sorted(missing))) if missing else f"Běží {len(expected)} trvalých instancí a příjem fronty karantény",f"running={sum(s=='RUNNING' for _,s in rows)}")
 
 
 def interfaces():
@@ -95,7 +98,8 @@ def valkey():
 
 def garage():
     out=inside("garage-test","curl","--noproxy","*","-fsS","--max-time","5","http://127.0.0.1:3903/health")
-    return state("healthy" in out.lower(),"Garage odpověděla na lokální sondu zdraví")
+    ok = "fully operational" in out.lower()
+    return state(ok, "Cluster je v provozu" if ok else "Garage hlásí omezený provoz")
 
 
 def mx():
