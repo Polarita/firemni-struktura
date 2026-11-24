@@ -18,6 +18,7 @@ CLIENTS = {
     "vaultwarden-test": ("10.239.33.11", 0, 0, "vaultwarden-agent"),
     "pecet-test": ("10.239.32.12", 65534, 65534, "pecet-agent"),
     "keycloak-test": ("10.239.32.11", 1000, 0, "keycloak-agent"),
+    "paperless-test": ("10.239.32.21", 0, 0, "paperless-agent"),
     "vikunja-test": ("10.239.32.20", 17320, 17320, "vikunja-agent"),
     "paperclip-test": ("10.239.32.18", 17308, 17308, "paperclip-agent"),
     "zulip-test": ("10.239.32.16", 0, 0, "zulip-agent"),
@@ -64,7 +65,7 @@ def deliver(name, manager):
                        {"cidr_list": [cidr], "token_bound_cidrs": [cidr]}, manager)["data"]["secret_id"]
     payload = {"role_id": rid, "secret_id": secret, "uid": uid, "gid": gid, "path": fixture,
                "databases": p.DATABASE_ACCESS.get(name, ()), "seal": name == "pecet-test",
-               "paperclip": name == "paperclip-test", "vikunja": name == "vikunja-test",
+               "paperless": name == "paperless-test", "paperclip": name == "paperclip-test", "vikunja": name == "vikunja-test",
                "zulip": name == "zulip-test", "zulip_queue": name in ("zulip-test","zulip-fronta-test"),
                "gitea": name == "gitea-test", "garage": name == "garage-test", "caches": p.CACHES if name == "valkey-test" else []}
     run("incus", "exec", "-T", name, "--user", "0", "--group", "0", "--",

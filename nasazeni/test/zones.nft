@@ -20,12 +20,12 @@ table inet polarita_test {
         iifname "data_vault" oifname "dmz_edge" ip saddr 10.239.33.11 ip daddr 10.239.31.10 tcp sport 8080 ct state established counter accept
         iifname "dmz_edge" oifname "data_vault" ip saddr @klienti_trezoru_dmz ip daddr 10.239.33.10 tcp dport 8200 ct state new,established counter accept
         iifname "data_vault" oifname "dmz_edge" ip saddr 10.239.33.10 ip daddr @klienti_trezoru_dmz tcp sport 8200 ct state established counter accept
-        iifname "app_internal" oifname "data_vault" ip saddr { 10.239.32.10, 10.239.32.11, 10.239.32.12, 10.239.32.13, 10.239.32.16, 10.239.32.17, 10.239.32.18, 10.239.32.20 } ip daddr 10.239.33.10 tcp dport 8200 ct state new,established counter accept
-        iifname "data_vault" oifname "app_internal" ip saddr 10.239.33.10 ip daddr { 10.239.32.10, 10.239.32.11, 10.239.32.12, 10.239.32.13, 10.239.32.16, 10.239.32.17, 10.239.32.18, 10.239.32.20 } tcp sport 8200 ct state established counter accept
+        iifname "app_internal" oifname "data_vault" ip saddr { 10.239.32.10, 10.239.32.11, 10.239.32.12, 10.239.32.13, 10.239.32.16, 10.239.32.17, 10.239.32.18, 10.239.32.20, 10.239.32.21 } ip daddr 10.239.33.10 tcp dport 8200 ct state new,established counter accept
+        iifname "data_vault" oifname "app_internal" ip saddr 10.239.33.10 ip daddr { 10.239.32.10, 10.239.32.11, 10.239.32.12, 10.239.32.13, 10.239.32.16, 10.239.32.17, 10.239.32.18, 10.239.32.20, 10.239.32.21 } tcp sport 8200 ct state established counter accept
         iifname "data_vault" oifname "data_vault" ip saddr { 10.239.33.11, 10.239.33.12, 10.239.33.13, 10.239.33.14 } ip daddr 10.239.33.10 tcp dport 8200 ct state new,established counter accept
         iifname "data_vault" oifname "data_vault" ip saddr 10.239.33.10 ip daddr { 10.239.33.11, 10.239.33.12, 10.239.33.13, 10.239.33.14 } tcp sport 8200 ct state established counter accept
-        iifname "app_internal" oifname "data_vault" ip saddr { 10.239.32.11, 10.239.32.13, 10.239.32.16, 10.239.32.18, 10.239.32.20 } ip daddr 10.239.33.12 tcp dport 5432 ct state new,established counter accept
-        iifname "data_vault" oifname "app_internal" ip saddr 10.239.33.12 ip daddr { 10.239.32.11, 10.239.32.13, 10.239.32.16, 10.239.32.18, 10.239.32.20 } tcp sport 5432 ct state established counter accept
+        iifname "app_internal" oifname "data_vault" ip saddr { 10.239.32.11, 10.239.32.13, 10.239.32.16, 10.239.32.18, 10.239.32.20, 10.239.32.21 } ip daddr 10.239.33.12 tcp dport 5432 ct state new,established counter accept
+        iifname "data_vault" oifname "app_internal" ip saddr 10.239.33.12 ip daddr { 10.239.32.11, 10.239.32.13, 10.239.32.16, 10.239.32.18, 10.239.32.20, 10.239.32.21 } tcp sport 5432 ct state established counter accept
         iifname "app_internal" oifname "data_vault" ip saddr 10.239.32.16 ip daddr 10.239.33.13 tcp dport 6379 ct state new,established counter accept
         iifname "data_vault" oifname "app_internal" ip saddr 10.239.33.13 ip daddr 10.239.32.16 tcp sport 6379 ct state established counter accept
         iifname "dmz_edge" oifname "app_internal" ip saddr 10.239.31.10 ip daddr 10.239.32.20 tcp dport 3456 ct state new,established counter accept

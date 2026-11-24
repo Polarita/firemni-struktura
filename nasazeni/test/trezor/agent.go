@@ -20,6 +20,7 @@ const private = target + "/.polarita-agent"
 const tmpfs = 0x01021994
 
 type grant struct {
+	Paperless  bool     `json:"paperless"`
 	Vikunja    bool     `json:"vikunja"`
 	Paperclip  bool     `json:"paperclip"`
 	Zulip      bool     `json:"zulip"`
@@ -161,12 +162,16 @@ template {
 		config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/gitea-stroj", template)
 		outputs["gitea-stroj"] = "gitea-stroj"
 	}
-	if g.Paperclip || g.Vikunja {
+	if g.Paperclip || g.Vikunja || g.Paperless {
 		app := "paperclip"
-		keys := []string{"auth", "jwt", "master"}
-		if g.Vikunja {
+		keys := []string{"secret", "oidc_secret"}
+		switch {
+		case g.Paperless:
+			app = "paperless"
+		case g.Vikunja:
 			app = "vikunja"
-			keys = []string{"secret", "oidc_secret"}
+		default:
+			keys = []string{"auth", "jwt", "master"}
 		}
 		for _, key := range keys {
 			file := app + "-" + key

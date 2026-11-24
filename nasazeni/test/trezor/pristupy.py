@@ -66,11 +66,12 @@ FIXTURES["garage-test"] = ["garage-agent"]
 FIXTURES.update({"s3-" + name: ["objekty-klient-" + name] for name in BUCKETS})
 FIXTURES["gitea-test"] = ["gitea-agent"]
 FIXTURES["paperclip-test"] = ["paperclip-agent"]
+FIXTURES["paperless-test"] = ["paperless-agent"]
 FIXTURES["vikunja-test"] = ["vikunja-agent"]
 FIXTURES["zulip-test"] = ["zulip-agent"]
 FIXTURES["dohled-zulip"] = ["dohled-zulip-agent"]
 FIXTURES["zulip-fronta-test"] = ["zulip-fronta-agent"]
-DATABASE_ACCESS = {"vikunja-test": ("vikunja",), "paperclip-test": ("db_paperclip",), "zulip-test": ("zulip",), "postgres-test": DATABASES, "keycloak-test": ("keycloak",), "gitea-test": ("gitea",)}
+DATABASE_ACCESS = {"paperless-test": ("paperless",), "vikunja-test": ("vikunja",), "paperclip-test": ("db_paperclip",), "zulip-test": ("zulip",), "postgres-test": DATABASES, "keycloak-test": ("keycloak",), "gitea-test": ("gitea",)}
 # Skutečné údaje ISDS vydá až oprávněný proces s ověřeným časem a rozhodnutím.
 DENIED = ["isds-cteni", "isds-odesilani", "eet-vypnuto", "cizi-vzorek"]
 HTTP = None
@@ -145,7 +146,7 @@ def configure(root):
     policy += allow("test/metadata/pki/organizace-test", "read") + allow("test/data/pki/organizace-test", "create")
     for suffix in ("pki/valkey-test", *("valkey/" + name for name in CACHES), "valkey-overeni/server"):
         policy += allow("test/metadata/" + suffix, "read") + allow("test/data/" + suffix, "create")
-    for suffix in ("pki/gitea-test", "pki/garage-test", "paperclip/aplikace", "vikunja/aplikace", "zulip/fronta", "zulip/aplikace", *("objekty/" + name for name in BUCKETS)):
+    for suffix in ("pki/gitea-test", "pki/garage-test", "paperclip/aplikace", "vikunja/aplikace", "paperless/aplikace", "zulip/fronta", "zulip/aplikace", *("objekty/" + name for name in BUCKETS)):
         policy += allow("test/metadata/" + suffix, "read") + allow("test/data/" + suffix, "create")
     policy += allow("test/data/zulip/checkmk", "create")
     for name in DATABASES:
@@ -160,6 +161,8 @@ def configure(root):
         for name in CACHES:
             if role == "cache-" + name:
                 acl += allow("test/data/valkey/" + name, "read")
+        if role == "paperless-test":
+            acl += allow("test/data/paperless/aplikace", "read")
         if role == "vikunja-test":
             acl += allow("test/data/vikunja/aplikace", "read")
         if role == "paperclip-test":
@@ -251,7 +254,7 @@ def initialize_cache(manager):
 
 def initialize_objects(manager):
     from tls_test import tls_bundle
-    for suffix in ("pki/gitea-test", "pki/garage-test", "paperclip/aplikace", "vikunja/aplikace", "zulip/fronta", "zulip/aplikace", *("objekty/" + name for name in BUCKETS)):
+    for suffix in ("pki/gitea-test", "pki/garage-test", "paperclip/aplikace", "vikunja/aplikace", "paperless/aplikace", "zulip/fronta", "zulip/aplikace", *("objekty/" + name for name in BUCKETS)):
         try:
             meta = request("GET", "test/metadata/" + suffix, token=manager)["data"]
             version = meta["versions"][str(meta["current_version"])]
@@ -264,7 +267,7 @@ def initialize_objects(manager):
                 fields = {"sada": json.dumps({k: secrets.token_urlsafe(48) for k in ("podpis","interni","oauth")})}
             elif suffix == "paperclip/aplikace":
                 fields = {"auth": secrets.token_urlsafe(48), "jwt": secrets.token_urlsafe(48), "master": secrets.token_hex(32)}
-            elif suffix == "vikunja/aplikace":
+            elif suffix in ("vikunja/aplikace", "paperless/aplikace"):
                 fields = {name: secrets.token_urlsafe(48) for name in ("secret", "oidc_secret")}
             elif suffix == "zulip/fronta":
                 fields = {name: secrets.token_urlsafe(32) for name in ("rabbitmq_password","memcached_password")}

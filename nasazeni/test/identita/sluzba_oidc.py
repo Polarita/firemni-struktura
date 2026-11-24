@@ -15,6 +15,7 @@ if os.geteuid() or socket.gethostname().split(".")[0] != "polarita-hq":
     raise SystemExit("Konfigurace klienta patří do firemní VM")
 profiles = {
     "zulip": (8444, "/complete/oidc/", "/run/secrets/zulip__social_auth_oidc_secret"),
+    "paperless": (8448, "/accounts/oidc/keycloak/login/callback/", "/run/secrets/paperless-oidc_secret"),
     "vikunja": (8447, "/auth/openid/keycloak", "/run/secrets/vikunja-oidc_secret"),
 }
 host = sys.argv[1]

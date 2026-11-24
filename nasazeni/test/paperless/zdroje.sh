@@ -22,6 +22,9 @@ alias=polarita-paperless-3.5.1
 if ! incus image info "$alias" >/dev/null 2>&1; then
     exec 8>/run/polarita-test-zatez.lock
     flock 8
+    if ! incus remote list --format json | python3 -c 'import json,sys; sys.exit("ghcr" not in json.load(sys.stdin))'; then
+        incus remote add ghcr https://ghcr.io --protocol=oci --public
+    fi
     incus image copy "ghcr:$image" local: --alias "$alias"
 fi
 [[ $(incus image get-property "$alias" id) == "$image" ]]
