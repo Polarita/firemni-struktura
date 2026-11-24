@@ -36,7 +36,7 @@ SQL
     else
         echo PAPERCLIP_AUTH_DISABLE_SIGN_UP=false
     fi
-} | "${inside[@]}" install -m 0644 /dev/stdin /etc/polarita-paperclip/server.env
+} | "${inside[@]}" sh -ec 'umask 022; cat > /etc/polarita-paperclip/server.env.next; mv -T /etc/polarita-paperclip/server.env.next /etc/polarita-paperclip/server.env'
 "${inside[@]}" systemctl daemon-reload
 "${inside[@]}" systemctl enable --now polarita-paperclip.timer
 "${inside[@]}" systemctl restart polarita-paperclip.service
