@@ -4,6 +4,8 @@ import fcntl
 import os
 from pathlib import Path
 import pwd
+import json
+import re
 import shutil
 import secrets
 import socket
@@ -62,22 +64,46 @@ def main():
                 raise RuntimeError("Serverová brána nepotvrdila odmítnutí testovacího vzorku")
             print("Gitea prostřednictvím gitleaks odmítla push s neškodnou kontrolní hodnotou. Větev nevznikla.")
             return
+        # Archiv pochází z konkrétní revize; main už může obsahovat práci správce.
+        src = tmp/"zdroj"
+        src.mkdir()
+        with tarfile.open(archive, "r:gz") as tar:
+            tar.extractall(src, filter="data")
+        workflow = src/".gitea/workflows/kontrola.yml"
+        workflow.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src/"balicky/ci-gitea-actions-priklad.yml", workflow)
+        git("init", "-q", "-b", "main", directory=src)
+        git("add", "--force", "--all", directory=src)
+        tree = git("write-tree", directory=src)
+        if not re.fullmatch(r"[0-9a-f]{40}", tree):
+            raise RuntimeError("Neznámý strom importu")
+        commit_options = ("-c", "user.name=Polarita TEST", "-c", "user.email=instalace@polarita.test")
         if not head:
-            src = tmp/"zdroj"
-            src.mkdir()
-            with tarfile.open(archive,"r:gz") as tar:
-                tar.extractall(src,filter="data")
-            workflow = src/".gitea/workflows/kontrola.yml"
-            workflow.parent.mkdir(parents=True,exist_ok=True)
-            shutil.copyfile(src/"balicky/ci-gitea-actions-priklad.yml",workflow)
-            git("init","-q","-b","main",directory=src)
-            git("add","--all",directory=src)
-            git("-c","user.name=Polarita TEST","-c","user.email=instalace@polarita.test","commit","-qm",
-                "Výchozí návrh ředitelství a ověřovací workflow",directory=src)
-            git("push","--quiet",url,"HEAD:refs/heads/main",directory=src)
-            head = git("ls-remote",url,"refs/heads/main")
-        if not head:
-            raise RuntimeError("Gitea nemá větev main")
+            git(*commit_options, "commit", "-qm", "Výchozí návrh ředitelství a ověřovací workflow", directory=src)
+            git("push", "--quiet", url, "HEAD:refs/heads/main", directory=src)
+            head = git("ls-remote", url, "refs/heads/main")
+        main_head = head.split()[0]
+        git("fetch", "--quiet", "--no-tags", url, "refs/heads/main", directory=src)
+        if git("rev-parse", "FETCH_HEAD", directory=src) != main_head:
+            raise RuntimeError("Větev main se během importu změnila")
+        branch = "main"
+        candidate = main_head
+        if git("rev-parse", "FETCH_HEAD^{tree}", directory=src) != tree:
+            branch = "instalace/" + tree
+            ref = "refs/heads/" + branch
+            if not git("ls-remote", url, ref):
+                candidate = git(*commit_options, "commit-tree", tree, "-p", main_head, "-m",
+                                "Zkouška instalace ze stromu " + tree, directory=src)
+                git("push", "--quiet", url, candidate+":"+ref, directory=src)
+            git("fetch", "--quiet", "--no-tags", url, ref, directory=src)
+            candidate = git("rev-parse", "FETCH_HEAD", directory=src)
+            if git("rev-parse", "FETCH_HEAD^{tree}", directory=src) != tree:
+                raise RuntimeError("Existující větev zkoušky obsahuje jiný strom")
+        evidence = {"branch": branch, "commit": candidate, "tree": tree}
+        marker = archive.with_name("revize-ci.json")
+        pending = marker.with_suffix(".next")
+        pending.write_text(json.dumps(evidence)+"\n")
+        pending.replace(marker)
         for name in ("worker","judge"):
             account = "pol-git-"+name
             if subprocess.run(["id","-u",account],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode:
