@@ -148,7 +148,7 @@ printf 'https://%s:8444/\n' "$fqdn" | "${inc[@]}" exec --project polarita -T pol
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/hovory_sber.py" | tee -a "$tmp/restic.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/zalohy/naplanuj.sh"
 "${guest[@]}" systemctl start polarita-dohled-sber.service
-"${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn" --dohled
+"${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn" --dohled --paperclip --zulip
 "${inc[@]}" file push --project polarita "$tmp/dohled.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-06/dohled-$commit.txt"
 "${inc[@]}" file push --project polarita "$tmp/restic.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-06/restic-$commit.txt"
 # Starší vydání vytvořilo přímý vstup. Odstraň ho až po ověření nové cesty.

@@ -28,10 +28,12 @@ def check(path, data, status, final_path, needle):
         # Prohlížeč při politice no-referrer může u POST odeslat Origin: null.
         if response.headers.get("Referrer-Policy") != "same-origin":
             raise SystemExit("Prohlížeč potřebuje původ pro odeslání přihlašovacího formuláře")
+        page = response.read().decode()
         if (response.code != status or response.url != origin + final_path
-                or needle not in response.read().decode()):
+                or needle not in page):
             raise SystemExit(f"Chyba testu {path}, HTTP {response.code}")
     print(f"OK {path} → {final_path} (HTTP {status})")
+    return page
 
 
 check("/prehled", None, 200, "/", "Přihlášení do testovacího prostředí")
@@ -40,7 +42,13 @@ if "--dohled" in sys.argv:
 check("/konfigurator", None, 200, "/", "Přihlášení do testovacího prostředí")
 check("/prihlasit", {"username": "spravce", "password": "neplatne"}, 401, "/prihlasit", "nesouhlasí")
 check("/prihlasit", {"username": "spravce", "password": secret}, 200, "/prehled", "Jste přihlášeni")
-check("/prehled", None, 200, "/prehled", "Jste přihlášeni")
+overview = check("/prehled", None, 200, "/prehled", "Jste přihlášeni")
+for flag, port in (("--paperclip", 8445), ("--zulip", 8444)):
+    if flag in sys.argv:
+        expected = f'{origin}:{port}/'
+        if f'href="{expected}"' not in overview:
+            raise SystemExit("V přehledu správce chybí odkaz na " + expected)
+        print("Přehled přihlášeného správce obsahuje odkaz na " + expected)
 check("/konfigurator", None, 200, "/konfigurator", "Konfigurátor paušálu")
 if "--dohled" in sys.argv:
     check("/dohled", None, 200, "/dohled", "Checkmk · polarita-hq")

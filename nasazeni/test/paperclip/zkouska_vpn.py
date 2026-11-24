@@ -3,6 +3,7 @@ from http.cookiejar import CookieJar
 import json
 import re
 import sys
+from urllib.error import HTTPError
 from urllib.request import HTTPRedirectHandler, HTTPCookieProcessor, Request, build_opener
 
 
@@ -26,14 +27,24 @@ def main():
                 return response.headers.get_content_type(), response.read()
             return json.load(response)
 
+    def check_signed_out():
+        try:
+            session = visit("/api/auth/get-session")
+        except HTTPError as exc:
+            if exc.code != 401:
+                raise
+            exc.close()
+        else:
+            if session is not None:
+                raise RuntimeError("Prohlížeč bez přihlášení má neočekávanou relaci")
+
     mime, web = visit("/")
     if mime != "text/html" or b'id="root"' not in web:
         raise RuntimeError("Chybí nativní webové rozhraní Paperclipu")
     health = visit("/api/health")
     if health.get("status") != "ok" or health.get("deploymentMode") != "authenticated":
         raise RuntimeError("Paperclip nepotvrdil připravenost chráněné aplikace")
-    if visit("/api/auth/get-session"):
-        raise RuntimeError("Nový prohlížeč má neočekávanou relaci")
+    check_signed_out()
     password = sys.stdin.readline().rstrip("\r\n")
     if not password:
         raise ValueError("Chybí testovací heslo")
@@ -47,8 +58,7 @@ def main():
     if len(rows) != 20 or len(ids) != 20 or None in ids or sum(a["budgetMonthlyCents"] for a in rows) != 39950:
         raise RuntimeError("Rozhraní správce nepotvrdilo 20 pozic a provozní kvóty")
     visit("/api/auth/sign-out", {})
-    if visit("/api/auth/get-session"):
-        raise RuntimeError("Odhlášení neukončilo relaci")
+    check_signed_out()
     print("Přes VPN se správce přihlásil do Paperclipu, otevřel organizaci s 20 pozicemi a úspěšně se odhlásil.")
 
 
