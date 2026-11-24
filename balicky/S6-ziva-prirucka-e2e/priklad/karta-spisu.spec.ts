@@ -1,14 +1,11 @@
 /**
- * EN: SAMPLE ONLY — NOT EXECUTED. This spec is a pattern for Block 18 (package S6,
- *     Polarita-3.12). It has never been run: the application under test and the test
- *     environment do not exist yet (greenfield design, server `polarita-hq` is not
- *     built). All selectors, screen texts and the seed record are illustrative and
- *     must be adapted to the real application before the first run.
- * CZ: POUZE VZOR — NEBYL SPUŠTĚN. Tento test je vzorem pro Blok 18 (balíček S6,
- *     Polarita-3.12). Nikdy neběžel: testovaná aplikace ani testovací prostředí zatím
- *     neexistují (greenfield návrh, server `polarita-hq` není postaven). Všechny
- *     selektory, texty obrazovek a záznam ze seedu jsou ilustrační a před prvním
- *     během se musí přizpůsobit skutečné aplikaci.
+ * EN: Unexecuted sample for Block 18 (package S6, Polarita-3.12). Once the
+ *     case-file application runs in the polarita-hq VM on Ejpovice, adapt the
+ *     selectors, labels and synthetic seed record to that deployment before
+ *     running this test.
+ * CZ: Nespouštěný vzor pro Blok 18 (balíček S6, Polarita-3.12). Po nasazení
+ *     Karty spisu uvnitř VM polarita-hq na Ejpovicích uprav selektory, popisky
+ *     obrazovek a syntetický záznam podle aplikace. Potom spusť test.
  *
  * EN: Rules enforced by this pattern (see ../README.md, chapter 2):
  *     1. The target URL comes only from POLARITA_E2E_BASE_URL — no real address in the repo.

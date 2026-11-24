@@ -2,11 +2,11 @@
 # metadata-schema-kernel · declarative schema DRAFT / deklarativní schéma NÁVRH
 # Module / Modul: dilensky-terminal · Blok 16 · balíček S4 · Verze 3.12
 # EN: Touch workshop kiosk for switchboard assembly, routine verification and
-#     CE / PHE label printing. Nothing here is deployed; server polarita-hq
-#     does not exist yet (greenfield design).
+#     CE / PHE label printing. Block 16 deploys the workshop module inside the
+#     polarita-hq VM on Ejpovice.
 # CZ: Dotykový dílenský kiosk pro kompletaci rozváděčů, kusové ověření a tisk
-#     štítku CE / podkladu PHE. Nic z toho není nasazeno; server polarita-hq
-#     zatím neexistuje (greenfield návrh).
+#     štítku CE / podkladu PHE. Dílenský modul se nasazuje v bloku 16 uvnitř
+#     stávající VM polarita-hq na Ejpovicích.
 # EN: The exact DSL of metadata-schema-kernel is fixed by 17001 during
 #     implementation; this file is a design input, not a tested migration.
 # CZ: Přesný formát (DSL) metadata-schema-kernel určí 17001 při implementaci;
