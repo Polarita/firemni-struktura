@@ -38,7 +38,7 @@ def collect(s3, now, prefix="hovory-", only_keys=None):
                 raise ValueError("Neplatný okamžik pořízení hovoru")
             if now < captured + timedelta(days=83):
                 day = captured.astimezone(timezone.utc).date()
-                days[day].append((key,head["ETag"],head["ContentType"],meta))
+                days[day].append((key,head["ETag"],head.get("ContentType","application/octet-stream"),meta))
     snapshots = {}
     for day, items in sorted(days.items()):
         name = prefix+day.isoformat()

@@ -134,7 +134,7 @@ def collect(root):
                         shutil.copyfileobj(stream,out,1024*1024)
                     if reply["ETag"]!=obj["ETag"] or (dst/filename).stat().st_size!=reply["ContentLength"]:
                         raise RuntimeError("Garage změnila objekt během sběru")
-                    listing.append({"klic":name,"soubor":filename,"metadata":reply["Metadata"],"typ":reply["ContentType"]})
+                    listing.append({"klic":name,"soubor":filename,"metadata":reply["Metadata"],"typ":reply.get("ContentType","application/octet-stream")})
         (dst/"seznam.json").write_text(json.dumps(listing,ensure_ascii=False))
     sums={str(f.relative_to(root)):hashfile(f) for f in root.rglob("*") if not f.is_symlink() and f.is_file()}
     (root/"soubory.sha256.json").write_text(json.dumps(sums,sort_keys=True))
