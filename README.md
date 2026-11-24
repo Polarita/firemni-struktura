@@ -20,6 +20,8 @@ Po ověření přístupu se v přehledu objeví také odkaz **Otevřít řízen�
 
 Z přehledu ředitelství otevři **Vyzkoušet rozhodnutí ve vzorovém spisu**. Tentýž spis `TEST-POL-0000-00013` najdeš ve frontě **Approvals** v Paperclipu. Uvidíš původní stav, navrženou změnu a čísla obou verzí. **Approve** změní testovací spis na „ke kontrole“. **Reject** zachová „rozpracován“. Jednu volbu můžeš vyzkoušet kdykoli. Instalace si potvrzení i zamítnutí prověřuje na dvou jiných vzorech a tvoje rozhodnutí zachová i při dalším nasazení.
 
+V přehledu **Spisy** můžeš založit testovací spis pro pobočku 101 nebo ho vyhledat podle čísla. Například `POL-2026-00001` a `POL-101-2026-00001` označují stejný spis pobočky Praha. Po výpadku připojení můžeš založení zopakovat se stejným požadavkem. Server vrátí původní číslo.
+
 Po zprovoznění týmového chatu otevři Zulip ve firemní VPN na stejném jméně jako ředitelství s portem `8444`. Zvol **Ředitelství Polarity** a přihlas se testovacím účtem `spravce` přes Keycloak. Chat má osm soukromých kanálů útvarů. Přístup každého z dvaceti pracovních botů odpovídá jeho firemní kartě. Odkaz na chat se v přehledu objeví po úspěšném přihlášení správce. Instalace vloží do soukromého kanálu `17-it-secops` testovací zprávu s přílohou. Při zkoušce obnovy se kontroluje obsah přílohy i její vazba na původní zprávu.
 
 Po zprovoznění Checkmk ředitelství zpřístupní stránku **Stav firemních služeb**. U každé služby uvidíš poslední měření a čas v UTC. V bloku 7 se přidají sondy přihlášení Zulipu a dostupnosti Paperclipu. Výpadek i obnovu služby zapisuje Checkmk do soukromého kanálu **17-it-secops** v Zulipu. Instalační zkouška ověřuje obě zprávy také po obnově ze zálohy.

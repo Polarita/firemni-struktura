@@ -8,6 +8,7 @@ import sys
 from urllib.parse import urlsplit
 
 from model import load, unique
+from spisy import najdi, zaloz
 from zaznamy import Problem, read, write
 
 
@@ -41,11 +42,19 @@ class Handler(BaseHTTPRequestHandler):
         data = self.server.data
         route = "/api/" + data["entity"]
         static = {"/": ("index.html", "text/html; charset=utf-8"),
+                  "/spisy": ("spisy.html", "text/html; charset=utf-8"),
+                  "/spisy.js": ("spisy.js", "text/javascript; charset=utf-8"),
                   "/formular.js": ("formular.js", "text/javascript; charset=utf-8"),
                   "/openapi.json": ("openapi.json", "application/json; charset=utf-8")}
         if self.command == "GET" and path in static:
             filename, mime = static[path]
             self.reply(200, (self.server.directory / filename).read_bytes(), mime)
+            return
+        if self.command == "POST" and path == "/api/spisy":
+            self.reply(200, zaloz(data, self.request_body()))
+            return
+        if self.command == "GET" and path.startswith("/api/spisy/"):
+            self.reply(200, najdi(data, path.removeprefix("/api/spisy/")))
             return
         if self.command == "POST" and path == route:
             row = write(data, self.request_body())

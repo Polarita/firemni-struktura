@@ -9,7 +9,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from uuid import UUID
+from uuid import UUID, NAMESPACE_URL, uuid5
 
 from model import load, migrations
 from mcp import PREFIX, VERSION
@@ -53,6 +53,28 @@ def mcp(src, items):
     run = subprocess.run(["runuser","-u","pol_metadata_read","--","python3",str(src/"mcp.py"),
                           str(src/"vystup/entity.json")], input="\n".join(messages)+"\n",text=True,capture_output=True,check=True)
     return [json.loads(line) for line in run.stdout.splitlines()]
+
+
+def over_spisy():
+    # Pevné klíče ponechají při opakované instalaci stejné zkušební spisy.
+    keys = [str(uuid5(NAMESPACE_URL, "polarita.test/zkouska-spisu/" + str(n))) for n in range(3)]
+    def pridat(key):
+        status, _, row = request("POST", "/api/spisy", {"pozadavek":key, "branch_id":101})
+        assert status == 200 and row["pozadavek"] == key
+        return row
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+        rows = list(pool.map(pridat, [keys[0], keys[0], *keys[1:]]))
+    assert rows[0] == rows[1]
+    assert len({row["case_id"] for row in rows}) == 3
+    for row in rows:
+        assert row["alias"] == row["case_id"].replace("POL-", "POL-101-", 1)
+        for name in ("case_id", "alias"):
+            status, _, result = request("GET", "/api/spisy/" + row[name])
+            assert status == 200 and result == row
+    assert request("GET", "/api/spisy/" + rows[0]["alias"].replace("POL-101-", "POL-109-"))[0] == 404
+    assert request("POST", "/api/spisy", {"pozadavek":keys[0], "branch_id":100})[0] == 400
+    sql("UPDATE polarita_test_spisy.rada SET posledni=0 WHERE false;", "pol_metadata_api", ok=False)
+    print("Opakované a souběžné založení zachovalo jediné číslo spisu. Tři spisy mají původní číslo i alias pobočky 101.")
 
 
 def check(src):
@@ -114,6 +136,7 @@ def check(src):
             except ValueError:
                 continue
             raise AssertionError("Cizí schéma přijato")
+    over_spisy()
     print("PostgreSQL ověřil opakovanou migraci, odmítnutí cizí revize a rollback. Cizí aplikační schémata byla odmítnuta.")
     print("HTTP poskytlo formulář a OpenAPI. Dvě změny stejné verze vrátily 200 a 412, chybějící If-Match vrátil 428.")
     print("MCP skutečného čtecího účtu získal totožný záznam. Pokus o zápis databáze odmítla.")

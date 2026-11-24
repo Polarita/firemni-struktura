@@ -1,0 +1,7 @@
+<!doctype html><html lang="cs"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spisy | Ředitelství Polarity</title>
+<style>body{font:1.05rem/1.55 system-ui,sans-serif;color:#172125;max-width:42rem;margin:3rem auto;padding:0 1rem}input,button{font:inherit;padding:.5rem}button{cursor:pointer}label{display:block}section{margin:2rem 0}dt{font-weight:600}dd{margin:0 0 .8rem}output{display:block;margin:1rem 0}</style>
+<main><a href="/prehled">Ředitelství</a><h1>Spisy</h1>
+<section><h2>Nový testovací spis</h2><p>Pobočka 101 · Praha</p><button id="zaloz" type="button">Založit spis</button></section>
+<section><h2>Vyhledat spis</h2><form id="hledani"><label for="cislo">Číslo spisu nebo pobočkový alias</label><input id="cislo" required><button>Vyhledat</button></form></section>
+<output role="status" id="stav"></output><section id="karta" hidden><h2 id="oznaceni"></h2><dl><dt>Pobočkový alias</dt><dd id="alias"></dd><dt>Pobočka</dt><dd id="pobocka"></dd><dt>Založeno</dt><dd id="cas"></dd></dl></section></main>
+<script src="spisy.js" defer></script></html>

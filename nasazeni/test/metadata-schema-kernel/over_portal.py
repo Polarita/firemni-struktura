@@ -5,7 +5,7 @@ import secrets
 import subprocess
 import sys
 from urllib import error, parse, request
-from uuid import UUID
+from uuid import UUID, NAMESPACE_URL, uuid5
 
 
 def main(origin, password):
@@ -41,6 +41,14 @@ def main(origin, password):
     try:
         record = route+"/"+key
         assert send("PUT",record,body,headers)[0] == 428
+        assert b'id="zaloz"' in send("GET", path + "spisy")[3]
+        request_key = str(uuid5(NAMESPACE_URL, "polarita.test/web-spisy"))
+        allocation = json.dumps({"pozadavek":request_key, "branch_id":101}).encode()
+        status, _, _, raw_spis = send("POST", path+"api/spisy", allocation, headers)
+        karta = json.loads(raw_spis)
+        assert status == 200 and karta["branch_id"] == 101
+        for field in ("case_id", "alias"):
+            assert json.loads(send("GET", path + "api/spisy/" + karta[field])[3]) == karta
         s, _, meta, raw = send("PUT",record,body,{**headers,"If-Match":'"1"'})
         assert s == 200 and meta["ETag"] == '"2"' and json.loads(raw)["id"] == key
         assert send("PUT",record,body,{**headers,"If-Match":'"1"'})[0] == 412
