@@ -1,0 +1,86 @@
+"""Ověří anonymní přístup, přihlášení přes Keycloak a ukončení relace Paperless."""
+from html.parser import HTMLParser
+from http.cookiejar import CookieJar
+import json
+import re
+import sys
+from urllib.error import HTTPError
+from urllib.parse import urlencode, urljoin
+from urllib.request import build_opener, HTTPCookieProcessor, HTTPRedirectHandler, Request
+
+host = sys.argv[1]
+if not re.fullmatch(r"[a-z0-9.-]+\.ts\.net", host):
+    raise ValueError("Chybná adresa archivu")
+origin = f"https://{host}:8448"
+realm = f"https://{host}/identita/realms/polarita/"
+start = origin + "/accounts/oidc/keycloak/login/"
+
+
+class Redirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not (newurl.startswith(origin + "/") or newurl.startswith(realm)):
+            raise RuntimeError("Návrat směřuje mimo testovací archiv")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+class Form(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.login = None
+        self.csrf = None
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        if tag == "form" and a.get("id") == "kc-form-login":
+            self.login = a.get("action")
+        if tag == "input" and a.get("name") == "csrfmiddlewaretoken":
+            self.csrf = a.get("value")
+
+
+web = build_opener(Redirect(), HTTPCookieProcessor(CookieJar()))
+
+
+def page(url, fields=None, referer=None):
+    data = None if fields is None else urlencode(fields).encode()
+    with web.open(Request(url, data=data, headers={"Referer": referer} if referer else {}), timeout=60) as res:
+        form = Form()
+        form.feed(res.read().decode())
+        return res.url, form
+
+
+def denied(req, codes):
+    try:
+        with web.open(req, timeout=30):
+            pass
+    except HTTPError as exc:
+        if exc.code in codes:
+            return
+        raise
+    raise RuntimeError("Rozhraní přijalo neočekávaný požadavek")
+
+
+denied(origin + "/api/profile/", (401, 403))
+denied(Request(origin + "/api/documents/post_document/", data=b""), (405,))
+url, form = page(start)
+if url == start and form.csrf:
+    url, form = page(start, {"csrfmiddlewaretoken": form.csrf}, start)
+action = urljoin(url, form.login or "")
+if not form.login or not url.startswith(realm) or not action.startswith(realm + "login-actions/"):
+    raise RuntimeError("Chybí přihlašovací formulář Keycloaku")
+password = sys.stdin.readline().rstrip("\r\n")
+if not password:
+    raise ValueError("Chybí testovací heslo")
+url, _ = page(action, {"username": "spravce", "password": password}, url)
+if not url.startswith(origin + "/"):
+    raise RuntimeError("Keycloak nevrátil správce do archivu")
+with web.open(origin + "/api/profile/", timeout=30) as res:
+    account = json.load(res)
+if account.get("email") != "spravce@polarita.test" or not any(a["provider"] == "keycloak" for a in account["social_accounts"]):
+    raise RuntimeError("Archiv nepotvrdil účet správce z Keycloaku")
+logout = origin + "/accounts/logout/"
+url, form = page(logout)
+if not form.csrf or url != logout:
+    raise RuntimeError("Archiv nenabídl odhlášení")
+page(logout, {"csrfmiddlewaretoken": form.csrf}, logout)
+denied(origin + "/api/profile/", (401, 403))
+print("Paperless ověřil správce z Keycloaku, po odhlášení uzavřel profil a odmítl přímé nahrání mimo karanténu.")

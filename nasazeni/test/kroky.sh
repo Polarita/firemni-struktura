@@ -193,6 +193,10 @@ obnova_databazi() {
     "${inc[@]}" file push --project polarita "$tmp/paperless-server.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-server-$commit.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/vikunja/server.sh" "$fqdn"
     "${guest[@]}" bash "$dest/nasazeni/test/hrana/obnov-vstup.sh"
+    sudo -n bash nasazeni/test/port-vpn.sh 8448 >/dev/null
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
+        python3 nasazeni/test/paperless/prihlaseni.py "$fqdn" | tee "$tmp/paperless-prihlaseni.txt"
+    "${inc[@]}" file push --project polarita "$tmp/paperless-prihlaseni.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-prihlaseni-$commit.txt"
     sudo -n bash nasazeni/test/port-vpn.sh 8447 >/dev/null
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/vikunja/zkouska.py "$fqdn" | tee "$tmp/vikunja.txt"

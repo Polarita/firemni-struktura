@@ -26,6 +26,25 @@ http://:8080 {
 	bind 127.0.0.1
 	header +Via "1.1 polarita-caddy"
 	route {
+		@archiv header_regexp Host ^[a-z0-9.-]+[.]ts[.]net:8448$
+		handle @archiv {
+			route {
+				@ostatni not method GET HEAD POST
+				respond @ostatni 405
+				@zapis {
+					method POST
+					not path /accounts/oidc/keycloak/login/ /accounts/logout/
+				}
+				respond @zapis 405
+				reverse_proxy 10.239.32.21:8000 {
+					header_up Cookie "polarchiv_sessionid={http.request.cookie.polarchiv_sessionid}; polarchiv_csrftoken={http.request.cookie.polarchiv_csrftoken}; polarchiv_django_language={http.request.cookie.polarchiv_django_language}"
+					header_up -Authorization
+					header_up -Remote-User
+					header_up X-Forwarded-Proto https
+				}
+			}
+		}
+		request_header Cookie "(^|; *)polarchiv_[^=;]+=[^;]*" ""
 		@ukoly header_regexp Host ^[a-z0-9.-]+[.]ts[.]net:8447$
 		handle @ukoly {
 			reverse_proxy 10.239.32.20:3456 {
