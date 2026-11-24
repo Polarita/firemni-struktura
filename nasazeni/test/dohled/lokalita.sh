@@ -15,7 +15,20 @@ if ! omd sites -b | awk '{print $1}' | grep -Fxq "$site"; then
     # omd vypisuje jednorázové heslo výchozího místního správce.
     omd create --no-tmpfs "$site" >/dev/null
 fi
-omd config "$site" set AUTOSTART on
+if [[ $(omd config "$site" show AUTOSTART) != on ]]; then
+    omd config "$site" set AUTOSTART on
+fi
+# Jeden lokální reverzní proxy proces stačí pro jednouživatelské testovací rozhraní.
+cat >/etc/apache2/conf-enabled/polarita-checkmk-test.conf <<'CONF'
+<IfModule mpm_event_module>
+    StartServers 1
+    ServerLimit 4
+    ThreadsPerChild 8
+    MinSpareThreads 4
+    MaxSpareThreads 12
+    MaxRequestWorkers 32
+</IfModule>
+CONF
 apachectl configtest
 systemctl enable --now apache2
 systemctl reload apache2
