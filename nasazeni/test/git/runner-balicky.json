@@ -2,6 +2,7 @@
   "fonts-dejavu-core": "2.37-8build1",
   "git": "1:2.53.0-1ubuntu1.1",
   "gitleaks": "8.16.0-1build2",
+  "golang-go": "2:1.26~1",
   "libasound2t64": "1.2.15.3-1ubuntu1.1",
   "libatk-bridge2.0-0t64": "2.60.4-0ubuntu0.1",
   "libatk1.0-0t64": "2.60.4-0ubuntu0.1",
@@ -22,5 +23,7 @@
   "libxfixes3": "1:6.0.0-2build2",
   "libxkbcommon0": "1.13.1-1",
   "libxrandr2": "2:1.5.4-1build1",
+  "openjdk-21-jdk-headless": "21.0.13.1+2-1~26.04.1",
+  "python3-pglast": "7.11-1build1",
   "python3-venv": "3.14.3-0ubuntu2"
 }

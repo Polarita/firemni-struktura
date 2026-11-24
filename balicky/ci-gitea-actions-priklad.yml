@@ -89,7 +89,7 @@ jobs:
       - name: AigisCode – statická kontrola architektury
         run: |
           (cd /opt/polarita-aigis && sha256sum -c --status SHA256SUMS)
-          python3 /opt/polarita-aigis/kontrola.py "$PWD"
+          /usr/bin/python3 -I /opt/polarita-aigis/kontrola.py "$PWD"
 
       - name: S2 Eval Suite 100+ (dry-run policy check must be 100 %) / dry-run politiky musí být 100 %
         working-directory: balicky/S2-eval-suite

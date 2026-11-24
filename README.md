@@ -26,7 +26,7 @@ Po zprovoznění týmového chatu otevři Zulip ve firemní VPN na stejném jmé
 
 Po zprovoznění Checkmk ředitelství zpřístupní stránku **Stav firemních služeb**. U každé služby uvidíš poslední měření a čas v UTC. V bloku 7 se přidají sondy přihlášení Zulipu a dostupnosti Paperclipu. Výpadek i obnovu služby zapisuje Checkmk do soukromého kanálu **17-it-secops** v Zulipu. Instalační zkouška ověřuje obě zprávy také po obnově ze zálohy.
 
-Po ověření místního Gitu se objeví odkaz **Otevřít firemní Git**. Použij stejný účet v Keycloaku. V soukromém repozitáři `spravce/firemni-struktura-test` zobrazí karta **Actions** výsledky kontroly návrhu, konfigurátoru i tisku PDF. Instalační zkouška ověřuje také AigisCode na čisté změně a na záměrně vložené cyklické závislosti.
+Po ověření místního Gitu se objeví odkaz **Otevřít firemní Git**. Použij stejný účet v Keycloaku. V soukromém repozitáři `spravce/firemni-struktura-test` zobrazí karta **Actions** výsledky kontroly návrhu, konfigurátoru i tisku PDF. Instalační zkouška ověřuje také AigisCode na čisté změně a na záměrně vložené cyklické závislosti. Kontrola inventarizuje celý strom. Pro jazyky podporované v AigisCode vyžaduje úplný sémantický graf. Shell kontroluje Bash, Go kontroluje parser gofmt, Javu parser JDK a SQL parser PostgreSQL. Neznámý zdrojový jazyk nebo chyba parseru zastaví kontrolu.
 
 Před prvním přenosem důkazů instalátor prověří historii znalostního Gitu. Při dalších zápisech kontroluje obsah souborů a jejich názvy. Odmítá nalezená tajemství, rozpoznané osobní identifikátory a PDF bez evidovaného otisku z testovací pečetící služby. Soukromé podklady zůstávají v oprávněném úložišti.
 

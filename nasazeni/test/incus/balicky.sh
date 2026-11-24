@@ -25,7 +25,7 @@ install -d -m 0755 "$tmp/deb/partial"
 apt-get -o "Dir::State::status=$tmp/status" -o "Dir::Cache::archives=$tmp/deb" --download-only --no-install-recommends -y install "$@"
 inside=(incus exec -T "$target" --)
 stage_root=/run
-if [[ $target == aigis-build-test ]]; then stage_root=/var/tmp; fi
+if [[ $target == aigis-build-test || $target == gitea-runner-test ]]; then stage_root=/var/tmp; fi
 stage=$("${inside[@]}" mktemp -d "$stage_root/polarita-deb-XXXXXXXX")
 [[ $stage == "$stage_root"/polarita-deb-* ]]
 "${inside[@]}" install -d -m 0755 "$stage/lists/partial"

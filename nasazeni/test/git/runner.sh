@@ -77,6 +77,6 @@ timeout 60 "$c" --disable-gpu --disable-dev-shm-usage --user-data-dir="$d/chrome
 "$d/venv/bin/python" -c '\''from pypdf import PdfReader; import sys; assert "Polarita CI" in PdfReader(sys.argv[1]).pages[0].extract_text()'\'' "$d/test.pdf"
 '
 incus file push --mode 0644 "$src/aigis/zkouska.py" gitea-runner-test/opt/polarita-runner/zkouska-aigis.py
-"${inside[@]}" runuser -u pol-ci -- python3 /opt/polarita-runner/zkouska-aigis.py
+"${inside[@]}" runuser -u pol-ci -- python3 /opt/polarita-runner/zkouska-aigis.py --jazyky
 systemctl enable --now polarita-gitea-runner.service
 tofu plan -input=false -detailed-exitcode

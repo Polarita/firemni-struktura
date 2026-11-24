@@ -9,7 +9,7 @@ install -d -m 0755 "$root/vstup"
 exec 9>"$root/sestaveni.lock"
 flock 9
 out=/srv/polarita/infra/gitea-runner-test/podklady/aigis
-recipe=$(cd "$src" && sha256sum podklady.py build.sh sestav.sh kontrola.py zkouska.py | sha256sum | cut -d' ' -f1)
+recipe=$(cd "$src" && sha256sum podklady.py build.sh sestav.sh kontrola.py jazyky.py zkouska.py | sha256sum | cut -d' ' -f1)
 if [[ -L $out/current && $(readlink "$out/current") == "$recipe" ]] && (cd "$out/$recipe" && sha256sum --check --status SHA256SUMS); then
     exit 0
 fi
@@ -32,6 +32,7 @@ incus file push --mode 0755 "$src/build.sh" "$name/usr/local/bin/polarita-build-
 if [[ ${1:-} == --priprav ]]; then exit 0; fi
 "${guest[@]}" nice -n 16 /usr/local/bin/polarita-build-aigis
 incus file push --mode 0644 "$src/kontrola.py" "$name/opt/polarita-aigis/kontrola.py"
+incus file push --mode 0644 "$src/jazyky.py" "$name/opt/polarita-aigis/jazyky.py"
 incus file push --mode 0644 "$src/zkouska.py" "$name/opt/polarita-aigis/zkouska.py"
 "${guest[@]}" runuser -u pol-build -- python3 /opt/polarita-aigis/zkouska.py
 install -d -m 0755 "$out"
@@ -39,12 +40,12 @@ pending=$(mktemp -d "$out/.balik-XXXXXXXX")
 trap 'if [[ -d $pending ]]; then rm -r -- "$pending"; fi' EXIT
 chmod 0755 "$pending"
 install -d -m 0755 "$pending/lib"
-install -m 0644 "$src/kontrola.py" "$pending/kontrola.py"
+install -m 0644 "$src/kontrola.py" "$src/jazyky.py" "$pending/"
 install -m 0644 "$root/vstup/LICENSE-kuzu" "$pending/LICENSE-kuzu"
 for file in aigiscode lib/libkuzu.so LICENSE-aigiscode; do
     incus file pull "$name/opt/polarita-aigis/$file" "$pending/$file"
 done
-(cd "$pending" && sha256sum aigiscode lib/libkuzu.so LICENSE-aigiscode LICENSE-kuzu kontrola.py >SHA256SUMS)
+(cd "$pending" && sha256sum aigiscode lib/libkuzu.so LICENSE-aigiscode LICENSE-kuzu kontrola.py jazyky.py >SHA256SUMS)
 if [[ -d $out/$recipe ]]; then
     cmp "$pending/SHA256SUMS" "$out/$recipe/SHA256SUMS"
     (cd "$out/$recipe" && sha256sum -c --status SHA256SUMS)
@@ -52,7 +53,7 @@ else
     mv -T "$pending" "$out/$recipe"
 fi
 # Konstantní cesty v RPATH a v runneru vždy odkazují do jediné úplné revize.
-for file in aigiscode lib LICENSE-aigiscode LICENSE-kuzu kontrola.py SHA256SUMS; do
+for file in aigiscode lib LICENSE-aigiscode LICENSE-kuzu kontrola.py jazyky.py SHA256SUMS; do
     if [[ ! -L $out/$file ]]; then ln -s "current/$file" "$out/$file"; fi
     [[ $(readlink "$out/$file") == "current/$file" ]]
 done
