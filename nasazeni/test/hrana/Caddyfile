@@ -33,6 +33,13 @@ http://:8080 {
 			header_up X-Forwarded-Proto https
 		}
 		respond /identita/* 404
+		redir /git /git/ 308
+		handle_path /git/* {
+			reverse_proxy 10.239.32.13:3000 {
+				header_up Cookie "(^|; *)__Host-polarita-test=[^;]*" ""
+				header_up X-Forwarded-Proto https
+			}
+		}
 		redir /hesla /hesla/ 308
 		@sprava path /hesla/admin /hesla/admin/*
 		respond @sprava 404
