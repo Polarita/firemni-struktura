@@ -14,11 +14,7 @@ flock 9
 # Rozbalení kořenového disku a zkouška OCR sdílejí I/O s běhy Chromium a karantény.
 exec 8>/run/polarita-test-zatez.lock
 flock 8
-# OCI vlastní /etc/hosts připojuje zvenčí. Incus připojí čitelnou tabulku už při startu.
-hostsfile="$work/conf/hosts"
-printf '127.0.0.1 localhost\n127.0.1.1 paperless-test\n::1 localhost ip6-localhost ip6-loopback\n10.239.32.13 %s\n' "$host" >"$hostsfile.next"
-chmod 0644 "$hostsfile.next"
-if cmp -s "$hostsfile.next" "$hostsfile"; then rm "$hostsfile.next"; else mv -T "$hostsfile.next" "$hostsfile"; fi
+bash "$src/hosts.sh" "$host" "$work/conf"
 [[ $(findmnt -no SOURCE --mountpoint /srv/polarita/data) == polarita_zfs/data ]]
 if ! zfs list -Ho name "$dataset" >/dev/null 2>&1; then
     [[ ! -e $data ]]

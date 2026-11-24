@@ -21,6 +21,7 @@ incus file pull gitea-test/etc/polarita-gitea/git-ca.crt "$tmp/oidc.crt"
 printf 'https://%s:8448\n' "$host" >"$tmp/url"
 bash "$src/../git/obnov-proxy.sh"
 python3 "$src/../identita/sluzba_oidc.py" "$host" paperless
+bash "$src/hosts.sh" "$host" "$work/conf"
 # Převezme novou tabulku také při aktualizaci už běžící instance.
 "${inside[@]}" sh -ec 'cmp -s /etc/polarita-paperless/hosts /etc/hosts || mount --bind /etc/polarita-paperless/hosts /etc/hosts'
 "${inside[@]}" python3 -c 'import socket, sys; assert {r[4][0] for r in socket.getaddrinfo(sys.argv[1],443)} == {"10.239.32.13"}' "$host"
