@@ -60,6 +60,10 @@ DATABASES = (
 CACHES = ("eshop", "akademie", "chatwoot", "zulip")
 FIXTURES["valkey-test"] = ["valkey-agent"]
 FIXTURES.update({"cache-" + name: ["valkey-klient-" + name] for name in CACHES})
+BUCKETS = ("foto-staveb", "foto-flotily", "prevzeti-sanonu", "media-eshopu", "prilohy-akademie",
+           "pracovni-vykresy", "stalwart-blobs", "hovory")
+FIXTURES["garage-test"] = ["garage-agent"]
+FIXTURES.update({"s3-" + name: ["objekty-klient-" + name] for name in BUCKETS})
 DATABASE_ACCESS = {"postgres-test": DATABASES, "keycloak-test": ("keycloak",)}
 # Skutečné údaje ISDS vydá až oprávněný proces s ověřeným časem a rozhodnutím.
 DENIED = ["isds-cteni", "isds-odesilani", "eet-vypnuto", "cizi-vzorek"]
@@ -135,6 +139,8 @@ def configure(root):
     policy += allow("test/metadata/pki/organizace-test", "read") + allow("test/data/pki/organizace-test", "create")
     for suffix in ("pki/valkey-test", *("valkey/" + name for name in CACHES), "valkey-overeni/server"):
         policy += allow("test/metadata/" + suffix, "read") + allow("test/data/" + suffix, "create")
+    for suffix in ("pki/garage-test", *("objekty/" + name for name in BUCKETS)):
+        policy += allow("test/metadata/" + suffix, "read") + allow("test/data/" + suffix, "create")
     for name in DATABASES:
         policy += allow("test/metadata/databaze/" + name, "read")
         policy += allow("test/data/databaze/" + name, "create")
@@ -147,6 +153,11 @@ def configure(root):
         for name in CACHES:
             if role == "cache-" + name:
                 acl += allow("test/data/valkey/" + name, "read")
+        if role == "garage-test":
+            acl += allow("test/data/pki/garage-test", "read")
+        for bucket in BUCKETS:
+            if role == "s3-" + bucket:
+                acl += allow("test/data/objekty/" + bucket, "read")
         if role == "pecet-test":
             acl += allow("test/data/pki/organizace-test", "read")
         for db in DATABASE_ACCESS.get(role, ()):
@@ -193,7 +204,7 @@ def initialize_seal(manager):
 
 
 def initialize_cache(manager):
-    from valkey_test import tls_bundle
+    from tls_test import tls_bundle
     for suffix in ("pki/valkey-test", *("valkey/" + name for name in CACHES), "valkey-overeni/server"):
         try:
             meta = request("GET", "test/metadata/" + suffix, token=manager)["data"]
@@ -204,7 +215,7 @@ def initialize_cache(manager):
             if err.code != 404:
                 raise
             if suffix == "pki/valkey-test":
-                fields = tls_bundle()
+                fields = tls_bundle("valkey-test", "10.239.33.13")
             elif suffix == "valkey-overeni/server":
                 fields = {}
                 for name in CACHES:
@@ -216,6 +227,25 @@ def initialize_cache(manager):
                         request("POST", "auth/token/revoke-self", {}, token)
             else:
                 fields = {"heslo": secrets.token_urlsafe(32)}
+            request("POST", "test/data/" + suffix, {"options": {"cas": 0}, "data": fields}, manager)
+
+
+def initialize_objects(manager):
+    from tls_test import tls_bundle
+    for suffix in ("pki/garage-test", *("objekty/" + name for name in BUCKETS)):
+        try:
+            meta = request("GET", "test/metadata/" + suffix, token=manager)["data"]
+            version = meta["versions"][str(meta["current_version"])]
+            if version.get("destroyed") or version.get("deletion_time"):
+                raise RuntimeError("Obnovte odstraněné přihlašovací údaje Garage")
+        except HTTPError as err:
+            if err.code != 404:
+                raise
+            if suffix == "pki/garage-test":
+                fields = tls_bundle("garage-test", "10.239.33.14")
+                fields.update({"rpc": secrets.token_hex(32), "admin": secrets.token_hex(32)})
+            else:
+                fields = {"id": "GK" + secrets.token_hex(12), "tajemstvi": secrets.token_hex(32)}
             request("POST", "test/data/" + suffix, {"options": {"cas": 0}, "data": fields}, manager)
 
 
@@ -234,6 +264,7 @@ def verify_roles():
     initialize_database_passwords(manager)
     initialize_seal(manager)
     initialize_cache(manager)
+    initialize_objects(manager)
     values = {}
     for fixture in sorted({x for paths in FIXTURES.values() for x in paths} | set(DENIED)):
         # Zkouška má vlastní pole a cesty pouze v samostatném testovacím KV.

@@ -22,7 +22,7 @@ Po přípravě úložiště VM v bloku 1 spustí instalační ai na Ejpovicích 
 
 V přehledu ředitelství lze stáhnout vzor předávacího protokolu s organizační pečetí a časovým razítkem TEST. Obojí ověří instalace samostatným účtem. Osobní podpis i připojení kvalifikované časové autority patří až k převzetí.
 
-Valkey používá čtyři aplikační účty s oddělenými klíči. Instalace přes TLS ověří zápis, čtení a odmítnutí přístupu k cizím klíčům. Do neměnného archivu uloží ověřený testovací list stavebního deníku a načte stejný list ze snímku ZFS.
+Valkey používá čtyři aplikační účty s oddělenými klíči. Instalace přes TLS ověří zápis, čtení a odmítnutí přístupu k cizím klíčům. Garage má osm účelových košů se samostatnými přístupy. U provozních nahrávek a přepisů se výmaz ve zdrojovém úložišti řídí datem pořízení. Do neměnného archivu instalace uloží ověřený testovací list stavebního deníku a načte stejný list ze snímku ZFS.
 
 Instalace obnoví všech 15 databází do dočasné izolované instance a prověří identitu správce v obnoveném Keycloaku. V místním znalostním Gitu vznikne deset oblastí s metodikami. Heslo správce a obnovovací údaje mají vlastní šifrovaný dataset přístupný pouze správě instalace.
 

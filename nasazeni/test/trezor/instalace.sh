@@ -35,7 +35,7 @@ tofu plan -input=false -detailed-exitcode
 [[ ! -e $work/uzamceno ]] || { echo 'Trezor je úmyslně uzamčen správcem.' >&2; exit 1; }
 install -m 0755 "$1" "$work/bin/agent"
 install -m 0755 "$src/start.sh" "$src/sprava.sh" "$work/bin/"
-install -m 0644 "$src/agenti.py" "$src/pristupy.py" "$src/pecet_test.py" "$src/valkey_test.py" "$work/bin/"
+install -m 0644 "$src/agenti.py" "$src/pristupy.py" "$src/pecet_test.py" "$src/tls_test.py" "$work/bin/"
 if ! echo "$(cat "$work/bao.sha256")  $work/bin/bao" | sha256sum --check --status 2>/dev/null; then
     incus file pull "$vm/usr/local/bin/bao" "$tmp/bao"
     echo "$(cat "$work/bao.sha256")  $tmp/bao" | sha256sum --check --status

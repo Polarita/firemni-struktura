@@ -1,0 +1,8 @@
+[Unit]
+Description=Výmaz běžných nahrávek a přepisů podle doby pořízení
+After=incus.service polarita-openbao-start.service
+RequiresMountsFor=/srv/polarita/data/garage
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /srv/polarita/infra/garage-test/zdroje/objekty/provoz.py --expirace
+UMask=0077

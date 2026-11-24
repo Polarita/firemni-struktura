@@ -1,0 +1,21 @@
+[Unit]
+Description=Vnitřní HTTPS vstup objektového úložiště TEST
+After=garage-test.service
+[Service]
+User=garage-test
+Group=garage-test
+TimeoutStartSec=3min
+ExecStartPre=/bin/sh -ec 'for name in garage-cert garage-klic; do while ! test -s "/run/secrets/$name"; do sleep 2; done; done'
+ExecStart=/opt/garage/caddy run --config /etc/polarita-garage/Caddyfile --adapter caddyfile
+Restart=on-failure
+RestartSec=3
+Environment=HOME=/var/lib/garage/caddy
+Environment=GOMEMLIMIT=32MiB
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/garage/caddy
+ProtectHome=yes
+PrivateTmp=yes
+UMask=0077
+[Install]
+WantedBy=multi-user.target

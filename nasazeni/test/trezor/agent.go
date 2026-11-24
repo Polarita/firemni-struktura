@@ -20,6 +20,7 @@ const private = target + "/.polarita-agent"
 const tmpfs = 0x01021994
 
 type grant struct {
+	Garage    bool     `json:"garage"`
 	Caches    []string `json:"caches"`
 	Seal      bool     `json:"seal"`
 	Databases []string `json:"databases"`
@@ -128,9 +129,19 @@ template {
 		}
 		config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/valkey-acl", acl)
 		outputs["valkey-acl"] = "valkey-acl"
-		for _, field := range []string{"cert", "klic"} {
-			file := "valkey-" + field
-			template := fmt.Sprintf(`{{ with secret "test/data/pki/valkey-test" }}{{ .Data.data.%s }}{{ end }}`, field)
+	}
+	service := ""
+	fields := []string{"cert", "klic"}
+	if len(g.Caches) > 0 {
+		service = "valkey"
+	} else if g.Garage {
+		service = "garage"
+		fields = append(fields, "rpc", "admin")
+	}
+	if service != "" {
+		for _, field := range fields {
+			file := service + "-" + field
+			template := fmt.Sprintf(`{{ with secret "test/data/pki/%s-test" }}{{ .Data.data.%s }}{{ end }}`, service, field)
 			config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/"+file, template)
 			outputs[file] = file
 		}

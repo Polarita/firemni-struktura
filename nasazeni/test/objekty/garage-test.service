@@ -1,0 +1,22 @@
+[Unit]
+Description=Provozní úložiště objektů Garage TEST
+RequiresMountsFor=/var/lib/garage
+After=network-online.target
+[Service]
+Type=simple
+User=garage-test
+Group=garage-test
+TimeoutStartSec=3min
+ExecStartPre=/bin/sh -ec 'for name in garage-rpc garage-admin; do while ! test -s "/run/secrets/$name"; do sleep 2; done; done'
+ExecStart=/opt/garage/garage-2.5.0 -c /etc/polarita-garage/garage.toml server --single-node
+Restart=on-failure
+RestartSec=3
+Environment=TOKIO_WORKER_THREADS=2
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/garage
+ProtectHome=yes
+UMask=0077
+[Install]
+WantedBy=multi-user.target

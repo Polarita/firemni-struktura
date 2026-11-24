@@ -1,0 +1,13 @@
+{
+    admin off
+    auto_https off
+    persist_config off
+    servers {
+        protocols h1 h2
+    }
+}
+https://10.239.33.14:8443 {
+    bind 10.239.33.14
+    tls /run/secrets/garage-cert /run/secrets/garage-klic
+    reverse_proxy 127.0.0.1:3900
+}
