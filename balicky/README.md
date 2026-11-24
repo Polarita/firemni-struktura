@@ -21,7 +21,7 @@ Balíčky navazují na jádro **Etapy I (`Bloky 0–12`)** a nemění ho: počet
 1. **Až po ostrém startu.** Žádný z bloků `13–19` se nespouští před `12/12 PASS` přejímací brány `Go-Live Gate` (`Blok 12`). Etapa I nevyžaduje spuštění žádného z těchto bloků; `Blok 7` pouze čte ze složky `S2-eval-suite/` dva hotové soubory (základní sadu `ES-001`–`ES-020` v `eval_suite_polarita_extended.json` a `reference_policy.py`).
 2. **Samostatně a v libovolném pořadí.** Bloky `13–18` lze spouštět v libovolném pořadí (doporučené pořadí je `13 → 18`) s jedinou vazbou: přejímka `Bloku 17` používá hodnotitel a scénáře balíčku `S2` (`Blok 14`). `Blok 15` na smluvní šablonu č. 2 balíčku `S1` jen odkazuje; jeho `DoD` na `Bloku 13` nezávisí.
 3. **`Blok 19` má vlastní bránu.** Polarita Elektro Cloud se spustí až po splnění a podpisu brány `Go / No-Go` (12–18 měsíců provozu, 100+ objektů, 500+ dokumentů, 100 % `Eval Suite`, 15+ partnerů).
-4. **Co je „hotovo“.** Ve Verzi 3.8 jsou balíčky `S1–S3` spustitelné přímo z této složky a ověřené spuštěním; `S4–S7` jsou úplné specifikace s realizačními prompty. Nic z toho není nasazeno na serveru `polarita-hq` — ten v tomto greenfield návrhu ještě neexistuje.
+4. **Co je „hotovo“.** Ve Verzi 3.8 jsou balíčky `S1–S3` spustitelné přímo z této složky a ověřené spuštěním; `S4–S7` jsou úplné specifikace s realizačními prompty. V testovacím ředitelství na VM `polarita-hq` je dostupný konfigurátor S3. Protokoly z ostatních zkoušek jsou ve VM pod `/srv/polarita/workspace/dukazy/`.
 
 ## Automatická kontrola
 

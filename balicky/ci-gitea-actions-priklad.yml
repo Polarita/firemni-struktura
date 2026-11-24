@@ -1,12 +1,10 @@
 # Example Gitea Actions workflow for the Polarita blueprint (Blocks 13-15 + consistency check).
 # Vzorový workflow Gitea Actions pro návrh Polarita (Bloky 13–15 + kontrola konzistence).
 #
-# EN: This file is a TEMPLATE. It has not been run: the server polarita-hq and its Gitea do not
-#     exist yet (the same checks were verified once on Linux on 15 Nov 2026, outside Gitea). After Gitea is
-#     deployed in Block 5, copy it to .gitea/workflows/kontrola.yml in the repository.
-# CZ: Tento soubor je VZOR. Nebyl spuštěn: stroj polarita-hq ani jeho Gitea zatím neexistují
-#     (tytéž kontroly byly 15. 11. 2026 jednorázově ověřeny na Linuxu mimo Gitea). Po nasazení Gitea v Bloku 5 jej zkopíruj
-#     do .gitea/workflows/kontrola.yml v repozitáři.
+# EN: After installing Gitea inside polarita-hq in Block 5, copy this template to
+#     .gitea/workflows/kontrola.yml and record the first successful run in Gitea.
+# CZ: Po instalaci Gitea uvnitř polarita-hq v Bloku 5 zkopíruj tuto šablonu do
+#     .gitea/workflows/kontrola.yml a ulož záznam o prvním úspěšném běhu v Gitea.
 name: kontrola-navrhu
 on:
   push:
