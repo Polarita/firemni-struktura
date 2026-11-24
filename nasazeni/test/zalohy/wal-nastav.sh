@@ -3,6 +3,7 @@ set -euo pipefail
 [[ $(hostname -s) == postgres-test && $EUID == 0 ]]
 data=/var/lib/polarita-postgres
 mountpoint -q "$data"
+install -d -m 0755 /etc/pgbackrest
 install -d -m 0700 -o postgres -g postgres "$data/pgbackrest"
 cat >/etc/pgbackrest/polarita.conf <<'CONF'
 [global]
