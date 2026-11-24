@@ -59,7 +59,8 @@ def expire(s3, now):
         for item in page.get("Contents", []):
             key = item["Key"]
             try:
-                meta = s3.head_object(Bucket="hovory", Key=key)["Metadata"]
+                headers = s3.head_object(Bucket="hovory", Key=key)["Metadata"]
+                meta = {name.lower(): value for name, value in headers.items()}
             except ClientError as error:
                 if error.response["ResponseMetadata"]["HTTPStatusCode"] == 404:
                     continue
