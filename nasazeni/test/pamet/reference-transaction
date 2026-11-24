@@ -1,0 +1,4 @@
+#!/bin/sh
+if [ "$1" = prepared ]; then
+    exec /usr/bin/python3 /usr/local/lib/polarita/znalostni-git/kontrola.py --ref
+fi

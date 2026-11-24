@@ -1,17 +1,2 @@
-#!/usr/bin/python3
-"""Aktualizaci indexu povol pouze pro běžné soubory v oblastech znalostí."""
-from pathlib import PurePosixPath
-import subprocess
-from sys import exit
-
-areas = set(open("/etc/polarita/znalostni-oblasti", encoding="utf-8").read().splitlines())
-index = subprocess.check_output(["git", "ls-files", "--stage", "-z"])
-for entry in index.split(b"\0"):
-    if not entry:
-        continue
-    meta, name = entry.split(b"\t", 1)
-    mode, oid, stage = meta.split()
-    path = PurePosixPath(name.decode("utf-8"))
-    if stage != b"0" or mode != b"100644" or not (name == b".gitignore" or
-            len(path.parts) > 1 and path.parts[0] in areas):
-        exit("Znalostní Git přijímá jen běžné dokumenty z deseti oblastí.")
+#!/bin/sh
+exec /usr/bin/python3 /usr/local/lib/polarita/znalostni-git/kontrola.py --index

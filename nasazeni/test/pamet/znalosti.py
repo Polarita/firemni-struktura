@@ -51,7 +51,12 @@ def main():
         git("init", "--quiet", "--initial-branch=main")
     hooks = Path("/usr/local/lib/polarita/znalostni-git")
     run("install", "-d", "-m", "0755", hooks)
-    run("install", "-m", "0755", Path(__file__).with_name("pre-commit"), hooks/"pre-commit")
+    source = Path(__file__).parent
+    run("install", "-m", "0644", source.parent/"git/gitleaks.toml", hooks/"gitleaks.toml")
+    for script in ("kontrola.py", "zkouska_gitu.py"):
+        run("install", "-m", "0644", source/script, hooks/script)
+    for hook in ("pre-commit", "reference-transaction"):
+        run("install", "-m", "0755", source/hook, hooks/hook)
     areas_file = Path("/etc/polarita/znalostni-oblasti")
     areas_file.write_text("\n".join(DOCS) + "\n")
     areas_file.chmod(0o644)
@@ -93,6 +98,11 @@ def main():
         git("check-ignore", "--quiet", name)
         if subprocess.run(["runuser", "-u", SERVICE, "--", "test", "-r", ROOT/name]).returncode != 1:
             raise RuntimeError("Znalostní účet získal přístup k soukromým datům")
+    subprocess.run(["runuser", "-u", SERVICE, "--", "env", "GIT_CONFIG_COUNT=1",
+                    "GIT_CONFIG_KEY_0=safe.directory", f"GIT_CONFIG_VALUE_0={ROOT}",
+                    "python3", hooks/"kontrola.py", "--historie"], cwd=ROOT, check=True)
+    run("runuser", "-u", SERVICE, "--", "python3", hooks/"zkouska_gitu.py")
+    print("Znalostní Git ověřil historii a odmítl zkušební tajemství, osobní údaje a neověřený PDF soubor.")
     git("fsck", "--strict")
     print("Git ověřil úplnost historie.", len(DOCS), "oblastí znalostí. Soukromé instalační adresáře jsou pro účet znalostí nepřístupné.")
     print("Revize znalostí", git("rev-parse", "HEAD"))
