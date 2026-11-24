@@ -144,6 +144,7 @@ def collect(root):
         shutil.copyfile(app / "zulip-secrets.conf", chat / "zulip-secrets.conf")
         copytree(app / "uploads", chat / "uploads")
     shutil.copyfile("/srv/polarita/infra/zulip-test/conf/pozice.json", chat / "pozice.json")
+    (chat / "verze-obnovy").write_text("2\n")
     with snapshot("polarita_zfs/data/paperclip") as source:
         target = root / "paperclip"
         target.mkdir()

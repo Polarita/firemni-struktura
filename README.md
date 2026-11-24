@@ -20,7 +20,7 @@ Po ověření přístupu se v přehledu objeví také odkaz **Otevřít řízen�
 
 Po zprovoznění týmového chatu otevři Zulip ve firemní VPN na stejném jméně jako ředitelství s portem `8444`. Zvol **Ředitelství Polarity** a přihlas se testovacím účtem `spravce` přes Keycloak. Chat má osm soukromých kanálů útvarů. Přístup každého z dvaceti pracovních botů odpovídá jeho firemní kartě. Odkaz na chat se v přehledu objeví po úspěšném přihlášení správce. Instalace vloží do soukromého kanálu `17-it-secops` testovací zprávu s přílohou. Při zkoušce obnovy se kontroluje obsah přílohy i její vazba na původní zprávu.
 
-Po zprovoznění Checkmk ředitelství zpřístupní stránku **Stav firemních služeb**. U každé služby uvidíš poslední měření a čas v UTC.
+Po zprovoznění Checkmk ředitelství zpřístupní stránku **Stav firemních služeb**. U každé služby uvidíš poslední měření a čas v UTC. V bloku 7 se přidají sondy přihlášení Zulipu a dostupnosti Paperclipu. Výpadek i obnovu služby zapisuje Checkmk do soukromého kanálu **17-it-secops** v Zulipu. Instalační zkouška ověřuje obě zprávy také po obnově ze zálohy.
 
 Po ověření místního Gitu se objeví odkaz **Otevřít firemní Git**. Použij stejný účet v Keycloaku. V soukromém repozitáři `spravce/firemni-struktura-test` zobrazí karta **Actions** výsledky kontroly návrhu, konfigurátoru i tisku PDF.
 

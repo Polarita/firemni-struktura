@@ -48,6 +48,8 @@ Tento dokument definuje řídicí, interní komunikační, metadata-driven, veri
 
 V režimu TEST se pro Zulip použije jedna aplikační instance v síti `app_internal` a vedle ní vyhrazená fronta RabbitMQ s Memcached. Obě běží uvnitř `polarita-hq`. Zulip se připojí přímo k vlastní databázi PostgreSQL a ke svému účtu Valkey přes ověřené TLS. E-maily zůstanou v místním testovacím úložišti. Správce vstoupí přes přihlášení ředitelství v Keycloaku. [Příprava aplikace](../nasazeni/test/zulip/aplikace.sh) · [Založení kanálů a pracovních účtů](../nasazeni/test/zulip/organizace.py)
 
+V režimu TEST předává Checkmk oznámení z účtu své lokality přes místní Unix socket. Doručovací služba ve VM zavolá nativní webhook Zulipu pro kanál `17-it-secops`. Samostatný příjmový bot má přístup do tohoto kanálu. Jeho klíč spravuje OpenBao a služba jej při startu načte z obálky vázané na vTPM. Při zkoušce se zastaví a obnoví vzorová služba. Ověřovací skript zaznamená ID obou zpráv v Zulipu a kontrola zálohy dohledá obě události v obnovené databázi.
+
 ### Prompt 1 — Nasazení `Zulip (latest)` + `Paperclip (latest)`, stromu `20` `ai` pozic, `claude-powerline-rust` a transakční fronty `Decisions` (`mutation_confirm`) (`pro 17003 spravce-site` + `11001 ceo`)
 
 ```text

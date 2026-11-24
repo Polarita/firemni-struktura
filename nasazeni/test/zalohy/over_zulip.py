@@ -50,6 +50,25 @@ def verify(root):
     for code, display in expected.items():
         if (f"ai-{code}-bot@polarita.test", display, channels[code[:2]]) not in actual:
             raise RuntimeError("Obnovený Zulip postrádá odběr účtu " + code)
+    if (data / "verze-obnovy").exists():
+        if (data / "verze-obnovy").read_text().strip() != "2":
+            raise RuntimeError("Neznámá verze obnovy chatu")
+        if ("checkmk-bot@polarita.test", "Checkmk TEST", "17-it-secops") not in actual:
+            raise RuntimeError("Chybí obnovený příjmový bot monitoringu")
+        alerts = query("""
+            SELECT DISTINCT broken.subject FROM zerver_message broken
+            JOIN zerver_message recovered ON recovered.sender_id=broken.sender_id
+                 AND recovered.recipient_id=broken.recipient_id AND recovered.subject=broken.subject AND recovered.id>broken.id
+            JOIN zerver_stream s ON s.recipient_id=broken.recipient_id
+            JOIN zerver_userprofile u ON u.id=broken.sender_id AND u.realm_id=s.realm_id
+            WHERE u.delivery_email='checkmk-bot@polarita.test' AND u.bot_type=2
+              AND s.name='17-it-secops' AND s.invite_only
+              AND broken.content='Checkmk TEST · polarita-hq · Polarita Zkusebni sluzba · CRITICAL (PROBLEM)'
+              AND recovered.content='Checkmk TEST · polarita-hq · Polarita Zkusebni sluzba · OK (RECOVERY)'
+        """)
+        if not any(re.fullmatch(r"POL-[0-9]{4}-00000", topic) for topic in alerts):
+            raise RuntimeError("Po obnově chybí dvojice oznámení o výpadku a návratu služby")
+        print("Obnovený Zulip obsahuje dvojici skutečných upozornění Checkmk v soukromém kanálu 17-it-secops.")
     uploads = (data / "uploads/files").resolve(strict=True)
     rows = query("SELECT json_build_array(path_id, size) FROM zerver_attachment")
     for row in rows:
