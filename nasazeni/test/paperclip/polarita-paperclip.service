@@ -11,8 +11,8 @@ StartLimitBurst=4
 
 [Service]
 Type=simple
-User=paperclip
-Group=paperclip
+User=paperclip-test
+Group=paperclip-test
 WorkingDirectory=/opt/paperclip/current
 Environment=HOME=/var/lib/paperclip
 Environment=PAPERCLIP_HOME=/var/lib/paperclip
@@ -30,10 +30,6 @@ Environment=PAPERCLIP_MIGRATION_AUTO_APPLY=true
 Environment=PAPERCLIP_DB_BACKUP_ENABLED=false
 Environment=HEARTBEAT_SCHEDULER_ENABLED=false
 EnvironmentFile=/etc/polarita-paperclip/server.env
-LoadCredential=postgres:/run/secrets/pg-db_paperclip
-LoadCredential=auth:/run/secrets/paperclip-auth
-LoadCredential=jwt:/run/secrets/paperclip-jwt
-LoadCredential=master:/run/secrets/paperclip-master
 ExecStart=/bin/bash /etc/polarita-paperclip/start.sh
 Restart=on-failure
 RestartSec=10

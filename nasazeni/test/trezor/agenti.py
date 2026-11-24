@@ -18,7 +18,7 @@ CLIENTS = {
     "vaultwarden-test": ("10.239.33.11", 0, 0, "vaultwarden-agent"),
     "pecet-test": ("10.239.32.12", 65534, 65534, "pecet-agent"),
     "keycloak-test": ("10.239.32.11", 1000, 0, "keycloak-agent"),
-    "paperclip-test": ("10.239.32.18", 0, 0, "paperclip-agent"),
+    "paperclip-test": ("10.239.32.18", 17308, 17308, "paperclip-agent"),
     "zulip-test": ("10.239.32.16", 0, 0, "zulip-agent"),
     "zulip-fronta-test": ("10.239.32.17", 0, 0, "zulip-fronta-agent"),
     "gitea-test": ("10.239.32.13", 17307, 17307, "gitea-agent"),

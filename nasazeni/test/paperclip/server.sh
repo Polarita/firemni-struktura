@@ -11,9 +11,11 @@ flock 9
 "${inside[@]}" test -s /opt/paperclip/current/node_modules/@paperclipai/server/ui-dist/index.html
 "${inside[@]}" bash -se <<'INNER'
 set -euo pipefail
-id paperclip >/dev/null 2>&1 || useradd --system --home-dir /var/lib/paperclip --no-create-home --shell /usr/sbin/nologin paperclip
+getent group paperclip-test >/dev/null || groupadd --gid 17308 paperclip-test
+id paperclip-test >/dev/null 2>&1 || useradd --uid 17308 --gid 17308 --home-dir /var/lib/paperclip --no-create-home --shell /usr/sbin/nologin paperclip-test
+[[ $(id -u paperclip-test) == 17308 && $(id -g paperclip-test) == 17308 ]]
 mountpoint -q /var/lib/paperclip
-chown paperclip:paperclip /var/lib/paperclip
+chown paperclip-test:paperclip-test /var/lib/paperclip
 chmod 0700 /var/lib/paperclip
 install -d -m 0755 /etc/polarita-paperclip
 INNER
@@ -39,6 +41,7 @@ SQL
 } | "${inside[@]}" sh -ec 'umask 022; cat > /etc/polarita-paperclip/server.env.next; mv -T /etc/polarita-paperclip/server.env.next /etc/polarita-paperclip/server.env'
 "${inside[@]}" systemctl daemon-reload
 "${inside[@]}" systemctl enable --now polarita-paperclip.timer
+"${inside[@]}" systemctl reset-failed polarita-paperclip.service
 "${inside[@]}" systemctl restart polarita-paperclip.service
 for step in {1..180}; do
     if "${inside[@]}" curl -fsS -m 4 -H "Host: $fqdn:8445" http://127.0.0.1:3100/api/health 2>/dev/null |
