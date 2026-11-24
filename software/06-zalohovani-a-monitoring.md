@@ -40,6 +40,8 @@ V režimu TEST instalační ai zřídí záložní server, obnovovací instanci 
 
 **Zkouška při automatické instalaci.** Zálohuj testovací data a do odděleného cíle obnov vzorek s ověřením součtu. Vyvolej měřitelnou poruchu testovací služby a zachyť místní upozornění. Níže uvedené kroky s živou protistranou či osobním vybavením jsou součástí produkční aktivace po převzetí.
 
+Při obnově VPN spustí ai v izolované síti uloženou verzi Headscale nad obnovenou databází a klíči. Služba musí ohlásit připravenost a klientovi vrátit stejný veřejný klíč jako před zálohou. Pro příchozí poštu ověří ai kontrolní součty obnovených tabulek RocksDB pomocí verze dodané se Stalwartem. Minutová kontrola živé poštovní fronty pouze spočítá klíče zpráv v sekundárním pohledu databáze. [Obnova identity VPN](../nasazeni/test/zalohy/identita_vpn.py) · [Kontrola poštovní databáze](../nasazeni/test/zalohy/RocksSonda.java)
+
 
 > V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
 
