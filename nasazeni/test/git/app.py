@@ -1,5 +1,7 @@
 """Sestaví konfiguraci testovací služby Gitea v paměti až po doručení její identity."""
 from pathlib import Path
+import base64
+import hashlib
 import configparser
 import json
 import os
@@ -33,7 +35,7 @@ groups = {
     "security": {"INSTALL_LOCK":"true", "SECRET_KEY":machine["podpis"], "INTERNAL_TOKEN":machine["interni"],
                  "EGRESS_MODE":"strict", "ALLOWED_HOST_LIST":"127.0.0.1/32:443", "DISABLE_GIT_HOOKS": "true", "DISABLE_WEBHOOKS": "true"},
     "oauth2_client": {"ENABLE_AUTO_REGISTRATION":"true", "USERNAME":"preferred_username", "ACCOUNT_LINKING":"login"},
-    "oauth2": {"JWT_SECRET":machine["oauth"]},
+    "oauth2": {"JWT_SECRET":base64.urlsafe_b64encode(hashlib.sha256(machine["oauth"].encode()).digest()).rstrip(b"=").decode()},
     "picture": {"DISABLE_GRAVATAR":"true", "ENABLE_FEDERATED_AVATAR":"false"},
     "actions": {"ENABLED":"true", "DEFAULT_ACTIONS_URL":"self"},
     "log": {"MODE":"console", "LEVEL":"warn"},
