@@ -88,7 +88,7 @@ python3 nasazeni/test/identita/overeni.py "https://$fqdn/identita" | tee "$tmp/i
 "${guest[@]}" python3 "$dest/nasazeni/test/git/pripoj_identitu.py" | tee -a "$tmp/gitea.txt"
 "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/git/zkouska_prihlaseni.py "https://$fqdn" | tee -a "$tmp/gitea.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/git/repozitar.py" | tee -a "$tmp/gitea.txt"
-"${guest[@]}" python3 "$dest/nasazeni/test/git/registrace.py" | tee -a "$tmp/gitea.txt"
+"${guest[@]}" bash "$dest/nasazeni/test/git/fronta.sh" | tee -a "$tmp/gitea.txt"
 git archive --format=tar.gz "$commit" | "${guest[@]}" install -m 0600 /dev/stdin "$dest/zdroj-ci.tar.gz"
 "${guest[@]}" python3 "$dest/nasazeni/test/git/zdroj_ci.py" "$dest/zdroj-ci.tar.gz" | tee -a "$tmp/gitea.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/git/sken.sh"

@@ -115,6 +115,9 @@ def main():
                                               "rev-parse","--absolute-git-dir"],text=True).strip()
             if check != str(mount/".git") or not (target/".git").is_dir():
                 raise RuntimeError("Klon používá nesamostatnou databázi Gitu")
+        for name,other in (("worker","judge"),("judge","worker")):
+            if subprocess.run(["runuser","-u","pol-git-"+name,"--","test","-r",f"/var/lib/polarita-git-test/wt-{other}/.git/config"]).returncode != 1:
+                raise RuntimeError("Chybné oddělení klonů")
         if os.path.samefile(workspace/"wt-judge/.git",workspace/"wt-worker/.git"):
             raise RuntimeError("Klony sdílejí databázi Gitu")
         print("Gitea uchovává návrh a workflow ve větvi main. Worker a judge mají samostatné soukromé klony.")

@@ -8,7 +8,7 @@ Tento dokument definuje datovou vrstvu společnosti **Polarita s.r.o.** v uzavř
 
 Instalace obnoví logický export PostgreSQL do dočasné instance bez síťové karty. Kontrola porovná seznam 15 databází, schémata a rozšíření. Ověří také přihlašovací role, realm a testovacího správce Keycloaku. Přístup k záloze má správce databází.
 
-Deset oblastí ve `/srv/polarita/vault` používá vlastní místní Git. Instalační heslo, údaje pro odemčení OpenBao a import Keycloaku patří do šifrovaného `/srv/polarita/data/bootstrap-test`. Při přechodu ze starší verze instalace pořídí ZFS snímek a porovná obsah a oprávnění před přesměrováním původních cest. Účet znalostního repozitáře tyto údaje nemůže číst. Centrální Gitea a její běhy CI mají vlastní přejímací zkoušku.
+Deset oblastí ve `/srv/polarita/vault` používá vlastní místní Git. Instalační heslo, údaje pro odemčení OpenBao a import Keycloaku patří do šifrovaného `/srv/polarita/data/bootstrap-test`. Při přechodu ze starší verze instalace pořídí ZFS snímek a porovná obsah a oprávnění před přesměrováním původních cest. Účet znalostního repozitáře tyto údaje nemůže číst. V přehledu ředitelství zpřístupní ověřená Gitea soukromý repozitář a výsledky Actions. Každou úlohu přebírá jednorázový pracovník s přístupem k místnímu Gitu. Gitleaks při příjmu commitu kontroluje nově zaváděné změny. Účty pro práci a kontrolu čtou své klony ve `/var/lib/polarita-git-test/wt-worker` a `/var/lib/polarita-git-test/wt-judge`. Přístup k cizímu klonu ověřuje samostatná zkouška.
 
 ### Ověřená archivní kopie deníku
 

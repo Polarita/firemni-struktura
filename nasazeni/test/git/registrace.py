@@ -4,7 +4,8 @@ from pathlib import Path
 import re
 import socket
 import subprocess
-from pripoj_identitu import CLI
+import sys
+from pripoj_identitu import CLI, DB
 from repozitar import OWNER, REPO
 
 if socket.gethostname().split(".")[0] != "polarita-hq":
@@ -16,6 +17,14 @@ scope = f"{OWNER}/{REPO}"
 url = subprocess.check_output(["incus","exec","-T","gitea-test","--","cat","/etc/polarita-gitea/url"],text=True).strip()
 with Path("/run/polarita-gitea-registrace.lock").open("a") as lock:
     fcntl.flock(lock, fcntl.LOCK_EX)
+    if "--cekajici" in sys.argv:
+        pending = subprocess.check_output(DB + ["""select exists(select 1 from action_run_job j
+            join repository r on r.id=j.repo_id where j.status=5 and r.owner_name='spravce'
+            and r.lower_name='firemni-struktura-test')"""]).strip()
+        if pending == b"f":
+            sys.exit(0)
+        if pending != b"t":
+            raise RuntimeError("Nelze určit stav pracovní fronty")
     for name, path in (("runner.yaml","/etc/polarita-gitea/"),("gitea-ci.service","/etc/systemd/system/")):
         subprocess.run(["incus","file","push","--mode=0644",str(root/name), vm+path],check=True)
     subprocess.run(inside+["install","-d","-m","0700","-o","pol-ci","-g","pol-ci",
