@@ -92,13 +92,38 @@ def put_token(target, token):
     os.replace(stream.name,target)
 
 
-@contextmanager
-def worker():
+def over_identitu_vm():
     if inc("config", "get", NAME, "user.polarita.role").strip() != NAME.encode():
         raise RuntimeError("Chybí identita pracovní VM")
-    # Držíme společný zámek instalace i zpracování. Po přerušení služby obnovíme pracovní VM.
-    if inc("list", NAME, "-f", "csv", "-c", "s").strip() == b"RUNNING":
+
+
+def zastav_vm():
+    def zastavena():
+        state = json.loads(inc("query", "/1.0/instances/" + NAME + "/state", timeout=15))
+        return state["status"] == "Stopped"
+
+    if zastavena():
+        return
+    try:
         inc("stop", NAME, "--timeout", "180", timeout=210)
+    except subprocess.SubprocessError:
+        # Při pomalém disku může klient skončit před potvrzením řádného vypnutí.
+        deadline = time.monotonic() + 90
+        while time.monotonic() < deadline:
+            try:
+                if zastavena():
+                    return
+            except subprocess.SubprocessError:
+                pass
+            time.sleep(3)
+        raise
+
+
+@contextmanager
+def worker():
+    over_identitu_vm()
+    # Držíme společný zámek instalace i zpracování. Po přerušení služby obnovíme pracovní VM.
+    zastav_vm()
     token = secrets.token_hex(16)
     challenge = SPOOL / "in" / ".start"
     ready = SPOOL / "out" / ".pripraveno"
@@ -112,8 +137,7 @@ def worker():
     finally:
         challenge.unlink(missing_ok=True)
         try:
-            if inc("list", NAME, "-f", "csv", "-c", "s").strip() == b"RUNNING":
-                inc("stop", NAME, "--timeout", "180", timeout=220)
+            zastav_vm()
         finally:
             ready.unlink(missing_ok=True)
 
@@ -181,6 +205,10 @@ def pending():
 def main():
     if socket.gethostname().split(".")[0] != "polarita-hq" or os.geteuid() != 0:
         raise SystemExit("Fronta patří do polarita-hq")
+    if sys.argv[1:] == ["--zastav-vm"]:
+        over_identitu_vm()
+        zastav_vm()
+        return
     os.umask(0o077)
     for name in ("vstup", "vysledky", "protokoly", "prijate", "odmitnute", "ceka"):
         (BASE / name).mkdir(mode=0o700, parents=True, exist_ok=True)

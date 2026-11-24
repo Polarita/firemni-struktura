@@ -10,7 +10,7 @@ exec 8>/run/polarita-test-zatez.lock
 flock 8
 [[ $(incus list "$vm" -c s -f csv) == STOPPED ]]
 incus start "$vm"
-trap 'incus stop "$vm" --timeout 180 </dev/null' EXIT
+trap 'python3 "$src/zpracovani.py" --zastav-vm </dev/null || exit 1' EXIT
 for i in {1..120}; do
     if incus exec -T "$vm" -- mountpoint -q /mnt/clamav-db 2>/dev/null; then break; fi
     sleep 1
@@ -23,7 +23,7 @@ incus file push --mode=0644 "$src/obsluha.py" "$vm/opt/polarita/obsluha.py"
 incus file push --mode=0644 "$src/polarita-offline-pracovnik.service" "$vm/etc/systemd/system/polarita-offline-pracovnik.service"
 incus exec -T "$vm" -- systemctl daemon-reload
 incus exec -T "$vm" -- systemctl enable polarita-offline-pracovnik.service
-incus stop "$vm" --timeout 180
+python3 "$src/zpracovani.py" --zastav-vm
 trap - EXIT
 install -d -m 0750 "$work/bin"
 install -m 0644 "$src/prijem.py" "$src/zpracovani.py" "$work/bin/"
