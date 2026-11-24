@@ -1,6 +1,8 @@
 """Restic otevře přes ověřené TLS vlastní snapshot a obnoví obsah přímo do instance bez síťové karty."""
 from contextlib import ExitStack
+import base64
 import fcntl
+import json
 import os
 from pathlib import Path
 import re
@@ -9,7 +11,7 @@ import socket
 import subprocess
 import sys
 
-from sber import CA,WORK,TEST,pg,rest_env
+from sber import CA,WORK,TEST,pg,provoz,rest_env
 
 
 def main():
@@ -42,6 +44,11 @@ def main():
         subprocess.run(["incus","file","push","--mode=0755","/srv/polarita/infra/openbao-test/bin/bao",name+"/var/tmp/bao"],check=True)
         subprocess.run(["incus","file","push","--mode=0644",str(TEST/"zalohy/over_soubory.py"),name+"/var/tmp/over_soubory.py"],check=True)
         subprocess.run(["incus","exec","-T",name,"--","python3","/var/tmp/over_soubory.py"],check=True)
+        subprocess.run(["incus","file","push","--mode=0400",str(TEST/"zalohy/obnov_raft.py"),name+"/run/obnov_raft.py"],check=True)
+        seal = pg.run("systemd-creds","decrypt","--name=bao-pecet",str(provoz.p.VAULT/"pecet.cred"),"-")
+        payload = {"seal":base64.b64encode(seal).decode(),"manager":provoz.p.recover("bao-sprava")}
+        subprocess.run(["incus","exec","-T",name,"--","python3","/run/obnov_raft.py"],
+                       input=json.dumps(payload).encode(), check=True, timeout=180)
         pg.inside(name,"bash","-ec","set -o pipefail; gzip -dc /var/tmp/obnova-polarita/cluster.sql.gz | runuser -u postgres -- psql -Xq -v ON_ERROR_STOP=1 -U obnova_test -d postgres >/dev/null")
         saved=pg.inside(name,"cat","/var/tmp/obnova-polarita/postgres.sha256").decode().strip()
         if pg.proof(name,"obnova_test").hex()!=saved:

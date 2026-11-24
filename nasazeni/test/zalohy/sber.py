@@ -101,6 +101,12 @@ def collect(root):
         for area in provoz.hovory.uloz.AREAS:
             copytree(src/area,target/area)
     with provoz.manager() as admin:
+        token = provoz.p.login(provoz.p.credentials("reditelstvi-test", admin))
+        try:
+            value = provoz.p.request("GET", "test/data/reditelstvi", token=token)["data"]["data"]["vzorek"]
+            (root/"openbao.sha256").write_text(hashlib.sha256(value.encode()).hexdigest()+"\n")
+        finally:
+            provoz.p.request("POST", "auth/token/revoke-self", {}, token)
         req=Request(provoz.p.BASE+"sys/storage/raft/snapshot",headers={"X-Vault-Token":admin})
         with provoz.p.HTTP.open(req,timeout=60) as remote,(root/"openbao.snap").open("xb") as out:
             shutil.copyfileobj(remote,out)

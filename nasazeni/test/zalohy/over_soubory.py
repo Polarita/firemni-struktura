@@ -52,6 +52,4 @@ for bucket in buckets:
 sample=(root/"garage/foto-staveb"/hashlib.sha256(b"zkouska/obnova-zalohy-test-v1.pgm").hexdigest())
 if sample.read_bytes()!=b"P2\n2 2\n255\n0 85\n170 255\n":
     raise RuntimeError("Zdrojový kontrolní objekt Garage se liší po obnově")
-subprocess.run(["/var/tmp/bao","operator","raft","snapshot","inspect",str(root/"openbao.snap")],
-               check=True,stdout=subprocess.DEVNULL)
-print(f"Bez síťové karty ověřeno {len(sums)} souborů, integrita Git a Vaultwarden, čitelnost Raftu, archivní hashe a {objects} objektů v sedmi účelových koších.")
+print(f"Bez síťové karty ověřeno {len(sums)} souborů, integrita Git a Vaultwarden, archivní hashe a {objects} objektů v sedmi účelových koších.")
