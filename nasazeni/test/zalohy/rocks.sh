@@ -10,12 +10,12 @@ url=https://repo.maven.apache.org/maven2/org/rocksdb/rocksdbjni/11.8.1/rocksdbjn
 install -d -m 0755 "$dir"
 exec 8>"$dir/.install"
 flock 8
-if ! printf '%s  %s\n' "$digest" "$dir/rocksdbjni.jar" | sha256sum --status -c; then
+if [[ ! -f $dir/rocksdbjni.jar ]] || ! printf '%s  %s\n' "$digest" "$dir/rocksdbjni.jar" | sha256sum --status -c; then
     tmp=$(mktemp -d "$dir/.stazeni-XXXXXXXX")
     trap 'rm -r -- "$tmp"' EXIT
     curl -fsSL --retry 3 "$url" -o "$tmp/lib.jar"
     curl -fsSL --retry 3 "$url.asc" -o "$tmp/lib.asc"
-    curl -fsSL --retry 3 "https://keys.openpgp.org/vks/v1/by-fingerprint/$signer" -o "$tmp/pub.asc"
+    curl -fsSL --retry 3 "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x$signer" -o "$tmp/pub.asc"
     printf '%s  %s\n' "$digest" "$tmp/lib.jar" | sha256sum -c
     gpg --batch --dearmor -o "$tmp/keys.gpg" "$tmp/pub.asc"
     gpgv --homedir "$tmp" --status-fd 1 --keyring "$tmp/keys.gpg" "$tmp/lib.asc" "$tmp/lib.jar" |
