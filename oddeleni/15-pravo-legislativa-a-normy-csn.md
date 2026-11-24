@@ -1,4 +1,4 @@
-# Charta a provozní řád: Oddělení 15 — Právo, Legislativa a Technické normy ČSN (Nezávislí Verifikátoři) · Verze 3.13
+# Charta a provozní řád: Oddělení 15 — Právo, Legislativa a Technické normy ČSN (Nezávislí Verifikátoři) · Verze 3.14
 
 ## 1. Poslání oddělení
 Slouží jako **nezávislá kontrolní a verifikační zeď (Compliance & Worker / Judge Critic-Verifier Layer, vzor Draivix)** celé společnosti **Polarita s.r.o.** Chrání firmu i jednatele Václava Šercla před právním, pracovněprávním, smluvním, dotačním, celním a odborně-technickým rizikem. Podle architektonického vzoru *Independent Critic-Verifier (`Worker / Judge`)* dostávají agenti tohoto oddělení (`Judge`) ke kontrole v čistém kontextu pouze původní zadání (*Requirement Manifest*) a výsledný artefakt — nikdy ne interní úvahy tvůrce (`Worker`), čímž se eliminuje přebírání halucinací.
@@ -34,7 +34,7 @@ Slouží jako **nezávislá kontrolní a verifikační zeď (Compliance & Worker
 
 ## 6. Rozvojové balíčky Etapy II a III (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.13 zapracovány jako samostatné `Bloky 13–19` (přehled a řídicí dokumenty: [`balicky/README.md`](../balicky/README.md)). Spouštějí se až po `12/12 PASS` Go-Live Gate, nemění složení oddělení ani rozpočty `ai` a oddělení se jich účastní takto:
+Balíčky `S1–S7` jsou ve Verzi 3.14 zapracovány jako samostatné `Bloky 13–19` (přehled a řídicí dokumenty: [`balicky/README.md`](../balicky/README.md)). Spouštějí se až po `12/12 PASS` Go-Live Gate, nemění složení oddělení ani rozpočty `ai` a oddělení se jich účastní takto:
 
 * **`Blok 13` (`S1`):** `15001 pravni-specialista` reviduje všech 15 šablon (s advokátem), `15002 normovac` sestavu č. 5 (pas rozváděče, kusové ověření, prohlášení o shodě).
 * **`Blok 14` (`S2`):** oba verifikátoři jsou nezávislým `Judge` nových scénářů; očekávané výsledky se nikdy neupravují jen proto, aby běh prošel.

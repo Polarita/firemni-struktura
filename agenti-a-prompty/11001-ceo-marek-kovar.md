@@ -1,4 +1,4 @@
-# Karta ai zaměstnance č. 11001: Marek Kovář (ai) — Výkonný ředitel společnosti (`ceo`) · Verze 3.13
+# Karta ai zaměstnance č. 11001: Marek Kovář (ai) — Výkonný ředitel společnosti (`ceo`) · Verze 3.14
 
 ## 1. Osobní a organizační karta
 
@@ -174,7 +174,7 @@ Jednatel 1001 podepsal předávací protokol Bloku 12 a přepnul tvůj režim na
 
 ## 6. Zapojení do rozvojových balíčků `S1–S7` (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.13 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
+Balíčky `S1–S7` jsou ve Verzi 3.14 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
 
 * `Blok 19` (`S7`): měří kritéria brány `Go / No-Go` a připravuje rozhodovací protokol pro `1001`.
 * `Bloky 13–18`: koordinuje pořadí a předává zahájení i uzavření každého bloku do `Decisions`.

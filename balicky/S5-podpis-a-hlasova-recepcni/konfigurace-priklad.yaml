@@ -1,7 +1,7 @@
 # =============================================================================
-# EN: Example configuration for package S5 (Block 17, release Polarita-3.13):
+# EN: Example configuration for package S5 (Block 17, release Polarita-3.14):
 #     esign-bridge (two-party e-signature) and voice-agent (night voice receptionist).
-# CZ: Příklad konfigurace balíčku S5 (Blok 17, release Polarita-3.13):
+# CZ: Příklad konfigurace balíčku S5 (Blok 17, release Polarita-3.14):
 #     esign-bridge (dvoustranný e-podpis) a voice-agent (noční hlasová recepční).
 #
 # EN: This is a design example only. Nothing here is deployed. The file contains
@@ -16,7 +16,7 @@
 schema_version: 1
 package: "S5"
 block: 17
-release: "Polarita-3.13"
+release: "Polarita-3.14"
 # EN: Overall status of this file. / CZ: Celkový stav tohoto souboru.
 status: "NAVRH"  # NÁVRH — ke schválení 1001
 

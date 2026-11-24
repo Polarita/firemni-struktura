@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Generátor tiskových PDF výstupů organizační struktury Polarita s.r.o. (Verze 3.13):
+Generátor tiskových PDF výstupů organizační struktury Polarita s.r.o. (Verze 3.14):
   1) 01-ORGANIZACNI-MAPA-A3-2026.pdf (1 strana A3 na šířku 420×297 mm, čitelná sazba bez zmenšení)
   2) 00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf (souborná Modrá kniha A4: Část 0–VI, 0× file:// URI, 1:1 měřítko)
 Cesty jsou relativní k umístění skriptu (nastroje/ ve složce firemni-struktura/); HTML předlohy vznikají
@@ -979,7 +979,7 @@ def build_book_html() -> str:
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<title>Polarita s.r.o. — Kompletní návrh čisté společnosti řízené lidmi (1001+) a 20 ai zaměstnanci · Verze 3.13</title>
+<title>Polarita s.r.o. — Kompletní návrh čisté společnosti řízené lidmi (1001+) a 20 ai zaměstnanci · Verze 3.14</title>
 <style>
   @page {{
     size: A4 portrait;

@@ -1,4 +1,4 @@
-# Checklist kusového ověření rozváděče · platná norma pro rozváděče nízkého napětí · Blok 16 · Verze 3.13
+# Checklist kusového ověření rozváděče · platná norma pro rozváděče nízkého napětí · Blok 16 · Verze 3.14
 
 Tento checklist je podklad pro povinný formulář kiosku `dilensky-terminal`. Je to **návrh k odbornému ověření**: záměrně neuvádí čísla článků normy ani mezní hodnoty. Ty se při každém ověření načítají z normové báze ve Vaultu (`03-Normy-a-Metodiky/`), kterou vede `15002 normovac`, a verze normové báze se uloží k záznamu. Kde je v tabulce napsáno „dle registru `15002`“, znamená to „dle platného znění normy v normové bázi ve Vaultu (`03-Normy-a-Metodiky/`), kterou spravuje `15002`“.
 
