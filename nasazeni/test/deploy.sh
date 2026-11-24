@@ -14,6 +14,20 @@ dest=/srv/polarita/infra/releases/$commit
 "${guest[@]}" install -d "$dest"
 git archive "$commit" | "${guest[@]}" tar -x -C "$dest"
 "${guest[@]}" python3 "$dest/nasazeni/test/pamet/soukrome.py"
+"${guest[@]}" bash "$dest/nasazeni/test/karantena/kvm-host.sh"
+if ! "${guest[@]}" grep -qw no-kvmapf /proc/cmdline; then
+    "${guest[@]}" systemd-run --quiet --pipe --wait --collect \
+        -p LoadCredentialEncrypted=polarita-zfs.key:/etc/polarita/zfs/vtpm.cred \
+        sh -ec 'zfs load-key -n -L "file://${CREDENTIALS_DIRECTORY}/polarita-zfs.key" polarita_zfs'
+    "${guest[@]}" zpool sync polarita_zfs
+    "${guest[@]}" systemctl reboot --no-block
+    for i in {1..180}; do
+        if timeout 4 "${guest[@]}" sh -ec 'grep -qw no-kvmapf /proc/cmdline && systemctl is-active --quiet polarita-bootstrap.service' 2>/dev/null; then break; fi
+        sleep 3
+    done
+    "${guest[@]}" grep -qw no-kvmapf /proc/cmdline
+    "${guest[@]}" systemctl is-active --quiet polarita-bootstrap.service
+fi
 tmp=$(mktemp -d)
 vpn_tmp=$("${guest[@]}" mktemp -d /run/polarita-vpn-test-XXXXXXXX)
 trap 'rm -rf "$tmp"; "${guest[@]}" rm -rf -- "$vpn_tmp"' EXIT
@@ -65,7 +79,7 @@ python3 nasazeni/test/identita/overeni.py "https://$fqdn/identita" | tee "$tmp/i
 "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/identita/prihlaseni.py "https://$fqdn/identita" | tee -a "$tmp/identita.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/databaze/obnova.py" | tee "$tmp/obnova-databazi.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/pamet/instalace.sh" | tee "$tmp/znalosti.txt"
-for step in kvm-host proxy signatury priprava offline fronta; do
+for step in proxy signatury priprava offline fronta; do
     "${guest[@]}" bash "$dest/nasazeni/test/karantena/$step.sh"
 done
 "${guest[@]}" python3 "$dest/nasazeni/test/karantena/zkouska.py" | tee "$tmp/karantena.txt"

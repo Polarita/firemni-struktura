@@ -8,6 +8,8 @@ Tento dokument definuje bezpečnostní a kryptografickou vrstvu společnosti **P
 
 Instalace pečetí tři vzory dokumentů v `pecet-test`. Oddělený ověřovatel potřebuje jen veřejný testovací certifikát. Ve vzoru předávacího protokolu na ředitelství lze ověřit původ, integritu i místní časové razítko RFC 3161. Smlouvy, odborná revizní zpráva a osobní zápis deníku vyžadují osobní podpis. Organizační pečeť lze použít na archivní kopii již autorizovaného listu. Kvalifikovanou autoritu připojí správce po převzetí.
 
+Před první zkouškou vnořené virtualizace instalace nastaví ve firemní VM parametr jádra `no-kvmapf`. Pokud ještě nebyl použit při startu, ověří klíč šifrovaného úložiště, synchronizuje ZFS a provede řádný restart VM. Pokračuje až po připojení soukromého datasetu.
+
 Offline zpracování spouští fronta ve firemní VM. Pracovní VM dostává vstup a databázi signatur pouze pro čtení. ClamAV zkontroluje přílohu. Dangerzone pod samostatným účtem převede PDF na obrazové stránky. Služba ověří výstup, uchová originál a označí stav v protokolu. Text zapisuje do datové obálky a zvuk drží do nasazení přepisu. Při chybě ověření signatur nebo převodu zůstává vstup v karanténě.
 
 ## 1. Seznam vybraného softwaru
