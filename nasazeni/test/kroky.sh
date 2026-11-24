@@ -151,6 +151,7 @@ rozhodnuti() {
     "${guest[@]}" bash "$dest/nasazeni/test/paperclip/stage1.sh" | tee -a "$tmp/paperclip.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/decisions/instalace.sh" | tee -a "$tmp/paperclip.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/decisions/paperclip.sh" "$fqdn" | tee -a "$tmp/paperclip.txt"
+    "${guest[@]}" bash "$dest/nasazeni/test/reklama/instalace.sh" | tee -a "$tmp/paperclip.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/finops/instalace.sh" "$fqdn" | tee -a "$tmp/paperclip.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/paperclip/vstup.sh"
     sudo -n bash nasazeni/test/port-vpn.sh 8445 >/dev/null
