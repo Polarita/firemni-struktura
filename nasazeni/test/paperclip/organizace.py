@@ -31,10 +31,17 @@ def main():
             if code in managed:
                 raise RuntimeError("Duplicitní identita v Paperclipu " + code)
             managed[code] = agent
-    restore_approval = company["requireBoardApprovalForNewAgents"]
-    if restore_approval:
-        board.call("PATCH", path, {"requireBoardApprovalForNewAgents": False})
+    pending = Path("/etc/polarita-paperclip/obnovit-schvalovani")
+    if pending.exists() and pending.read_text() != company["id"]:
+        raise RuntimeError("Nedokončené nastavení patří jiné firmě")
+    missing = any(item["id"] not in managed for item in target["agents"])
+    if missing and company["requireBoardApprovalForNewAgents"] and not pending.exists():
+        temp = pending.with_suffix(".next")
+        temp.write_text(company["id"])
+        temp.replace(pending)
     try:
+        if missing and company["requireBoardApprovalForNewAgents"]:
+            board.call("PATCH", path, {"requireBoardApprovalForNewAgents": False})
         for item in target["agents"]:
             code = item["id"]
             name = f'{item["name"]} (ai {code})'
@@ -55,7 +62,8 @@ def main():
                 }, allowed=(201,))
             agent_path = "/api/agents/" + managed[code]["id"]
             saved = board.call("GET", agent_path)
-            if any(saved.get(key) != value for key, value in attributes.items()):
+            if (any(saved.get(key) != value for key, value in attributes.items() if key != "metadata") or
+                any((saved.get("metadata") or {}).get(key) != value for key, value in attributes["metadata"].items())):
                 raise RuntimeError("Organizační údaje se rozcházejí u účtu " + code)
             instruction_path = agent_path + "/instructions-bundle/file"
             detail = board.call("GET", instruction_path + "?path=AGENTS.md")
@@ -69,8 +77,11 @@ def main():
             if hashlib.sha256(detail["content"].encode()).hexdigest() != item["prompt_sha256"]:
                 raise RuntimeError("Uložený systémový prompt nesouhlasí s kartou " + code)
     finally:
-        if restore_approval:
-            board.call("PATCH", path, {"requireBoardApprovalForNewAgents": True})
+        if pending.exists():
+            restored = board.call("PATCH", path, {"requireBoardApprovalForNewAgents": True})
+            if not restored.get("requireBoardApprovalForNewAgents"):
+                raise RuntimeError("Paperclip nepotvrdil obnovení pravidla pro nové nábory")
+            pending.unlink()
     if len(managed) != 20:
         raise RuntimeError("Počet registrovaných ai pozic neodpovídá")
     print("Paperclip potvrdil firmu, strom 20 pozic, samostatné měsíční kvóty a shodný obsah všech 20 systémových promptů.")
