@@ -29,7 +29,7 @@ def snapshot():
 def read(oid):
     return git(ROOT,"cat-file","blob",oid).decode("utf-8")
 
-def save(pages, message, *, keep_existing=False):
+def save(pages, message, *, update_seed=False):
     # Soukromý klon zachytí zamítnuté zápisy mimo živý Vault i jeho databázi objektů.
     with (ROOT/".git"/"agent-vault.lock").open("a") as lock, tempfile.TemporaryDirectory() as tmp:
         fcntl.flock(lock,fcntl.LOCK_EX)
@@ -44,12 +44,16 @@ def save(pages, message, *, keep_existing=False):
         changed = []
         for name, content in pages.items():
             if name in known:
-                if keep_existing or read(known[name]) == content:
+                if read(known[name]) == content:
                     continue
-                raise ValueError("Identifikátor již patří jinému záznamu.")
+                if not update_seed:
+                    raise ValueError("Identifikátor již patří jinému záznamu.")
+                last = git(base,"log","-1","--format=%ae%x00%s",head,"--",name).decode().rstrip("\n")
+                if last != "znalosti@polarita.test\0"+message:
+                    continue
             target = base/name
             target.parent.mkdir(parents=True,exist_ok=True)
-            with target.open("x",encoding="utf-8") as f:
+            with target.open("w" if name in known else "x",encoding="utf-8") as f:
                 f.write(content)
             changed.append(name)
         if not changed:

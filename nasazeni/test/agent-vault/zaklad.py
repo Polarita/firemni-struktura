@@ -15,7 +15,7 @@ def pages(source):
         "Projektování elektroinstalací, rozpočty, montáž, revize a odborná výuka.",
         "Nezávislé ověřování smluv, předpisů a technických norem.",
         "Účetní podklady, faktury, rozpočty, podatelna a sledování lhůt.",
-        "Správa serverů, software, provoz AI, bezpečnost, zálohy a obnova dat.",
+        "Správa serverů, software, provoz ai, bezpečnost, zálohy a obnova dat.",
         "Personální kapacity, školení bezpečnosti práce a kvalifikace terénního týmu.",
     ]
     for number, purpose in enumerate(purposes,11):
@@ -36,4 +36,4 @@ def pages(source):
 if __name__ == "__main__":
     import sys
     source = Path(sys.argv[1])
-    print(save(pages(source),"Založení osmi útvarů, registru poboček a šablony předání",keep_existing=True))
+    print(save(pages(source),"Založení osmi útvarů, registru poboček a šablony předání",update_seed=True))
