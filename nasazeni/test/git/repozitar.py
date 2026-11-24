@@ -51,19 +51,35 @@ def configure():
         branch = candidate["branch"]
         if branch != "instalace/" + candidate["tree"] or not re.fullmatch(r"instalace/[0-9a-f]{40}", branch):
             raise ValueError("Neplatná větev instalační zkoušky")
+        negative = candidate.get("zkouska") == "aigis-cyklus"
+        close_sample = config.get("uzavri_aigis")
+        if close_sample and not negative:
+            raise ValueError("Lze uzavřít jen instalační vzorek cyklu")
+        state = "all" if negative else "open"
         page = 1
         while True:
-            _, pulls = api("GET", path + f"/pulls?state=open&limit=50&page={page}")
+            _, pulls = api("GET", path + f"/pulls?state={state}&limit=50&page={page}")
             found = next((pr for pr in pulls if pr["head"]["ref"] == branch and pr["base"]["ref"] == "main"
                           and pr["head"]["repo"]["id"] == repo["id"]), None)
             if found or len(pulls) < 50:
                 break
             page += 1
         if not found:
+            if close_sample:
+                raise RuntimeError("Chybí ověřený požadavek zkoušky")
             _, found = api("POST", path + "/pulls", {"base": "main", "head": branch,
-                           "title": "Ověření testovací instalace " + candidate["tree"][:12]}, (201,))
+                           "title": ("Zkouška odmítnutí cyklu AigisCode " if negative else "Ověření testovací instalace ") + candidate["tree"][:12]}, (201,))
         if found["head"]["sha"] != candidate["commit"]:
             raise RuntimeError("Požadavek na začlenění míří na jinou revizi")
+        if close_sample:
+            number = found["number"]
+            if found["state"] == "open":
+                api("PATCH", path+f"/pulls/{number}", {"state":"closed"})
+            _, closed = api("GET", path+f"/pulls/{number}")
+            if closed["state"] != "closed" or closed["merged"] or closed["head"]["sha"] != candidate["commit"]:
+                raise RuntimeError("Kontrolní revize nebyla uzavřena bez sloučení")
+            print(f"Gitea uchovala selhaný běh v uzavřeném požadavku č. {number}.")
+            return
         print(f"Gitea přijala instalační revizi do ověření v požadavku č. {found['number']}.")
     if config.get("ochrana"):
         for rule in ("main","release/**"):
@@ -102,7 +118,7 @@ def main():
     if "--kandidat" in sys.argv:
         candidate = json.loads(Path(sys.argv[sys.argv.index("--kandidat")+1]).read_text())
     subprocess.run(INSIDE + ["python3","/etc/polarita-gitea/repozitar.py"],
-                   input=json.dumps({"admin":ADMIN,"password":admin_password(),"kandidat":candidate,"opakuj":"--opakuj-ci" in sys.argv,"ochrana":"--ochrana" in sys.argv}).encode(),check=True)
+                   input=json.dumps({"admin":ADMIN,"password":admin_password(),"kandidat":candidate,"uzavri_aigis":"--uzavri-aigis" in sys.argv,"opakuj":"--opakuj-ci" in sys.argv,"ochrana":"--ochrana" in sys.argv}).encode(),check=True)
 
 
 if __name__ == "__main__":

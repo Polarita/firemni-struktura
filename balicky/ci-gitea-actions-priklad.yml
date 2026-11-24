@@ -86,6 +86,11 @@ jobs:
       #     proti očekáváním sady - ne chování jazykového modelu ani změněného systémového promptu.
       #     Promptfoo ani žádný běh s modelem NEJSOU součástí CI: spouští je 17005 mimo runner
       #     (runner nemá odchozí provoz ani klíče k API modelů).
+      - name: AigisCode – statická kontrola architektury
+        run: |
+          (cd /opt/polarita-aigis && sha256sum -c --status SHA256SUMS)
+          python3 /opt/polarita-aigis/kontrola.py "$PWD"
+
       - name: S2 Eval Suite 100+ (dry-run policy check must be 100 %) / dry-run politiky musí být 100 %
         working-directory: balicky/S2-eval-suite
         run: |
