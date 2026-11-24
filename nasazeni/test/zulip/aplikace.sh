@@ -5,7 +5,6 @@ src=$(cd "$(dirname "$0")" && pwd)
 work=/srv/polarita/infra/zulip-test
 export TF_VAR_fqdn=${1:?Chybí jméno testovacího ředitelství}
 [[ $TF_VAR_fqdn =~ ^[a-z0-9.-]+\.ts\.net$ ]]
-bash "$src/pamet.sh"
 bash "$src/zdroje.sh"
 bash "$src/klient-valkey.sh"
 [[ $(findmnt -n -o SOURCE --mountpoint /srv/polarita/data/zulip) == polarita_zfs/data/zulip ]]

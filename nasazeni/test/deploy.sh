@@ -14,6 +14,7 @@ guest=("${inc[@]}" exec -T --project polarita polarita-hq --)
 dest=/srv/polarita/infra/releases/$commit
 "${guest[@]}" install -d "$dest"
 git archive "$commit" | "${guest[@]}" tar -x -C "$dest"
+"${guest[@]}" bash "$dest/nasazeni/test/zaklad/pamet.sh"
 "${guest[@]}" python3 "$dest/nasazeni/test/pamet/soukrome.py"
 "${guest[@]}" bash "$dest/nasazeni/test/karantena/kvm-host.sh"
 if ! "${guest[@]}" grep -qw no-kvmapf /proc/cmdline; then
