@@ -1,5 +1,6 @@
 """Projde běžné rozhraní ředitelství a zákaznické stránky přes privátní HTTPS."""
 import http.cookiejar
+from pathlib import Path
 import sys
 from urllib import error, parse, request
 from over import Stranka
@@ -22,7 +23,12 @@ def over(origin, password):
     url, headers, html = send("/web-test/")
     assert url == origin+"/web-test/" and "noindex" in headers["X-Robots-Tag"]
     home.feed(html)
-    assert {"Start SVJ", "Standard Objekt", "Maxi Areál / B2B"} == {v["name"] for v in home.schema if v["@type"] == "Service"}
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]/"balicky"/"S3-konfigurator-a-tarify"))
+    from pricing import load_price_list, public_price_list
+    ceny = public_price_list(load_price_list())
+    assert {t["label"]: t["base_monthly_per_object_hellers"]/100 for t in ceny["mrr_tariffs"]} == {
+        entry["name"]: entry["offers"]["price"] for entry in home.schema if entry["@type"] == "Service"
+    }
     assert "/konfigurator" in home.links and "/web-test/prevzeti-sanonu/" in home.links
     assert send("/konfigurator")[0] == origin+"/konfigurator"
     intake.feed(send("/web-test/prevzeti-sanonu/")[2])
