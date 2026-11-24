@@ -52,3 +52,4 @@ ln -sfn "$recipe" "$root/.current-next"
 mv -Tf "$root/.current-next" "$root/current"
 install -m0755 "$src/spust.sh" /usr/local/sbin/polarita-ads-mcp-test
 /usr/local/sbin/polarita-ads-mcp-test --zkouska
+"$dir/sdk/bin/python" -I "$src/zkouska_vstupu.py"
