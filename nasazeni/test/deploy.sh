@@ -84,16 +84,18 @@ python3 nasazeni/test/identita/overeni.py "https://$fqdn/identita" | tee "$tmp/i
 "${guest[@]}" python3 "$dest/nasazeni/test/databaze/obnova.py" | tee "$tmp/obnova-databazi.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/pamet/instalace.sh" | tee "$tmp/znalosti.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/archiv/instalace.sh" | tee "$tmp/archiv.txt"
-for step in proxy signatury priprava offline fronta; do
-    "${guest[@]}" bash "$dest/nasazeni/test/karantena/$step.sh"
-done
-"${guest[@]}" python3 "$dest/nasazeni/test/karantena/zkouska.py" | tee "$tmp/karantena.txt"
 for proof in identita postgres databaze obnova-databazi znalosti valkey garage archiv; do
     "${inc[@]}" file push --project polarita "$tmp/$proof.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-05/$proof-$commit.txt"
 done
-for proof in trezor restart obnova hesla obnova-hesel pecet karantena; do
+for proof in trezor restart obnova hesla obnova-hesel pecet; do
     "${inc[@]}" file push --project polarita "$tmp/$proof.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-04/$proof-$commit.txt"
 done
+for step in proxy signatury priprava offline fronta; do
+    printf 'Karanténa – %s\n' "$step"
+    "${guest[@]}" bash "$dest/nasazeni/test/karantena/$step.sh" </dev/null
+done
+"${guest[@]}" python3 "$dest/nasazeni/test/karantena/zkouska.py" | tee "$tmp/karantena.txt"
+"${inc[@]}" file push --project polarita "$tmp/karantena.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-04/karantena-$commit.txt"
 # Starší vydání vytvořilo přímý vstup. Odstraň ho až po ověření nové cesty.
 if [[ $("${guest[@]}" incus config device get reditelstvi-test portal listen 2>/dev/null || true) == tcp:127.0.0.1:18182 ]]; then
     "${guest[@]}" incus config device remove reditelstvi-test portal

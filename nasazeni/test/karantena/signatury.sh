@@ -14,7 +14,7 @@ alias=polarita-clamav-db-1.5.4
 if ! incus image info "$alias" >/dev/null 2>&1; then
     incus image copy "docker:clamav/clamav@sha256:$digest" local: --alias "$alias"
 fi
-incus image info "$alias" | grep -Fq "id: clamav/clamav@sha256:$digest"
+[[ $(incus image get-property "$alias" id) == "clamav/clamav@sha256:$digest" ]]
 cd "$work/aktualizace"
 install -m 0644 "$src/updater.tf" "$src/../incus/providers.tf" "$src/../incus/.terraform.lock.hcl" .
 tofu init -input=false -lockfile=readonly
