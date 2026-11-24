@@ -85,6 +85,35 @@ token = api("POST", "auth/openid/keycloak/callback", {"code": result["code"][0],
 account = api("GET", "user", token=token)
 if account["username"] != "spravce" or account["is_local_user"] or account["auth_provider"] != provider["name"]:
     raise RuntimeError("Úkolovník přihlásil jiného uživatele")
+if "--nastenky" in sys.argv:
+    # Stabilní identifikátory dovolují přejmenovat nástěnku v rozhraní.
+    boards = {"ZAK": "Zakázkové", "MONT": "Montážní", "SLA": "SLA servisní"}
+    existing = {}
+    page = 1
+    while True:
+        rows = api("GET", f"projects?page={page}&per_page=50", token=token)
+        if not rows:
+            break
+        existing.update({row["identifier"]: row for row in rows if row.get("identifier") in boards})
+        page += 1
+    for identifier, title in boards.items():
+        board = existing.get(identifier)
+        if board is None:
+            board = api("PUT", "projects", {"title": title, "identifier": identifier}, token)
+        path = f"projects/{board['id']}"
+        persisted = api("GET", path, token=token)
+        if persisted["identifier"] != identifier or persisted["owner"]["id"] != account["id"]:
+            raise RuntimeError("Jiný vlastník nebo identifikátor nástěnky " + identifier)
+        views = api("GET", path + "/views", token=token)
+        kanban = next((view for view in views if view["view_kind"] == "kanban"), None)
+        if kanban is None:
+            kanban = api("PUT", path + "/views", {"title": "Kanban", "view_kind": "kanban",
+                                                 "bucket_configuration_mode": "manual"}, token)
+        viewpath = f"{path}/views/{kanban['id']}"
+        restored = api("GET", viewpath, token=token)
+        if restored["view_kind"] != "kanban" or restored["project_id"] != board["id"]:
+            raise RuntimeError("Vikunja nepotvrdila nástěnku " + identifier)
+        print(f"{title} ({identifier}): {origin}/{path}/{kanban['id']}", flush=True)
 # Jen dočasný projekt založený tímto během.
 project = api("PUT", "projects", {"title": "Kontrola instalace " + secrets.token_hex(6)}, token)["id"]
 try:
