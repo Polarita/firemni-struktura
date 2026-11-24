@@ -1,0 +1,24 @@
+{
+    admin off
+    auto_https disable_redirects
+    skip_install_trust
+    persist_config off
+    servers {
+        protocols h1 h2
+    }
+}
+https://{$POLARITA_GIT_HOST} {
+    bind 127.0.0.1 10.239.32.13
+    tls internal
+    route {
+        @identita {
+            remote_ip 127.0.0.1 10.239.32.13
+            path /identita/realms/polarita/.well-known/openid-configuration /identita/realms/polarita/protocol/openid-connect/token /identita/realms/polarita/protocol/openid-connect/certs /identita/realms/polarita/protocol/openid-connect/userinfo
+        }
+        reverse_proxy @identita 10.239.32.11:8080
+        handle_path /git/* {
+            reverse_proxy 10.239.32.13:3000
+        }
+        respond 404
+    }
+}

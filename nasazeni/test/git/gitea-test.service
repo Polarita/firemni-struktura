@@ -8,6 +8,7 @@ Group=gitea-test
 Environment=HOME=/var/lib/gitea/home
 Environment=GITEA_WORK_DIR=/var/lib/gitea/data
 Environment=GITEA_CUSTOM=/var/lib/gitea/data/custom
+Environment=SSL_CERT_FILE=/etc/polarita-gitea/git-ca.crt
 Environment=PGSSLROOTCERT=/etc/polarita-gitea/ca-postgres.crt
 Environment=GOMEMLIMIT=158MiB
 Environment=GOMAXPROCS=2
