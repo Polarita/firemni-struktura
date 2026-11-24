@@ -7,11 +7,11 @@ ConditionPathExists=/var/lib/restic-test/data/polarita-test/firma/config
 Type=oneshot
 User=pol-restic
 Group=pol-restic
-LoadCredential=heslo:/etc/polarita-restic/sprava/heslo
+EnvironmentFile=/etc/polarita-restic/sprava/repozitar.env
 Environment=RESTIC_REPOSITORY=/var/lib/restic-test/data/polarita-test/firma
 Environment=GOMAXPROCS=1
 Environment=GOMEMLIMIT=85MiB
-ExecStart=/usr/bin/restic --no-cache --retry-lock=10m --password-file=%d/heslo forget --group-by=host,tags --keep-daily=7 --keep-weekly=4 --keep-monthly=12 --prune --max-repack-size=32M
+ExecStart=/usr/bin/restic --no-cache --retry-lock=10m forget --group-by=host,tags --keep-daily=7 --keep-weekly=4 --keep-monthly=12 --prune --max-repack-size=32M
 TimeoutStartSec=30min
 NoNewPrivileges=true
 ProtectSystem=strict
