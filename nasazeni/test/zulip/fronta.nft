@@ -1,0 +1,19 @@
+destroy table bridge polarita_zulip_fronta
+table bridge polarita_zulip_fronta {
+    chain do_fronty {
+        type filter hook postrouting priority -50; policy accept;
+        oifname "polzfront0" ether type arp accept
+        oifname "polzfront0" ether type ip ip saddr 10.239.32.1 udp sport 67 udp dport 68 accept
+        oifname "polzfront0" ether type ip ip saddr 10.239.32.16 ip daddr 10.239.32.17 tcp dport { 5672, 11211 } accept
+        oifname "polzfront0" ether type ip ip saddr 10.239.33.10 tcp sport 8200 ct state established accept
+        oifname "polzfront0" counter drop
+    }
+    chain z_fronty {
+        type filter hook prerouting priority -280; policy accept;
+        iifname "polzfront0" ether type arp accept
+        iifname "polzfront0" ether type ip udp sport 68 udp dport 67 accept
+        iifname "polzfront0" ether type ip ip saddr 10.239.32.17 ip daddr 10.239.32.16 tcp sport { 5672, 11211 } accept
+        iifname "polzfront0" ether type ip ip saddr 10.239.32.17 ip daddr 10.239.33.10 tcp dport 8200 accept
+        iifname "polzfront0" counter drop
+    }
+}
