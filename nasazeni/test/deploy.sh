@@ -122,6 +122,7 @@ done
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/obnov.py" | tee -a "$tmp/restic.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/zalohy/retence.sh" | tee -a "$tmp/restic.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/zalohy/hovory-instalace.sh"
+"${guest[@]}" python3 "$dest/nasazeni/test/zalohy/zkouska_hovoru.py" | tee -a "$tmp/restic.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/hovory_sber.py" | tee -a "$tmp/restic.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/zalohy/naplanuj.sh"
 "${inc[@]}" file push --project polarita "$tmp/restic.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-06/restic-$commit.txt"
