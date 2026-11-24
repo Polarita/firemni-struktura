@@ -2,6 +2,7 @@
 import base64
 from http.client import HTTPSConnection
 import json
+import re
 from pathlib import Path
 import socket
 import ssl
@@ -45,6 +46,25 @@ def configure():
     _, repo = api("GET",path)
     if not repo.get("has_actions") or not repo["private"]:
         raise RuntimeError("Gitea nepotvrdila soukromý repozitář s Actions")
+    candidate = config.get("kandidat")
+    if candidate and candidate["branch"] != "main":
+        branch = candidate["branch"]
+        if branch != "instalace/" + candidate["tree"] or not re.fullmatch(r"instalace/[0-9a-f]{40}", branch):
+            raise ValueError("Neplatná větev instalační zkoušky")
+        page = 1
+        while True:
+            _, pulls = api("GET", path + f"/pulls?state=open&limit=50&page={page}")
+            found = next((pr for pr in pulls if pr["head"]["ref"] == branch and pr["base"]["ref"] == "main"
+                          and pr["head"]["repo"]["id"] == repo["id"]), None)
+            if found or len(pulls) < 50:
+                break
+            page += 1
+        if not found:
+            _, found = api("POST", path + "/pulls", {"base": "main", "head": branch,
+                           "title": "Ověření testovací instalace " + candidate["tree"][:12]}, (201,))
+        if found["head"]["sha"] != candidate["commit"]:
+            raise RuntimeError("Požadavek na začlenění míří na jinou revizi")
+        print(f"Gitea přijala instalační revizi do ověření v požadavku č. {found['number']}.")
     if config.get("ochrana"):
         for rule in ("main","release/**"):
             _, rules = api("GET",path+"/branch_protections")
@@ -78,8 +98,11 @@ def main():
     from pripoj_identitu import ADMIN, INSIDE, admin_password
     source = str(Path(__file__).resolve())
     subprocess.run(["incus","file","push","--mode=0644",source,"gitea-test/etc/polarita-gitea/"],check=True)
+    candidate = None
+    if "--kandidat" in sys.argv:
+        candidate = json.loads(Path(sys.argv[sys.argv.index("--kandidat")+1]).read_text())
     subprocess.run(INSIDE + ["python3","/etc/polarita-gitea/repozitar.py"],
-                   input=json.dumps({"admin":ADMIN,"password":admin_password(),"opakuj":"--opakuj-ci" in sys.argv,"ochrana":"--ochrana" in sys.argv}).encode(),check=True)
+                   input=json.dumps({"admin":ADMIN,"password":admin_password(),"kandidat":candidate,"opakuj":"--opakuj-ci" in sys.argv,"ochrana":"--ochrana" in sys.argv}).encode(),check=True)
 
 
 if __name__ == "__main__":
