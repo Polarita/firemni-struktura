@@ -28,6 +28,8 @@ fqdn=$(tailscale status --json | python3 -c 'import json,sys;print(json.load(sys
 "${guest[@]}" cat /srv/polarita/vault/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn"
 "${inc[@]}" file push --project polarita "$(command -v tailscale)" "$(command -v tailscaled || echo /usr/sbin/tailscaled)" "polarita-hq$vpn_tmp/"
 "${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-03
+"${guest[@]}" "$dest/nasazeni/test/mx.sh" | tee "$tmp/mx.txt"
+"${inc[@]}" file push --project polarita "$tmp/mx.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-03/mx-$commit.txt"
 if command -v dig >/dev/null; then
     bash nasazeni/test/hrana/inventura-dns.sh >"$tmp/dns.txt"
     "${inc[@]}" file push --project polarita "$tmp/dns.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-03/verejne-dns-$commit.txt"

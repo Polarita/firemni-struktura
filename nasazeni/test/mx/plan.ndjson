@@ -1,0 +1,5 @@
+{"@type":"reconcile","object":"NetworkListener","matchOn":["name"],"value":{"mx":{"name":"smtp","bind":{"0.0.0.0:25":true},"protocol":"smtp","useTls":true,"implicitTls":false}}}
+{"@type":"upsert","object":"Certificate","matchOn":["certificate"],"value":{"tls":{"certificate":{"@type":"File","filePath":"/var/lib/stalwart/tls/mx.crt"},"privateKey":{"@type":"File","filePath":"/var/lib/stalwart/tls/mx.key"}}}}
+{"@type":"update","object":"MtaStageRcpt","value":{"allowRelaying":{"else":"false"}}}
+{"@type":"update","object":"MtaStageAuth","value":{"saslMechanisms":{"else":"false"}}}
+{"@type":"upsert","object":"Tracer","matchOn":["prefix"],"value":{"log":{"@type":"Log","path":"/var/lib/stalwart/log","prefix":"smtp","level":"info","ansi":false,"multiline":false}}}
