@@ -2,7 +2,8 @@
 import json
 import sys
 
-from model import load, tool
+from model import CASE_TOOL, load, tool
+from spisy import najdi
 from zaznamy import Problem, read
 
 VERSION = "2026-07-28"
@@ -34,13 +35,18 @@ def response(data, req):
     if req["method"] == "server/discover":
         out.update(supportedVersions=[VERSION], capabilities={"tools": {}})
     elif req["method"] == "tools/list":
-        out.update(tools=[definition])
+        out.update(tools=[definition, CASE_TOOL])
     elif req["method"] == "tools/call":
         args = params.get("arguments")
-        if params.get("name") != definition["name"] or not isinstance(args, dict) or set(args) != {"id"}:
-            return error(-32602, "Neznámý nástroj nebo parametry")
+        if not isinstance(args, dict):
+            return error(-32602, "Neplatné parametry nástroje")
         try:
-            row = read(data, args["id"])
+            if params.get("name") == definition["name"] and set(args) == {"id"}:
+                row = read(data, args["id"])
+            elif params.get("name") == CASE_TOOL["name"] and set(args) == {"oznaceni"}:
+                row = najdi(data, args["oznaceni"])
+            else:
+                return error(-32602, "Neznámý nástroj nebo parametry")
             out.update(structuredContent=row, content=[{"type": "text", "text": json.dumps(row, ensure_ascii=False)}])
         except Problem as exc:
             out.update(isError=True, content=[{"type": "text", "text": str(exc)}])

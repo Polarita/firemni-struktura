@@ -133,6 +133,17 @@ def tool(data):
             "inputSchema": obj({"id": ID}), "outputSchema": record(data), "annotations": {"readOnlyHint": True}}
 
 
+BRANCH = {"type": "integer", "minimum": 101, "maximum": 999}
+CASE_NUMBER = {"type": "string", "pattern": "^POL-[0-9]{4}-[0-9]{5}$"}
+CASE_ALIAS = {"type": "string", "pattern": "^POL-[1-9][0-9]{2}-[0-9]{4}-[0-9]{5}$"}
+CASE_LOOKUP = {"oneOf": [CASE_NUMBER, CASE_ALIAS]}
+CASE_CARD = obj({"pozadavek": ID, "branch_id": BRANCH, "zalozeno": {"type": "string", "format": "date-time"},
+                 "case_id": CASE_NUMBER, "alias": CASE_ALIAS})
+CASE_TOOL = {"name": "spisy_najdi", "description": "Načte kartu spisu podle čísla nebo pobočkového aliasu.",
+             "inputSchema": obj({"oznaceni": CASE_LOOKUP}), "outputSchema": CASE_CARD,
+             "annotations": {"readOnlyHint": True}}
+
+
 def openapi(data):
     def content(schema):
         return {"application/json": {"schema": schema}}
@@ -141,7 +152,15 @@ def openapi(data):
     body = {"required": True, "content": content(obj(data["fields"]))}
     route = "/api/" + data["entity"]
     return {"openapi": "3.2.1", "info": {"title": data["title"], "version": "1.0"},
-            "paths": {route: {"post": {"requestBody": body,
+            "paths": {"/api/spisy": {"post": {"description": "Založí spis nebo vrátí spis pro stejný požadavek.",
+                        "requestBody": {"required": True, "content": content(obj({"pozadavek": ID, "branch_id": BRANCH}))},
+                        "responses": {"200": {"description": "Karta spisu", "content": content(CASE_CARD)},
+                                      "400": {"description": "Neplatný požadavek nebo pobočka"},
+                                      "409": {"description": "Kolize požadavku nebo vyčerpaná řada"}}}},
+                      "/api/spisy/{oznaceni}": {"get": {"parameters": [{"name": "oznaceni", "in": "path", "required": True,
+                        "schema": CASE_LOOKUP}], "responses": {"200": {"description": "Karta spisu", "content": content(CASE_CARD)},
+                        "400": {"description": "Neplatné označení"}, "404": {"description": "Spis nenalezen"}}}},
+                      route: {"post": {"requestBody": body,
                                         "responses": {"201": success, "400": {"description": "Neplatná pole"}}}},
                       route + "/{id}": {
                           "parameters": [{"name": "id", "in": "path", "required": True, "schema": ID}],
