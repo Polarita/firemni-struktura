@@ -26,8 +26,9 @@ def events():
     return [json.loads(line) for line in inside("cat",path).splitlines()]
 
 
-def wait_state(expected):
-    deadline=time.monotonic()+240
+def wait_state(expected, *, stable=False):
+    since=int(time.time())
+    deadline=time.monotonic()+(420 if stable else 240)
     while time.monotonic()<deadline:
         now=int(time.time())
         # Pasivní lokální kontroly vyhodnotí skutečný Check_MK aktivní sběr.
@@ -37,7 +38,9 @@ def wait_state(expected):
         time.sleep(5)
         table=json.loads(inside("runuser","-u","polarita","--","python3","/usr/local/lib/polarita-dohled/livestatus.py"))
         row=table.get(TEST,{})
-        if row.get("stav")==expected and row.get("typ")==1 and row.get("cas",0)>=now-30:
+        if stable and (row.get("kolisa") != 0 or row.get("zmeny_pct") != 0):
+            continue
+        if row.get("stav")==expected and row.get("typ")==1 and row.get("cas",0)>=since:
             return
     raise RuntimeError("Checkmk včas nepotvrdil stav služby "+str(expected))
 
@@ -57,7 +60,8 @@ def main():
         raise SystemExit("Zkouška musí běžet uvnitř ředitelství")
     run("systemctl","start",UNIT)
     run("systemctl","start","polarita-dohled-sber.service")
-    wait_state(0)
+    # Před dalším výpadkem necháme odeznít historii předchozí zkoušky.
+    wait_state(0, stable=True)
     start=len(events())
     try:
         run("systemctl","stop",UNIT)
