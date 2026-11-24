@@ -29,16 +29,9 @@ mv -T "$work/.identita.crt.next" "$work/identita.crt"
 "${inside[@]}" install -m 0644 /etc/polarita-zulip/identita.crt /usr/local/share/ca-certificates/polarita-oidc.crt
 "${inside[@]}" update-ca-certificates
 "${inside[@]}" python3 - "$fqdn" <<'PY'
-import json, sys, urllib.request
-from pathlib import Path
-p=Path("/etc/hosts")
-tag="# polarita-oidc-test"
-with p.open("r+") as stream:
-    rows=[line for line in stream.read().splitlines() if not line.endswith(tag)]
-    rows.append(f"10.239.32.13 {sys.argv[1]} {tag}")
-    stream.seek(0)
-    stream.write("\n".join(rows)+"\n")
-    stream.truncate()
+import json, socket, sys, urllib.request
+if set(socket.gethostbyname_ex(sys.argv[1])[2]) != {"10.239.32.13"}:
+    raise RuntimeError("Zulip nepoužívá vnitřní adresu firemní identity")
 issuer="https://"+sys.argv[1]+"/identita/realms/polarita"
 with urllib.request.urlopen(issuer+"/.well-known/openid-configuration",timeout=8) as response:
     if json.load(response).get("issuer")!=issuer:
