@@ -35,10 +35,14 @@ def check(path, data, status, final_path, needle):
 
 
 check("/prehled", None, 200, "/", "Přihlášení do testovacího prostředí")
+if "--dohled" in sys.argv:
+    check("/dohled", None, 200, "/", "Přihlášení do testovacího prostředí")
 check("/konfigurator", None, 200, "/", "Přihlášení do testovacího prostředí")
 check("/prihlasit", {"username": "spravce", "password": "neplatne"}, 401, "/prihlasit", "nesouhlasí")
 check("/prihlasit", {"username": "spravce", "password": secret}, 200, "/prehled", "Jste přihlášeni")
 check("/prehled", None, 200, "/prehled", "Jste přihlášeni")
 check("/konfigurator", None, 200, "/konfigurator", "Konfigurátor paušálu")
+if "--dohled" in sys.argv:
+    check("/dohled", None, 200, "/dohled", "Checkmk · polarita-hq")
 check("/odhlasit", {}, 200, "/", "Přihlášení do testovacího prostředí")
 check("/prehled", None, 200, "/", "Přihlášení do testovacího prostředí")
