@@ -31,6 +31,9 @@ fi
 tmp=$(mktemp -d)
 vpn_tmp=$("${guest[@]}" mktemp -d /run/polarita-vpn-test-XXXXXXXX)
 trap 'rm -rf "$tmp"; "${guest[@]}" rm -rf -- "$vpn_tmp"' EXIT
+python3 nasazeni/test/inventura.py >"$tmp/inventura.json"
+"${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-01
+"${inc[@]}" file push --project polarita "$tmp/inventura.json" "polarita-hq/srv/polarita/workspace/dukazy/blok-01/inventura-$commit.json"
 CGO_ENABLED=0 go build -trimpath -o "$tmp/portal" nasazeni/test/portal.go
 "${inc[@]}" file push --mode 0755 --project polarita "$tmp/portal" "polarita-hq$dest/portal"
 "${guest[@]}" "$dest/nasazeni/test/incus.sh"
