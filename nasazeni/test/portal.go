@@ -205,7 +205,7 @@ func (p *portal) serveMetadata(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer res.Body.Close()
-	if r.Method == http.MethodGet && (strings.HasPrefix(path, "api/kniha/") || strings.HasPrefix(path, "api/sanony/")) {
+	if r.Method == http.MethodGet && (strings.HasPrefix(path, "api/spisy/") || strings.HasPrefix(path, "api/kniha/") || strings.HasPrefix(path, "api/sanony/")) {
 		if url := archiveURL(); url != "" {
 			w.Header().Set("X-Polarita-Archiv", url)
 		}

@@ -44,6 +44,8 @@ Po ověření přihlášení do Paperless a načtení rastrového protokolu z ka
 
 Na kartě testovacího spisu otevři **Převzetí šanonů do 48 hodin**, vyber zkušební PDF do 64 MiB a stiskni **Předat do karantény**. Karta zobrazí čas převzetí a termín za 48 hodin. Opakování stejného požadavku zachová původní potvrzení. Zpracování probíhá na pozadí. Po kontrole a rekonstrukci v izolované karanténě převezme Paperless očištěné PDF a karta zobrazí výsledek OCR. Správce před předáním digitální knihy ještě zkontroluje obsah a lhůty.
 
+Na kartě otevři **Časová osa spisu**. Nejnovější událost je nahoře. Tlačítkem **Načíst starší události** můžeš projít historii založení, převzetí skenů, zpracování příloh a zápisů revizí. U dříve zpracovaných příloh je na ose jen ten čas, který systém zaznamenal.
+
 V části **Digitální kniha objektu** otevři u převzatého dokumentu odkaz do archivu. Podle revizní zprávy můžeš zapsat zařízení, den provedení revize, začátek připomenutí a konec platnosti. Karta ukáže stav každého zařízení a odkaz na jeho podklad. Pro automatickou zkoušku instalace používá vlastní spis, objekt `TEST-HALA` a zařízení `TEST-R1`.
 
 Instalátor připraví ve VM čtecí prostor SilverBullet. Každou minutu kontroluje novou revizi znalostního Gitu. Po změně porovná obsah publikovaných stránek přes souborové API s obsahem v Gitu. V `04-Pravo-a-Smlouvy/den-1-pravni-minimum` je zkušební postup pro servisní poptávku. Právní a normová báze obsahuje i vlastní metodiku a bibliografický záznam. Pět periodických kontrol najde správce v databázi `db_erp_lhutnik` v pohledu `polarita_test_lhutnik.plan`.

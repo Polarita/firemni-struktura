@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 
 import kniha
 from model import load, unique
-from spisy import najdi, prevzate_sanony, zaloz
+from spisy import casova_osa, najdi, prevzate_sanony, zaloz
 from zaznamy import Problem, read, write
 
 
@@ -63,7 +63,11 @@ class Handler(BaseHTTPRequestHandler):
             self.reply(200, prevzate_sanony(data, path.removeprefix("/api/sanony/")))
             return
         if self.command == "GET" and path.startswith("/api/spisy/"):
-            self.reply(200, najdi(data, path.removeprefix("/api/spisy/")))
+            parts = path.removeprefix("/api/spisy/").split("/")
+            if len(parts) in (2, 3) and parts[1] == "osa":
+                self.reply(200, casova_osa(data, parts[0], parts[2] if len(parts) == 3 else None))
+            else:
+                self.reply(200, najdi(data, parts[0] if len(parts) == 1 else ""))
             return
         if self.command == "POST" and path == route:
             row = write(data, self.request_body())

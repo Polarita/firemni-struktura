@@ -4,10 +4,17 @@ const button = byId("zaloz");
 const storageKey = "polarita-test-rozpracovane-zalozeni-spisu";
 
 let request = 0;
+let nacteniOsy = 0;
+let dalsiPozice = null;
 
 async function otevri(url, options) {
     const current = ++request;
     byId("karta").hidden = true;
+    byId("osa").open = false;
+    byId("udalosti").replaceChildren();
+    byId("stav-osy").textContent = "";
+    byId("starsi").hidden = true;
+    dalsiPozice = null;
     stav.textContent = "Načítám spis…";
     const response = await fetch(url, options);
     const data = await response.json();
@@ -143,7 +150,7 @@ byId("sanony").addEventListener("submit", async event => {
         if (receipt.case_id !== kod || receipt.priloha !== key) throw new Error("Potvrzení nesouhlasí se spisem.");
         if (request === current) {
             byId("prijem").textContent = "Příjem do karantény potvrzen.";
-            await ukazPrijem(kod, current);
+            await Promise.all([ukazPrijem(kod, current), obnovOsu()]);
         }
     } catch (err) {
         if (request === current) byId("prijem").textContent = err.message;
@@ -191,10 +198,54 @@ byId("kniha").addEventListener("submit", async event => {
         if (current !== request) return;
         if (!res.ok) throw new Error(result.error || "Zápis se nezdařil.");
         byId("stav-knihy").textContent = "Revize zapsána.";
-        await ukazKnihu(kod, current);
+        await Promise.all([ukazKnihu(kod, current), obnovOsu()]);
     } catch (err) {
         if (current === request) byId("stav-knihy").textContent = err.message;
     } finally {
         button.disabled = false;
     }
 });
+
+async function nactiOsu(pred) {
+    const current = request;
+    const nacteni = ++nacteniOsy;
+    const kod = byId("oznaceni").textContent;
+    const stavOsy = byId("stav-osy");
+    const starsi = byId("starsi");
+    const list = byId("udalosti");
+    if (pred === null) list.replaceChildren();
+    dalsiPozice = pred;
+    starsi.hidden = true;
+    stavOsy.textContent = "Načítám události…";
+    try {
+        const path = "api/spisy/" + encodeURIComponent(kod) + "/osa";
+        const res = await fetch(pred === null ? path : path + "/" + encodeURIComponent(pred));
+        if (!res.ok) throw new Error();
+        const page = await res.json();
+        if (current !== request || nacteni !== nacteniOsy) return;
+        for (const event of page.udalosti) {
+            const li = document.createElement("li");
+            const time = document.createElement("time");
+            time.dateTime = event.cas;
+            time.textContent = new Date(event.cas).toLocaleString("cs-CZ");
+            li.append(time, " · ", event.popis);
+            if (event.dokument) li.append(" · ", odkazNaDokument(res, event.dokument));
+            list.append(li);
+        }
+        dalsiPozice = page.dalsi;
+        stavOsy.textContent = list.childElementCount ? "" : "Spis zatím nemá zaznamenané události.";
+        starsi.hidden = dalsiPozice === null;
+        starsi.textContent = "Načíst starší události";
+    } catch {
+        if (current !== request || nacteni !== nacteniOsy) return;
+        stavOsy.textContent = "Události se nepodařilo načíst.";
+        starsi.textContent = "Zkusit znovu";
+        starsi.hidden = false;
+    }
+}
+
+function obnovOsu() {
+    if (byId("osa").open && !byId("karta").hidden) return nactiOsu(null);
+}
+byId("osa").addEventListener("toggle", obnovOsu);
+byId("starsi").addEventListener("click", () => nactiOsu(dalsiPozice));

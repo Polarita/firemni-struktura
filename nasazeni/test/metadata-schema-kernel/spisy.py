@@ -34,3 +34,21 @@ def prevzate_sanony(data, kod):
         SELECT coalesce(jsonb_agg(to_jsonb(p) ORDER BY p.prijato DESC,p.priloha), '[]'::jsonb)
         FROM (SELECT * FROM polarita_test_spisy.potvrzeni_sanonu WHERE case_id=:'kod'
               ORDER BY prijato DESC,priloha LIMIT 50) p;""", kod=kod)
+
+
+def casova_osa(data, kod, pred=None):
+    if not re.fullmatch(r"POL-[0-9]{4}-[0-9]{5}", kod):
+        raise Problem(400, "Neplatné hlavní číslo spisu.")
+    if pred is not None and not re.fullmatch(r"[0-9]{20}\.[1-4][.A-Za-z0-9_-]{0,115}", pred):
+        raise Problem(400, "Neplatná pozice na časové ose.")
+    page = query(data, """
+        SELECT coalesce((
+            SELECT jsonb_agg(to_jsonb(u) ORDER BY pozice DESC)
+            FROM (SELECT cas,druh,popis,dokument,pozice FROM polarita_test_spisy.casova_osa
+                  WHERE case_id=k.case_id AND (:'pred'='' OR pozice < :'pred')
+                  ORDER BY pozice DESC LIMIT 21) u
+        ),'[]'::jsonb) FROM polarita_test_spisy.karty k WHERE k.case_id=:'kod';""",
+                 kod=kod, pred=pred or "")
+    if page is None:
+        raise Problem(404, "Spis nebyl nalezen.")
+    return {"udalosti": page[:20], "dalsi": page[19]["pozice"] if len(page) > 20 else None}

@@ -7,6 +7,8 @@ Tento dokument definuje znalostní, podatelní, spisovou, komunikační, dispeč
 
 **Příjem skenů v TEST.** Přihlášený správce předává PDF z karty spisu přes VPN. PostgreSQL v `db_erp_lhutnik` páruje identifikátor přílohy se spisem, otiskem a časem převzetí. Termín běží 48 hodin od prvního přijetí. Opakovaný požadavek se shodnými bajty vrací stejné potvrzení. Výměna obsahu pod týmž identifikátorem vrací HTTP 409. Vstup prochází ClamAV a rastrovou rekonstrukcí v oddělené karanténě. Zpracovatel před importem kontroluje doklad i otisk a zapisuje identifikátor dokumentu vrácený Paperless. Při odmítnutí přílohy nebo prázdném OCR zobrazí karta stav pro správce. Dokončení OCR a předání zkontrolované digitální knihy mají samostatný význam.
 
+Časová osa v testovací kartě řadí události podle uloženého času. Zahrnuje založení spisu, první převzetí PDF, výsledek karantény nebo OCR se známým časem a každou zapsanou revizi zařízení včetně předchozích revizí. Další komunikační kanály mají integrační zkoušky v bloku 11.
+
 Na kartě spisu je interní Digitální kniha objektu. Testovací správce může k archivované příloze stejného spisu zadat označení objektu a zařízení, datum provedené revize, datum připomenutí a poslední den platnosti podle revizní zprávy. Kniha zobrazuje nejnovější zapsanou revizi zařízení. V den připomenutí se zobrazí „Blíží se termín“, od následujícího dne po skončení platnosti „Po lhůtě“. Kalendář používá pražské časové pásmo. Bez záznamu karta hlásí „Platnost revizí zatím nedoložena“. Veřejný QR přístup a předání knihy mají vlastní přejímací zkoušky.
 
 ## 1. Seznam vybraného softwaru a modulů

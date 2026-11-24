@@ -60,6 +60,7 @@ SQL
 "${db[@]}" <"$src/spisy.sql"
 "${db[@]}" <"$src/sanony.sql"
 "${db[@]}" <"$src/kniha.sql"
+"${db[@]}" <"$src/osa.sql"
 "${db[@]}" <"$src/zkouska_knihy.sql"
 ln -sfn "$src" "$base/.current.next"
 mv -Tf "$base/.current.next" "$base/current"

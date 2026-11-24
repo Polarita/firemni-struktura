@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS polarita_test_spisy.prijem_sanonu (
 );
 ALTER TABLE polarita_test_spisy.prijem_sanonu
     ADD COLUMN IF NOT EXISTS vystup_sha256 text CHECK (vystup_sha256 ~ '^[a-f0-9]{64}$'),
+    ADD COLUMN IF NOT EXISTS uzavreno timestamptz,
     ADD COLUMN IF NOT EXISTS dokument bigint CHECK (dokument > 0),
     ADD COLUMN IF NOT EXISTS stav text NOT NULL DEFAULT 'v-karantene'
         CHECK (stav IN ('v-karantene','odmitnuto','ocr-hotovo','ke-kontrole'));
@@ -50,7 +51,8 @@ BEGIN
     IF NOT (stav_ocr='odmitnuto' AND cisty IS NULL AND doc IS NULL
             OR stav_ocr IN ('ocr-hotovo','ke-kontrole') AND cisty IS NOT NULL AND doc IS NOT NULL)
        OR stav_ocr IS NULL THEN RETURN false; END IF;
-    UPDATE polarita_test_spisy.prijem_sanonu p SET stav=stav_ocr,vystup_sha256=cisty,dokument=doc
+    UPDATE polarita_test_spisy.prijem_sanonu p SET stav=stav_ocr,vystup_sha256=cisty,dokument=doc,
+        uzavreno=CASE WHEN p.stav='v-karantene' THEN clock_timestamp() ELSE p.uzavreno END
         FROM polarita_test_spisy.karty k WHERE p.priloha=id AND p.spis=k.pozadavek AND k.case_id=kod AND p.otisk=puvodni
         AND (p.stav='v-karantene' OR (p.stav,p.vystup_sha256,p.dokument) IS NOT DISTINCT FROM (stav_ocr,cisty,doc));
     RETURN FOUND;
