@@ -55,7 +55,7 @@ def mcp(src, items):
     return [json.loads(line) for line in run.stdout.splitlines()]
 
 
-def over_spisy():
+def over_spisy(src):
     # Pevné klíče ponechají při opakované instalaci stejné zkušební spisy.
     keys = [str(uuid5(NAMESPACE_URL, "polarita.test/zkouska-spisu/" + str(n))) for n in range(3)]
     def pridat(key):
@@ -75,6 +75,12 @@ def over_spisy():
             assert status == 200 and result == row
     assert request("GET", "/api/spisy/" + rows[0]["alias"].replace("POL-101-", "POL-109-"))[0] == 404
     assert request("POST", "/api/spisy", {"pozadavek":keys[0], "branch_id":100})[0] == 400
+    identifiers = [rows[0]["case_id"], rows[0]["alias"], rows[0]["alias"].replace("POL-101-", "POL-109-"), 3]
+    calls = mcp(src, [("tools/call", {"name": "spisy_najdi", "arguments": {"oznaceni": i}}) for i in identifiers])
+    assert all(call["result"]["structuredContent"] == rows[0] for call in calls[:2])
+    assert all(call["result"]["isError"] for call in calls[2:])
+    sql("UPDATE polarita_test_spisy.spis SET branch_id=101 WHERE false;", "pol_metadata_read", ok=False)
+    print("Čtecí MCP vrátil totožnou kartu přes číslo i pobočkový alias a odmítl neplatné označení.")
     sql("UPDATE polarita_test_spisy.rada SET posledni=0 WHERE false;", "pol_metadata_api", ok=False)
     print("Opakované a souběžné založení zachovalo jediné číslo spisu. Tři spisy mají původní číslo i alias pobočky 101.")
 
@@ -112,7 +118,7 @@ def check(src):
         calls = mcp(src, [("server/discover",{}),("tools/list",{}),("tools/call",{"name":"get_termin","arguments":{"id":key}}),
                           ("tools/call",{"name":"set_termin","arguments":{"id":key}})])
         assert VERSION in calls[0]["result"]["supportedVersions"]
-        assert [t["name"] for t in calls[1]["result"]["tools"]] == ["get_termin"]
+        assert [t["name"] for t in calls[1]["result"]["tools"]] == ["get_termin", "spisy_najdi"]
         assert calls[2]["result"]["structuredContent"] == value and calls[3]["error"]["code"] == -32602
         sql("UPDATE polarita_test_metadata.meta_termin SET version=1 WHERE false;", "pol_metadata_read", ok=False)
         sql("CREATE TABLE polarita_test_metadata.nesmi_vzniknout (id int);", "pol_metadata_api", ok=False)
@@ -138,7 +144,7 @@ def check(src):
             except ValueError:
                 continue
             raise AssertionError("Cizí schéma přijato")
-    over_spisy()
+    over_spisy(src)
     print("PostgreSQL ověřil opakovanou migraci, odmítnutí cizí revize a rollback. Cizí aplikační schémata byla odmítnuta.")
     print("HTTP poskytlo formulář a OpenAPI. Dvě změny stejné verze vrátily 200 a 412, chybějící If-Match vrátil 428.")
     print("MCP skutečného čtecího účtu získal totožný záznam. Pokus o zápis databáze odmítla.")

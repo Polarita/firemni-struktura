@@ -18,7 +18,7 @@ def zaloz(data, body):
 
 
 def najdi(data, oznaceni):
-    if not re.fullmatch(r"POL-(?:[1-9][0-9]{2}-)?[0-9]{4}-[0-9]{5}", oznaceni):
+    if not isinstance(oznaceni, str) or not re.fullmatch(r"POL-(?:[1-9][0-9]{2}-)?[0-9]{4}-[0-9]{5}", oznaceni):
         raise Problem(400, "Neplatné označení spisu.")
     karta = query(data, "SELECT to_jsonb(k) FROM polarita_test_spisy.karty k WHERE k.case_id=:'key' OR k.alias=:'key';",
                   key=oznaceni)
