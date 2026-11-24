@@ -65,9 +65,10 @@ BUCKETS = ("foto-staveb", "foto-flotily", "prevzeti-sanonu", "media-eshopu", "pr
 FIXTURES["garage-test"] = ["garage-agent"]
 FIXTURES.update({"s3-" + name: ["objekty-klient-" + name] for name in BUCKETS})
 FIXTURES["gitea-test"] = ["gitea-agent"]
+FIXTURES["paperclip-test"] = ["paperclip-agent"]
 FIXTURES["zulip-test"] = ["zulip-agent"]
 FIXTURES["zulip-fronta-test"] = ["zulip-fronta-agent"]
-DATABASE_ACCESS = {"zulip-test": ("zulip",), "postgres-test": DATABASES, "keycloak-test": ("keycloak",), "gitea-test": ("gitea",)}
+DATABASE_ACCESS = {"paperclip-test": ("db_paperclip",), "zulip-test": ("zulip",), "postgres-test": DATABASES, "keycloak-test": ("keycloak",), "gitea-test": ("gitea",)}
 # Skutečné údaje ISDS vydá až oprávněný proces s ověřeným časem a rozhodnutím.
 DENIED = ["isds-cteni", "isds-odesilani", "eet-vypnuto", "cizi-vzorek"]
 HTTP = None
@@ -142,7 +143,7 @@ def configure(root):
     policy += allow("test/metadata/pki/organizace-test", "read") + allow("test/data/pki/organizace-test", "create")
     for suffix in ("pki/valkey-test", *("valkey/" + name for name in CACHES), "valkey-overeni/server"):
         policy += allow("test/metadata/" + suffix, "read") + allow("test/data/" + suffix, "create")
-    for suffix in ("pki/gitea-test", "pki/garage-test", "zulip/fronta", "zulip/aplikace", *("objekty/" + name for name in BUCKETS)):
+    for suffix in ("pki/gitea-test", "pki/garage-test", "paperclip/aplikace", "zulip/fronta", "zulip/aplikace", *("objekty/" + name for name in BUCKETS)):
         policy += allow("test/metadata/" + suffix, "read") + allow("test/data/" + suffix, "create")
     for name in DATABASES:
         policy += allow("test/metadata/databaze/" + name, "read")
@@ -156,6 +157,8 @@ def configure(root):
         for name in CACHES:
             if role == "cache-" + name:
                 acl += allow("test/data/valkey/" + name, "read")
+        if role == "paperclip-test":
+            acl += allow("test/data/paperclip/aplikace", "read")
         if role in ("zulip-test","zulip-fronta-test"):
             acl += allow("test/data/zulip/fronta", "read")
         if role == "zulip-test":
@@ -241,7 +244,7 @@ def initialize_cache(manager):
 
 def initialize_objects(manager):
     from tls_test import tls_bundle
-    for suffix in ("pki/gitea-test", "pki/garage-test", "zulip/fronta", "zulip/aplikace", *("objekty/" + name for name in BUCKETS)):
+    for suffix in ("pki/gitea-test", "pki/garage-test", "paperclip/aplikace", "zulip/fronta", "zulip/aplikace", *("objekty/" + name for name in BUCKETS)):
         try:
             meta = request("GET", "test/metadata/" + suffix, token=manager)["data"]
             version = meta["versions"][str(meta["current_version"])]
@@ -252,6 +255,8 @@ def initialize_objects(manager):
                 raise
             if suffix == "pki/gitea-test":
                 fields = {"sada": json.dumps({k: secrets.token_urlsafe(48) for k in ("podpis","interni","oauth")})}
+            elif suffix == "paperclip/aplikace":
+                fields = {"auth": secrets.token_urlsafe(48), "jwt": secrets.token_urlsafe(48), "master": secrets.token_hex(32)}
             elif suffix == "zulip/fronta":
                 fields = {name: secrets.token_urlsafe(32) for name in ("rabbitmq_password","memcached_password")}
             elif suffix == "zulip/aplikace":

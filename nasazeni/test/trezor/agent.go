@@ -20,6 +20,7 @@ const private = target + "/.polarita-agent"
 const tmpfs = 0x01021994
 
 type grant struct {
+	Paperclip  bool     `json:"paperclip"`
 	Zulip      bool     `json:"zulip"`
 	ZulipQueue bool     `json:"zulip_queue"`
 	Gitea      bool     `json:"gitea"`
@@ -158,6 +159,14 @@ template {
 		template := `{{ with secret "test/data/pki/gitea-test" }}{{ .Data.data.sada }}{{ end }}`
 		config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/gitea-stroj", template)
 		outputs["gitea-stroj"] = "gitea-stroj"
+	}
+	if g.Paperclip {
+		for _, key := range []string{"auth", "jwt", "master"} {
+			file := "paperclip-" + key
+			template := fmt.Sprintf(`{{ with secret "test/data/paperclip/aplikace" }}{{ .Data.data.%s }}{{ end }}`, key)
+			config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/"+file, template)
+			outputs[file] = file
+		}
 	}
 	if g.ZulipQueue {
 		fields := map[string][2]string{
