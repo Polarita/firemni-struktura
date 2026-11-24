@@ -28,8 +28,12 @@ def verify(root):
         with tarfile.open(target/"headscale.tar") as bundle, bundle.extractfile("volume.tar") as volume:
             with tarfile.open(fileobj=volume) as hs:
                 for entry in ("noise.key","derp.key"):
-                    if hs.getmember("backup/volume/"+entry).size==0:
+                    member=hs.getmember("backup/volume/"+entry)
+                    if member.size==0:
                         raise RuntimeError("Chybí identita serveru Headscale")
+                    with hs.extractfile(member) as source,(local/entry).open("xb") as out:
+                        shutil.copyfileobj(source,out)
+                    (local/entry).chmod(0o600)
                 for entry in ("db.sqlite","db.sqlite-wal","db.sqlite-shm"):
                     name="backup/volume/"+entry
                     if name in hs.getnames():
@@ -40,6 +44,9 @@ def verify(root):
                 raise RuntimeError("Obnovená databáze Headscale je poškozená")
             for table in ("users","nodes","pre_auth_keys"):
                 db.execute("select count(*) from "+table).fetchone()
+        if (target/"headscale-program").exists() or (target/"headscale-identita.sha256").exists():
+            import identita_vpn
+            identita_vpn.verify(target,local)
     with tarfile.open(target/"stalwart-mx.tar") as mx:
         base="backup/volume/rocksdb/"
         manifest=mx.extractfile(base+"CURRENT").read().decode().strip()

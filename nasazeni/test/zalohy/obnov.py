@@ -49,7 +49,8 @@ def main():
                 raise RuntimeError("Restic nedokončil čtení snapshotu")
         subprocess.run(["incus","file","push","--mode=0755","/srv/polarita/infra/openbao-test/bin/bao",name+"/var/tmp/bao"],check=True)
         subprocess.run(["incus","file","push","--mode=0644",str(TEST/"zalohy/over_soubory.py"),name+"/var/tmp/over_soubory.py"],check=True)
-        subprocess.run(["incus","file","push","--mode=0644",str(TEST/"zalohy/over_infrastrukturu.py"),name+"/var/tmp/over_infrastrukturu.py"],check=True)
+        for filename in ("over_infrastrukturu.py","identita_vpn.py"):
+            subprocess.run(["incus","file","push","--mode=0644",str(TEST/"zalohy"/filename),name+"/var/tmp/"+filename],check=True)
         subprocess.run(["incus","exec","-T",name,"--","python3","/var/tmp/over_soubory.py"],check=True)
         subprocess.run(["incus","file","push","--mode=0400",str(TEST/"zalohy/obnov_raft.py"),name+"/run/obnov_raft.py"],check=True)
         seal = pg.run("systemd-creds","decrypt","--name=bao-pecet",str(provoz.p.VAULT/"pecet.cred"),"-")

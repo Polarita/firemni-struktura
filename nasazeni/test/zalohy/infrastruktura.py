@@ -4,6 +4,8 @@ from pathlib import Path
 import shutil
 import subprocess
 
+import identita_vpn
+
 
 def collect(root, snapshot):
     target=root/"infrastruktura"
@@ -22,6 +24,7 @@ def collect(root, snapshot):
             dest=target/relative
             dest.parent.mkdir(parents=True,exist_ok=True)
             shutil.copyfile(source/relative,dest)
+    identita_vpn.collect(target)
     with (target/"incus/instance.json").open("wb") as out:
         subprocess.run(["incus","list","--format=json"],check=True,stdout=out)
     for resource in ("profile","network","project","storage"):
