@@ -21,12 +21,21 @@ class SameOrigin(HTTPRedirectHandler):
 class Login(HTMLParser):
     action = None
     account = None
+    email_element = False
     def handle_starttag(self,tag,attrs):
         field = dict(attrs)
         if tag == "form" and field.get("id") == "kc-form-login":
             self.action = field["action"]
-        if tag == "input" and field.get("name") == "email":
-            self.account = field.get("value")
+        if tag == "p" and field.get("id") == "signed-user-email":
+            self.email_element = True
+
+    def handle_data(self, text):
+        if self.email_element:
+            self.account = text.strip()
+
+    def handle_endtag(self, tag):
+        if tag == "p":
+            self.email_element = False
 
 
 def main():

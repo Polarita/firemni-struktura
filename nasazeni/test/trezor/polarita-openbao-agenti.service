@@ -4,5 +4,5 @@ After=polarita-openbao-start.service
 RequiresMountsFor=/srv/polarita/infra/openbao-test
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/flock --shared /srv/polarita/infra/openbao-test/.install-lock /usr/bin/python3 /srv/polarita/infra/openbao-test/bin/agenti.py
+ExecStart=/usr/bin/flock --shared --nonblock --conflict-exit-code 0 /srv/polarita/infra/openbao-test/.install-lock /usr/bin/python3 /srv/polarita/infra/openbao-test/bin/agenti.py
 TimeoutStartSec=240
