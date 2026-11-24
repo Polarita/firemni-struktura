@@ -191,8 +191,6 @@ obnova_databazi() {
     "${guest[@]}" install -dm0750 /srv/polarita/workspace/dukazy/blok-08
     "${guest[@]}" bash "$dest/nasazeni/test/paperless/server.sh" "$fqdn" | tee "$tmp/paperless-server.txt"
     "${inc[@]}" file push --project polarita "$tmp/paperless-server.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-server-$commit.txt"
-    "${guest[@]}" python3 "$dest/nasazeni/test/paperless/vzor.py" | tee "$tmp/paperless-vzor.txt"
-    "${inc[@]}" file push --project polarita "$tmp/paperless-vzor.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-vzor-$commit.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/vikunja/server.sh" "$fqdn"
     "${guest[@]}" bash "$dest/nasazeni/test/hrana/obnov-vstup.sh"
     sudo -n bash nasazeni/test/port-vpn.sh 8447 >/dev/null
@@ -216,6 +214,8 @@ karantena() {
     done
     "${guest[@]}" python3 "$dest/nasazeni/test/karantena/zkouska.py" | tee "$tmp/karantena.txt"
     "${inc[@]}" file push --project polarita "$tmp/karantena.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-04/karantena-$commit.txt"
+    "${guest[@]}" python3 "$dest/nasazeni/test/paperless/vzor.py" | tee "$tmp/paperless-vzor.txt"
+    "${inc[@]}" file push --project polarita "$tmp/paperless-vzor.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-vzor-$commit.txt"
 }
 
 zalohy() {
