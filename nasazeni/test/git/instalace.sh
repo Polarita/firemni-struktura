@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 [[ $(hostname -s) == polarita-hq ]]
+url=${1:?Chybí soukromá HTTPS adresa Gitea}
 src=$(cd "$(dirname "$0")" && pwd)
 work=/srv/polarita/infra/gitea-test
 store=/srv/polarita/data/gitea
@@ -45,3 +46,9 @@ install -d -m 0755 /etc/polarita-gitea
 git --version
 /opt/gitea/gitea-28.4.0-linux-amd64 --version'
 tofu plan -input=false -detailed-exitcode
+echo "$url" >"$tmp/url"
+incus file push --mode=0644 "$src/app.py" "$tmp/url" gitea-test/etc/polarita-gitea/
+incus file push --mode=0644 /srv/polarita/infra/postgres-test/ca.crt gitea-test/etc/polarita-gitea/ca-postgres.crt
+incus file push --mode=0644 "$src/gitea-test.service" gitea-test/etc/systemd/system/
+"${inside[@]}" systemctl daemon-reload
+"${inside[@]}" bash -ec 'install -d -m 0700 -o gitea-test -g gitea-test /var/lib/gitea/home/.postgresql; install -m 0444 /etc/polarita-gitea/ca-postgres.crt /var/lib/gitea/home/.postgresql/root.crt'

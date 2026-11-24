@@ -20,6 +20,7 @@ const private = target + "/.polarita-agent"
 const tmpfs = 0x01021994
 
 type grant struct {
+	Gitea     bool     `json:"gitea"`
 	Garage    bool     `json:"garage"`
 	Caches    []string `json:"caches"`
 	Seal      bool     `json:"seal"`
@@ -145,6 +146,11 @@ template {
 			config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/"+file, template)
 			outputs[file] = file
 		}
+	}
+	if g.Gitea {
+		template := `{{ with secret "test/data/pki/gitea-test" }}{{ .Data.data.sada }}{{ end }}`
+		config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/gitea-stroj", template)
+		outputs["gitea-stroj"] = "gitea-stroj"
 	}
 	for _, name := range g.Databases {
 		if !regexp.MustCompile(`^[a-z][a-z0-9_]{0,40}$`).MatchString(name) {

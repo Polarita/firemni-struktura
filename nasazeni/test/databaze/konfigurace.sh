@@ -55,6 +55,7 @@ host all postgres 0.0.0.0/0 reject
 host all postgres ::/0 reject
 hostssl sameuser all 10.239.33.1/32 scram-sha-256
 hostssl keycloak keycloak 10.239.32.11/32 scram-sha-256
+hostssl gitea gitea 10.239.32.13/32 scram-sha-256
 hostssl sameuser all 127.0.0.1/32 scram-sha-256
 CONF
 chmod 0644 /etc/polarita-postgres/*.conf

@@ -1,0 +1,28 @@
+[Unit]
+Description=Soukromé repozitáře Gitea TEST
+After=network-online.target
+RequiresMountsFor=/var/lib/gitea
+[Service]
+User=gitea-test
+Group=gitea-test
+Environment=HOME=/var/lib/gitea/home
+Environment=GITEA_WORK_DIR=/var/lib/gitea/data
+Environment=GITEA_CUSTOM=/var/lib/gitea/data/custom
+Environment=PGSSLROOTCERT=/etc/polarita-gitea/ca-postgres.crt
+Environment=GOMEMLIMIT=158MiB
+Environment=GOMAXPROCS=2
+RuntimeDirectory=polarita-gitea
+RuntimeDirectoryMode=0700
+TimeoutStartSec=3min
+ExecStartPre=/usr/bin/python3 /etc/polarita-gitea/app.py
+ExecStart=/opt/gitea/gitea-28.4.0-linux-amd64 web --config /run/polarita-gitea/app.ini
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/gitea
+UMask=0077
+[Install]
+WantedBy=multi-user.target

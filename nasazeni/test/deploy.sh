@@ -64,6 +64,7 @@ CGO_ENABLED=0 go build -trimpath -o "$tmp/agent" nasazeni/test/trezor/agent.go
 "${guest[@]}" bash "$dest/nasazeni/test/pecet/instalace.sh"
 "${guest[@]}" bash "$dest/nasazeni/test/mezipamet/instalace.sh"
 "${guest[@]}" bash "$dest/nasazeni/test/objekty/instalace.sh"
+"${guest[@]}" bash "$dest/nasazeni/test/git/instalace.sh" "https://$fqdn/git/"
 sudo -n bash nasazeni/test/trezor/prijemce.sh
 if "${guest[@]}" test -e /srv/polarita/data/bootstrap-test/openbao-test/inicializovano; then
     sudo -n python3 nasazeni/test/trezor/rozsireni.py "$dest/nasazeni/test/trezor"
@@ -80,6 +81,7 @@ sum=$("${guest[@]}" sha256sum /srv/polarita/workspace/dukazy/blok-04/pecet/preda
 python3 nasazeni/test/identita/overeni.py "https://$fqdn/identita" | tee "$tmp/identita.txt"
 "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/identita/prihlaseni.py "https://$fqdn/identita" | tee -a "$tmp/identita.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/mezipamet/overeni.py" | tee "$tmp/valkey.txt"
+"${guest[@]}" bash "$dest/nasazeni/test/git/spust.sh" | tee "$tmp/gitea.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/objekty/zkouska.sh" | tee "$tmp/garage.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/databaze/obnova.py" | tee "$tmp/obnova-databazi.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/pamet/instalace.sh" | tee "$tmp/znalosti.txt"
@@ -88,7 +90,7 @@ for step in proxy signatury priprava offline fronta; do
     "${guest[@]}" bash "$dest/nasazeni/test/karantena/$step.sh"
 done
 "${guest[@]}" python3 "$dest/nasazeni/test/karantena/zkouska.py" | tee "$tmp/karantena.txt"
-for proof in identita postgres databaze obnova-databazi znalosti valkey garage archiv; do
+for proof in identita postgres databaze obnova-databazi znalosti valkey garage archiv gitea; do
     "${inc[@]}" file push --project polarita "$tmp/$proof.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-05/$proof-$commit.txt"
 done
 for proof in trezor restart obnova hesla obnova-hesel pecet karantena; do
