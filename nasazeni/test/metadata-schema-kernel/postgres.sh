@@ -59,6 +59,8 @@ GRANT INSERT (popis,dny,vyrizeno), UPDATE (popis,dny,vyrizeno,version) ON polari
 SQL
 "${db[@]}" <"$src/spisy.sql"
 "${db[@]}" <"$src/sanony.sql"
+"${db[@]}" <"$src/kniha.sql"
+"${db[@]}" <"$src/zkouska_knihy.sql"
 ln -sfn "$src" "$base/.current.next"
 mv -Tf "$base/.current.next" "$base/current"
 install -m 0644 "$src/polarita-metadata.service" /etc/systemd/system/polarita-metadata.service

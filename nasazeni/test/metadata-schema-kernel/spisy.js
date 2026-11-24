@@ -24,7 +24,12 @@ async function otevri(url, options) {
     byId("prijem").textContent = "";
     byId("sken").value = "";
     byId("prevzate").replaceChildren();
-    await ukazPrijem(data.case_id, current);
+    byId("kniha").reset();
+    byId("zapis-revize").hidden = true;
+    byId("zapis-revize").open = false;
+    byId("stav-knihy").textContent = "";
+    byId("terminy").replaceChildren();
+    await Promise.all([ukazPrijem(data.case_id, current), ukazKnihu(data.case_id, current)]);
 }
 
 button.addEventListener("click", async () => {
@@ -80,6 +85,9 @@ async function ukazPrijem(kod, current) {
     if (request !== current) return;
     const list = byId("prevzate");
     list.replaceChildren();
+    const doklad = byId("doklad");
+    const vybrano = doklad.value;
+    doklad.replaceChildren();
     for (const r of receipts) {
         const li = document.createElement("li");
         const when = timestamp => new Date(timestamp).toLocaleString("cs-CZ");
@@ -88,7 +96,12 @@ async function ukazPrijem(kod, current) {
             "ocr-hotovo":"uloženo v archivu, OCR dokončeno", "ke-kontrole":"uloženo v archivu, OCR vyžaduje kontrolu"};
         if (states[r.stav]) li.textContent += " · " + states[r.stav];
         list.append(li);
+        if (r.dokument && ["ocr-hotovo", "ke-kontrole"].includes(r.stav)) {
+            doklad.add(new Option("Dokument " + r.dokument + " · " + when(r.prijato), r.priloha));
+        }
     }
+    if ([...doklad.options].some(option => option.value === vybrano)) doklad.value = vybrano;
+    byId("zapis-revize").hidden = !doklad.options.length;
     if (!receipts.length) list.textContent = "Spis zatím nemá potvrzení.";
 }
 
@@ -125,5 +138,52 @@ byId("sanony").addEventListener("submit", async event => {
         if (request === current) byId("prijem").textContent = err.message;
     } finally {
         byId("odeslat").disabled = false;
+    }
+});
+
+async function ukazKnihu(kod, current) {
+    const res = await fetch("api/kniha/" + encodeURIComponent(kod));
+    if (current !== request) return;
+    if (!res.ok) {
+        byId("stav-knihy").textContent = "Knihu se nepodařilo načíst.";
+        return;
+    }
+    const rows = await res.json();
+    if (current !== request) return;
+    const list = byId("terminy");
+    list.replaceChildren();
+    if (!rows.length) list.textContent = "Platnost revizí zatím nedoložena.";
+    const stavy = {"ve-lhute":"Ve lhůtě", "blizi-se":"Blíží se termín", "po-lhute":"Po lhůtě"};
+    for (const row of rows) {
+        const li = document.createElement("li");
+        const badge = document.createElement("span");
+        badge.classList.add("lhuta", row.stav);
+        badge.textContent = stavy[row.stav];
+        const den = row.platnost.split("-").reverse().join(". ");
+        li.append(row.objekt + " / " + row.zarizeni + " · ", badge,
+            " · platnost do " + den + " · dokument " + row.dokument);
+        list.append(li);
+    }
+}
+
+byId("kniha").addEventListener("submit", async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const kod = byId("oznaceni").textContent;
+    const current = request;
+    const button = form.querySelector("button");
+    button.disabled = true;
+    try {
+        const res = await fetch("api/kniha/" + encodeURIComponent(kod), {method:"POST",
+            headers:{"Content-Type":"application/json"}, body:JSON.stringify(Object.fromEntries(new FormData(form)))});
+        const result = await res.json();
+        if (current !== request) return;
+        if (!res.ok) throw new Error(result.error || "Zápis se nezdařil.");
+        byId("stav-knihy").textContent = "Revize zapsána.";
+        await ukazKnihu(kod, current);
+    } catch (err) {
+        if (current === request) byId("stav-knihy").textContent = err.message;
+    } finally {
+        button.disabled = false;
     }
 });

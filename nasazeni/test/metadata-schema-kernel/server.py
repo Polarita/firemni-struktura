@@ -7,6 +7,7 @@ import socketserver
 import sys
 from urllib.parse import urlsplit
 
+import kniha
 from model import load, unique
 from spisy import najdi, prevzate_sanony, zaloz
 from zaznamy import Problem, read, write
@@ -52,6 +53,11 @@ class Handler(BaseHTTPRequestHandler):
             return
         if self.command == "POST" and path == "/api/spisy":
             self.reply(200, zaloz(data, self.request_body()))
+            return
+        if path.startswith("/api/kniha/") and self.command in ("GET", "POST"):
+            kod = path.removeprefix("/api/kniha/")
+            rows = kniha.prehled(data, kod) if self.command == "GET" else kniha.zaznam(data, kod, self.request_body())
+            self.reply(200, rows)
             return
         if self.command == "GET" and path.startswith("/api/sanony/"):
             self.reply(200, prevzate_sanony(data, path.removeprefix("/api/sanony/")))
