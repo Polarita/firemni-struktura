@@ -1,4 +1,4 @@
-# 06 — Zálohování odolné proti ransomwaru (`3-2-1-1-0` + týdenní datová obnova + čtvrtletní DR drill) a monitoring · Verze 3.1
+# 06 — Zálohování odolné proti ransomwaru (`3-2-1-1-0` + týdenní datová obnova + čtvrtletní DR drill) a monitoring · Verze 3.2
 
 Tento dokument definuje zálohovací a dohledovou vrstvu společnosti **Polarita s.r.o.** (oddělení `17` — `17003 spravce-site` pod kontrolou `17004 klicnik`) — víceúrovňovou ochranu dat, automatické každotýdenní ověření datové obnovitelnosti záloh všech `6` doménových i `9` servisních databází, čtvrtletní end-to-end zkoušku obnovy celé infrastruktury na čistý stroj (*Full Bare-Metal / VM DR Drill*) a distribuovaný monitoring s acyklickým pořadím nasazení a okamžitým out-of-band varováním na mobil i počítač.
 
@@ -6,7 +6,7 @@ Tento dokument definuje zálohovací a dohledovou vrstvu společnosti **Polarita
 
 ## 1. Seznam vybraného softwaru
 
-| Oblast | Vybraný software | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.1) | Odpovědný `ai` / garant |
+| Oblast | Vybraný software | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.2) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Šifrované geograficky oddělené zálohování (proti ransomwaru)** | **Restic** + **Restic REST Server** *(režim `--append-only`)* | `latest` | Klientsky šifrované, deduplikované zálohování `/srv/polarita/` přes privátní VPN `Headscale` na druhý fyzicky oddělený server v jiné lokalitě. Serverová komponenta **`Restic REST Server (--append-only)`** zaručuje, že klient na `polarita-hq` má jen `append-only` přístup a nemůže přes něj smazat či přepsat dřívější zálohy. Retenci (`forget/prune`) spouští výhradně místní úloha na záložním uzlu; správcovský přístup k záložnímu uzlu má jen `1001` vlastním klíčem, který není uložen na `polarita-hq`. | `17003` `spravce-site` *(kontrola klíčů `17004` `klicnik`)* |
 | **Lokální atomické snapshoty úložiště** | **Sanoid** *(nad `OpenZFS`; u větve `ext4 / LVM thin` blokové snapshoty `LVM thin` / API hypervizoru)* | `latest` | Automatická správa 15minutových, hodinových, denních a měsíčních snapshotů `OpenZFS` (a u větve `ext4 / LVM thin` blokových snapshotů `LVM thin` či API hypervizoru) pro rychlý návrat stavu při nepovedené aktualizaci nebo lidské chybě se změřenou dobou návratu. | `17003` `spravce-site` |
@@ -34,12 +34,15 @@ Tento dokument definuje zálohovací a dohledovou vrstvu společnosti **Polarita
 
 ## 3. Pokyny k instalaci a konfiguraci pro `ai` (Prompty)
 
-> **Role před vznikem agentů a schvalovací smyčka:** Do konce `Bloku 6` (a v `Bloku 7` do založení agentů) vykonávají prompty adresované `17003 spravce-site`, `17004 klicnik` a `17001 programator` subagenti Instalačního koordinátora (infrastrukturní / vývojový subagent) a „schválení v `Decisions`“ znamená písemné schválení jednatelem `1001`; od založení agentů v `Bloku 7` přebírají prompty jmenovaní agenti. Každý `Prompt` začíná čtecím průzkumem (preflight) a plánem, pak se ZASTAVÍ pro schválení `1001` a teprve potom provádí změny.
+**Zkouška při automatické instalaci.** Zálohuj testovací data a do odděleného cíle obnov vzorek s ověřením součtu. Vyvolej měřitelnou poruchu testovací služby a zachyť místní upozornění. Níže uvedené kroky s živou protistranou či osobním vybavením jsou součástí produkční aktivace po převzetí.
+
+
+> V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
 
 ### Prompt 1 — Nasazení `Sanoid (latest)`, záloh všech `6 + 9` databází `PostgreSQL` a neměnného `Restic REST Server (--append-only)` mezi lokalitami (`pro 17003 spravce-site` + `17004 klicnik`)
 
 ```text
-Postup: nejprve proveď čtecí průzkum (preflight) a sestav plán, pak se ZASTAV pro schválení 1001 (do spuštění fronty Decisions písemné schválení v relaci) a teprve po schválení proveď měnící kroky.
+V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
 Jsi správce serveru (17003 spravce-site). Nasaď na centrálním serveru polarita-hq a záložním serveru v druhé lokalitě zálohovací architekturu 3-2-1-1-0 pomocí Sanoid (latest), pgBackRest/pg_dump (latest) a Restic + Restic REST Server (--append-only):
 
 0. Instalace a připojení záložního uzlu (výslovný první krok Bloku 6, v oddělené relaci): záložní uzel v druhé fyzické lokalitě (viz požadavky na stroj v kap. 1 README) připrav v samostatné relaci vedené jednatelem 1001 jeho vlastním správcovským klíčem, který se nikdy neukládá na polarita-hq — čistý Ubuntu Server latest LTS, hardening SSH, Incus, žádné jiné kontejnerové prostředí — a připoj jej do privátní VPN Headscale. Z polarita-hq se na záložní uzel nesmí jít přihlásit jako správce.
@@ -58,7 +61,7 @@ Jsi správce serveru (17003 spravce-site). Nasaď na centrálním serveru polari
 ### Prompt 2 — Nedělní `03:00` datová zkouška obnovy v `Incus` a čtvrtletní *Full Bare-Metal / VM DR Drill* (`pro 17003 spravce-site` + `17004 klicnik`)
 
 ```text
-Postup: nejprve proveď čtecí průzkum (preflight) a sestav plán, pak se ZASTAV pro schválení 1001 (do spuštění fronty Decisions písemné schválení v relaci) a teprve po schválení proveď měnící kroky.
+V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
 Připrav a aktivuj na serveru polarita-hq dvoustupňové ověřování obnovitelnosti záloh (týdenní datový drill každou neděli v 03:00 + čtvrtletní Full Bare-Metal / VM DR Drill):
 
 1. Týdenní automatická datová zkouška (každou neděli v 03:00 v dočasné instanci Incus, ne na hostiteli):
@@ -74,7 +77,7 @@ Připrav a aktivuj na serveru polarita-hq dvoustupňové ověřování obnovitel
 ### Prompt 3 — Distribuovaný monitoring `Checkmk Raw (latest)` s acyklickým nasazením notifikací a aplikačních sond (`pro 17003 spravce-site`)
 
 ```text
-Postup: nejprve proveď čtecí průzkum (preflight) a sestav plán, pak se ZASTAV pro schválení 1001 (do spuštění fronty Decisions písemné schválení v relaci) a teprve po schválení proveď měnící kroky.
+V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
 Podle schváleného firemního standardu monitoringu nasaď a nakonfiguruj Checkmk Raw (latest) pro kompletní dohled nad serverem polarita-hq a pobočkovými/záložními uzly v acyklickém pořadí bloků:
 
 1. Nasazení a registrace uzlů (Blok 6):

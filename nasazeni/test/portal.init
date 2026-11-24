@@ -1,0 +1,6 @@
+#!/sbin/openrc-run
+description="Testovaci reditelstvi Polarity"
+command="/usr/local/bin/polarita-portal"
+command_user="nobody:nogroup"
+command_background=true
+pidfile="/run/polarita-portal.pid"

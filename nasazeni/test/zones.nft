@@ -1,0 +1,18 @@
+destroy table inet polarita_test
+table inet polarita_test {
+    set zones {
+        type ifname
+        elements = { "app_internal", "data_vault", "dmz_edge" }
+    }
+    chain forwarding {
+        type filter hook forward priority -20; policy accept;
+        iifname @zones counter drop
+        oifname @zones counter drop
+    }
+    chain local_input {
+        type filter hook input priority -20; policy accept;
+        iifname @zones ct state established,related accept
+        iifname @zones udp sport 68 udp dport 67 accept
+        iifname @zones counter drop
+    }
+}

@@ -1,4 +1,4 @@
-# 02 — Virtualizace, kontejnerizace a izolace zón (Bez Dockeru na hostiteli) · Verze 3.1
+# 02 — Virtualizace, kontejnerizace a izolace zón (Bez Dockeru na hostiteli) · Verze 3.2
 
 Tento dokument stanovuje jednotnou virtualizační a kontejnerovou platformu na centrálním serveru `polarita-hq` (`Ubuntu Server — latest LTS`) pro provoz všech aplikací, databází, komunikační ústředny, bez-síťové karantény i testů obnovy společnosti **Polarita s.r.o.** Instalační příkazy, profily, čtyři zóny a OpenTofu v této vrstvě patří do vnitřního Incusu ve VM `polarita-hq`. Vnější Incus poskytuje firemní VM a její disk v poolu `zrcadlo`.
 
@@ -6,7 +6,7 @@ Tento dokument stanovuje jednotnou virtualizační a kontejnerovou platformu na 
 
 ## 1. Seznam vybraného softwaru
 
-| Komponenta | Vybraný software | Kanál / Zdroj | Role a použití v Polarita s.r.o. (Verze 3.1) | Odpovědný `ai` / garant |
+| Komponenta | Vybraný software | Kanál / Zdroj | Role a použití v Polarita s.r.o. (Verze 3.2) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Jednotný správce virtuálních strojů a kontejnerů** | **Incus** | `latest` *(oficiální podepsaný stabilní repozitář Zabbly)* | Spouští pod jedním nástrojem plné virtuální stroje (`KVM`), lehké systémové kontejnery (`LXC`) i hotové aplikační obrazy (`OCI` přímo z Docker Hubu / GHCR) — zcela bez nutnosti instalovat Docker na hostitele. | `17003` `spravce-site` *(kontrola `17004` `klicnik`)* |
 | **Hardwarová virtualizace plných VM** | **QEMU / KVM** *(s UEFI OVMF)* | `latest` *(ovládáno přímo přes `Incus`)* | Hardwarově oddělené virtuální stroje pro bez-síťový sandbox (`sandbox_airgap` — výkresy, přílohy `.zfo`, hlasové zprávy a přílohy z `Chatwoot CE / Stalwart Mail` i 48h převzetí šanonů `N7`), čtvrtletní *Full DR Drill* obnovy záloh a případnou izolovanou Windows VM pro oborový elektro software. | `17003` `spravce-site` |
@@ -117,12 +117,16 @@ Co v tabulce není, je zakázáno (`nftables` `default drop`). Konkrétní čís
 
 ## 3. Pokyny k instalaci a konfiguraci pro `ai` (Prompty)
 
-> **Role před vznikem agentů a schvalovací smyčka:** Do konce `Bloku 6` (a v `Bloku 7` do založení agentů) vykonávají prompty adresované `17003 spravce-site`, `17004 klicnik` a `17001 programator` subagenti Instalačního koordinátora (infrastrukturní / vývojový subagent) a „schválení v `Decisions`“ znamená písemné schválení jednatelem `1001`; od založení agentů v `Bloku 7` přebírají prompty jmenovaní agenti. Každý `Prompt` začíná čtecím průzkumem (preflight) a plánem, pak se ZASTAVÍ pro schválení `1001` a teprve potom provádí změny.
+**Zkouška při automatické instalaci.** Ověř lokální socket Incusu, ZFS a provider, nulový drift, start LXC, OCI a KVM a izolaci každé zóny. Dočasné instance označ a po zápisu výsledků odstraň. Níže uvedené kroky s živou protistranou či osobním vybavením jsou součástí produkční aktivace po převzetí.
 
-### Prompt 1 — Průzkum, plán a po schválení instalace a bezpečná inicializace `Incus (latest)` a `OpenTofu (latest)` (`pro 17003 spravce-site`)
+
+> V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
+
+### Prompt 1 — Průzkum, plán, instalace a bezpečná inicializace `Incus (latest)` a `OpenTofu (latest)` (`pro 17003 spravce-site`)
 
 ```text
-Jsi správce serveru (17003 spravce-site). Uvnitř VM polarita-hq s Ubuntu Server (latest LTS) připrav instalaci jednotné virtualizační vrstvy Incus (latest) a OpenTofu (latest) — bez instalace Dockeru na hostitele. Nejprve proveď jen krok 1 (Read-Only), předlož plán kroků 2–5 ke schválení 1001 (do spuštění fronty Decisions písemně) a ZASTAV se; kroky 2–5 proveď až po schválení:
+V režimu TEST proveď instalaci samostatně. Kroky vyžadující osobní identitu nebo ostrý účet eviduj pro aktivaci po uživatelském testu a převzetí.
+Jsi správce serveru (17003 spravce-site). Uvnitř VM polarita-hq s Ubuntu Server (latest LTS) připrav instalaci jednotné virtualizační vrstvy Incus (latest) a OpenTofu (latest) — bez instalace Dockeru na hostitele. Po inventuře proveď kroky 2–5 a ověř stav:
 
 1. Preflight (Read-Only): Uvnitř VM ověř hostname polarita-hq, výsledek kvm z příkazu systemd-detect-virt, dostupnou RAM, vmx/svm a /dev/kvm. Ověř nftables, lokální socket vnitřního Incusu a stav případné předchozí inicializace. Před instalací je chybějící socket očekávaný. Ověř také, že zde neběží dockerd.
 2. Instalace z ověřených zdrojů:
@@ -140,7 +144,7 @@ Jsi správce serveru (17003 spravce-site). Uvnitř VM polarita-hq s Ubuntu Serve
 ### Prompt 2 — Deklarativní vytvoření 4 bezpečnostních síťových zón v `OpenTofu` (`pro 17003 spravce-site` + `17004 klicnik`)
 
 ```text
-Postup: nejprve proveď čtecí průzkum (preflight) a sestav plán, pak se ZASTAV pro schválení 1001 (do spuštění fronty Decisions písemné schválení v relaci) a teprve po schválení proveď měnící kroky.
+V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
 Pomocí OpenTofu (latest) a provideru lxc/incus připrav ve složce /srv/polarita/infra/incus/zones/ deklarativní definici čtyř striktně oddělených prostředí na serveru polarita-hq:
 
 1. Zóna 1 — dmz_edge: izolovaná síť a profil výhradně pro reverzní proxy Caddy (porty 80/tcp a 443/tcp+udp), řídicí server Headscale (+ 3478/udp STUN) a izolovaný příchozí SMTP MX relay port 25/tcp pro Stalwart Mail chráněný CrowdSec (jediná zóna přijímající veřejný příchozí provoz; žádné veřejné storefronty ani aplikační backendy, 0 příchozích SIP portů a 0 správních portů).
@@ -148,15 +152,15 @@ Pomocí OpenTofu (latest) a provideru lxc/incus připrav ve složce /srv/polarit
 3. Zóna 3 — data_vault: uzavřená databázová a trezorová síť s NULOVÝM přístupem do internetu (žádný odchozí NAT/egress ven ze serveru, přístup povolen výhradně podle matice toků: z autorizovaných aplikačních kontejnerů na konkrétní porty PostgreSQL/PgBouncer, Valkey a Garage, z OpenBao Agenta každé instance se síťovým rozhraním kromě gitea-runner na OpenBao, z Caddy na Vaultwarden jen pro interní vhost z VPN a z Checkmk jen na čtecího agenta).
 4. Zóna 4 — sandbox_airgap: profil pro bez-síťové kontejnery a KVM virtuální stroje s výslovně odebraným síťovým rozhraním (v OpenTofu / Incus přepiš zděděný device { name = "eth0", type = "none" }, tj. eth0 none — nikdy neponechávej ani výchozí incusbr0!) a s předáváním souborů výhradně jediným tokem karanténa /srv/polarita/workspace/karantena -> spool /srv/polarita/data/airgap-spool (vstupní podsložka jen pro čtení ro) -> zpracování -> oddělený výstupní adresář spoolu, přičemž přesun provádí hostitelská jednotka systemd, ne aplikace; modely /srv/polarita/data/airgap-models a signatury ClamAV /srv/polarita/data/clamav-db připoj pouze pro čtení pro sanitizaci hlasových příloh WhisperX (HF_HUB_OFFLINE=1 + předstažené offline modely), ClamAV/Dangerzone a čtení cizích .dwg, .dxf, .ifc, .pdf, .xc4, příloh .zfo i historických šanonů ze služby 48h převzetí šanonů dle architektury CaMeL.
 5. Ke každému profilu a instanci nastav v OpenTofu pevné limity paměti RAM (limits.memory), jader CPU (limits.cpu) a počtu procesů (limits.processes) podle tabulky výchozích limitů (v profilu MVP 64 GB součet limitů instancí nejvýše 52 GB a hostitel + zfs_arc_max nejvýše 12 GB; v Plném profilu 128 GB + GPU úměrně), aby žádná zacyklená služba nemohla vyčerpat prostředky hostitelského serveru.
-6. Zapiš do OpenTofu matici povolených toků mezi zónami (zdroj -> cíl -> port; co v ní není, zahazuj) a po schválení ji už v tomto bloku nasaď jako mezizónová pravidla nftables (default drop mezi mosty zón podle matice; případný ufw odstraň, aby nevznikaly duplicitní tabulky; veřejný vstup z internetu zůstává do Bloku 3 zavřený — veřejný perimetr a CrowdSec přidá Blok 3 nad tento základ; toky služeb z pozdějších bloků, např. stahovač signatur ClamAV v dmz_edge -> distribuční služba signatur 443/tcp od Bloku 4, gitea-runner -> jen místní Gitea od Bloku 5, isds-podatelna-bridge -> testovací prostředí ISDS 443/tcp od Bloku 8 s produkčním ISDS až po přepnutí v Bloku 12 a centralni-lhutnik-a-objekty -> Mapy.cz Routing & Matrix API 443/tcp od Bloku 8, se zapínají až s danou službou), včetně výslovných výjimek (Caddy -> Vaultwarden jen interní vhost z VPN, OpenBao Agent každé instance se síťovým rozhraním -> OpenBao (instance v sandbox_airgap nemají žádná strojová tajemství ani agenta; gitea-runner z Bloku 5 je vyňat — nemá AppRole, agenta ani tok k OpenBao, jeho jediné spojení je místní Gitea), Checkmk -> data_vault jen čtecí agent, Checkmk -> API Telegram a -> jeden konkrétní externí SMTP relay ze vstupů Bloku 0 na jeho submission port, zálohovací klient -> záložní uzel přes VPN, Traccar a RTP Asterisk až v Bloku 11 přes přesměrování v dmz_edge).
+6. Zapiš do OpenTofu matici povolených toků mezi zónami (zdroj -> cíl -> port; co v ní není, zahazuj) a po validaci ji už v tomto bloku nasaď jako mezizónová pravidla nftables (default drop mezi mosty zón podle matice; případný ufw odstraň, aby nevznikaly duplicitní tabulky; veřejný vstup z internetu zůstává do Bloku 3 zavřený — veřejný perimetr a CrowdSec přidá Blok 3 nad tento základ; toky služeb z pozdějších bloků, např. stahovač signatur ClamAV v dmz_edge -> distribuční služba signatur 443/tcp od Bloku 4, gitea-runner -> jen místní Gitea od Bloku 5, isds-podatelna-bridge -> testovací prostředí ISDS 443/tcp od Bloku 8 s produkčním ISDS až po přepnutí v Bloku 12 a centralni-lhutnik-a-objekty -> Mapy.cz Routing & Matrix API 443/tcp od Bloku 8, se zapínají až s danou službou), včetně výslovných výjimek (Caddy -> Vaultwarden jen interní vhost z VPN, OpenBao Agent každé instance se síťovým rozhraním -> OpenBao (instance v sandbox_airgap nemají žádná strojová tajemství ani agenta; gitea-runner z Bloku 5 je vyňat — nemá AppRole, agenta ani tok k OpenBao, jeho jediné spojení je místní Gitea), Checkmk -> data_vault jen čtecí agent, Checkmk -> API Telegram a -> jeden konkrétní externí SMTP relay ze vstupů Bloku 0 na jeho submission port, zálohovací klient -> záložní uzel přes VPN, Traccar a RTP Asterisk až v Bloku 11 přes přesměrování v dmz_edge).
 7. Připrav definici dočasné sestavovací instance v dmz_edge (odchozí přístup jen po dobu sestavení) a postup: sestavení obrazu -> publikace do místního úložiště obrazů Incus -> spuštění instance v data_vault / sandbox_airgap z tohoto obrazu -> zrušení sestavovací instance; aktualizace = nové sestavení obrazu a výměna instance (měsíčně a při bezpečnostní záplatě).
-8. Spusť tofu fmt, tofu validate a tofu plan, nech síťová ACL pravidla zkontrolovat u 17004 klicnik (VERIFIED_PASS) a předlož plán ke schválení do Decisions před spuštěním tofu apply.
+8. Spusť tofu fmt, tofu validate a tofu plan. Ověř cíle a aplikuj uložený plán. Potvrď izolaci zón a nulový následný drift.
 ```
 
 ### Prompt 3 — Přejímací zkouška všech 3 režimů (`LXC`, `OCI`, `KVM VM`) a čistý úklid (`pro 17003 spravce-site`)
 
 ```text
-Postup: nejprve proveď čtecí průzkum (preflight) a sestav plán, pak se ZASTAV pro schválení 1001 (do spuštění fronty Decisions písemné schválení v relaci) a teprve po schválení proveď měnící kroky.
+V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
 Proveď na serveru polarita-hq kompletní přejímací zkoušku virtualizační platformy Incus (latest) + OpenTofu (latest) ve všech třech režimech běhu:
 
 1. Test 1 (Systémový kontejner LXC): Přes OpenTofu vytvoř neprivilegovaný kontejner Ubuntu (latest LTS), ověř jeho start, síťovou izolaci dle zóny, pořízení snapshotu a nulový drift (tofu plan vrátí beze změn).

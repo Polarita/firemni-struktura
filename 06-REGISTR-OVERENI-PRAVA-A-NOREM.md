@@ -1,4 +1,6 @@
-# Právní a normová báze: pravidla a registr otevřených bodů — Polarita s.r.o. (Verze 3.1)
+# Právní a normová báze: pravidla a registr otevřených bodů — Polarita s.r.o. (Verze 3.2)
+
+> V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem. Podrobný postup uvádí [README](./README.md).
 
 Tento dokument stanoví, **jak firma zachází s právními předpisy, technickými normami a smlouvami**, a eviduje technické údaje návrhu, které byly ověřeny nebo na ověření čekají. Návrh je teoretický koncept a návod pro čistý stroj; nic v něm nenahrazuje právní ani odborné posouzení.
 

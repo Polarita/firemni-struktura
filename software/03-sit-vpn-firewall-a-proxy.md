@@ -1,4 +1,4 @@
-# 03 — Síť, privátní mesh VPN, správa DNS, firewall, reverzní proxy a poštovní/SIP hrana · Verze 3.1
+# 03 — Síť, privátní mesh VPN, správa DNS, firewall, reverzní proxy a poštovní/SIP hrana · Verze 3.2
 
 Tento dokument definuje síťovou vrstvu společnosti **Polarita s.r.o.** — oddělení veřejného provozu zákazníků od privátní firemní sítě pro jednatele (`1001`), spolupracovníky (`1002+`) a pobočky (`101`–`999`), bezpečnou hranu poštovního serveru **`Stalwart Mail`** a odchozí registraci ústředny **`Asterisk`** bez veřejných příchozích SIP portů, centralizovanou správu všech domén a vícevrstvou ochranu bez licenčních poplatků za uživatele.
 
@@ -6,7 +6,7 @@ Tento dokument definuje síťovou vrstvu společnosti **Polarita s.r.o.** — od
 
 ## 1. Seznam vybraného softwaru
 
-| Oblast | Vybraný software | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.1) | Odpovědný `ai` / garant |
+| Oblast | Vybraný software | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.2) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Správa veřejného DNS a ochrana domén** | **Cloudflare DNS** | `Standard / Free` *(řízeno přes API a `OpenTofu`)* | Centrální správa všech firemních domén (`polarita.cz`, `polarita.eu` a dalších) v jednom účtu zdarma, podpora `DNSSEC`, `CAA`, `SPF`, `DKIM`, `DMARC`, `MTA-STS`, DDoS ochrany veřejných webů a omezených API tokenů pro automatické vystavování HTTPS certifikátů (`DNS-01`). | `17003` `spravce-site` *(kontrola `17004` `klicnik`)* |
 | **Veřejná reverzní proxy a HTTPS (`dmz_edge`)** | **Caddy** *(s DNS modulem Cloudflare a `trusted_proxies`)* | `latest` *(v izolovaném kontejneru `Incus`)* | Jediná HTTP/HTTPS služba vystavená do internetu na portech `80` a `443` v zóně `dmz_edge` (spolu s odděleným příchozím MX relayem **`Stalwart Mail`** na `25/tcp` a `Headscale` STUN `3478/udp`). Automaticky obstarává TLS certifikáty, směruje provoz na storefronty/aplikace v `app_internal` (`polarita.cz`, `polarita.eu`, `akademie.polarita.cz`), veřejný OIDC endpoint `auth.polarita.cz/realms/...` (při blokaci `/admin` mimo VPN!), `wss://ocpp.polarita.cz` pro wallboxy a privátní subdomény `*.int.polarita.cz` (za VPN + ACME DNS-01; `Caddy` je uzlem VPN a interní vhosty obsluhuje jen na adrese VPN). Routy služeb z vyšších bloků (`auth.polarita.cz` v `Bloku 5`, `ocpp.polarita.cz` v `Bloku 8`, weby v `Bloku 9`) se přidávají až s danou službou. | `17003` `spravce-site` *(spolupráce `17002` `webmaster`)* |
@@ -39,12 +39,15 @@ Tento dokument definuje síťovou vrstvu společnosti **Polarita s.r.o.** — od
 
 ## 3. Pokyny k instalaci a konfiguraci pro `ai` (Prompty)
 
-> **Role před vznikem agentů a schvalovací smyčka:** Do konce `Bloku 6` (a v `Bloku 7` do založení agentů) vykonávají prompty adresované `17003 spravce-site`, `17004 klicnik` a `17001 programator` subagenti Instalačního koordinátora (infrastrukturní / vývojový subagent) a „schválení v `Decisions`“ znamená písemné schválení jednatelem `1001`; od založení agentů v `Bloku 7` přebírají prompty jmenovaní agenti. Každý `Prompt` začíná čtecím průzkumem (preflight) a plánem, pak se ZASTAVÍ pro schválení `1001` a teprve potom provádí změny.
+**Zkouška při automatické instalaci.** Pro ředitelství použij dostupnou firemní VPN a důvěryhodný serverový certifikát. Ověř rozlišení jména, odmítnutí přístupu mimo VPN a přihlášení v nové relaci. Veřejné DNS, MX a telefonní směrování patří do produkčního přepnutí. Níže uvedené kroky s živou protistranou či osobním vybavením jsou součástí produkční aktivace po převzetí.
+
+
+> V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
 
 ### Prompt 1 — Technické záznamy v `Cloudflare DNS` a správa přes `OpenTofu` beze změny veřejných záznamů (`pro 17003 spravce-site` + `17004 klicnik`)
 
 ```text
-Postup: nejprve proveď čtecí průzkum (preflight) a sestav plán, pak se ZASTAV pro schválení 1001 (do spuštění fronty Decisions písemné schválení v relaci) a teprve po schválení proveď měnící kroky.
+V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
 Jsi správce sítě (17003 spravce-site). Připrav deklarativní správu DNS firemních domén (polarita.cz, polarita.eu a souvisejících domén) v Cloudflare DNS přes OpenTofu (latest), nebo u stávajícího autoritativního správce zóny (Větev B v kroku 3). Blok 3 zakládá jen technické záznamy (vpn, *.int, ACME); existující veřejné záznamy (A/AAAA webu, MX, SPF, DKIM, DMARC) se do Bloku 12 nemění:
 
 1. Inventura před změnou (Read-Only):
@@ -52,20 +55,20 @@ Jsi správce sítě (17003 spravce-site). Připrav deklarativní správu DNS fir
 2. Příprava v Cloudflare a OpenTofu:
    - Připrav v /srv/polarita/infra/dns/ deklarativní konfiguraci OpenTofu (provider cloudflare; ve Větvi B podle kroku 3 poskytovatel stávajícího správce zóny) obsahující 100 % stávajících záznamů beze změny hodnot a navíc pouze nová technická jména vpn.polarita.cz, *.int.polarita.cz a záznamy výzev ACME DNS-01 pro tato jména. CAA ani DNSSEC existující veřejné zóny se v Bloku 3 nemění.
    - Režim DDoS/WAF ochrany veřejného webu a e-shopu jen navrhni pro přepnutí v Bloku 12; u řídicího subdoménového záznamu vpn.polarita.cz striktně nastav režim čistého DNS (proxied = false) a stejný režim zachovej u stávajících poštovních záznamů. DKIM klíč vznikne až s poštovním jádrem v Bloku 11; ostré přepnutí MX/SPF/DKIM/DMARC a webu je výslovný krok Bloku 12.
-   - CAA a DNSSEC: v Bloku 3 neměň žádný záznam CAA ani stav DNSSEC existující veřejné zóny. Pokud by stávající CAA bránilo vydání certifikátu pro vpn.polarita.cz nebo *.int.polarita.cz schválenou autoritou ACME, nic neměň, ZASTAV se a předlož to 1001 jako samostatné rozhodnutí. Omezení CAA na schválené certifikační autority a zapnutí či změnu DNSSEC veřejné zóny jen navrhni jako kroky ostrého přepnutí v Bloku 12.
+   - CAA a DNSSEC: v Bloku 3 neměň žádný záznam CAA ani stav DNSSEC existující veřejné zóny. Pokud by stávající CAA bránilo vydání certifikátu pro vpn.polarita.cz nebo *.int.polarita.cz schválenou autoritou ACME, použij pro TEST dostupný privátní vstup a eviduj požadavek pro produkci. Omezení CAA na schválené certifikační autority a zapnutí či změnu DNSSEC veřejné zóny jen navrhni jako kroky ostrého přepnutí v Bloku 12.
    - Vyžádej pro automatizaci pouze úzce vymezený Cloudflare API token (oprávnění výhradně Zone:DNS:Edit pro vybrané zóny, žádné globální práva k účtu!); ve Větvi B obdobně úzce omezený token stávajícího správce zóny, případně jen pomocné technické zóny pro výzvy ACME.
 3. Volba větve správy DNS pro každou doménu (zapiš ji do plánu; migrace veřejné zóny je jen návrh pro Blok 12, pro schválení 1001):
    - Větev A (zóna u Cloudflare): přesun jmenných serverů pod Cloudflare proveď v Bloku 3 jen tehdy, když nevyžaduje žádný zásah do DNSSEC ani CAA veřejné zóny a obsah zóny zůstane shodný; kroky 2 pak platí beze změny.
    - Větev B (stávající autoritativní DNS): je-li u stávajícího registrátora aktivní DNSSEC nebo by přesun vyžadoval jakýkoli zásah do DNSSEC či CAA, jmenné servery v Bloku 3 nepřesouvej. Autoritativním DNS zůstává stávající správce zóny: technická jména vpn.polarita.cz a *.int.polarita.cz založ u něj (deklarativně v OpenTofu jeho poskytovatelem, má-li ho; jinak ručně podle schváleného diffu se zápisem do protokolu) a po změně porovnej výpis zóny s archivem z kroku 1. Výzvu ACME DNS-01 pro tato jména řeš buď DNS modulem Caddy pro stávajícího správce, nebo delegací jména výzvy (_acme-challenge jako CNAME do pomocné technické zóny, pro kterou má Caddy úzce omezený token); zvolený způsob ověř proti oficiální dokumentaci nasazené verze Caddy a potvrď zkušebním vydáním certifikátu v testovacím prostředí certifikační autority.
    - V obou větvích jen sepiš jako krok ostrého přepnutí v Bloku 12 přesný postup migrace veřejné zóny (vypnutí DS záznamu, čekací lhůta TTL, přepsání NS a opětovné zapnutí DNSSEC); Blok 3 migraci nevyžaduje.
-4. Nech kompletní plán a diff DNS záznamů zkontrolovat agentem 17004 klicnik a předlož jej ke schválení vlastníkovi (1001) do Decisions.
+4. Nech kompletní plán a diff DNS záznamů zkontrolovat agentem 17004 klicnik a ulož výsledek do důkazů.
 ```
 
 ### Prompt 2 — Reverzní proxy `Caddy (latest)`, `CrowdSec (latest)` a firewall `nftables (latest)` (`pro 17003 spravce-site` + `17004 klicnik`)
 
 ```text
-Postup: nejprve proveď čtecí průzkum (preflight) a sestav plán, pak se ZASTAV pro schválení 1001 (do spuštění fronty Decisions písemné schválení v relaci) a teprve po schválení proveď měnící kroky.
-Po schválení nasaď na serveru polarita-hq síťovou ochranu hostitele a veřejnou hranu v zóně dmz_edge (v dokumentaci bez čísel verzí; nasazené verze a digesty uzamkni v lockfilech):
+V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
+Po validaci nasaď na serveru polarita-hq síťovou ochranu hostitele a veřejnou hranu v zóně dmz_edge (v dokumentaci bez čísel verzí; nasazené verze a digesty uzamkni v lockfilech):
 
 1. Veřejný perimetr nad firewallem nftables (latest) z Bloku 2:
    - Navaž na deklarativní ruleset nftables z Bloku 2 (/etc/nftables.conf + mezizónová pravidla default drop podle matice toků; ufw je odstraněn už tam). Mezizónová pravidla neměň — v tomto bloku přidej jen veřejný perimetr a ochranu rozhraní VPN.
@@ -83,7 +86,7 @@ Po schválení nasaď na serveru polarita-hq síťovou ochranu hostitele a veře
 ### Prompt 3 — Vlastní mesh VPN `Headscale (latest)` pro centrálu, pobočky (`101+`), PC a mobily (`pro 17003 spravce-site` + `17004 klicnik`)
 
 ```text
-Postup: nejprve proveď čtecí průzkum (preflight) a sestav plán, pak se ZASTAV pro schválení 1001 (do spuštění fronty Decisions písemné schválení v relaci) a teprve po schválení proveď měnící kroky.
+V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
 Nasaď a nakonfiguruj vlastní self-hosted řídicí server privátní mesh VPN Headscale (latest) na doméně vpn.polarita.cz:
 
 1. Nasazení Headscale (latest) v Incus:

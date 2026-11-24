@@ -1,4 +1,4 @@
-# 01 — Operační systémy a úložiště (Server, pracovní stanice a mobilní zařízení) · Verze 3.1
+# 01 — Operační systémy a úložiště (Server, pracovní stanice a mobilní zařízení) · Verze 3.2
 
 Tento dokument definuje výchozí operační systémy pro realizaci čisté hybridní `ai`-first společnosti **Polarita s.r.o.** (pobočka `101` Praha — Centrála i budoucí pobočky `102`–`999`) — postavené na prověřených open-source stavebních kamenech, vlastních modulech oddělení `17` a plné multiplatformní svobodě koncových zařízení.
 
@@ -6,7 +6,7 @@ Tento dokument definuje výchozí operační systémy pro realizaci čisté hybr
 
 ## 1. Seznam vybraného softwaru
 
-| Vrstva / Zařízení | Vybraný software | Kanál / Edice | Role a použití v Polarita s.r.o. (Verze 3.1) | Odpovědný `ai` / garant |
+| Vrstva / Zařízení | Vybraný software | Kanál / Edice | Role a použití v Polarita s.r.o. (Verze 3.2) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Centrální server (`polarita-hq`) a pobočkové servery (`101+`)** | **Ubuntu Server** | `latest LTS` *(aktuální dlouhodobě podporovaná verze)* | Jednotný hostitelský operační systém uvnitř VM `polarita-hq` v projektu `polarita`; nese strom `/srv/polarita/` a virtualizační vrstvu `Incus (latest)`. | `17003` `spravce-site` *(kontrola `17004` `klicnik`)* |
 | **Úložiště VM** | **Ceph** ve vnějším clusteru, systémový disk s Ubuntu a šifrovaný datový pool **OpenZFS** uvnitř VM | podporované stabilní verze | Vnější Incus ukládá virtuální disky do poolu `zrcadlo`. Vnitřní správce pracuje s přiděleným datovým diskem a ověřuje šifrování, snímky a obnovu. | `17003` `spravce-site` |
@@ -40,15 +40,19 @@ Tento dokument definuje výchozí operační systémy pro realizaci čisté hybr
 
 ## 3. Pokyny k instalaci a konfiguraci pro `ai` (Prompty)
 
-> **Pravidlo bezpečného postupu (`Dual-Control`):** `ai` agent nikdy sám nemaže disky ani nemění produkční síť bez předchozího Read-Only průzkumu a schválení plánu vlastníkem (`1001`) ve frontě `Decisions`. Do spuštění fronty `Decisions` (`Prompt 1` `Bloku 7`) se „schválením v `Decisions`“ v `Blocích 1–6` a v `Promptu 1` `Bloku 7` rozumí výslovné písemné schválení plánu jednatelem `1001` přímo v relaci (do vzniku datasetu `workspace` v `Promptu 2` `Bloku 1` písemně mimo server, potom zapsané do `/srv/polarita/workspace/`), od `Promptu 2` `Bloku 7` převedené do fronty `Decisions`. Schválení předchází každému měnícímu kroku každého promptu (ne jen `Promptu 1`): každý `Prompt` začíná čtecím průzkumem a plánem, pak se zastaví pro schválení `1001`. Do konce `Bloku 6` (a v `Bloku 7` do založení agentů) vykonávají prompty adresované `17003 spravce-site`, `17004 klicnik` a `17001 programator` subagenti Instalačního koordinátora (infrastrukturní / vývojový subagent); od založení agentů v `Bloku 7` je přebírají jmenovaní agenti.
+**Zkouška při automatické instalaci.** Zaznamenej přidělené prostředky a ověř obnovitelnost pracovních dat. Klientský test provede prohlížeč přes VPN. Osobní podpisovou výbavu eviduj při převzetí. Níže uvedené kroky s živou protistranou či osobním vybavením jsou součástí produkční aktivace po převzetí.
+
+
+> V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
 
 > **Cílový stroj:** VM `polarita-hq` v projektu `polarita` na uzlu `ejpovice`. Vnější cluster zajišťuje přidělené prostředky a replikaci virtuálních disků v poolu `zrcadlo`. Všechny následující kroky instalace systému, SSH, úložiště a auditních služeb proveď uvnitř této VM. Fyzické SMART a stav Ceph sleduje správce clusteru.
 
 ### Prompt 1 — Průzkum VM a návrh rozložení úložiště před instalací (`pro 17003 spravce-site`)
 
 ```text
-Jsi správce serveru (17003 spravce-site; do vzniku agentů infrastrukturní subagent Instalačního koordinátora). Připravujeme VM polarita-hq pro operační systém Ubuntu Server (latest LTS). Pořadí Bloku 1: průzkum VM a návrh rozložení -> schválení 1001 -> příprava OS a datového disku VM (Prompt 2).
-Proveď nejprve výhradně čtecí (Read-Only) kontrolu cílového stroje a připrav realizační plán ke schválení do Decisions:
+V režimu TEST proveď instalaci samostatně. Kroky vyžadující osobní identitu nebo ostrý účet eviduj pro aktivaci po uživatelském testu a převzetí.
+Jsi správce serveru (17003 spravce-site; do vzniku agentů infrastrukturní subagent Instalačního koordinátora). Připravujeme VM polarita-hq pro operační systém Ubuntu Server (latest LTS). Pořadí Bloku 1: průzkum VM a návrh rozložení -> ověření cíle -> příprava OS a datového disku VM (Prompt 2).
+Proveď nejprve výhradně čtecí (Read-Only) kontrolu cílového stroje a připrav realizační plán:
 
 1. Ve vnějším Incusu ověř projekt polarita, jméno polarita-hq, uzel ejpovice, limity CPU/RAM a pool zrcadlo. Vstup do VM. Zkontroluj hostname, systemd-detect-virt (kvm), Ubuntu LTS, přidělené virtuální disky a jejich existující obsah. Ověř UEFI, Secure Boot, vTPM 2.0, příznaky vmx/svm a /dev/kvm uvnitř VM. Zapiš chybějící zařízení před návrhem změn.
 2. Zkontroluj, že na stroji neběží grafické prostředí ani nechtěné síťové služby naslouchající do veřejného internetu.
@@ -56,32 +60,33 @@ Proveď nejprve výhradně čtecí (Read-Only) kontrolu cílového stroje a při
 4. Ověř kapacitu přidělenou VM: MVP (64 GB RAM — batch CPU WhisperX, bez Windows VM; ve VM bez vnořeného /dev/kvm se Dangerzone v sandbox_airgap nahrazuje bez-síťovou pixelovou rekonstrukcí PDF přes Poppler + QPDF) vs. Plný provoz (128 GB ECC RAM + dedikovaná GPU).
 5. Připrav příkazy pro vytvoření čistého kanonického stromu /srv/polarita/{infra,apps,data,vault,workspace,backups} se správnými oprávněními nejmenších privilegií (do /srv/polarita/vault/ se nikdy neukládají osobní údaje PII).
 6. Nikde v dokumentaci neuváděj pevně zadrátovaná historická čísla verzí, pracuj s kanálem latest LTS / supported stable dle oficiální matice kompatibility aplikací a exaktní nasazené verze uzamykej v lockfilech v /srv/polarita/infra/ (po Bloku 5 v Gitea / OpenTofu).
-7. Nech návrh zkontrolovat u 17004 klicnik a předlož jej ke schválení vlastníkovi (1001) (do spuštění fronty Decisions v Bloku 7 formou výslovného písemného schválení v relaci). Nic na disku zatím neměň.
+7. Ověř plán proti inventuře a ulož jej před změnou disků.
 ```
 
-### Prompt 2 — Instalace OS a šifrovaného pole, základní inicializace a zabezpečení po schválení (`pro 17003 spravce-site` + `17004 klicnik`)
+### Prompt 2 — Instalace OS a šifrovaného pole, základní inicializace a zabezpečení (`pro 17003 spravce-site` + `17004 klicnik`)
 
 ```text
-Plán instalace a inicializace serveru polarita-hq na Ubuntu Server (latest LTS) z Promptu 1 byl písemně schválen jednatelem 1001. Nejprve čtecí kontrolou ověř skutečný stav stroje proti schválenému plánu, sestav aktualizovaný plán měnících kroků 1–5 (se jmenovitě uvedenou každou odchylkou) a předlož jej 1001; pak se ZASTAV, dokud 1001 aktualizovaný plán výslovně písemně neschválí — vždy, ne jen při odchylce. Teprve potom nainstaluj operační systém a datové pole podle schváleného aktualizovaného plánu a proveď inicializaci a základní hardening:
+V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
 
-1. Ověř nebo podle schváleného plánu nainstaluj Ubuntu Server latest LTS na systémový disk VM. Nastav hostname polarita-hq, pásmo Europe/Prague a synchronizaci času. Pokud je systém již připraven, použij stávající instalaci.
+1. Ověř nebo podle ověřeného plánu nainstaluj Ubuntu Server latest LTS na systémový disk VM. Nastav hostname polarita-hq, pásmo Europe/Prague a synchronizaci času. Pokud je systém již připraven, použij stávající instalaci.
 2. Aktualizuj systémové balíčky Ubuntu Server (latest LTS) z oficiálních repozitářů a zapni automatické stahování kritických bezpečnostních záplat s řízeným oknem pro restart mimo špičku.
 3. Vytvoř adresářovou strukturu /srv/polarita/ (infra vč. openbao, apps, data, vault jako prázdný dataset — Git repozitář v něm vznikne v Bloku 5 a služba paměti v Bloku 8, do té doby se do něj nic nezapisuje —, workspace včetně podsložek oddělení 11–18, dukazy/blok-00 až dukazy/blok-07 pro důkazy a přejímací protokoly Bloků 0–7 (do blok-00 ulož protokol splnění vstupů Bloku 0 — vyplněnou kanonickou tabulku vstupů s odkazy na důkazy, bez tajemství a PII), karantena, isds-podatelna a ai-finops/eval-suite, backups) s přísnými přístupovými právy (žádné globálně zapisovatelné složky 0777); vytvoř a ověř nativně šifrovaný datový pool OpenZFS na samostatném virtuálním disku (klíč zapečetěný ve vTPM 2.0 s bezobslužným odemčením při startu; záložní kopie klíče tištěná + PGP do obálky Break-Glass; přesný postup podle N-17; zpool status = ONLINE uvnitř VM, zfs_arc_max nastaven, komprese lz4, atime=off, oddělené datasety data/incus (prázdný, vyhrazený výhradně Incusu), data/postgres (s recordsize=8k), data/garage, data/gitea, data/pgbackrest, data/legal-archive, data/vaultwarden, data/airgap-spool, data/airgap-models, data/clamav-db, vault, workspace a backups), zapni pravidelné kontroly zpool scrub uvnitř VM a auditní logování auditd.
 4. Sjednoť konfiguraci OpenSSH serveru (/etc/ssh/sshd_config.d/00-unified-hardening.conf): zakaž přihlašování heslem (PasswordAuthentication no, KbdInteractiveAuthentication no), zakaž přímé přihlášení uživatele root (PermitRootLogin no) a povol výhradně ověřené Ed25519 klíče. Před restartem sshd ověř syntaxi přes sshd -t, abys neztratil spojení!
-5. Vytvoř úvodní čistý snapshot datových datasetů (stav po čisté instalaci) a připrav schválený způsob návratu systémového oddílu; vyzkoušej bezobslužný restart (pool se odemkne bez obsluhy) a obnovu přístupu k poolu ze záložní kopie klíče z obálky Break-Glass.
+5. Vytvoř úvodní čistý snapshot datových datasetů (stav po čisté instalaci) a ověř způsob návratu systémového oddílu; vyzkoušej bezobslužný restart (pool se odemkne bez obsluhy) a obnovu přístupu k poolu ze záložní kopie klíče z obálky Break-Glass.
 6. Proveď kontrolní Read-Only ověření (systemctl --failed, ss -tulpn, oprávnění /srv/polarita/, stav SSH a NTP), ulož protokol do /srv/polarita/workspace/dukazy/blok-01/ a předej jej ke kontrole agentovi 17004 klicnik.
 ```
 
-### Prompt 3 — Kontrolní audit multiplatformní kompatibility klientů a po schválení příprava klientských stanic (`pro 17002 webmaster` a `17004 klicnik`)
+### Prompt 3 — Kontrolní audit multiplatformní kompatibility klientů a příprava klientských stanic (`pro 17002 webmaster` a `17004 klicnik`)
 
 ```text
-Prompt má dvě části: A) čtecí kontrola (kroky 1–3, nic nemění) a plán přípravy klientských stanic; pak se ZASTAV pro písemné schválení 1001; B) po schválení samostatný měnící krok 4 (příprava klientských stanic a uložení matice).
+V režimu TEST proveď instalaci samostatně. Kroky vyžadující osobní identitu nebo ostrý účet eviduj pro aktivaci po uživatelském testu a převzetí.
+Zjisti podporované klienty a připrav jejich matici. První přihlášení otestuj v běžném prohlížeči.
 V Bloku 1 ověř jen to, co už existuje (klientská zařízení a jejich nástroje), a sestav matici multiplatformní kompatibility, podle které se každá služba otestuje až v bloku, kde vzniká:
 
 1. Pracovní stanice: Ověř, že na stanicích, které jsou v Bloku 1 k dispozici (Windows latest Pro, Linux Desktop latest LTS, Apple macOS latest), je nainstalován aktuální prohlížeč a klient SSH a že se z nich lze klíčem přihlásit ke správě serveru; u ostatních klientských nástrojů (VPN klient, Zulip, Linphone, Thunderbird, JSignPdf, QElectroTech) jen zjisti, zda jsou nainstalovány, a zapiš je do matice s blokem, ve kterém se funkčně ověří.
 2. Mobilní zařízení: Ověř, že telefony a tablety Android (latest) a Apple iOS / iPadOS (latest), které jsou k dispozici, mají aktuální systém se záplatami a aktuální prohlížeč a že je na nich čitelný hardwarový klíč YubiKey přes USB-C / NFC.
-3. Matice kompatibility: Sestav matici služba × platforma × blok ověření a plán přípravy stanic (co se na které zařízení doinstaluje) a předlož obojí ke schválení 1001; ZASTAV se. Funkční zkoušky služeb patří do DoD bloků, kde služby vznikají — VPN v Bloku 3, fronta Decisions v Bloku 7, paměť Vault a 360° Karta spisu v Bloku 8, terénní rozhraní (Zadávací listy, fotografie, diktování Stavebního deníku, kamerový skener QR kódů) v Bloku 11; v Bloku 1 se nezkoušejí.
-4. Po schválení (měnící krok): Na stanici jednatele 1001 a na terénních mobilních zařízeních doinstaluj schválené klientské nástroje (klient VPN, Zulip, Linphone, Thunderbird, na stanici 1001 JSignPdf s čtečkou čipových karet) — v Bloku 1 se jen instalují, k Headscale se připojí v Bloku 3, k Zulipu v Bloku 7 a k ústředně v Bloku 11 — a schválenou matici s protokolem ulož do /srv/polarita/workspace/dukazy/blok-01/.
+3. Matice kompatibility: Sestav matici služba × platforma × blok ověření a plán přípravy stanic (co se na které zařízení doinstaluje) a ulož výsledek. Funkční zkoušky služeb patří do DoD bloků, kde služby vznikají — VPN v Bloku 3, fronta Decisions v Bloku 7, paměť Vault a 360° Karta spisu v Bloku 8, terénní rozhraní (Zadávací listy, fotografie, diktování Stavebního deníku, kamerový skener QR kódů) v Bloku 11; v Bloku 1 se nezkoušejí.
+4. Ověř přístup z dostupných prohlížečů. Osobní podpisové nástroje eviduj jako krok po převzetí. Ulož výsledky.
 5. Pokud by některý zvažovaný software vázal uživatele výhradně na jediný klientský systém bez možnosti webového nebo vzdáleného multiplatformního přístupu, označ jej jako neshodu a navrhni multiplatformní alternativu nebo provoz v izolované serverové VM v Incusu.
 ```
 
@@ -95,4 +100,4 @@ V Bloku 1 ověř jen to, co už existuje (klientská zařízení a jejich nástr
 - [ ] Vnější Incus ukládá virtuální disky VM do poolu `zrcadlo`. Uvnitř VM je systémový disk s EFI a samostatný šifrovaný datový pool OpenZFS. `zpool status` a `zfs get encryption` potvrzují stav a šifrování. Po restartu VM bylo ověřeno odemčení přes vTPM i následná obnova ze záložního klíče. Výsledek uzavírá `N-17` v registru 06.
 - [ ] Existují datasety `data/airgap-spool`, `data/airgap-models` a adresář signatur `ClamAV` `data/clamav-db`.
 - [ ] Přihlášení přes `OpenSSH` funguje výhradně klíčem (`PasswordAuthentication no`, `PermitRootLogin no`).
-- [ ] Správa serveru přes `OpenSSH` klíčem je ověřena ze stanice `1001`, na dostupných klientských zařízeních je ověřen aktuální systém, prohlížeč a čitelnost klíče `YubiKey`, schválené klientské nástroje jsou po schválení `1001` nainstalovány (bez připojení ke službám z vyšších bloků) a ve `/srv/polarita/workspace/dukazy/blok-01/` je zapsána matice multiplatformní kompatibility (služba × **Windows**, **Linux**, **Apple macOS**, **Android**, **Apple iOS / iPadOS** × blok ověření); funkční zkoušky `Decisions`, `Vaultu`, 360° Karty spisu a terénních rozhraní nejsou součástí `Bloku 1` — patří do `DoD` bloků, kde tyto služby vznikají.
+- [ ] Správa serveru přes `OpenSSH` klíčem je ověřena ze stanice `1001`, na dostupných klientských zařízeních je ověřen aktuální systém, prohlížeč a čitelnost klíče `YubiKey`, schválené klientské nástroje jsou evidovány podle režimu (bez připojení ke službám z vyšších bloků) a ve `/srv/polarita/workspace/dukazy/blok-01/` je zapsána matice multiplatformní kompatibility (služba × **Windows**, **Linux**, **Apple macOS**, **Android**, **Apple iOS / iPadOS** × blok ověření); funkční zkoušky `Decisions`, `Vaultu`, 360° Karty spisu a terénních rozhraní nejsou součástí `Bloku 1` — patří do `DoD` bloků, kde tyto služby vznikají.

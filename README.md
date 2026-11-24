@@ -1,62 +1,38 @@
-# Výchozí rozcestník a návod ke zprovoznění systému po blocích — Polarita s.r.o. (2026 · Verze 3.1)
+# Polarita s.r.o. — instalace a provoz (Verze 3.2)
 
-Tento soubor (`README.md`) je **hlavním výchozím bodem celého systému společnosti Polarita s.r.o.** (`Verze 3.1`, release tag `Polarita-3.1`). Obsahuje **závazný provozní protokol pro realizačního `ai` agenta (`kap. 0` — subagenti, oponentura jinou `ai` a třístupňové předání řízení `11001 ceo`)**, ucelený přehled architektury organizace (`kap. 1`), **praktický návod krok za krokem, jak celý systém postupně zprovoznit od přípravy virtuálního stroje až po ostrý denní provoz po jednotlivých číslovaných blocích (`Blok 0` až `Blok 12`)**, návod pro navazující **Rozvojovou Etapu II a Strategickou Etapu III (`Blok 13` až `Blok 19` — zapracované balíčky `S1–S7`)** a kompletní rozcestník všech **50 dokumentů** jádra (`46 × .md` + `4 × .pdf`) i **7 rozvojových balíčků** ve složce [`balicky/`](./balicky/README.md).
+Tento návod vede ai od přípravy virtuálního stroje po předání systému správci k uživatelskému testování. Verzi dokumentace a nasazení označuje Git tag `Polarita-3.2`.
 
-> **Stav repozitáře ve Verzi 3.1:** Jádro tvoří auditovaná, vzájemně sjednocená zakladatelská, procesní a architektonická dokumentace (`.md`), předpřipravené kopírovací prompty (`Copy & Paste`) a vysázené tiskové výstupy (`.pdf` formátu A4 a A3). Nově přibyla složka [`balicky/`](./balicky/README.md) se zapracovanými balíčky `S1–S7`: spustitelné a spuštěním ověřené jsou `S1` (generátor PDF čistopisů), `S2` (`Eval Suite 100+`) a `S3` (konfigurátor a ceník — výchozí ceny schválil `1001` dne 15. 11. 2026), balíčky `S4–S7` jsou úplné specifikace s realizačními prompty; složka [`nastroje/`](./nastroje/README.md) obsahuje kanon hodnot, automatickou kontrolu konzistence, vkládání společného jádra promptů a skripty sestavující tisková PDF; pravidla právní a normové báze (předpisy, normy a smlouvy se načítají až po nasazení) a otevřené technické body vede [`06-REGISTR-OVERENI-PRAVA-A-NOREM.md`](./06-REGISTR-OVERENI-PRAVA-A-NOREM.md). Cílem nasazení je jediná firemní VM `polarita-hq` v projektu `polarita` stávajícího clusteru Incus. Všechny firemní služby a jejich data vznikají uvnitř této VM. Rozdělení správy mezi cluster a VM popisuje kapitola 1.
+Software a požadované zkoušky pro každý blok popisují [instalační vrstvy](./software/00-SEZNAM-SOFTWARU-README.md). Jádro návrhu tvoří `46 × .md` a čtyři tiskové dokumenty. Repozitář obsahuje návrh celé firmy i spustitelné části. Skutečný stav konkrétní instalace dokládají protokoly z virtuálního stroje.
 
 ---
 
-## 0. Závazný provozní protokol pro realizačního `ai` agenta (Jak systém nasadit)
+## 0. Automatická instalace a předání
 
-> **Závazné pravidlo při nasazování:** Tento repozitář je architektonický návrh a realizační kuchařka (vlastní moduly v `Pythonu` / `TypeScriptu` a konfigurace `OpenTofu` vznikají teprve postupně během `Bloků 1–12`, nejde o předpřipravené instalační balíky na jedno kliknutí). I kdyby jednatel `1001` řekl *„Udělej vše podle `README.md`“*, **nikdy** nespouštěj celý návrh najednou a **nikdy** nepracuj jako jeden osamocený monolitický agent.
+Po zadání instalace projde ai bloky 0 až 12 v režimu **TEST**. Před změnou zjistí stav cíle, uloží plán, provede vratnou změnu a ověří výsledek. Úspěšný technický test spouští další závislý krok automaticky. Po přerušení ai znovu zjistí stav služeb a naváže. Instalace ani přechody mezi bloky nevyžadují souhlas správce.
 
-### 0.1 Zákaz osamocené práce — hlavní koordinátor a specializovaní subagenti
+### První přihlášení
 
-Hlavní `ai` agent v relaci vystupuje výhradně jako **koordinátor**: drží celkový plán, stav aktuálního bloku, přejímací bránu `DoD` a komunikaci s jednatelem `1001`. Konkrétní dílčí práce deleguje na izolované **subagenty** s čistým kontextem:
+Ředitelství běží uvnitř VM `polarita-hq` v projektu `polarita` na Ejpovicích. Správce na zařízení připojeném přes firemní VPN otevře adresu ředitelství v prohlížeči. Pro testování použije účet **spravce** a zapamatovatelné heslo, které instalace vygeneruje právě pro tuto instanci. ai předá adresu a heslo správci soukromě. Přihlášení vyžaduje jen jméno a heslo. Serverovou část TLS zajišťuje provozovatel vstupu. Instalační účet pro přístup do aplikace má oprávnění jen k testovacím datům.
 
-1. **Průzkumný subagent (`read-only`):** před každou změnou ověří skutečný stav hardwaru, disků, sítě, operačního systému a oficiální matici vzájemné kompatibility nasazovaného softwaru.
-2. **Infrastrukturní subagent (`Incus / OpenTofu / Linux / PostgreSQL / OpenBao`):** připravuje deklarativní infrastrukturu (`OpenTofu`), 4 izolované síťové zóny (`dmz_edge`, `app_internal`, `data_vault`, `sandbox_airgap`), trezor, zálohy a monitoring.
-3. **Vývojový subagent (`Worker` v pracovním stromu `wt-worker`):** implementuje vždy jediný vymezený modul nebo skript se `100 %` automatických testů; dva subagenti nikdy neupravují tytéž soubory souběžně.
-4. **Testovací a verifikační subagent:** spouští unit testy, `nastroje/check_consistency.py`, `Eval Suite` (`Promptfoo` / `S2`), kontrolu izolace portů a zón (`sandbox_airgap` s `eth0 none`, `Clean Room`) a shromažďuje objektivní důkazy ke každému bodu `DoD`.
+Na Ejpovicích je vstupní adresa **http://reditelstvi.polarita.cz/** ve firemní VPN. Otevře zabezpečené přihlášení pod jménem uzlu v síti Tailscale. Heslo zadávej až na stránce HTTPS.
 
-**Role před vznikem `ai` agentů:** Realizační prompty ve vrstvách [`software/`](./software/00-SEZNAM-SOFTWARU-README.md) jsou adresovány `17003 spravce-site`, `17004 klicnik` a `17001 programator`. Do konce `Bloku 6` (a v `Bloku 7` do založení agentů) je vykonávají subagenti Instalačního koordinátora (infrastrukturní / vývojový subagent) a „schválení v `Decisions`“ znamená písemné schválení `1001` (kap. 2). Od založení agentů v `Bloku 7` přebírají tyto úlohy jmenovaní agenti.
+Po inicializaci vnitřního Incusu s poolem ZFS a ověření provideru OpenTofu spustí instalační ai na Ejpovicích z vydaného tagu `bash nasazeni/test/deploy.sh`. Skript nasadí vydané zdroje do VM, vytvoří tři mosty a čtyři profily, sestaví a spustí testovací ředitelství, propojí je s VPN a ověří přihlášení i odhlášení. Heslo se při opakování zachová. Další služby mají vlastní postup v příslušném bloku. [Skript pro nasazení](./nasazeni/test/deploy.sh)
 
-### 0.2 Povinná nezávislá oponentura jinou `ai` (`Worker / Judge` z odlišné rodiny modelů)
+### Jak vyhodnocovat bloky
 
-* Žádný blok, bezpečnostní politika, databázové schéma ani vlastní modul nesmí být prohlášen za hotový bez **nezávislé oponentury (`Judge`)** spuštěné na **odlišné rodině `ai` modelů**, než jaká daný výstup vytvořila (`Worker`) — např. staví `Claude` → oponuje `Gemini / AGY` nebo `Codex / GPT` a naopak; žádný model nikdy neposuzuje vlastní práci.
-* **Čistý kontext oponenta (`wt-judge`):** Oponent dostane **výhradně** *(1)* cílové zadání z `README.md` a příslušné vrstvy `software/01–11` (nebo `balicky/`), *(2)* výsledné soubory či `git diff` a *(3)* syrové výstupy testů a kontrolních příkazů — **nikdy** slovní komentář, obhajobu ani vysvětlování autora (`Worker`).
-* **Vyhodnocení a oprava nálezů:** Každý nález oponenta ověř proti skutečnému kódu a důkazům; všechny potvrzené závady oprav a spusť znovu jak testy, tak oponenturu, dokud nezůstane `0` potvrzených nálezů. Není-li nástroj nezávislého `ai` oponenta dostupný nebo je blokovaný, **zastav práci, oznam blokaci jednateli `1001` a nikdy oponenturu neoznačuj za dokončenou**.
+- ai pracuje s jedinou firemní VM. Změny plánuje nad skutečně dostupnými prostředky. Při obnově nasazení zachová svazky, přístupové cesty a dříve uložené důkazy.
+- Funkce ověřuje skutečným voláním. Pro banku, podatelnu, podpis, placené API a odesílání zpráv používá místní testovací protějšky a vzorová data. K výsledku zaznamená prostředí, verzi, příkaz a výstup bez tajemství.
+- Výsledek každé položky je **ověřeno v TEST**, **technická chyba** nebo **ověřit po převzetí**. Poslední stav patří jen úkonům vyžadujícím skutečnou identitu, smlouvu či živou protistranu. Chybějící služba, nedostatečná kapacita či vadná izolace jsou technické chyby. ai opraví obnovitelné chyby a mezitím pokračuje v nezávislé práci.
+- Protokoly ukládej do `/srv/polarita/workspace/dukazy/blok-NN/`. Nezávislou oponenturu zajisti, pokud je dostupná. Její stav vykazuj zvlášť. Samostatně ověř přístup bez hesla, s chybným heslem a úspěšné přihlášení v nové relaci.
+- Po úplném funkčním testu předej správci verzi, adresu, přístup a výsledky jednotlivých služeb. **Teprve po uživatelském testu a převzetí** nastav osobní identitu, WebAuthn, YubiKey, klientské certifikáty a podpisová oprávnění. Ověř nový osobní přístup, ukonči testovací účet a jeho relace. Pak vyhodnoť produkční bránu v bloku 12. Provozní rozhodnutí, živé podpisy a platby se řídí pravidly `Decisions`.
 
-### 0.3 Přísný postup po blocích (`Blok 0` → `Blok 12`), lidské vstupy a brány `DoD`
-
-1. **Lidské vstupy mimo server (`Blok 0`) a registr otevřených bodů:** Před spuštěním `Bloku 1` ověř s `1001`, že jsou splněny všechny vstupy podle **kanonické tabulky vstupů `Bloku 0` v kap. 3** (jediný úplný seznam: vstup → blok spotřeby → důkaz). Shrnutí: hardware (virtuální stroj `polarita-hq` a záložní uzel se správcovským klíčem `1001`), identita a podpis (`2× YubiKey` jednatele, vlastní hardwarové klíče zástupců `Break-Glass`, čip `QSCD` + čtečka pro osobní `QES`, certifikát organizační pečeti + `TSA`), přístupy (přístupové údaje pověřené osoby ISDS `w9bbdva` + `czebox.cz`, `Read-Only` tokeny ČS / Fio / UOL, účty a klíče alespoň dvou rodin modelů, `Cloudflare DNS`, statická IPv4 s `PTR`, `SIP Trunk` a další externí služby), peníze (karta se stropem `470 USD / měsíc` jen pro API modelů, samostatný rozpočet stavby, samostatná karta reklamy) a právo a lidé (právní minimum Dne 1 zrevidované advokátem, smlouva o výkonu funkce jednatele, zástupný RT `SUB-1007` pod vlastním TIČR, náhradní 3. člen komise a jmenovaný bankovní zmocněnec). Dále ověř, že registr [06-REGISTR-OVERENI-PRAVA-A-NOREM.md](./06-REGISTR-OVERENI-PRAVA-A-NOREM.md) je projednán s `1001` a každý otevřený bod má přiřazen blok uzavření a vlastníka — otevřené body se neuzavírají v `Bloku 0`, ale v bloku, který u nich registr uvádí. Chybějící klíče, tokeny ani lidská rozhodnutí nikdy nevymýšlej ani neobcházej.
-2. **Smyčka uvnitř každého bloku (u každého promptu: průzkum a plán → schválení `1001` → provedení):** Otevři příslušný řídicí dokument ve složce [`software/`](./software/00-SEZNAM-SOFTWARU-README.md). Každý `Prompt 1`, `Prompt 2` i `Prompt 3` začíná čtecím průzkumem (*preflight*) a plánem, potom se **zastaví** pro výslovné schválení jednatelem `1001` a teprve po něm provede změny přes subagenty — schválení tedy předchází každému měnícímu kroku každého promptu, ne jen `Promptu 1` (v `Bloku 0` a do vzniku datasetu `workspace` v `Bloku 1` se schvaluje písemně mimo server, potom až do `Promptu 1` `Bloku 7` včetně zápisem v `/srv/polarita/workspace/`, od `Promptu 2` `Bloku 7` přes `Decisions` a `mutation_confirm`). Po provedení všech promptů bloku proveď nezávislou oponenturu `Judge` → ověř `100 %` všech položek `DoD` daného bloku (ke každé položce ulož důkaz: výstup příkazu nebo protokol) a ulož předávací záznam (*checkpoint*). Důkazy a protokoly `Bloků 1–7` se ukládají do `/srv/polarita/workspace/dukazy/blok-NN/` (protokol `Bloku 0` vzniká písemně mimo server a ukládá se tamtéž po vzniku datasetu `workspace`); jejich přenos do `Vaultu` je krok a položka `DoD` `Bloku 8`, od `Bloku 8` se důkazy ukládají přímo do `Vaultu`.
-3. **Zákaz přeskakování bloků a paměťového citování předpisů:** Nikdy nespouštěj `Blok N+1`, dokud `Blok N` nesplňuje `100 % PASS` ve všech bodech `DoD` a nemá souhlas `1001`. Nikdy necituj zákony, paragrafy ani normy zpaměti; do sdílené paměti `Vault` je až v `Bloku 8` z úředních a licencovaných zdrojů načtou `15001 pravni-specialista` a `15002 normovac` podle [06-REGISTR-OVERENI-PRAVA-A-NOREM.md](./06-REGISTR-OVERENI-PRAVA-A-NOREM.md). Navazující `Bloky 13–19` (`S1–S7`) spouštěj až po splnění `Bloku 12` (`Go-Live Gate 12/12 PASS`).
-
-### 0.4 Přechod od Instalačního koordinátora k `11001 ceo` (Zákaz sebe-ustanovení v `root` relaci a 3 stupně předání)
-
-* **Zákaz sebe-ustanovení v instalační `root` relaci:** Realizační `ai` agent vystupuje během stavby výhradně jako dočasný **Instalační koordinátor (*Stavitel*)** s výsadním oprávněním `root / sudo` na hostiteli `polarita-hq`, k `OpenTofu` a ke správě `Incus`. **Nikdy se nesmí v této instalační relaci sám prohlásit za provozního `11001 ceo`**, protože `11001 ceo` smí podle architektury běžet výhradně jako neprivilegovaná instance uvnitř kontejneru `Paperclip` v zóně `app_internal` — bez přístupu k hostiteli, bez čtení otevřených tajemství z `OpenBao`, za maskovací bránou `Clean Room` (`0` PII z `db_hr_lide` a `db_gdpr_zkousky`), se jmenovitým podílem `35 USD / měsíc` (z toho `85 %` = `29,75 USD` tvrdá provozní kvóta agenta a `15 %` do sdílené rezervy `P1`) uvnitř celofiremního stropu `470 USD / měsíc`, pod ochranou `CaMeL` a s potvrzováním každé změny dat vyvolané `ai` nebo člověkem mimo vyjmenované automatické zápisy (kap. 1, třídy změn dat) přes `mutation_confirm / mutation_cancel` v `Decisions`. Stejná špičková rodina modelů (*Director Reasoning Tier*) však může pohánět `11001 ceo` jako **čistou, oddělenou instanci spuštěnou uvnitř `Paperclip`**.
-* **Tři stupně zrození a předání řízení:**
-  1. **`Blok 7` (Technické zrození v `Paperclip` a `Stage 1`):** Instalační koordinátor nasadí `Paperclip`, `Decisions` a `Zulip`, založí účet `11001 ceo` se jmenovitým podílem `35 USD / měsíc` (provozní kvóta `29,75 USD`, uvnitř `470 USD / měsíc`), nahraje jeho kartu [agenti-a-prompty/11001-ceo-marek-kovar.md](./agenti-a-prompty/11001-ceo-marek-kovar.md) a ověří `Stage 1 Eval Suite (20/20 PASS)`. Až do formálního předání v `Bloku 12` však `11001 ceo` ostrý provoz nepřebírá.
-  2. **`Blok 8` (Stínové zaučení nad `Vaultem` během dostavby `Bloků 9–11` — stav `SHADOW`):** Po zprovoznění sdílené paměti `Vault` a nahrání zakladatelských dokumentů i úřední právní a normové báze (`15001 pravni-specialista`, `15002 normovac`) spustí koordinátor v `Paperclip` **Startovací prompt pro první spuštění (`kap. 5.A` karty `11001-ceo-marek-kovar.md`)**. `11001 ceo` má stavový přepínač `SHADOW` / `LIVE`: od `Bloku 8` běží ve stavu `SHADOW` (jen čte, nic nezadává ani neposílá do `Decisions`, žádosti ostatních jen eviduje) a zapíše úvodní zprávu o připravenosti do `#11-vedeni`; ve stavu `SHADOW` běží v `Bloku 8` i Startovací prompty ostatních agentů. Koordinátor se subagenty a oponentem `Judge` mezitím dokončí aplikační vrstvy `Bloků 9–11`.
-  3. **`Blok 12` (Formální předání klíčů a trvalé ukončení `root` relace Stavitele):** Po krocích `Bloku 12` v závazném pořadí (evidence lidí a podpisy → rotace a revokace všech tajemství a klíčů, která viděl Instalační koordinátor → `Go-Live Gate (12/12 PASS)` s živým během `Eval Suite — Stage 2 (20/20 PASS)` → ostré přepnutí s kontrolou po přepnutí) zapíše Instalační koordinátor do `Vaultu` (`07-IT-a-Architektura/`) dokumentaci skutečného provedení (*As-Built*, s `0` otevřenými tajemstvími a `0` PII), a sám založí v `Decisions` položku předání řízení; jednatel `1001` ji potvrdí přes `mutation_confirm`, tím `11001 ceo` přechází ze stavu `SHADOW` do `LIVE`, a teprve potom `11001 ceo` podle promptu pro převzetí (`kap. 5.C` své karty) zkontroluje živý stav všech služeb a předloží první provozní přehled. Instalační koordinátor potom **trvale ukončí svou instalační `root` relaci** (jeho účet a klíče na hostiteli se odstraní). Od tohoto okamžiku denní provoz i navazující `Bloky 13–19` (`S1–S7`) koordinuje neprivilegovaný `11001 ceo` v `Paperclip`; práva na hostiteli drží jen `1001` (osobní účet + klíč) a zásahy na hostiteli provádí `1001` nebo jím jednorázově spuštěná relace podle plánu od `17003 spravce-site`.
-
-### 0.5 Startovací příkaz pro zahájení realizace (`Copy & Paste`)
+### Startovací pokyn pro ai
 
 ```text
-Jsi hlavní koordinátor nasazení společnosti Polarita s.r.o. uvnitř VM polarita-hq (projekt polarita, uzel ejpovice). Spravuješ systém této VM a její vnitřní Incus. Před změnou ověř, že příkaz běží ve správné vrstvě.
-Postupuj přísně podle kap. 0, kap. 2 a kap. 3 souboru README.md a podle 06-REGISTR-OVERENI-PRAVA-A-NOREM.md:
-
-1. Pracuj jako koordinátor — nedělej vše sám v jediném kontextu; pro průzkum, infrastrukturu, kódování (wt-worker) a testování vytvářej izolované subagenty.
-2. Nikdy nenasazuj celé README.md najednou: postupuj striktně blok po bloku (Blok 0 -> Blok 12). Každý Prompt 1, Prompt 2 i Prompt 3 začni čtecím průzkumem a plánem, zastav se pro schválení jednatele 1001 a teprve potom proveď změny; blok uzavři až při 100 % DoD s důkazem ke každé položce.
-3. Před uzavřením každého bloku i vlastního modulu vždy zajisti nezávislou oponenturu (Judge / wt-judge) jiným modelem ai z odlišné rodiny modelů v čistém kontextu (jen zadání + diff + výstup testů, bez obhajoby tvůrce).
-4. Nejprve společně se mnou ověř splnění všech vstupů podle kanonické tabulky vstupů Bloku 0 (README.md kap. 3) a projednej registr 06 tak, aby každý otevřený bod měl přiřazen blok uzavření a vlastníka. Jakmile potvrdím Blok 0, spusť výhradně čtecí průzkum Promptu 1 z Bloku 1 (software/01-operacni-systemy.md) a zastav se pro mé schválení plánu.
-5. Pamatuj, že jsi dočasný Instalační koordinátor (Stavitel), nikoliv provozní 11001 ceo: nikdy se sám v této root relaci neustanovuj do role 11001 ceo. V Bloku 7 vytvoř 11001 ceo jako neprivilegovanou instanci v Paperclip, v Bloku 8 jej zauč nad Vaultem ve stavu SHADOW (kap. 5.A jeho karty) a v Bloku 12 mu po evidenci lidí, rotaci všech tajemství, která jsi viděl, 12/12 Go-Live Gate s 20/20 Stage 2, ostrém přepnutí a zápisu As-Built dokumentace do Vaultu předej řízení přes mé schválení v Decisions (SHADOW -> LIVE) a trvale ukonči svou instalační root relaci.
+Nasaď Polaritu v režimu TEST na Ejpovicích. Pokračuj od prvního technicky neověřeného kroku, včetně instalace, konfigurace, testování a opravy závad. Proveď všechny dostupné bloky a předej funkční systém k uživatelskému testu. Při předání uveď i každou neověřenou funkci.
 ```
 
----
-
-## 1. Základní identita a neměnné pilíře systému (`Verze 3.1`)
+## 1. Základní identita a neměnné pilíře systému (`Verze 3.2`)
 
 * **Společnost a sídlo:** **Polarita s.r.o.**, IČO: `14180324`, DIČ: `CZ14180324`, datová schránka ISDS: `w9bbdva`, výchozí pobočka **`101` (`CZ-101` Praha — Centrála)**: `Na Folimance 2155/15, Vinohrady, 120 00 Praha 2`.
 * **Statutární orgán a odborný garant elektro:** **Václav Šercl** (osobní číslo **`1001`** / `STAT-1001`, revizní technik **TIČR E2A** — osobní *Osvědčení* revizního technika na `5 let` + podnikatelské *Oprávnění* TIČR společnosti na `10 let`), se smluvní zástupností **`Break-Glass`** (`SUB-1007` jednající výhradně pod vlastním Osvědčením RT i vlastním Oprávněním TIČR, náhradní 3. člen komise a jmenovaný bankovní zmocněnec / prokurista — zástupci se v `Decisions` přihlašují vlastním účtem a vlastním hardwarovým klíčem s rolí `break-glass-approver` a smějí potvrdit jen vyjmenované třídy mutací, vše ostatní čeká ve stavu `PAUSED` na `1001`; zapečetěný záložní `YubiKey č. 2` je výhradně osobní náhrada `1001` a nikdy se nikomu nepředává) a dvourychlostním schvalováním **`Decisions`** (`07:30` a `16:30`, u každé změny dat vyvolané `ai` nebo člověkem mimo vyjmenované automatické zápisy atomický transakční diff `před → po` potvrzovaný **`mutation_confirm` / `mutation_cancel`**).
@@ -104,20 +80,20 @@ Před příkazy bloku 1 na vnějším clusteru ověř `incus list polarita-hq --
 
 Tisková PDF jsou výstupy sestavení a **do Gitu se neukládají**: sestaví je skripty ve složce [`nastroje/`](./nastroje/README.md) a hotová jsou přílohou vydání (Release) příslušné verze. Odkazy níže fungují po sestavení.
 
-1. **[00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.1/00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf)** — Hlavní souborná kniha **A4 na výšku** (kompletní organizace, procesy, 8 oddělení, 20 karet `ai`, metodika expanze, zásobník `S1–S7` i tento návod po blocích).
-2. **[01-ORGANIZACNI-MAPA-A3-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.1/01-ORGANIZACNI-MAPA-A3-2026.pdf)** — Jednostránkový nástěnný plakát **A3 na šířku** (organizační strom, pobočky `101–999`, `20 ai`, živý tým `1001+`, tok zakázek a 15 železných pojistek).
-3. **[04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.1/04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf)** — Souborná kniha softwarové a serverové architektury **A4 na výšku** (všech 11 vrstev a realizační prompty Fází A–D).
-4. **[05-SOFTWAROVA-MAPA-A3-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.1/05-SOFTWAROVA-MAPA-A3-2026.pdf)** — Jednostránkový nástěnný plakát softwarové architektury **A3 na šířku** (5 klientských platforem, 4 síťové zóny `polarita-hq`, 11 vrstev a architektonická pravidla).
+1. **[00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.2/00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf)** — Hlavní souborná kniha **A4 na výšku** (kompletní organizace, procesy, 8 oddělení, 20 karet `ai`, metodika expanze, zásobník `S1–S7` i tento návod po blocích).
+2. **[01-ORGANIZACNI-MAPA-A3-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.2/01-ORGANIZACNI-MAPA-A3-2026.pdf)** — Jednostránkový nástěnný plakát **A3 na šířku** (organizační strom, pobočky `101–999`, `20 ai`, živý tým `1001+`, tok zakázek a 15 železných pojistek).
+3. **[04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.2/04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf)** — Souborná kniha softwarové a serverové architektury **A4 na výšku** (všech 11 vrstev a realizační prompty Fází A–D).
+4. **[05-SOFTWAROVA-MAPA-A3-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.2/05-SOFTWAROVA-MAPA-A3-2026.pdf)** — Jednostránkový nástěnný plakát softwarové architektury **A3 na šířku** (5 klientských platforem, 4 síťové zóny `polarita-hq`, 11 vrstev a architektonická pravidla).
 
 ---
 
 ## 2. Přehledová mapa zprovoznění systému (`Blok 0` až `Blok 12`)
 
-Zprovoznění probíhá v **13 přísně acyklických číslovaných blocích (`Etapa I: Blok 0 – Blok 12`, etapový harmonogram `Týden 0` až `Týdny 11–12`)**. Platí železné pravidlo: **nikdy nespouštěj vyšší blok, dokud předchozí blok nesplňuje 100 % svých podmínek dokončení (`DoD`) — přičemž žádný blok nesmí ve svém `DoD` vyžadovat službu z vyššího bloku!** Do spuštění fronty `Decisions` v `Bloku 7` se „schválením v `Decisions`“ v `Blocích 0–6` rozumí výslovné písemné schválení plánu jednatelem `1001` přímo v relaci (v `Bloku 0` a do vzniku datasetu `workspace` v `Bloku 1` písemně mimo server, potom zapsané do `/srv/polarita/workspace/`), od `Promptu 2` `Bloku 7` převedené do fronty `Decisions`. Do založení agentů v `Bloku 7` vykonávají prompty adresované `17003`, `17004` a `17001` subagenti Instalačního koordinátora (kap. 0.1). Sloupec `DoD` níže je shrnutím podrobných položek `DoD` v kap. 3.
+Bloky popisují závislosti mezi službami. ai přechází mezi technicky ověřenými kroky automaticky. Tabulka uvádí cílové vlastnosti plného provozu. Při instalaci je testuj postupem z kapitoly 0.
 
 | Číslo bloku | Fáze a časový rámec | Název bloku | Hlavní řídicí dokument | Klíčová výstupní brána (`DoD`) |
 | :--- | :--- | :--- | :--- | :--- |
-| **`Blok 0`** | Příprava (`Týden 0`, 1–3 prac. dny) | Statutární, bankovní, právní, telekomunikační a HW příprava mimo server | [00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.md](./00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.md) *(kap. 9.1)* | Protokol `Bloku 0` podepsaný `1001`: každý vstup kanonické tabulky (kap. 3) má důkaz — hardware a záložní uzel, `2× YubiKey` + klíče zástupců, `QES` + pečeť + `TSA`, přístupy (ISDS, banky, `ORG-UOL`, modely, DNS, telekomunikace, externí služby), rozpočty a karty, právní minimum zrevidované advokátem a smlouvy `Break-Glass`; registr 06 projednán (každý bod má blok uzavření a vlastníka) |
+| **`Blok 0`** | Příprava | Inventura VM a zdrojů | Tento návod | Identifikovaná VM, disky, síť, dostupný výkon a záznam vstupů pro produkci |
 | **`Blok 1`** | **Fáze A** (`Týdny 1–2`) | Virtuální hostitel `polarita-hq`, jeho úložiště a klientské stanice | [software/01-operacni-systemy.md](./software/01-operacni-systemy.md) | Šifrované datové úložiště VM (`N-17` uzavřen, bezobslužný restart i obnova ze záložní kopie klíče vyzkoušeny), `auditd` a kompletní strom `/srv/polarita/`, připravené stanice (klienti nainstalováni; připojení ke službám až v `Blocích 3, 7 a 11`) |
 | **`Blok 2`** | **Fáze A** (`Týdny 1–2`) | Virtualizace `Incus + OpenTofu` (`0× Docker`) a 4 izolované síťové zóny | [software/02-virtualizace-a-kontejnery.md](./software/02-virtualizace-a-kontejnery.md) | `Incus` bez Dockeru, zóny `dmz_edge`, `app_internal`, `data_vault` a bez-síťový `sandbox_airgap` (`eth0 none`) z kódu, obrazy pro zóny bez sítě z místního úložiště obrazů, součet limitů RAM ≤ RAM přidělená VM, `tofu plan` bez driftu |
 | **`Blok 3`** | **Fáze A** (`Týdny 1–2`) | Domény `Cloudflare DNS`, firewall `nftables`, `Caddy` (`80/443`) + MX `25/tcp` a `Headscale VPN` | [software/03-sit-vpn-firewall-a-proxy.md](./software/03-sit-vpn-firewall-a-proxy.md) | Jen technické DNS záznamy (veřejné záznamy beze změny), sken TCP i UDP: otevřeny jen `80/tcp`, `443/tcp+udp`, `25/tcp MX` a `3478/udp` (`0` veřejných DB/SSH/SIP portů), funkční `vpn.polarita.cz` + `CrowdSec`, SSH jen ve VPN a nouzový vstup nezávislý na SSO |
@@ -135,7 +111,7 @@ Zprovoznění probíhá v **13 přísně acyklických číslovaných blocích (`
 
 Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatně spustitelnými bloky** — zapracovanými balíčky `S1–S7` ze zásobníku [03-NAVRHY-BALICKU-NA-POZDEJI.md](./03-NAVRHY-BALICKU-NA-POZDEJI.md). Řídicím dokumentem každého bloku je `README.md` příslušné složky v [`balicky/`](./balicky/README.md). Bloky `13–18` lze spouštět v libovolném pořadí podle obchodních priorit (doporučené pořadí je vzestupné; jediná vazba: přejímka `Bloku 17` používá balíček `S2` z `Bloku 14`); `Blok 19` má vlastní bránu `Go / No-Go`. **Etapa I nevyžaduje spuštění ani závislost žádného z těchto bloků** (`Blok 7` spouští lokální základní 20-scénářovou sadu přímo ve `/srv/polarita/workspace/ai-finops/eval-suite/` bez nasazení `Bloku 14`; základní sada a referenční politika se čtou z repozitáře (`balicky/S2-eval-suite/`) jako data a `Blok 14` sadu teprve rozšiřuje na `157` scénářů a CI bránu) a žádný z nich nemění počet `ai` zaměstnanců (`20`), strop `470 USD / měsíc` ani databázový základ `6 + 9` DB.
 
-| Číslo bloku | Etapa | Název bloku (balíček) | Hlavní řídicí dokument | Klíčová výstupní brána (`DoD`) | Stav ve Verzi 3.1 |
+| Číslo bloku | Etapa | Název bloku (balíček) | Hlavní řídicí dokument | Klíčová výstupní brána (`DoD`) | Stav ve Verzi 3.2 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **`Blok 13`** | Etapa II | Generátor PDF čistopisů smluv a protokolů (`S1`) | [balicky/S1-generator-cistopisu/README.md](./balicky/S1-generator-cistopisu/README.md) | Všech 8 sestav (15 šablon) generuje platné PDF s jednotnými proměnnými a manifestem pro `mutation_confirm`; znění šablon odpovídá právnímu minimu potvrzenému v `Bloku 8` a nové vzory potvrdil advokát | Spustitelné a ověřené spuštěním; právní revize čeká |
 | **`Blok 14`** | Etapa II | Rozšířená regresní sada `Eval Suite 100+` (`S2`) | [balicky/S2-eval-suite/README.md](./balicky/S2-eval-suite/README.md) | `VERIFIED_PASS 157/157` (20 základních + 137 rozšířených scénářů), brána v `Gitea Actions`, živý běh proti gateway | Spustitelné a ověřené (dry-run) |
@@ -149,84 +125,27 @@ Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatn�
 
 ## 3. Podrobný návod: Jak celý systém postupně zprovoznit po blocích (`Blok 0` – `Blok 12` a navazující `Blok 13` – `Blok 19`)
 
-> **Platí pro všechny bloky:** Každý `Prompt 1`, `Prompt 2` i `Prompt 3` začíná čtecím průzkumem a plánem, zastaví se pro schválení `1001` a teprve potom mění systém (kap. 0.3). Ke každému kroku bloku patří jedna ověřitelná položka `DoD` ve stejném pořadí; důkaz (výstup příkazu nebo protokol) se ukládá do předávacího záznamu bloku. Do založení agentů v `Bloku 7` vykonávají prompty adresované `ai` agentům subagenti Instalačního koordinátora (kap. 0.1).
+> V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
 
-### `Blok 0` — Mimo-serverová statutární, bankovní, právní, telekomunikační a hardwarová příprava (`Týden 0`, `1–3 prac. dny`)
+### `Blok 0` — Inventura pro instalaci
 
-* **Vstupní předpoklad:** Existující obchodní korporace Polarita s.r.o. (`IČO 14180324`). Nic se nepřebírá z žádného dřívějšího systému; stávající veřejné DNS záznamy domén (web, pošta) zůstávají až do `Bloku 12` beze změny.
-* **Řídicí dokumenty:** [00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.md](./00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.md) *(Základní identifikační a statutární karta a kap. 9.1 — Týden 0)*, [oddeleni/11-vedeni-a-governance.md](./oddeleni/11-vedeni-a-governance.md), registr [06-REGISTR-OVERENI-PRAVA-A-NOREM.md](./06-REGISTR-OVERENI-PRAVA-A-NOREM.md).
-* **Postup krok za krokem (vykonává jednatel Václav Šercl `1001` osobně; schválení a důkazy se v tomto bloku vedou písemně mimo server v protokolu `Bloku 0`):**
-  1. Připrav **VM `polarita-hq` v projektu `polarita` na Ejpovicích** podle kap. 1 (zdroje, virtuální disk v poolu `zrcadlo`, UEFI, vTPM a vnořené KVM), **záložní uzel v jiné fyzické lokalitě** podle kap. 1 (zapojí se v `Bloku 6`) a vlastní **správcovský klíč záložního uzlu**, který nikdy neuložíš na `polarita-hq`; připrav klientskou stanici a mobil jednatele.
-  2. Pořiď a otestuj **`2×` hardwarový klíč `YubiKey 5 NFC`** (primární klíč pro `Keycloak WebAuthn` a `Decisions` nosíš u sebe, zapečetěný `YubiKey č. 2` ulož výhradně jako svou osobní náhradu v obálce v ohnivzdorném trezoru mimo serverovnu — nikdy se nikomu nepředává, ani v režimu `Break-Glass`) a pro každého zástupce `Break-Glass` (`SUB-1007`, jmenovaný bankovní zmocněnec / prokurista) pořiď **vlastní hardwarový klíč**, kterým se zástupce v `Decisions` přihlašuje pod vlastním účtem.
-  3. Připrav **osobní kvalifikovaný certifikát `QES` na certifikovaném prostředku `QSCD`** (`eObčanka` s kontaktní USB čtečkou na PC, případně u mobilu spárovanou **Bluetooth čtečkou čipových karet**, nebo kvalifikovaný USB token `PostSignum` — soukromý klíč osobního QES nikdy neopouští čip!), vyřiď **organizační elektronickou pečeť + časová razítka `TSA`** pro serverové pečetění `pyHanko`, zřiď testovací schránku ISDS na **`czebox.cz`**, **přístupové údaje pověřené osoby pro čtení** produkční ISDS **`w9bbdva`** (pozor: čtení oprávněným účtem má u zpráv v rozsahu jeho oprávnění účinky doručení podle předpisů o datových schránkách!) a pro jmenovaného zmocněnce / prokuristu **přístup pověřené osoby s oprávněním odesílat** (mimo `Break-Glass` odesílá jen `1001`).
-  4. Vygeneruj **striktně `Read-Only` API tokeny** pro provozní účet České spořitelny (`6359094389/0800`), účet e-shopu Fio banky (`2902115850/2010`) a účetní API **UOL** (`https://polarita.ucetnictvi.uol.cz/api`) a potvrď smluvní součinnost účetní a daňové kanceláře **`ORG-UOL`** (statutární odpovědnost za účetnictví nese vždy `Polarita s.r.o.` podle účetních předpisů).
-  5. Zřiď **účty a API klíče alespoň dvou rodin jazykových modelů** (stavitel `Worker` a nezávislý oponent `Judge` musí být z odlišných rodin už od `Bloku 1`), vyhrazenou platební kartu s pevným měsíčním limitem **`Spend Cap`** výhradně pro API jazykových modelů (do tvrdého stropu **`470 USD / měsíc`**), písemně stanov **samostatný rozpočet stavby** (Instalační koordinátor, subagenti a oponent `Judge` nejsou součástí `470 USD`) a založ **reklamní účty se samostatnou kartou / limitem** (reklama se z karty pro modely neplatí).
-  6. Zřiď předplatné **ČSN Online** (Česká agentura pro standardizaci), firemní API klíč **`Mapy.cz`** (plánování tras výjezdů), účet **`Ecomail`**, vyber nástroj **`CMP`** pro reklamní pixely, **`Telegram` bota a externí SMTP relay** pro nouzové alerty, účet **`Balíkobot`**, **platební bránu e-shopu** a pořiď **GPS/OBD jednotky** do vozidel.
-  7. Uzavři smlouvu s **českým VoIP operátorem na `SIP Trunk` přes šifrované `SIPS (TLS) + SRTP`** (hlavní firemní číslo + přímé provolby `DID` + SIM/eSIM s GSM přesměrováním přes `B2BUA`), zaregistruj **`WhatsApp Business API`**, vyber **poskytovatele SMS brány**, zkontroluj správu DNS domén `polarita.cz` a `polarita.eu` v **`Cloudflare`** (včetně úzce vymezeného API tokenu pro správu zóny) a zajisti **statickou veřejnou IPv4 adresu s nastavitelným `PTR / rDNS`** záznamem.
-  8. Připrav s advokátem **povinné právní a obchodní minimum Dne 1** (vnitřní směrnici a nástupní informační doložku o **pravidlech pro sledování zaměstnanců podle pracovněprávních předpisů**, záznam o činnostech zpracování GDPR a VOP, základní vzor Smlouvy o dílo, Dohodu o svěření služebního vozidla s obecnou odpovědností za škodu + foto-protokol a základní sazebník služeb/MRR) a nech je advokátem zrevidovat, podepiš **Smlouvu o výkonu funkce jednatele**, rámcovou smlouvu se **zastupujícím revizním technikem `SUB-1007` (TIČR E2A — výkon i podpis výhradně pod vlastním Osvědčením RT i vlastním podnikatelským Oprávněním TIČR)**, smlouvu s **náhradním 3. členem komise** (role bez pevného osobního čísla — přidělí je evidence při nástupu), pověření jmenovaného bankovního zmocněnce / prokuristy a pověřené osoby ISDS pro režim **`Break-Glass`** a ověř platnost **Pojistné matice** (`20–50 mil. Kč` + `CAR/EAR`) i osobního *Osvědčení* TIČR (`5 let`) a podnikatelského *Oprávnění* TIČR (`10 let`).
-  9. Projednej registr [06-REGISTR-OVERENI-PRAVA-A-NOREM.md](./06-REGISTR-OVERENI-PRAVA-A-NOREM.md): každý otevřený bod musí mít přiřazen blok uzavření a vlastníka (do vzniku agentů Instalační koordinátor + `1001`).
-* **Kanonická tabulka vstupů `Bloku 0`** (jediný úplný seznam; kap. 0.3, tabulka kap. 2, kniha `00` kap. 9.1 a `software/00` ji jen shrnují a odkazují sem):
-
-| Vstup (zajišťuje `1001`) | Blok spotřeby | Důkaz v protokolu `Bloku 0` |
-| :--- | :--- | :--- |
-| VM `polarita-hq` v projektu `polarita` (disk v poolu `zrcadlo`, vTPM, UEFI a vnořené KVM) | `Blok 1` | ověřeny identita, přidělené prostředky a stav zařízení VM |
-| Záložní uzel v jiné lokalitě + správcovský klíč uzlu (jen `1001`, neuložen na `polarita-hq`) | `Blok 6` | uzel umístěn, klíč v držení `1001` |
-| Klientská stanice a mobil jednatele | `Blok 1`, `Blok 3` | zařízení k dispozici |
-| `2× YubiKey` jednatele (`č. 2` zapečetěný, nikdy se nepředává) | `Blok 4`, `Blok 5` | oba klíče otestovány, obálka zapečetěna |
-| Vlastní hardwarové klíče zástupců `Break-Glass` | `Blok 5` (role `break-glass-approver`), `Blok 12` | předávací protokol klíčů |
-| Čip `QSCD` + čtečka a osobní `QES` | `Blok 4` | zkušební podpis |
-| Certifikát organizační pečeti + přístup k `TSA` | `Blok 4` | certifikát vydán, zkušební razítko |
-| Testovací schránka ISDS na `czebox.cz` | `Blok 8` | zkušební přihlášení |
-| Přístupové údaje pověřené osoby ISDS `w9bbdva` pro čtení | `Blok 4` (uložení), `Blok 8` (`PAUSED`), `Blok 12` | přístup zřízen |
-| Přístup pověřené osoby ISDS s oprávněním odesílat pro zmocněnce / prokuristu | `Blok 4` (uložení), `Blok 12` | přístup zřízen |
-| `Read-Only` tokeny ČS, Fio a UOL + potvrzená součinnost `ORG-UOL` | `Blok 4` (uložení), `Blok 11` | tokeny vydány jako čtecí, potvrzení `ORG-UOL` |
-| Účty a API klíče alespoň dvou rodin jazykových modelů | `Blok 1` (oponentura), `Blok 4` (uložení), `Blok 7` | zkušební volání obou rodin |
-| Karta `Spend Cap` `470 USD / měsíc` jen pro API modelů | `Blok 7` | limit nastaven u vydavatele |
-| Samostatný rozpočet stavby (mimo `470 USD`) | `Bloky 1–12` | písemné rozhodnutí `1001` |
-| Reklamní účty + samostatná karta / limit reklamy | `Blok 7` (`PAUSED`), `Blok 12` | účty založeny, limit nastaven |
-| Předplatné ČSN Online | `Blok 8` | přihlášení funkční |
-| API klíč `Mapy.cz` | `Blok 8` | klíč vydán |
-| Účet `Ecomail` | `Blok 9` | účet založen |
-| Nástroj `CMP` pro reklamní pixely (vybírá `1001`) | `Blok 9` | zapsaný výběr nástroje |
-| `Telegram` bot + externí SMTP relay | `Blok 6` | zkušební zpráva doručena |
-| Správa DNS v `Cloudflare` + úzký API token zóny | `Blok 3`, `Blok 12` | token s oprávněním jen ke správě zóny |
-| Statická veřejná IPv4 s `PTR / rDNS` | `Blok 3`, `Blok 11`, `Blok 12` | potvrzení poskytovatele připojení |
-| `SIP Trunk` (`SIPS/SRTP`), `DID`, SIM/eSIM | `Blok 11`, `Blok 12` | smlouva a parametry trunku |
-| `WhatsApp Business API` + poskytovatel SMS brány | `Blok 11` | účty založeny |
-| Účet `Balíkobot` | `Blok 9` | účet založen |
-| Platební brána e-shopu | `Blok 9` | smlouva a testovací přístup |
-| GPS/OBD jednotky do vozidel | `Blok 11` | jednotky k dispozici |
-| Právní minimum Dne 1 zrevidované advokátem + základní sazebník služeb/MRR | `Blok 8` (ověření proti bázi), `Blok 9` (ceník), `Blok 12` (podpisy) | vyjádření advokáta |
-| Smlouva o výkonu funkce jednatele | `Blok 12` | podepsaná smlouva |
-| Smlouva `Break-Glass` (`SUB-1007`), náhradní 3. člen komise, pověření zmocněnce / prokuristy a pověřené osoby ISDS | `Blok 5`, `Blok 12` | podepsané smlouvy a pověření |
-| Platná Pojistná matice, Osvědčení a Oprávnění TIČR | `Blok 8` (Lhůtník), `Blok 12` | data platnosti zapsána |
-| Registr 06 projednán — každý otevřený bod má blok uzavření a vlastníka | bloky podle registru | zápis z projednání |
-
-* **Ověřitelná brána dokončení `Bloku 0` (`DoD` — každá položka má důkaz v protokolu `Bloku 0` podepsaném `1001`):**
-  - [ ] **Krok 1:** VM `polarita-hq`, záložní uzel v jiné lokalitě, správcovský klíč uzlu (mimo `polarita-hq`) a klientská zařízení jsou k dispozici.
-  - [ ] **Krok 2:** Oba klíče `YubiKey` jednatele jsou otestovány, `YubiKey č. 2` je v zapečetěné obálce a každý zástupce `Break-Glass` převzal vlastní hardwarový klíč.
-  - [ ] **Krok 3:** Čip `QSCD` s čtečkou vytvoří zkušební osobní `QES`, certifikát pečeti + `TSA` jsou vydány, přihlášení na `czebox.cz` funguje a přístupové údaje pověřené osoby k `w9bbdva` (čtení; odesílání pro zmocněnce) jsou zřízeny.
-  - [ ] **Krok 4:** `Read-Only` tokeny ČS, Fio a UOL jsou vydány (pokus o zápis je odmítnut) a součinnost `ORG-UOL` je písemně potvrzena.
-  - [ ] **Krok 5:** Zkušební volání API proběhlo u dvou rodin modelů, karta pro modely má limit `470 USD / měsíc`, rozpočet stavby je písemně stanoven a reklamní účty mají samostatnou kartu / limit.
-  - [ ] **Krok 6:** Nástroj `CMP` je vybrán a přístupy ČSN Online, `Mapy.cz`, `Ecomail`, `Telegram` bot + externí SMTP relay, `Balíkobot` a platební brána jsou funkční a GPS/OBD jednotky jsou k dispozici.
-  - [ ] **Krok 7:** Parametry `SIP Trunku (SIPS/SRTP)`, účty `WhatsApp Business API` a SMS brány, API token `Cloudflare` a statická IPv4 s `PTR / rDNS` jsou připraveny.
-  - [ ] **Krok 8:** Právní minimum Dne 1 má vyjádření advokáta, smlouva o výkonu funkce a smlouvy a pověření `Break-Glass` jsou podepsány a platnost Pojistné matice, Osvědčení a Oprávnění TIČR je ověřena.
-  - [ ] **Krok 9:** Registr 06 je projednán s `1001` a každý otevřený bod má přiřazen blok uzavření a vlastníka.
-
----
+Ověř projekt, umístění VM, její systém, disky, síť a volnou paměť. Eviduj již provedené práce. Zapiš vstupy pro testovací režim a pokračuj blokem 1.
 
 ### `Blok 1` — VM `polarita-hq`, její systém a úložiště a klientské stanice (`Fáze A · Vrstva 01 · Týdny 1–2`)
+
+**Technický test před předáním.** Zaznamenej přidělené prostředky a ověř obnovitelnost pracovních dat. Klientský test provede prohlížeč přes VPN. Osobní podpisovou výbavu eviduj při převzetí.
+
 
 * **Vstupní předpoklad:** Splněn `Blok 0`.
 * **Řídicí dokument a prompty:** [software/01-operacni-systemy.md](./software/01-operacni-systemy.md) *(Prompty 1, 2 a 3)*, [software/00-SEZNAM-SOFTWARU-README.md](./software/00-SEZNAM-SOFTWARU-README.md) *(souhrn Fáze A v kap. 4)*.
 * **Postup krok za krokem:**
-  1. Spusť **Prompt 1** ve [software/01-operacni-systemy.md](./software/01-operacni-systemy.md) — čtecí průzkum a plán (nic nemění): ověření identity VM, přidělených disků, jejich obsahu, vTPM a `/dev/kvm` uvnitř hosta, návrh rozložení úložiště a připravené příkazy pro strom `/srv/polarita/`; plán schválí jednatel `1001`.
-  2. Spusť **Prompt 2 uvnitř VM**. Po čtecí kontrole předlož aktualizovaný plán a vyčkej na výslovné schválení `1001`. Ověř Ubuntu Server LTS, hostname, čas i bezpečnostní aktualizace. Připrav strom `/srv/polarita/` podle vrstvy 01, šifrovaný datový svazek na vyhrazeném virtuálním disku, audit a SSH. Ověř snímek, návrat, automatické odemčení a obnovovací klíč podle `N-17`. Protokol ulož do `/srv/polarita/workspace/dukazy/blok-01/` uvnitř VM.
-  3. Spusť **Prompt 3** ve [software/01-operacni-systemy.md](./software/01-operacni-systemy.md) — příprava klientských stanic: **část A (čtecí)** zjistí stav inženýrské a administrátorské stanice jednatele (`1001` s kontaktní USB čtečkou čipových karet pro `QES` a `JSignPdf`) a terénního mobilního profilu (`iOS / Android`), sestaví matici služba × platforma × blok ověření a plán přípravy stanic; potom **STOP** a schválení `1001`. **Část B (měnící)** doinstaluje schválené klienty — `Tailscale` (mířící na vlastní `Headscale`), `Zulip`, `Linphone` (`SIPS/SRTP`), `Thunderbird`, ověřování `YubiKey NFC` (`WebAuthn`) a případně Bluetooth čtečku pro mobilní `eObčanku` — bez připojení ke službám a uloží matici do `/srv/polarita/workspace/dukazy/blok-01/`. Funkční zkoušky služeb se v `Bloku 1` nedělají: k `Headscale` se klienti připojí v `Bloku 3`, k `Zulipu` v `Bloku 7` a k ústředně v `Bloku 11` a tam se také ověřují.
+  1. Spusť **Prompt 1** ve [software/01-operacni-systemy.md](./software/01-operacni-systemy.md) — čtecí průzkum a plán (nic nemění): ověření identity VM, přidělených disků, jejich obsahu, vTPM a `/dev/kvm` uvnitř hosta, návrh rozložení úložiště a připravené příkazy pro strom `/srv/polarita/`.
+  2. Spusť **Prompt 2 uvnitř VM**. Po čtecí kontrole ulož aktualizovaný plán. Ověř Ubuntu Server LTS, hostname, čas i bezpečnostní aktualizace. Připrav strom `/srv/polarita/` podle vrstvy 01, šifrovaný datový svazek na vyhrazeném virtuálním disku, audit a SSH. Ověř snímek, návrat, automatické odemčení a obnovovací klíč podle `N-17`. Protokol ulož do `/srv/polarita/workspace/dukazy/blok-01/` uvnitř VM.
+  3. Ověř podporované prohlížeče na dostupných platformách a ulož matici kompatibility. Pro první test ředitelství stačí prohlížeč a přístup do VPN.
 * **Ověřitelná brána dokončení `Bloku 1` (`DoD`):**
   - [ ] **Krok 1:** Protokol čtecího průzkumu potvrzuje identitu VM, virtuální disky, stav vTPM a `/dev/kvm`, na disku nebyla provedena žádná změna a plán (rozložení úložiště a příkazy pro strom `/srv/polarita/`) je písemně schválen `1001`.
-  - [ ] **Krok 2:** Aktualizovaný plán byl před instalací schválen `1001`; virtuální datový disk je v poolu `zrcadlo`, `zfs get encryption` ukazuje šifrovaný datový pool, bezobslužný restart VM proběhl s automatickým odemčením poolu, obnova klíče z obálky `Break-Glass` byla vyzkoušena a bod `N-17` je v registru 06 uzavřen; `systemctl is-active auditd chrony` vrací `active`, automatické bezpečnostní záplaty jsou zapnuty, `OpenSSH` je zpevněno, existuje úvodní snímek, `zfs list` a výpis stromu `/srv/polarita/` odpovídají architektuře (včetně `data/airgap-models`, `data/airgap-spool`, `/srv/polarita/data/clamav-db`, prázdného datasetu `vault` a `workspace/dukazy/blok-00` až `blok-07`), na hostiteli neběží žádná aplikační služba mimo systémové démony a protokol ověření je v `/srv/polarita/workspace/dukazy/blok-01/`.
-  - [ ] **Krok 3:** Plán přípravy stanic byl schválen `1001`, na stanici a mobilu `1001` jsou nainstalováni schválení klienti (`Tailscale`, `Zulip`, `Linphone`, `Thunderbird`) bez připojení ke službám, čtečka načte čip `QSCD`, `YubiKey` projde místním zkušebním ověřením a matice služba × platforma × blok ověření je uložena v `/srv/polarita/workspace/dukazy/blok-01/`.
+  - [ ] **Krok 2:** Aktualizovaný plán byl před instalací ověřen proti inventuře; virtuální datový disk je v poolu `zrcadlo`, `zfs get encryption` ukazuje šifrovaný datový pool, bezobslužný restart VM proběhl s automatickým odemčením poolu, obnova klíče z obálky `Break-Glass` byla vyzkoušena a bod `N-17` je v registru 06 uzavřen; `systemctl is-active auditd chrony` vrací `active`, automatické bezpečnostní záplaty jsou zapnuty, `OpenSSH` je zpevněno, existuje úvodní snímek, `zfs list` a výpis stromu `/srv/polarita/` odpovídají architektuře (včetně `data/airgap-models`, `data/airgap-spool`, `/srv/polarita/data/clamav-db`, prázdného datasetu `vault` a `workspace/dukazy/blok-00` až `blok-07`), na hostiteli neběží žádná aplikační služba mimo systémové démony a protokol ověření je v `/srv/polarita/workspace/dukazy/blok-01/`.
+  - [ ] **Krok 3:** U každé dostupné platformy je evidován prohlížeč a výsledek testu přístupu. Osobní podpisová výbava patří do evidence při aktivaci produkce.
 
 ---
 
@@ -236,7 +155,7 @@ Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatn�
 * **Řídicí dokument a prompty:** [software/02-virtualizace-a-kontejnery.md](./software/02-virtualizace-a-kontejnery.md) *(Prompty 1, 2 a 3)*.
 * **Postup krok za krokem:**
   1. Spusť **Prompt 1** ve [software/02-virtualizace-a-kontejnery.md](./software/02-virtualizace-a-kontejnery.md): uvnitř VM nainstaluj správce systémových kontejnerů a VM **`Incus`** nad úložištěm `OpenZFS` — od tohoto kroku vzniká každá další služba firmy výhradně jako instance v `Incus` — a ověř, že na `polarita-hq` **není nainstalován `Docker` (`0× docker.sock`)** a všechny kontejnery běží jako neprivilegované (`security.privileged=false`).
-  2. Spusť **Prompt 2**: vytvoř 4 striktně oddělené interní síťové mosty (zóny) a mezizónová pravidla `nftables` podle matice toků (zákaz internetu a nepovolených mezizónových spojení — vznikají a testují se už v tomto bloku); obrazy pro `data_vault` a `sandbox_airgap` se sestavují v dočasné sestavovací instanci v `dmz_edge` s odchozím přístupem jen po dobu sestavení, hotový obraz se publikuje do místního úložiště obrazů `Incus` a instance se spouštějí z něj (aktualizace = nové sestavení obrazu a výměna instance, měsíčně a při bezpečnostní záplatě):
+  2. Spusť **Prompt 2**: vytvoř tři interní mosty a jeden profil bez síťového rozhraní a mezizónová pravidla `nftables` podle matice toků (zákaz internetu a nepovolených mezizónových spojení — vznikají a testují se už v tomto bloku); obrazy pro `data_vault` a `sandbox_airgap` se sestavují v dočasné sestavovací instanci v `dmz_edge` s odchozím přístupem jen po dobu sestavení, hotový obraz se publikuje do místního úložiště obrazů `Incus` a instance se spouštějí z něj (aktualizace = nové sestavení obrazu a výměna instance, měsíčně a při bezpečnostní záplatě):
      * **`dmz_edge`** — reverzní proxy `Caddy` (`80/443`, `trusted_proxies cloudflare`, publikuje storefronty běžící v `app_internal`), příchozí MX relay `Stalwart Mail` (`25/tcp` s `RocksDB`) `Headscale` (`443` + `3478/udp` STUN) a stahovač signatur `ClamAV` (odchozí jen `443/tcp` k distribuční službě signatur; do `sandbox_airgap` se připojuje jen adresář `clamav-db` pro čtení); od `Bloku 11` přesměrování UDP rozsahu médií `Asterisk` a jednoho TCP portu zařízení `Traccar`,
      * **`app_internal`** — veřejné storefronty `Astro`, `MedusaJS`, `Moodle`, `Paperclip`, `Zulip`, `Asterisk`, `Chatwoot CE` (veřejně jen widget a webhooky kanálů, vše ostatní za VPN + `oauth2-proxy`), `comm-gateway`, `Paperless-ngx`, `Vikunja` a vlastní moduly Polarity,
      * **`data_vault`** — `PostgreSQL` + `PgBouncer`, `Valkey`, `Garage`, `OpenBao`, `Vaultwarden (SQLite)` a `legal-archive` (**nulový přímý přístup z internetu**),
@@ -250,6 +169,9 @@ Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatn�
 ---
 
 ### `Blok 3` — Domény `Cloudflare DNS`, firewall `nftables`, `Caddy` (`80/443`) + MX `25/tcp` a `Headscale VPN` (`Fáze A · Vrstva 03 · Týdny 1–2`)
+
+**Technický test před předáním.** Pro ředitelství použij dostupnou firemní VPN a důvěryhodný serverový certifikát. Ověř rozlišení jména, odmítnutí přístupu mimo VPN a přihlášení v nové relaci. Veřejné DNS, MX a telefonní směrování patří do produkčního přepnutí.
+
 
 * **Vstupní předpoklad:** Splněn `Blok 2`.
 * **Řídicí dokument a prompty:** [software/03-sit-vpn-firewall-a-proxy.md](./software/03-sit-vpn-firewall-a-proxy.md) *(Prompty 1, 2 a 3)*.
@@ -266,13 +188,16 @@ Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatn�
 
 ### `Blok 4` — Trezor `OpenBao + TPM + 2× YubiKey`, příprava `Keycloak SSO`, karanténa, lokální `QES` a serverová pečeť `pyHanko` (`Fáze A · Vrstva 04 · Týdny 1–2`)
 
+**Technický test před předáním.** Inicializuj oddělený testovací trezor se strojovým tajemstvím. Ověř restart, přístup pouze povolenou rolí a odmítnutí cizí role. Podpisové rozhraní testuj na vzoru s testovacím klíčem. Kvalifikovaný podpis a fyzickou identitu přenech správci po převzetí.
+
+
 * **Vstupní předpoklad:** Splněny `Blok 0` až `Blok 3`.
 * **Řídicí dokument a prompty:** [software/04-bezpecnost-trezor-identita-a-podpis.md](./software/04-bezpecnost-trezor-identita-a-podpis.md) *(Prompty 1, 2 a 3)*, karta [17004-klicnik-roman-hajek.md](./agenti-a-prompty/17004-klicnik-roman-hajek.md).
 * **Postup krok za krokem:**
   1. Spusť **Prompt 1** ve [software/04-bezpecnost-trezor-identita-a-podpis.md](./software/04-bezpecnost-trezor-identita-a-podpis.md): nasaď v `data_vault` trezor **`OpenBao`** se statickou pečetí `seal "static"` svázanou s čipem **`TPM`** serveru (s PGP kopií pečetního klíče v obálce `Break-Glass`, bezpečným odpojením média klíče po odemčení a kontrolou `current_key_id`) a oběma klíči **`YubiKey`** jednatele (`1001` — zapečetěný `YubiKey č. 2` se nikdy nikomu nepředává). Přesnou konfiguraci pečeti, postup odemčení po restartu a to, zda `OpenBao` při statické pečeti vydává i podíly `Shamir Recovery Keys`, ověř proti oficiální dokumentaci nasazené verze a uzavři tím bod `N-16` registru 06 (nevydává-li je, je jedinou cestou obnovy PGP kopie statického klíče a zmínky o podílech `Shamir` se z dokumentace vypustí). Každé instanci se síťovým rozhraním založ vlastní identitu `AppRole`; tajemství jí vykresluje `OpenBao Agent` do `tmpfs` (`/run/secrets`, režim `0400`), nikdy na persistentní disk. Instance v `sandbox_airgap` nemají žádná strojová tajemství ani `OpenBao Agenta`; z pravidla je vyňat také `gitea-runner` z `Bloku 5` (žádná tajemství z trezoru, jediné spojení na místní `Gitea`). Politiky pro tajemství, která vzniknou později (například klíč `DKIM` z `Bloku 11`), se v tomto bloku jen připraví a ověří se zkušebním tajemstvím. Čtecí a odesílací přístupy ISDS ulož jako oddělená tajemství s oddělenými politikami. Ulož do `OpenBao` připravené API tokeny, přístupové údaje pověřené osoby ISDS a certifikát **organizační elektronické pečeti** z `Bloku 0` (žádné tajemství mimo `tmpfs` vykreslené z `OpenBao`; osobní klíč `QES` zůstává vždy na čipu `QSCD` a nikdy se do `OpenBao` neukládá!).
   2. Spusť **Prompt 2**: připrav konfiguraci a realm centrální brány identit **`Keycloak OIDC SSO`** (ostré spuštění nad izolovanou servisní DB `keycloak` v `PostgreSQL` a připojení na `WebAuthn / FIDO2 YubiKey` proběhne v `Bloku 5` po založení PostgreSQL; s rolí `break-glass-approver` pro zástupce `Break-Glass`, kteří se přihlašují vlastním účtem a vlastním hardwarovým klíčem; role je aktivní jen po dobu režimu), reverzní autentizační bránu **`oauth2-proxy`** pro interní nástroje bez nativního OIDC (`Chatwoot CE`, `SilverBullet`) a firemní trezor hesel **`Vaultwarden`**. *(Databázové základy `Clean Room` nad `db_hr_lide` a `db_gdpr_zkousky` se zakládají po spuštění DB v `Bloku 5`, živé pohledy navazují s tabulkami v `Blocích 9 a 11`, a CI skener `gitleaks` se spouští s `Gitea` v `Bloku 5`.)*
   3. Spusť **Prompt 3**: v bez-síťové zóně `sandbox_airgap` (`eth0 none`) otestuj automatickou dezinfekci příloh **`ClamAV + Dangerzone`** (signatury z `/srv/polarita/data/clamav-db`; převod rizikového dokumentu přes rastr na čisté PDF; balíček a plně offline režim `Dangerzone` v obrazu bez sítě ověř a uzavři tím bod `N-20` registru 06), v zóně `app_internal` serverovou pečetní službu **`pyHanko`** (`PAdES` organizační pečeť + časové razítko `TSA` pro interní záznamy a denní listy Stavebního deníku) a na stanici `1001` lokální podpis **`JSignPdf`** čipem `QSCD` pro osobní `QES` revizních zpráv a pasů CE.
-* **Ověřitelná brána dokončení `Bloku 4` (`DoD` · Závěr Fáze A):**
+* **Cílové kontroly pro produkční aktivaci `Bloku 4` (`DoD` · Závěr Fáze A):**
   - [ ] **Krok 1:** Po restartu instance je `OpenBao` odemčen podle zapsaného postupu a `bao status` hlásí `Sealed false`; obnova z PGP kopie pečetního klíče byla vyzkoušena; bod `N-16` je v registru 06 uzavřen (včetně rozhodnutí o podílech `Shamir`); prohledání disků `polarita-hq` nenajde žádné tajemství mimo `tmpfs` vykreslené z `OpenBao`.
   - [ ] **Krok 2:** Definice `Keycloak` realmu (včetně role `break-glass-approver`) a konfigurace `oauth2-proxy` jsou uloženy v `/srv/polarita/infra/` připravené pro `PostgreSQL` v `Bloku 5` a `1001` se z VPN přihlásí do `Vaultwarden`.
   - [ ] **Krok 3:** `Dangerzone` v `sandbox_airgap` vyčistí cizí PDF bez sítě (bod `N-20` uzavřen), serverové `pyHanko` opatří zkušební PDF platnou pečetí + `TSA` (ověření podpisu projde) a stanice `1001` vytvoří v `JSignPdf` osobní podpis `QES` přímo z čipu `QSCD`.
@@ -281,6 +206,9 @@ Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatn�
 
 ### `Blok 5` — Datové jádro `PostgreSQL` (`0× MySQL`, `0× MongoDB`), ostrý `Keycloak`, `Clean Room`, `Valkey`, `Garage`, `legal-archive` a `Gitea` (`Fáze B · Vrstva 05 · Týdny 3–4`)
 
+**Technický test před předáním.** Založ databáze a otestuj izolaci rolí na vzorových datech. V testovacím realmu Keycloak ověř jméno, heslo, tok OIDC a odhlášení. Vynucení WebAuthn pro osobní produkční účty aktivuj po převzetí.
+
+
 * **Vstupní předpoklad:** Splněna celá **Fáze A** (`Bloky 1–4`).
 * **Řídicí dokument a prompty:** [software/05-databaze-a-uloziste.md](./software/05-databaze-a-uloziste.md) *(Prompty 1, 2 a 3)*, [software/00-SEZNAM-SOFTWARU-README.md](./software/00-SEZNAM-SOFTWARU-README.md) *(souhrn Fáze B v kap. 4)*.
 * **Postup krok za krokem:**
@@ -288,7 +216,7 @@ Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatn�
   2. **Ostrý `Keycloak` (samostatný krok):** spusť `Keycloak OIDC SSO` nad servisní DB `keycloak` s realmem připraveným v `Bloku 4`, zapni přihlášení `WebAuthn / FIDO2` klíčem `YubiKey`, napoj `OIDC` pro `Headscale` (a v kroku 4 pro `Gitea`) a ponech `/admin` dostupný jen z VPN; nouzový vstup do VPN nezávislý na SSO zůstává z `Bloku 3`.
   3. Spusť **Prompt 2**: zprovozni S3 objektové úložiště **`Garage`** s automatickou `90denní` retenční politikou pro běžné stereo nahrávky hovorů `Asterisk` a jejich doslovné přepisy (výmaz v prvotním úložišti po `83.` dni od pořízení, aby se snímky žijícími nejdéle `7 dnů` žádná kopie nepřežila `90.` den) a přímým povýšením spisových hovorů, `.zfo` zpráv z ISDS `w9bbdva`, podepsaných revizních zpráv, pasů rozváděčů (`CE`), stavebních deníků a faktur do neměnného archivu **`/srv/polarita/data/legal-archive/` (`LEGAL_HOLD 3–10 let`, append-only)**.
   4. Spusť **Prompt 3**: zprovozni lokální Git a CI server **`Gitea`** za `Headscale VPN` s aktivním skenerem tajemství **`gitleaks`** a dvěma oddělenými klony repozitáře **`wt-worker`** a **`wt-judge`** (každý s vlastním `.git`) a vyhrazenou instancí `gitea-runner` v `app_internal` (režim `host`, bez přístupu k produkčním tajemstvím a bez odchozího provozu; závislosti bere z offline úložiště balíčků — *wheelhouse* — připraveného a ověřeného v tomto kroku).
-* **Ověřitelná brána dokončení `Bloku 5` (`DoD`):**
+* **Cílové kontroly pro produkční aktivaci `Bloku 5` (`DoD`):**
   - [ ] **Krok 1:** Výpis databází ukazuje všech `6` doménových i `9` servisních DB výhradně v `PostgreSQL` (major verze je zapsána v lockfilu), přímý `SELECT` role `ai` na tabulku v `db_hr_lide` i `db_gdpr_zkousky` skončí chybou oprávnění, zkušební maskovaný pohled vrátil jen maskovaná data a zkušební tabulka byla odstraněna; `Valkey` odpovídá.
   - [ ] **Krok 2:** `1001` se přihlásí do `Keycloak` klíčem `YubiKey` (`WebAuthn`), přihlášení do `Headscale` přes `OIDC` funguje a `/admin` je z internetu odmítnut a z VPN dostupný.
   - [ ] **Krok 3:** V `Garage` je nastavena `90denní` retence pro nahrávky (pravidlem životního cyklu, nebo plánovanou úlohou výmazu — bod `N-21` uzavřen) a pokus o smazání či přepsání souboru v `legal-archive` skončí zamítnutím.
@@ -297,6 +225,9 @@ Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatn�
 ---
 
 ### `Blok 6` — Zálohování `3-2-1-1-0` (`Restic REST Server (--append-only)`, neděle `03:00`) a monitoring `Checkmk Raw` (`Fáze B · Vrstva 06 · Týdny 3–4`)
+
+**Technický test před předáním.** Zálohuj testovací data a do odděleného cíle obnov vzorek s ověřením součtu. Vyvolej měřitelnou poruchu testovací služby a zachyť místní upozornění.
+
 
 * **Vstupní předpoklad:** Splněn `Blok 5`; záložní uzel v jiné lokalitě (kap. 1) a správcovský klíč uzlu jsou fyzicky připraveny z `Bloku 0`.
 * **Řídicí dokument a prompty:** [software/06-zalohovani-a-monitoring.md](./software/06-zalohovani-a-monitoring.md) *(Prompty 1, 2 a 3)*.
@@ -315,10 +246,13 @@ Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatn�
 
 ### `Blok 7` — Orchestrátor `Paperclip` (`mutation_confirm`), `metadata-schema-kernel`, `Zulip`, oživení `20 ai` a `Eval Stage 1` (`Fáze C · Vrstva 07 · Týdny 5–6`)
 
+**Technický test před předáním.** Spusť agenty ve stavu SHADOW, použij názvy kanálů z kanonu a otestuj rozhodovací frontu na vzorovém spisu. Placení, rozesílání a ostré úkony zůstanou vypnuté.
+
+
 * **Vstupní předpoklad:** Splněna celá **Fáze B** (`Bloky 5–6`).
 * **Řídicí dokumenty a prompty:** [software/07-ai-orchestrace-decisions-a-eval.md](./software/07-ai-orchestrace-decisions-a-eval.md) *(Prompty 1, 2 a 3)*, všech **20 karet `ai` zaměstnanců** ve složce [`agenti-a-prompty/`](./agenti-a-prompty/) (`11001` až `18001`).
 * **Postup krok za krokem:**
-  1. Před `Promptem 1` rozhodne `1001` názvy kanálů `Zulip` (bod `R-05` registru 06); plán `Promptu 1` se ještě schvaluje písemně, od `Promptu 2` přes `Decisions`. Spusť **Prompt 1** ve [software/07-ai-orchestrace-decisions-a-eval.md](./software/07-ai-orchestrace-decisions-a-eval.md): nasaď v `app_internal` za `Headscale VPN` orchestrátor **`Paperclip`** (s dvourychlostní frontou **`Decisions`**: `URGENT` vs. dávková okna `07:30` / `16:30` a povinným transakčním diffem **`mutation_confirm` / `mutation_cancel`**), interní týmový hub **`Zulip`** napojený na `Keycloak OIDC SSO` (kanály `#11-vedeni`, `#12-marketing`, `#13-eshop-a-nakup`, `#14-elektro-a-zakazky`, `#15-pravo-a-normy`, `#16-finance-a-kancelar`, `#17-it-secops` a `#18-hr-a-teren` s povinnými tématy `POL-RRRR-NNNNN` + dopojení webhooku alertů `Checkmk -> #17-it-secops`) a živou FinOps lištu **`claude-powerline-rust`** zobrazující spotřebu vůči stropu **`470 USD / měsíc`**; souhrnnou stopku napříč `20 ai` vyviň v tomto bloku jako vlastní rozšíření (bod `N-10` registru 06) se třemi prahy: (1) `100 %` provozní kvóty agenta (`85 %` jeho jmenovitého podílu) zastaví placená volání tohoto agenta do schválení v `Decisions`; (2) sdílená rezerva `P1` (`15 %`, celkem `70,50 USD`) se čerpá jen po schválení `1001` v `Decisions` na návrh `11001` — `17005` ji pouze technicky uvolní a nikdy ji nesmí uvolnit sám sobě; (3) `100 %` celofiremního stropu zastaví placená volání všech. Měsíční běh `Eval Suite` se účtuje na kvótu `17005`.
+  1. Použij názvy kanálů z kanonu. Spusť **Prompt 1** ve [software/07-ai-orchestrace-decisions-a-eval.md](./software/07-ai-orchestrace-decisions-a-eval.md): nasaď v `app_internal` za `Headscale VPN` orchestrátor **`Paperclip`** (s dvourychlostní frontou **`Decisions`**: `URGENT` vs. dávková okna `07:30` / `16:30` a povinným transakčním diffem **`mutation_confirm` / `mutation_cancel`**), interní týmový hub **`Zulip`** napojený na `Keycloak OIDC SSO` (kanály `#11-vedeni`, `#12-marketing`, `#13-eshop-a-nakup`, `#14-elektro-a-zakazky`, `#15-pravo-a-normy`, `#16-finance-a-kancelar`, `#17-it-secops` a `#18-hr-a-teren` s povinnými tématy `POL-RRRR-NNNNN` + dopojení webhooku alertů `Checkmk -> #17-it-secops`) a živou FinOps lištu **`claude-powerline-rust`** zobrazující spotřebu vůči stropu **`470 USD / měsíc`**; souhrnnou stopku napříč `20 ai` vyviň v tomto bloku jako vlastní rozšíření (bod `N-10` registru 06) se třemi prahy: (1) `100 %` provozní kvóty agenta (`85 %` jeho jmenovitého podílu) zastaví placená volání tohoto agenta do schválení v `Decisions`; (2) sdílená rezerva `P1` (`15 %`, celkem `70,50 USD`) se čerpá jen po schválení `1001` v `Decisions` na návrh `11001` — `17005` ji pouze technicky uvolní a nikdy ji nesmí uvolnit sám sobě; (3) `100 %` celofiremního stropu zastaví placená volání všech. Měsíční běh `Eval Suite` se účtuje na kvótu `17005`.
   2. Založ v `Paperclipu` a `Zulipu` všech **`20` `ai` pozic (`11001` až `18001`)**, do každé vlož její **předpřipravený Systémový Prompt (kap. 4)** z příslušné karty v [`agenti-a-prompty/`](./agenti-a-prompty/) *(přesný seznam všech 20 karet s rozpočty najdeš v kap. 4.C níže)* a ověř komunikaci botů v tématech `POL-RRRR-NNNNN` *(**Startovací prompty kap. 5.A**, které pracují s `Vaultem` a právní/normovou bází, se spouštějí ve stavu `SHADOW` až po založení právní a normové báze v `Bloku 8`, krok 4; u `14004 skolitel` až po nasazení `Moodle` v `Bloku 9`; od založení agentů přebírají prompty adresované `17003`, `17004` a `17001` jmenovaní agenti místo subagentů Instalačního koordinátora)*.
   3. Spusť **Prompt 2**: zprovozni v `Gitea` generátor **`metadata-schema-kernel`** (z jednoho `JSON/YAML` schématu generuje migraci vlastních modulů v izolovaných schématech `db_erp_lhutnik`, `OpenAPI` endpoint s `ETag`, formulář i typovaný `MCP` nástroj), nastav izolovaný přezkum **`Worker / Judge` (`wt-worker / wt-judge`, dva oddělené klony repozitáře)** na odlišných rodinách modelů, CI bránu **`Draivix/aigiscode` + `gitleaks`** a vlastní auditovaný fork **`polarita-ads-mcp`** s natvrdo uzamčeným stavem nových kampaní **`PAUSED`**.
   4. Spusť **Prompt 3**: nasaď v `/srv/polarita/workspace/ai-finops/eval-suite/` samostatnou základní sadu **`20 YAML` scénářů a spouštěč `Promptfoo` (`Eval Suite`)** bez nasazení `Bloku 14`; základní sada a referenční politika se čtou z repozitáře ([`balicky/S2-eval-suite/`](./balicky/S2-eval-suite/README.md)) jako data (`Blok 14` ji v Etapě II rozšiřuje na `157` scénářů a CI bránu) a spusť **Stage 1 (deterministický běh bez volání modelu: dry-run základní sady hodnotitelem `run_eval_suite.py --suite base` proti referenční politice; stejně běží v `Gitea CI`, kde neběží `Promptfoo` ani model — runner nemá odchozí provoz; běh s modelem v `Promptfoo` spouští `17005` mimo runner)**: ověření hlasového *Spoken Prompt Injection* v `<untrusted_inbound_comm>`, blokace emoční analýzy na `Kanálu R` (`FAIL_CLOSED`), `Clean Room`, `DTM ČR`, `ADIS` (ručení za DPH), `SCRAP-CU` (přenesená daňová povinnost u šrotu), `PHE` a pasu rozváděče (`CE`), plus izolovaného prohlížečového asistenta **`Nod`**. *(Plný end-to-end integrační běh **Stage 2** proti živým službám proběhne v `Bloku 12` po nasazení `Bloků 8–11`.)*
@@ -331,6 +265,9 @@ Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatn�
 ---
 
 ### `Blok 8` — Paměť `Vault` (`SilverBullet`), Podatelna ISDS `w9bbdva`, `Paperless-ngx`, `Vikunja` a `360° Karta spisu` (`Fáze C · Vrstva 08 · Týdny 5–6`)
+
+**Technický test před předáním.** Přijmi vzorovou zprávu z místního testovacího rozhraní, ulož přílohu, ověř spis, lhůtu a audit. Přihlášení do skutečné datové schránky následuje po převzetí.
+
 
 * **Vstupní předpoklad:** Splněn `Blok 7`.
 * **Řídicí dokumenty a prompty:** [software/08-pamet-vault-podatelna-spisy-lhutnik-a-kniha-objektu.md](./software/08-pamet-vault-podatelna-spisy-lhutnik-a-kniha-objektu.md) *(Prompty 1, 2 a 3)*, všech **8 provozních chart útvarů** ve složce [`oddeleni/`](./oddeleni/) (`11` až `18`).
@@ -352,6 +289,9 @@ Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatn�
 
 ### `Blok 9` — Web `polarita.cz` (Kalkulačka SVJ, ceník + 48h šanony), `Umami`, e-shop `polarita.eu` (`Elektro WMS`) a `Akademie` (`Fáze D · Vrstva 09 · Týdny 7–10`)
 
+**Technický test před předáním.** Objednávku, vrácení zboží a platbu proveď v testovacím obchodě s místní platební odpovědí. Ověř skladový pohyb a stav objednávky z prohlížeče.
+
+
 * **Vstupní předpoklad:** Splněna celá **Fáze C** (`Bloky 7–8`).
 * **Řídicí dokument a prompty:** [software/09-weby-eshop-a-akademie.md](./software/09-weby-eshop-a-akademie.md) *(Prompty 1, 2 a 3)*, [oddeleni/12-marketing-reklama-a-ai-rust.md](./oddeleni/12-marketing-reklama-a-ai-rust.md), [oddeleni/13-eshop-obchod-nakup-a-logistika.md](./oddeleni/13-eshop-obchod-nakup-a-logistika.md).
 * **Postup krok za krokem:**
@@ -366,6 +306,9 @@ Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatn�
 ---
 
 ### `Blok 10` — Inženýrské jádro `QElectroTech`, `IfcOpenShell / ezdxf` (volitelně `CadCraft`) a `cad-urs-engine` (`Fáze D · Vrstva 10 · Týdny 7–10`)
+
+**Technický test před předáním.** Zpracuj vzorové výkresy a měření, ověř výstupní dokument i odmítnutí neúplných vstupů. Skutečný revizní podpis připojí oprávněná osoba po převzetí.
+
 
 * **Vstupní předpoklad:** Splněn `Blok 9`.
 * **Řídicí dokument a prompty:** [software/10-elektro-projekce-rozvadece-rozpocty-a-revize.md](./software/10-elektro-projekce-rozvadece-rozpocty-a-revize.md) *(Prompty 1, 2 a 3)*, [oddeleni/14-elektro-projekce-rozpocty-revize-akademie.md](./oddeleni/14-elektro-projekce-rozpocty-revize-akademie.md), [oddeleni/15-pravo-legislativa-a-normy-csn.md](./oddeleni/15-pravo-legislativa-a-normy-csn.md).
@@ -385,6 +328,9 @@ Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatn�
 
 ### `Blok 11` — Sdílený `cz-sk-registry-kernel`, `finance-uol-marze-engine`, `portal-spolupracovniku`, `Traccar` a komunikační ústředna `K1–K5` (`Fáze D · Vrstva 11 · Týdny 7–10`)
 
+**Technický test před předáním.** Zpracuj syntetický bankovní výpis, pracovníka a testovací hovor mezi interními klapkami. Porovnej výstupy s předlohou a ověř, že služba neodeslala žádný pokyn do živé banky ani telefonu.
+
+
 * **Vstupní předpoklad:** Splněn `Blok 10`.
 * **Řídicí dokument a prompty:** [software/11-finance-uol-hr-bozp-portal-flotila-a-komunikace.md](./software/11-finance-uol-hr-bozp-portal-flotila-a-komunikace.md) *(Prompty 1, 2 a 3)*, [oddeleni/16-finance-fakturace-a-kancelar.md](./oddeleni/16-finance-fakturace-a-kancelar.md), [oddeleni/18-lide-personalistika-bozp-a-realizace.md](./oddeleni/18-lide-personalistika-bozp-a-realizace.md).
 * **Postup krok za krokem:**
@@ -403,7 +349,9 @@ Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatn�
 
 ---
 
-### `Blok 12` — Závěrečná přejímací brána `Go-Live Gate (12/12 PASS)`, živý `Eval Stage 2`, ostrý start a další rozvoj (`Týdny 11–12`)
+### `Blok 12` — Uživatelský test, předání správci a následná aktivace produkce
+
+V TEST spusť integrační zkoušky nad vzorovými daty, ověř přihlášení v prohlížeči a sestav předávací zprávu. Následující produkční postup začíná až po uživatelských testech a převzetí správcem.
 
 * **Vstupní předpoklad:** Splněny všechny bloky `Blok 0` až `Blok 11`.
 * **Řídicí dokumenty:** [00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.md](./00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.md) *(kap. 9.1 Harmonogram, kap. 9.2 Go-Live Gate a kap. 9.3 Denní provoz)*, [02-METODIKA-ROZSIROVANI-FIRMY-POBOCKY-ODDELENI-AI-LIDE.md](./02-METODIKA-ROZSIROVANI-FIRMY-POBOCKY-ODDELENI-AI-LIDE.md), [03-NAVRHY-BALICKU-NA-POZDEJI.md](./03-NAVRHY-BALICKU-NA-POZDEJI.md).
@@ -440,6 +388,45 @@ Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatn�
 
 ---
 
+### Podklady pro aktivaci produkce po převzetí
+
+Následující tabulka mapuje živé účty, osobní vybavení, smlouvy a důkazy na bloky, ve kterých je využije produkce. ai při stavbě v TEST eviduje jejich dostupnost. Správce je doplní a vyzkouší až po převzetí.
+
+| Vstup (zajišťuje `1001`) | Blok spotřeby | Důkaz při aktivaci produkce |
+| :--- | :--- | :--- |
+| VM `polarita-hq` v projektu `polarita` (disk v poolu `zrcadlo`, vTPM, UEFI a vnořené KVM) | `Blok 1` | ověřeny identita, přidělené prostředky a stav zařízení VM |
+| Záložní uzel v jiné lokalitě + správcovský klíč uzlu (jen `1001`, neuložen na `polarita-hq`) | `Blok 6` | uzel umístěn, klíč v držení `1001` |
+| Klientská stanice a mobil jednatele | `Blok 1`, `Blok 3` | zařízení k dispozici |
+| `2× YubiKey` jednatele (`č. 2` zapečetěný, nikdy se nepředává) | `Blok 4`, `Blok 5` | oba klíče otestovány, obálka zapečetěna |
+| Vlastní hardwarové klíče zástupců `Break-Glass` | `Blok 5` (role `break-glass-approver`), `Blok 12` | předávací protokol klíčů |
+| Čip `QSCD` + čtečka a osobní `QES` | `Blok 4` | zkušební podpis |
+| Certifikát organizační pečeti + přístup k `TSA` | `Blok 4` | certifikát vydán, zkušební razítko |
+| Testovací schránka ISDS na `czebox.cz` | `Blok 8` | zkušební přihlášení |
+| Přístupové údaje pověřené osoby ISDS `w9bbdva` pro čtení | `Blok 4` (uložení), `Blok 8` (`PAUSED`), `Blok 12` | přístup zřízen |
+| Přístup pověřené osoby ISDS s oprávněním odesílat pro zmocněnce / prokuristu | `Blok 4` (uložení), `Blok 12` | přístup zřízen |
+| `Read-Only` tokeny ČS, Fio a UOL + potvrzená součinnost `ORG-UOL` | `Blok 4` (uložení), `Blok 11` | tokeny vydány jako čtecí, potvrzení `ORG-UOL` |
+| Účty a API klíče alespoň dvou rodin jazykových modelů | `Blok 1` (oponentura), `Blok 4` (uložení), `Blok 7` | zkušební volání obou rodin |
+| Karta `Spend Cap` `470 USD / měsíc` jen pro API modelů | `Blok 7` | limit nastaven u vydavatele |
+| Samostatný rozpočet stavby (mimo `470 USD`) | `Bloky 1–12` | písemné rozhodnutí `1001` |
+| Reklamní účty + samostatná karta / limit reklamy | `Blok 7` (`PAUSED`), `Blok 12` | účty založeny, limit nastaven |
+| Předplatné ČSN Online | `Blok 8` | přihlášení funkční |
+| API klíč `Mapy.cz` | `Blok 8` | klíč vydán |
+| Účet `Ecomail` | `Blok 9` | účet založen |
+| Nástroj `CMP` pro reklamní pixely (vybírá `1001`) | `Blok 9` | zapsaný výběr nástroje |
+| `Telegram` bot + externí SMTP relay | `Blok 6` | zkušební zpráva doručena |
+| Správa DNS v `Cloudflare` + úzký API token zóny | `Blok 3`, `Blok 12` | token s oprávněním jen ke správě zóny |
+| Statická veřejná IPv4 s `PTR / rDNS` | `Blok 3`, `Blok 11`, `Blok 12` | potvrzení poskytovatele připojení |
+| `SIP Trunk` (`SIPS/SRTP`), `DID`, SIM/eSIM | `Blok 11`, `Blok 12` | smlouva a parametry trunku |
+| `WhatsApp Business API` + poskytovatel SMS brány | `Blok 11` | účty založeny |
+| Účet `Balíkobot` | `Blok 9` | účet založen |
+| Platební brána e-shopu | `Blok 9` | smlouva a testovací přístup |
+| GPS/OBD jednotky do vozidel | `Blok 11` | jednotky k dispozici |
+| Právní minimum Dne 1 zrevidované advokátem + základní sazebník služeb/MRR | `Blok 8` (ověření proti bázi), `Blok 9` (ceník), `Blok 12` (podpisy) | vyjádření advokáta |
+| Smlouva o výkonu funkce jednatele | `Blok 12` | podepsaná smlouva |
+| Smlouva `Break-Glass` (`SUB-1007`), náhradní 3. člen komise, pověření zmocněnce / prokuristy a pověřené osoby ISDS | `Blok 5`, `Blok 12` | podepsané smlouvy a pověření |
+| Platná Pojistná matice, Osvědčení a Oprávnění TIČR | `Blok 8` (Lhůtník), `Blok 12` | data platnosti zapsána |
+| Registr 06 projednán — každý otevřený bod má blok uzavření a vlastníka | bloky podle registru | zápis z projednání |
+
 ### `Blok 13` až `Blok 19` — Rozvojová Etapa II a Strategická Etapa III (po ostrém startu)
 
 * **Vstupní předpoklad všech bloků:** Splněn `Blok 12` (`12/12 PASS` Go-Live Gate) a pokyn jednatele `1001` v `Decisions` k zahájení konkrétního bloku. Každý blok má ve svém řídicím dokumentu tři realizační prompty a vlastní `DoD`. Bloky koordinuje `11001 ceo`; zásahy na hostiteli provádí `1001` nebo jím jednorázově spuštěná relace podle plánu od `17003 spravce-site`.
@@ -455,18 +442,18 @@ Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatn�
 
 ---
 
-## 4. Kompletní katalog všech 50 dokumentů jádra a rozvojových balíčků (`Verze 3.1`)
+## 4. Kompletní katalog všech 50 dokumentů jádra a rozvojových balíčků (`Verze 3.2`)
 
 ### A. Kořenové zakladatelské, rozvojové a tiskové dokumenty (`9` souborů)
 
 * [README.md](./README.md) — Tento výchozí rozcestník a návod ke zprovoznění systému po blocích `Blok 0` až `Blok 12`.
 * [00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.md](./00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.md) — Hlavní zakladatelský dokument společnosti (`Modrá kniha` v Markdownu vč. Master Playbooku kap. 9.1–9.3 a 15 železných pravidel).
-* [00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.1/00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf) — Tisková souborná kniha **A4 na výšku** celé organizace, oddělení, 20 karet `ai`, metodiky a balíčků `S1–S7`.
-* [01-ORGANIZACNI-MAPA-A3-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.1/01-ORGANIZACNI-MAPA-A3-2026.pdf) — Jednostránkový nástěnný plakát **A3 na šířku** organizační struktury a toků firmy.
+* [00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.2/00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf) — Tisková souborná kniha **A4 na výšku** celé organizace, oddělení, 20 karet `ai`, metodiky a balíčků `S1–S7`.
+* [01-ORGANIZACNI-MAPA-A3-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.2/01-ORGANIZACNI-MAPA-A3-2026.pdf) — Jednostránkový nástěnný plakát **A3 na šířku** organizační struktury a toků firmy.
 * [02-METODIKA-ROZSIROVANI-FIRMY-POBOCKY-ODDELENI-AI-LIDE.md](./02-METODIKA-ROZSIROVANI-FIRMY-POBOCKY-ODDELENI-AI-LIDE.md) — Kuchařka a kopírovací šablony pro zakládání poboček (`102–999`), oddělení (`19+`), nových `ai` agentů a přijímání/ukončování živých lidí (`1002+`).
 * [03-NAVRHY-BALICKU-NA-POZDEJI.md](./03-NAVRHY-BALICKU-NA-POZDEJI.md) — Registr rozvojových balíčků `S1–S7` zapracovaných jako `Bloky 13–19`: **Rozvojová Etapa II (`S1`–`S6`)** a **Strategická Etapa III (`S7` — Polarita Elektro Cloud)**; stav zapracování, zbývající práce a odkazy na řídicí dokumenty ve složce `balicky/` (podrobná zadání převzaly řídicí dokumenty bloků).
-* [04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.1/04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf) — Tisková souborná kniha **A4 na výšku** kompletní softwarové a serverové architektury.
-* [05-SOFTWAROVA-MAPA-A3-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.1/05-SOFTWAROVA-MAPA-A3-2026.pdf) — Jednostránkový nástěnný plakát **A3 na šířku** softwarové a serverové architektury.
+* [04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.2/04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf) — Tisková souborná kniha **A4 na výšku** kompletní softwarové a serverové architektury.
+* [05-SOFTWAROVA-MAPA-A3-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.2/05-SOFTWAROVA-MAPA-A3-2026.pdf) — Jednostránkový nástěnný plakát **A3 na šířku** softwarové a serverové architektury.
 
 * [06-REGISTR-OVERENI-PRAVA-A-NOREM.md](./06-REGISTR-OVERENI-PRAVA-A-NOREM.md) — Právní a normová báze: zásada, že návod neobsahuje čísla předpisů ani označení norem, kdy a z čeho báze po nasazení vzniká, jak se předpisy, normy a smlouvy pravidelně hlídají, postup při jejich změně a registr otevřených technických bodů a rozhodnutí jednatele `1001`.
 
