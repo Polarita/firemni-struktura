@@ -24,6 +24,7 @@ trap - EXIT
 install -d -m 0750 "$work/bin"
 install -m 0644 "$src/prijem.py" "$src/zpracovani.py" "$work/bin/"
 install -d -m 0700 /srv/polarita/workspace/karantena/vstup
+install -m 0755 "$src/pamet-fronty.sh" "$work/bin/pamet-fronty.sh"
 install -m 0644 "$src"/polarita-karantena.{service,path,timer} /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now polarita-karantena.path polarita-karantena.timer

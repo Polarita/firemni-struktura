@@ -4,6 +4,7 @@ After=incus.service polarita-zfs.service
 RequiresMountsFor=/srv/polarita/data/airgap-spool /srv/polarita/workspace
 [Service]
 Type=oneshot
+ExecStartPre=/srv/polarita/infra/karantena-test/bin/pamet-fronty.sh
 ExecStart=/usr/bin/python3 /srv/polarita/infra/karantena-test/bin/zpracovani.py --opakovat
 UMask=0077
 TimeoutStartSec=infinity
