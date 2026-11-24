@@ -8,6 +8,12 @@ import sys
 from urllib import error, parse, request
 from uuid import NAMESPACE_URL, uuid5
 
+class NeocekavanyStav(RuntimeError):
+    def __init__(self, method, path, status, expected):
+        self.status = status
+        super().__init__(f"{method} {path} vrátil HTTP {status}, očekáván {expected}.")
+
+
 def pripojeni(origin):
     if not re.fullmatch(r"https://[a-z0-9.-]+\.ts\.net", origin):
         raise ValueError("Chybí vstup ředitelství")
@@ -24,7 +30,7 @@ def pripojeni(origin):
             res = exc
         with res:
             if res.status != status:
-                raise RuntimeError(f"{method} {path} vrátil HTTP {res.status}, očekáván {status}.")
+                raise NeocekavanyStav(method, path, res.status, status)
             return res.read()
 
     return call

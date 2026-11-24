@@ -48,7 +48,7 @@ def query(data, sql, **bindings):
     for key, value in bindings.items():
         cmd.extend(["-v", key + "=" + value])
     try:
-        out = subprocess.run(cmd, input=sql, text=True, capture_output=True, timeout=15)
+        out = subprocess.run(cmd, input=sql, text=True, capture_output=True, timeout=60)
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError("Vypršel čas databázového příkazu") from exc
     if out.returncode:

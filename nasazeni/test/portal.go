@@ -87,7 +87,9 @@ var cisloSpisu = regexp.MustCompile(`^POL-([1-9][0-9]{2}-)?[0-9]{4}-[0-9]{5}$`)
 
 const metadataSocket = "/run/polarita-metadata.sock"
 
-var metadataClient = privateClient(metadataSocket, 20*time.Second)
+const metadataTimeout = 75 * time.Second
+
+var metadataClient = privateClient(metadataSocket, metadataTimeout)
 var sanonyClient = privateClient("/run/polarita-sanony.sock", 5*time.Minute)
 
 func privateClient(socket string, timeout time.Duration) *http.Client {
@@ -195,6 +197,8 @@ func (p *portal) serveMetadata(w http.ResponseWriter, r *http.Request) {
 			req.Header.Set("If-Match", tag)
 		}
 	}
+	// Čas pro zápis odpovědi zahrnuje i čekání na lokální databázi.
+	http.NewResponseController(w).SetWriteDeadline(time.Now().Add(metadataTimeout + 10*time.Second))
 	res, err := metadataClient.Do(req)
 	if err != nil {
 		http.Error(w, "Lhůtník je dočasně nedostupný.", http.StatusServiceUnavailable)

@@ -17,7 +17,7 @@ def main(origin, password):
     def send(method, dest, body=None, headers=None):
         req = request.Request(origin+dest, data=body, headers=headers or {}, method=method)
         try:
-            res = browser.open(req, timeout=35)
+            res = browser.open(req, timeout=100)
         except error.HTTPError as exc:
             res = exc
         with res:

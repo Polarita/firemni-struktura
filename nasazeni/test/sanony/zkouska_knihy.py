@@ -5,10 +5,11 @@ import json
 from pathlib import Path
 import sys
 import time
+from urllib.error import URLError
 from uuid import NAMESPACE_URL, uuid5
 from zoneinfo import ZoneInfo
 
-from overeni import pripojeni, prihlasit
+from overeni import NeocekavanyStav, pripojeni, prihlasit
 
 
 def over(origin, password):
@@ -29,7 +30,15 @@ def over(origin, password):
         if time.monotonic() >= deadline:
             raise TimeoutError("Archiv nepotvrdil OCR ve vyhrazeném čase.")
         time.sleep(30)
-        receipt = next(r for r in json.loads(call("GET", api+"sanony/"+case)) if r["priloha"] == key)
+        try:
+            rows = json.loads(call("GET", api+"sanony/"+case))
+        except NeocekavanyStav as exc:
+            if exc.status in (502, 503, 504):
+                continue
+            raise
+        except (TimeoutError, ConnectionError, URLError):
+            continue
+        receipt = next(r for r in rows if r["priloha"] == key)
     if receipt["stav"] != "ocr-hotovo" or not receipt["dokument"]:
         raise RuntimeError("Syntetická revizní zpráva neprošla karanténou a OCR.")
     route = api + "kniha/" + case

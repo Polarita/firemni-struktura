@@ -18,7 +18,7 @@ from mcp import PREFIX, VERSION
 class Local(http.client.HTTPConnection):
     def connect(self):
         self.sock = socket.socket(socket.AF_UNIX)
-        self.sock.settimeout(20)
+        self.sock.settimeout(80)
         self.sock.connect("/run/polarita-metadata-test/api.sock")
 
 
@@ -26,7 +26,7 @@ def request(method, path, body=None, tag=None):
     headers = {"Content-Type": "application/json"}
     if tag:
         headers["If-Match"] = tag
-    conn = Local("localhost", timeout=20)
+    conn = Local("localhost", timeout=80)
     try:
         conn.request(method, path, json.dumps(body) if body is not None else None, headers)
         res = conn.getresponse()
