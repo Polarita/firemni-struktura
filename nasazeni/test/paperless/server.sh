@@ -21,14 +21,7 @@ incus file pull gitea-test/etc/polarita-gitea/git-ca.crt "$tmp/oidc.crt"
 printf 'https://%s:8448\n' "$host" >"$tmp/url"
 bash "$src/../git/obnov-proxy.sh"
 python3 "$src/../identita/sluzba_oidc.py" "$host" paperless
-"${inside[@]}" python3 - "$host" <<'PY'
-from pathlib import Path
-import sys
-p=Path("/etc/hosts")
-tag="# polarita-paperless-oidc"
-rows=[row for row in p.read_text().splitlines() if not row.endswith(tag)]
-p.write_text("\n".join([*rows, f"10.239.32.13 {sys.argv[1]} {tag}"])+"\n")
-PY
+"${inside[@]}" python3 -c 'import socket, sys; assert {r[4][0] for r in socket.getaddrinfo(sys.argv[1],443)} == {"10.239.32.13"}' "$host"
 restart=false
 for file in postgres.crt oidc.crt url web.py; do
     from="$tmp/$file"

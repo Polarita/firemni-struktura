@@ -1,3 +1,6 @@
+variable "oidc_host" {
+  type = string
+}
 variable "image" {
   type = string
 }
@@ -34,6 +37,15 @@ resource "incus_instance" "archiv" {
     properties = {
       source   = "/srv/polarita/infra/paperless-test/conf/start.sh"
       path     = "/s6-init"
+      readonly = "true"
+    }
+  }
+  device {
+    name = "hosts"
+    type = "disk"
+    properties = {
+      source   = "/srv/polarita/infra/paperless-test/conf/hosts-${var.oidc_host}"
+      path     = "/etc/hosts"
       readonly = "true"
     }
   }

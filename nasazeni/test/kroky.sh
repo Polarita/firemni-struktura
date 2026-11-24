@@ -103,7 +103,7 @@ sluzby() {
 
 tym() {
     "${guest[@]}" install -dm0750 /srv/polarita/workspace/dukazy/blok-08
-    "${guest[@]}" bash "$dest/nasazeni/test/paperless/priprava.sh" | tee "$tmp/paperless-priprava.txt"
+    "${guest[@]}" bash "$dest/nasazeni/test/paperless/priprava.sh" "$fqdn" | tee "$tmp/paperless-priprava.txt"
     "${inc[@]}" file push --project polarita "$tmp/paperless-priprava.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-priprava-$commit.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/vikunja/priprava.sh" | tee "$tmp/vikunja-priprava.txt"
     "${inc[@]}" file push --project polarita "$tmp/vikunja-priprava.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/vikunja-priprava-$commit.txt"

@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 [[ $(hostname -s) == polarita-hq && $EUID == 0 ]]
+host=${1:?Chybí jméno ředitelství}
+[[ $host =~ ^[a-z0-9.-]+\.ts\.net$ ]]
+export TF_VAR_oidc_host="$host"
 src=$(cd "$(dirname "$0")" && pwd)
 work=/srv/polarita/infra/paperless-test
 data=/srv/polarita/data/paperless-test
@@ -12,6 +15,11 @@ flock 9
 # Rozbalení kořenového disku a zkouška OCR sdílejí I/O s běhy Chromium a karantény.
 exec 8>/run/polarita-test-zatez.lock
 flock 8
+# OCI vlastní /etc/hosts připojuje zvenčí. Incus připojí čitelnou tabulku už při startu.
+hostsfile="$work/conf/hosts-$host"
+printf '127.0.0.1 localhost\n127.0.1.1 paperless-test\n::1 localhost ip6-localhost ip6-loopback\n10.239.32.13 %s\n' "$host" >"$hostsfile.next"
+chmod 0644 "$hostsfile.next"
+if cmp -s "$hostsfile.next" "$hostsfile"; then rm "$hostsfile.next"; else mv -T "$hostsfile.next" "$hostsfile"; fi
 [[ $(findmnt -no SOURCE --mountpoint /srv/polarita/data) == polarita_zfs/data ]]
 if ! zfs list -Ho name "$dataset" >/dev/null 2>&1; then
     [[ ! -e $data ]]
