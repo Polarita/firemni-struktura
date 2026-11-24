@@ -10,6 +10,8 @@ StartLimitIntervalSec=300
 StartLimitBurst=4
 
 [Service]
+Environment=DATABASE_POOL_MAX=4
+Environment=DATABASE_IDLE_TIMEOUT_SECONDS=30
 Type=simple
 User=paperclip-test
 Group=paperclip-test
