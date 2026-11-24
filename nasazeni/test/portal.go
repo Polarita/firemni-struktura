@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/netip"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -27,7 +28,7 @@ const cookieName = "__Host-polarita-test"
 var page = template.Must(template.New("portal").Parse(`<!doctype html><html lang="cs"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ředitelství Polarity</title><style>
 :root{font:110%/1.55 "Segoe UI",system-ui,sans-serif;color:#152a37;background:#f0f4f4}
 body{margin:0}header{padding:1rem max(5vw,1rem);border-bottom:1px solid #bdccce;color:#294956}main{max-width:32rem;margin:8vh auto;padding:2rem}h1{font-size:clamp(2rem,6vw,3rem);line-height:1.12}label{display:block;margin:1rem 0 .3rem}input,button{font:inherit;padding:.65rem .8rem;border-radius:.3rem}input{width:100%;box-sizing:border-box;border:1px solid #778b90}button{margin:1rem 0;background:#15555c;color:white;border:0;cursor:pointer}small{color:#314f57}
-</style><header>Polarita s.r.o.</header><main><h1>Ředitelství Polarity</h1>{{if .Signed}}<h2>Ověření přístupu</h2><p>Jste přihlášeni jako <strong>spravce</strong> v testovacím prostředí.</p><p><a href="/konfigurator">Otevřít konfigurátor paušálu Elektro Správa</a></p>{{if .Vzor}}<p><a href="/vzory/predavaci-protokol.pdf">Stáhnout vzor předávacího protokolu s testovací pečetí (PDF)</a></p>{{end}}<p><a href="/identita/realms/polarita/account/">Otevřít můj účet v Keycloaku</a></p>{{if .Metadata}}<p><a href="/lhutnik-test/spisy">Spisy</a></p><p><a href="/lhutnik-test/">Testovací lhůtník</a></p>{{end}}{{if .Dohled}}<p><a href="/dohled">Stav firemních služeb</a></p>{{end}}{{if .Tasks}}<p><a href="{{.Tasks}}">Otevřít úkolovník Vikunja</a></p>{{end}}{{if .Vault}}<p><a href="{{.Vault}}">Otevřít znalostní paměť</a></p>{{end}}{{if .Paperclip}}<p><a href="{{.Paperclip}}">Otevřít řízení firmy v Paperclipu</a></p>{{end}}{{if .Decisions}}<p><a href="{{.Decisions}}">Vyzkoušet rozhodnutí ve vzorovém spisu</a></p>{{end}}{{if .Chat}}<p><a href="{{.Chat}}">Otevřít týmový chat Zulip</a></p>{{end}}{{if .Git}}<p><a href="/git/user/oauth2/keycloak">Otevřít firemní Git</a></p>{{end}}<p><a href="/hesla/">Otevřít správce hesel Vaultwarden</a><br><small>Testovací účet spravce@polarita.test používá stejné heslo jako ředitelství.</small></p><form method="post" action="/odhlasit"><button>Odhlásit se</button></form>{{else}}<p>Přihlášení do testovacího prostředí</p>{{if .Error}}<p role="alert">{{.Error}}</p>{{end}}<form method="post" action="/prihlasit"><label for="u">Jméno</label><input id="u" name="username" autocomplete="username" required><label for="p">Heslo</label><input id="p" name="password" type="password" autocomplete="current-password" required><button>Přihlásit se</button></form>{{end}}</main></html>`))
+</style><header>Polarita s.r.o.</header><main><h1>Ředitelství Polarity</h1>{{if .Signed}}<h2>Ověření přístupu</h2><p>Jste přihlášeni jako <strong>spravce</strong> v testovacím prostředí.</p><p><a href="/konfigurator">Otevřít konfigurátor paušálu Elektro Správa</a></p>{{if .Vzor}}<p><a href="/vzory/predavaci-protokol.pdf">Stáhnout vzor předávacího protokolu s testovací pečetí (PDF)</a></p>{{end}}<p><a href="/identita/realms/polarita/account/">Otevřít můj účet v Keycloaku</a></p>{{if .Metadata}}<p><a href="/lhutnik-test/spisy">Spisy</a></p><p><a href="/lhutnik-test/">Testovací lhůtník</a></p>{{end}}{{if .Dohled}}<p><a href="/dohled">Stav firemních služeb</a></p>{{end}}{{if .Tasks}}<p><a href="{{.Tasks}}">Otevřít úkolovník Vikunja</a></p>{{end}}{{if .Vault}}<p><a href="{{.Vault}}">Otevřít znalostní paměť</a></p>{{end}}{{if .Paperclip}}<p><a href="{{.Paperclip}}">Otevřít řízení firmy v Paperclipu</a></p>{{end}}{{if .Decisions}}<p><a href="{{.Decisions}}">Vyzkoušet rozhodnutí ve vzorovém spisu</a></p>{{end}}{{if .Chat}}<p><a href="{{.Chat}}">Otevřít týmový chat Zulip</a></p>{{end}}{{if .Git}}<p><a href="/git/user/oauth2/keycloak">Otevřít firemní Git</a></p>{{end}}<p><a href="/hesla/">Otevřít správce hesel Vaultwarden</a><br><small>Testovací účet spravce@polarita.test používá stejné heslo jako ředitelství.</small></p><form method="post" action="/odhlasit"><button>Odhlásit se</button></form>{{else}}<p>Přihlášení do testovacího prostředí</p>{{if .Error}}<p role="alert">{{.Error}}</p>{{end}}<form method="post" action="/prihlasit">{{if .Spis}}<input type="hidden" name="spis" value="{{.Spis}}">{{end}}<label for="u">Jméno</label><input id="u" name="username" autocomplete="username" required><label for="p">Heslo</label><input id="p" name="password" type="password" autocomplete="current-password" required><button>Přihlásit se</button></form>{{end}}</main></html>`))
 
 const vzor = "/usr/local/share/predavaci-protokol-test.pdf"
 
@@ -81,6 +82,9 @@ type portal struct {
 }
 
 const metadataPath = "/lhutnik-test/"
+
+var cisloSpisu = regexp.MustCompile(`^POL-([1-9][0-9]{2}-)?[0-9]{4}-[0-9]{5}$`)
+
 const metadataSocket = "/run/polarita-metadata.sock"
 
 var metadataClient = &http.Client{
@@ -104,6 +108,10 @@ func (p *portal) metadata(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if r.Method == http.MethodGet {
+		if spis := r.URL.Query().Get("spis"); r.URL.Path == metadataPath+"spisy" && cisloSpisu.MatchString(spis) {
+			http.Redirect(w, r, "/?spis="+spis, http.StatusSeeOther)
+			return
+		}
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	} else {
 		http.Error(w, "Přihlaste se do ředitelství.", http.StatusUnauthorized)
@@ -158,6 +166,7 @@ func (p *portal) serveMetadata(w http.ResponseWriter, r *http.Request) {
 }
 
 type portalView struct {
+	Spis      string
 	Tasks     string
 	Vault     string
 	Paperclip string
@@ -241,6 +250,13 @@ func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var view portalView
 	switch {
 	case r.URL.Path == "/" && r.Method == "GET":
+		if spis := r.URL.Query().Get("spis"); cisloSpisu.MatchString(spis) {
+			view.Spis = spis
+			if signed {
+				http.Redirect(w, r, metadataPath+"spisy?spis="+spis, http.StatusSeeOther)
+				return
+			}
+		}
 	case r.URL.Path == "/prehled" && r.Method == "GET":
 		if !signed {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -276,6 +292,9 @@ func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Chybný formulář", 400)
 			return
 		}
+		if spis := r.PostForm.Get("spis"); cisloSpisu.MatchString(spis) {
+			view.Spis = spis
+		}
 		newToken, status := p.login(r.PostForm.Get("username"), r.PostForm.Get("password"), token)
 		switch status {
 		case http.StatusTooManyRequests:
@@ -291,7 +310,11 @@ func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(status)
 		default:
 			http.SetCookie(w, &http.Cookie{Name: cookieName, Value: newToken, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: 7200})
-			http.Redirect(w, r, "/prehled", 303)
+			next := "/prehled"
+			if view.Spis != "" {
+				next = metadataPath + "spisy?spis=" + view.Spis
+			}
+			http.Redirect(w, r, next, http.StatusSeeOther)
 			return
 		}
 	case r.URL.Path == "/odhlasit" && r.Method == "POST":

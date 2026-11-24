@@ -17,7 +17,7 @@ async function otevri(url, options) {
     byId("alias").textContent = data.alias;
     byId("pobocka").textContent = String(data.branch_id);
     byId("cas").textContent = new Date(data.zalozeno).toLocaleString("cs-CZ");
-    history.replaceState(null, "", "#" + data.case_id);
+    history.replaceState(null, "", "?spis=" + encodeURIComponent(data.case_id));
     byId("cislo").value = data.case_id;
     byId("karta").hidden = false;
     stav.textContent = "Spis je otevřený.";
@@ -48,7 +48,7 @@ byId("hledani").addEventListener("submit", async (e) => {
 });
 
 async function otevriOdkaz() {
-    const code = location.hash.slice(1);
+    const code = new URL(location.href).searchParams.get("spis") || location.hash.slice(1);
     if (!code) {
         ++request;
         byId("karta").hidden = true;
@@ -62,4 +62,5 @@ async function otevriOdkaz() {
     }
 }
 window.addEventListener("hashchange", otevriOdkaz);
-if (location.hash) otevriOdkaz();
+window.addEventListener("popstate", otevriOdkaz);
+if (location.search || location.hash) otevriOdkaz();
