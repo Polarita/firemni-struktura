@@ -1,0 +1,11 @@
+{
+  "database": "db_erp_lhutnik",
+  "schema": "polarita_test_metadata",
+  "entity": "termin",
+  "title": "Testovací termín",
+  "fields": {
+    "popis": {"type": "string", "title": "Popis", "maxLength": 160},
+    "dny": {"type": "integer", "title": "Počet dnů", "minimum": 1, "maximum": 365},
+    "vyrizeno": {"type": "boolean", "title": "Vyřízeno"}
+  }
+}

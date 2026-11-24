@@ -136,7 +136,12 @@ git() {
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/git/zkouska_prihlaseni.py "https://$fqdn" | tee -a "$tmp/gitea.txt"
     "${guest[@]}" python3 "$dest/nasazeni/test/git/repozitar.py" | tee -a "$tmp/gitea.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/git/fronta.sh" | tee -a "$tmp/gitea.txt"
-    git archive --format=tar.gz "$commit" | "${guest[@]}" install -m 0600 /dev/stdin "$dest/zdroj-ci.tar.gz"
+    git archive --format=tar.gz --output="$tmp/zdroj-ci.tar.gz" "$commit"
+    local digest upload
+    digest=$(sha256sum "$tmp/zdroj-ci.tar.gz")
+    upload=$("${guest[@]}" mktemp "$dest/.zdroj-ci-XXXXXXXX")
+    "${inc[@]}" file push --mode 0600 --project polarita "$tmp/zdroj-ci.tar.gz" "polarita-hq$upload"
+    "${guest[@]}" bash -ec 'sum=$(sha256sum "$1"); [[ ${sum%% *} == "$3" ]]; mv -T "$1" "$2"' -- "$upload" "$dest/zdroj-ci.tar.gz" "${digest%% *}"
     "${guest[@]}" bash "$dest/nasazeni/test/git/kontrola.sh" "$dest" | tee -a "$tmp/gitea.txt"
 }
 
@@ -152,6 +157,13 @@ rozhodnuti() {
     "${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-07
     "${inc[@]}" file push --project polarita "$tmp/paperclip.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-07/paperclip-$commit.txt"
     "${guest[@]}" incus exec -T reditelstvi-test -- touch /usr/local/share/polarita-gitea-oidc.ok
+}
+
+metadata() {
+    "${guest[@]}" bash "$dest/nasazeni/test/metadata-schema-kernel/instalace.sh" | tee "$tmp/metadata.txt"
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
+        python3 nasazeni/test/metadata-schema-kernel/over_portal.py "https://$fqdn" | tee -a "$tmp/metadata.txt"
+    "${inc[@]}" file push --project polarita "$tmp/metadata.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-07/metadata-$commit.txt"
 }
 
 obnova_databazi() {
@@ -230,7 +242,7 @@ predani() {
     "${guest[@]}" sh -ec 'ln -sfn "$1" /srv/polarita/infra/releases/.current-new; mv -Tf /srv/polarita/infra/releases/.current-new /srv/polarita/infra/releases/current' deploy "$dest"
 }
 
-kroky=(portal sit hesla postgres sluzby tym trezor databaze paperclip identita git rozhodnuti obnova_databazi karantena zalohy dohled zulip obnova predani)
+kroky=(portal sit hesla postgres sluzby tym trezor databaze paperclip identita git rozhodnuti metadata obnova_databazi karantena zalohy dohled zulip obnova predani)
 over_vstup() {
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn"
 }

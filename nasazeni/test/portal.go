@@ -2,13 +2,17 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"html/template"
+	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/netip"
 	"os"
@@ -23,7 +27,7 @@ const cookieName = "__Host-polarita-test"
 var page = template.Must(template.New("portal").Parse(`<!doctype html><html lang="cs"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ředitelství Polarity</title><style>
 :root{font:110%/1.55 "Segoe UI",system-ui,sans-serif;color:#152a37;background:#f0f4f4}
 body{margin:0}header{padding:1rem max(5vw,1rem);border-bottom:1px solid #bdccce;color:#294956}main{max-width:32rem;margin:8vh auto;padding:2rem}h1{font-size:clamp(2rem,6vw,3rem);line-height:1.12}label{display:block;margin:1rem 0 .3rem}input,button{font:inherit;padding:.65rem .8rem;border-radius:.3rem}input{width:100%;box-sizing:border-box;border:1px solid #778b90}button{margin:1rem 0;background:#15555c;color:white;border:0;cursor:pointer}small{color:#314f57}
-</style><header>Polarita s.r.o.</header><main><h1>Ředitelství Polarity</h1>{{if .Signed}}<h2>Ověření přístupu</h2><p>Jste přihlášeni jako <strong>spravce</strong> v testovacím prostředí.</p><p><a href="/konfigurator">Otevřít konfigurátor paušálu Elektro Správa</a></p>{{if .Vzor}}<p><a href="/vzory/predavaci-protokol.pdf">Stáhnout vzor předávacího protokolu s testovací pečetí (PDF)</a></p>{{end}}<p><a href="/identita/realms/polarita/account/">Otevřít můj účet v Keycloaku</a></p>{{if .Dohled}}<p><a href="/dohled">Stav firemních služeb</a></p>{{end}}{{if .Paperclip}}<p><a href="{{.Paperclip}}">Otevřít řízení firmy v Paperclipu</a></p>{{end}}{{if .Decisions}}<p><a href="{{.Decisions}}">Vyzkoušet rozhodnutí ve vzorovém spisu</a></p>{{end}}{{if .Chat}}<p><a href="{{.Chat}}">Otevřít týmový chat Zulip</a></p>{{end}}{{if .Git}}<p><a href="/git/user/oauth2/keycloak">Otevřít firemní Git</a></p>{{end}}<p><a href="/hesla/">Otevřít správce hesel Vaultwarden</a><br><small>Testovací účet spravce@polarita.test používá stejné heslo jako ředitelství.</small></p><form method="post" action="/odhlasit"><button>Odhlásit se</button></form>{{else}}<p>Přihlášení do testovacího prostředí</p>{{if .Error}}<p role="alert">{{.Error}}</p>{{end}}<form method="post" action="/prihlasit"><label for="u">Jméno</label><input id="u" name="username" autocomplete="username" required><label for="p">Heslo</label><input id="p" name="password" type="password" autocomplete="current-password" required><button>Přihlásit se</button></form>{{end}}</main></html>`))
+</style><header>Polarita s.r.o.</header><main><h1>Ředitelství Polarity</h1>{{if .Signed}}<h2>Ověření přístupu</h2><p>Jste přihlášeni jako <strong>spravce</strong> v testovacím prostředí.</p><p><a href="/konfigurator">Otevřít konfigurátor paušálu Elektro Správa</a></p>{{if .Vzor}}<p><a href="/vzory/predavaci-protokol.pdf">Stáhnout vzor předávacího protokolu s testovací pečetí (PDF)</a></p>{{end}}<p><a href="/identita/realms/polarita/account/">Otevřít můj účet v Keycloaku</a></p>{{if .Metadata}}<p><a href="/lhutnik-test/">Testovací lhůtník</a></p>{{end}}{{if .Dohled}}<p><a href="/dohled">Stav firemních služeb</a></p>{{end}}{{if .Paperclip}}<p><a href="{{.Paperclip}}">Otevřít řízení firmy v Paperclipu</a></p>{{end}}{{if .Decisions}}<p><a href="{{.Decisions}}">Vyzkoušet rozhodnutí ve vzorovém spisu</a></p>{{end}}{{if .Chat}}<p><a href="{{.Chat}}">Otevřít týmový chat Zulip</a></p>{{end}}{{if .Git}}<p><a href="/git/user/oauth2/keycloak">Otevřít firemní Git</a></p>{{end}}<p><a href="/hesla/">Otevřít správce hesel Vaultwarden</a><br><small>Testovací účet spravce@polarita.test používá stejné heslo jako ředitelství.</small></p><form method="post" action="/odhlasit"><button>Odhlásit se</button></form>{{else}}<p>Přihlášení do testovacího prostředí</p>{{if .Error}}<p role="alert">{{.Error}}</p>{{end}}<form method="post" action="/prihlasit"><label for="u">Jméno</label><input id="u" name="username" autocomplete="username" required><label for="p">Heslo</label><input id="p" name="password" type="password" autocomplete="current-password" required><button>Přihlásit se</button></form>{{end}}</main></html>`))
 
 const vzor = "/usr/local/share/predavaci-protokol-test.pdf"
 
@@ -76,6 +80,82 @@ type portal struct {
 	failures []time.Time
 }
 
+const metadataPath = "/lhutnik-test/"
+const metadataSocket = "/run/polarita-metadata.sock"
+
+var metadataClient = &http.Client{
+	Timeout: 7 * time.Second,
+	Transport: &http.Transport{DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+		return (&net.Dialer{}).DialContext(ctx, "unix", metadataSocket)
+	}},
+	CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse },
+}
+
+func (p *portal) metadata(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie(cookieName)
+	if err == nil {
+		p.lock.Lock()
+		expiry := p.sessions[cookie.Value]
+		p.lock.Unlock()
+		if time.Now().Before(expiry) {
+			p.serveMetadata(w, r)
+			return
+		}
+	}
+	if r.Method == http.MethodGet {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+	} else {
+		http.Error(w, "Přihlaste se do ředitelství.", http.StatusUnauthorized)
+	}
+}
+
+func (p *portal) serveMetadata(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		if r.Method != http.MethodPost && r.Method != http.MethodPut {
+			http.Error(w, "Nepodporovaná metoda", http.StatusMethodNotAllowed)
+			return
+		}
+		if r.Header.Get("Origin") != "https://"+r.Host {
+			http.Error(w, "Cizí původ požadavku", http.StatusForbidden)
+			return
+		}
+	}
+	path := strings.TrimPrefix(r.URL.EscapedPath(), metadataPath)
+	req, err := http.NewRequestWithContext(r.Context(), r.Method, "http://localhost/"+path, nil)
+	if err != nil {
+		http.Error(w, "Neplatná cesta", http.StatusBadRequest)
+		return
+	}
+	if r.Method != http.MethodGet {
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1<<20))
+		if err != nil {
+			http.Error(w, "Neplatné tělo", http.StatusBadRequest)
+			return
+		}
+		req.Body = io.NopCloser(bytes.NewReader(body))
+		req.ContentLength = int64(len(body))
+		req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
+		if tag := r.Header.Get("If-Match"); tag != "" {
+			req.Header.Set("If-Match", tag)
+		}
+	}
+	res, err := metadataClient.Do(req)
+	if err != nil {
+		http.Error(w, "Lhůtník je dočasně nedostupný.", http.StatusServiceUnavailable)
+		return
+	}
+	defer res.Body.Close()
+	for _, name := range []string{"Content-Type", "ETag"} {
+		if value := res.Header.Get(name); value != "" {
+			w.Header().Set(name, value)
+		}
+	}
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
+	w.WriteHeader(res.StatusCode)
+	io.Copy(w, res.Body)
+}
+
 func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	peer, err := netip.ParseAddrPort(r.RemoteAddr)
 	if err != nil || !(peer.Addr().IsLoopback() || peer.Addr() == netip.MustParseAddr("10.239.31.10")) {
@@ -87,6 +167,10 @@ func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Referrer-Policy", "same-origin")
 	if r.Method == "POST" && r.Header.Get("Origin") != "" && r.Header.Get("Origin") != "https://"+r.Host {
 		http.Error(w, "Cizí původ požadavku", 403)
+		return
+	}
+	if strings.HasPrefix(r.URL.Path, metadataPath) {
+		p.metadata(w, r)
 		return
 	}
 	p.lock.Lock()
@@ -107,6 +191,7 @@ func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_, signed := p.sessions[token]
 	_, vzorErr := os.Stat(vzor)
 	_, monitorErr := os.Stat(monitorFile)
+	metadataInfo, metadataErr := os.Stat(metadataSocket)
 	_, gitErr := os.Stat("/usr/local/share/polarita-gitea-oidc.ok")
 	chat, _ := os.ReadFile("/usr/local/share/polarita-zulip-url")
 	orchestrator, _ := os.ReadFile("/usr/local/share/polarita-paperclip-url")
@@ -116,11 +201,12 @@ func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Decisions string
 		Chat      string
 		Dohled    bool
+		Metadata  bool
 		Git       bool
 		Vzor      bool
 		Signed    bool
 		Error     string
-	}{Decisions: strings.TrimSpace(string(decisions)), Paperclip: strings.TrimSpace(string(orchestrator)), Chat: strings.TrimSpace(string(chat)), Dohled: monitorErr == nil, Signed: signed, Vzor: vzorErr == nil, Git: gitErr == nil}
+	}{Metadata: metadataErr == nil && metadataInfo.Mode()&os.ModeSocket != 0, Decisions: strings.TrimSpace(string(decisions)), Paperclip: strings.TrimSpace(string(orchestrator)), Chat: strings.TrimSpace(string(chat)), Dohled: monitorErr == nil, Signed: signed, Vzor: vzorErr == nil, Git: gitErr == nil}
 	switch {
 	case r.URL.Path == "/" && r.Method == "GET":
 	case r.URL.Path == "/prehled" && r.Method == "GET":

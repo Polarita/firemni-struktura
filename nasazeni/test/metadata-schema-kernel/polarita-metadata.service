@@ -1,0 +1,18 @@
+[Unit]
+Description=Formulář a verzované API vlastní entity TEST
+After=polarita-postgres.service
+Requires=polarita-postgres.service
+[Service]
+User=pol_metadata_api
+RuntimeDirectory=polarita-metadata-test
+RuntimeDirectoryMode=0700
+UMask=0077
+ExecStart=/usr/bin/python3 /opt/polarita-metadata-test/current/server.py /opt/polarita-metadata-test/current/vystup /run/polarita-metadata-test/api.sock
+Restart=on-failure
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+RestrictAddressFamilies=AF_UNIX
+[Install]
+WantedBy=multi-user.target
