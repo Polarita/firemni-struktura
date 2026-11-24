@@ -151,6 +151,8 @@ def collect(root):
         shutil.copyfile(source / "pozice.json", target / "pozice.json")
         if (source / "rozhodnuti.json").exists():
             shutil.copyfile(source / "rozhodnuti.json", target / "rozhodnuti.json")
+        if (source / "finops.json").exists():
+            shutil.copyfile(source / "finops.json", target / "finops.json")
         copytree(source / "test", target / "data")
     infrastruktura.collect(root, snapshot)
     sums={str(f.relative_to(root)):hashfile(f) for f in root.rglob("*") if not f.is_symlink() and f.is_file()}

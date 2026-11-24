@@ -54,8 +54,30 @@ def over(data):
     print("Obnovený Paperclip i Decisions potvrzují oba hlasy, jejich původ, přesný diff a verze tří vzorových spisů.")
 
 
+def over_finops(data):
+    marker = data / "finops.json"
+    if not marker.is_file():
+        return  # Starší souborová záloha ještě neukládala doklad rozpočtového vzoru.
+    expected = json.loads(marker.read_bytes())
+    rows = sql("""
+        SELECT jsonb_build_object('hlas',a.id,'rozsah',a.rozsah)
+        FROM polarita_finops.uvolneni u JOIN polarita_finops.hlasovani a ON a.id=u.hlas
+        JOIN polarita_finops.navrhy n ON n.id=u.navrh AND n.ukol=u.ukol AND n.prijemce=u.pozice
+        WHERE a.rozsah = jsonb_build_object('navrh',n.id,'rezim','TEST','mesic',to_char(n.mesic,'YYYY-MM'),
+            'pozice',u.pozice,'ukol',u.ukol,'centy',u.centy) AND n.mesic=u.mesic AND n.centy=u.centy;
+    """)
+    if expected not in [json.loads(row) for row in rows]:
+        raise RuntimeError("Obnova FinOps ztratila vazbu návrhu, souhlasu nebo technického uvolnění")
+    states=sql("BEGIN; SET LOCAL ROLE pol_finops_read; SELECT polarita_finops.stav(); ROLLBACK;")
+    state=json.loads(states[0])
+    if (len(state['pozice']),state['strop_cent'],sum(r['kvota'] for r in state['pozice']),state['rezerva_cent'])!=(20,47000,39950,7050):
+        raise RuntimeError("Obnovené kvóty nebo souhrnný limit Paperclipu nesouhlasí")
+    print("Obnovený rozpočet ověřil dvacet kvót a věcně svázaný doklad P1.")
+
 if __name__ == "__main__":
     if not re.fullmatch(r"(restic-obnova-[a-f0-9]{12}|obnova-pg-[a-f0-9]{10})",socket.gethostname().split(".")[0]) or {
             p.name for p in Path("/sys/class/net").iterdir()} != {"lo"}:
         raise SystemExit("Ověření vyžaduje izolovanou obnovu")
-    over(Path("/var/tmp/obnova-polarita/paperclip"))
+    data = Path("/var/tmp/obnova-polarita/paperclip")
+    over(data)
+    over_finops(data)

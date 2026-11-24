@@ -5,6 +5,7 @@ from pathlib import Path
 import socket
 import subprocess
 import sys
+import tempfile
 from uuid import UUID, uuid5
 
 def db(role, statement, **variables):
@@ -31,6 +32,12 @@ def main():
                     "/etc/polarita-paperclip/finops-hlas.py",sys.argv[1],json.dumps(scope)],stdin=secret,text=True)
     approval=str(UUID(raw.strip()))
     db("release","SELECT polarita_finops.uvolni(:'hlas',:'navrh',:'pozice',:'ukol',:centy)",hlas=approval,**scope)
+    file = Path("/srv/polarita/data/paperclip/finops.json")
+    with tempfile.NamedTemporaryFile("w",dir=file.parent,delete=False) as tmp:
+        json.dump({"hlas":approval,"rozsah":scope},tmp)
+        tmp.flush()
+        os.fsync(tmp.fileno())
+    os.replace(tmp.name,file)
     print("Rozhodnutí",approval,"potvrdil správce v Paperclipu. Návrh zapsala identita 11001 a jediný cent pro vzorovou úlohu pozice 16002 uvolnila oddělená identita 17005. Výdaj nevznikl.")
 
 if __name__=="__main__":
