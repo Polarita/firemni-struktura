@@ -89,7 +89,7 @@ BEGIN
     IF schvaleni IS NULL OR prijemce IS NULL OR ukol_id IS NULL OR castka IS NULL OR
         castka NOT BETWEEN 1 AND 7050 OR prijemce='17005' THEN RAISE EXCEPTION 'Neplatné uvolnění P1'; END IF;
     IF NOT EXISTS (SELECT FROM polarita_finops.navrhy n WHERE n.id=navrh_id AND
-        (n.mesic,n.prijemce,n.ukol,n.centy)=(obdobi,prijemce,ukol_id,castka))
+        (n.mesic,n.prijemce,n.ukol,n.centy)=(obdobi,uvolni.prijemce,ukol_id,castka))
     THEN RAISE EXCEPTION 'Chybí návrh 11001'; END IF;
     vzor := jsonb_build_object('navrh',navrh_id,'rezim','TEST','mesic',to_char(obdobi,'YYYY-MM'),'pozice',prijemce,'ukol',ukol_id,'centy',castka);
     IF NOT EXISTS (SELECT FROM polarita_finops.hlasovani h JOIN polarita_finops.kvoty q ON q.firma=h.firma
