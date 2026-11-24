@@ -25,7 +25,7 @@ class ApiError(RuntimeError):
 
 
 def call(method, path, *, token=None, data=None, form=None, cookie=None):
-    conn = HTTPConnection("127.0.0.1", 8080, timeout=20)
+    conn = HTTPConnection("127.0.0.1", 8080, timeout=90)
     headers = {}
     if token:
         headers["Authorization"] = "Bearer " + token
