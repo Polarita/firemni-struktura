@@ -102,6 +102,9 @@ sluzby() {
 }
 
 tym() {
+    "${guest[@]}" install -dm0750 /srv/polarita/workspace/dukazy/blok-08
+    "${guest[@]}" bash "$dest/nasazeni/test/vikunja/priprava.sh" | tee "$tmp/vikunja-priprava.txt"
+    "${inc[@]}" file push --project polarita "$tmp/vikunja-priprava.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/vikunja-priprava-$commit.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/paperclip/priprava.sh"
     "${guest[@]}" bash "$dest/nasazeni/test/zulip/fronta.sh"
     "${guest[@]}" bash "$dest/nasazeni/test/zulip/aplikace.sh" "$fqdn"
@@ -184,8 +187,6 @@ obnova_databazi() {
     printf 'https://%s:8446/pamet/\n' "$fqdn" | "${guest[@]}" incus exec -T reditelstvi-test -- sh -ec 'umask 022; cat >/usr/local/share/.polarita-silverbullet-url.next; mv -T /usr/local/share/.polarita-silverbullet-url.next /usr/local/share/polarita-silverbullet-url'
 
     "${guest[@]}" install -dm0750 /srv/polarita/workspace/dukazy/blok-08
-    "${guest[@]}" bash "$dest/nasazeni/test/vikunja/priprava.sh" | tee "$tmp/vikunja-priprava.txt"
-    "${inc[@]}" file push --project polarita "$tmp/vikunja-priprava.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/vikunja-priprava-$commit.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/archiv/instalace.sh" | tee "$tmp/archiv.txt"
     for proof in identita postgres databaze obnova-databazi znalosti valkey garage archiv gitea; do
         "${inc[@]}" file push --project polarita "$tmp/$proof.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-05/$proof-$commit.txt"

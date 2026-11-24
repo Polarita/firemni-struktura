@@ -20,6 +20,7 @@ const private = target + "/.polarita-agent"
 const tmpfs = 0x01021994
 
 type grant struct {
+	Vikunja    bool     `json:"vikunja"`
 	Paperclip  bool     `json:"paperclip"`
 	Zulip      bool     `json:"zulip"`
 	ZulipQueue bool     `json:"zulip_queue"`
@@ -160,10 +161,16 @@ template {
 		config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/gitea-stroj", template)
 		outputs["gitea-stroj"] = "gitea-stroj"
 	}
-	if g.Paperclip {
-		for _, key := range []string{"auth", "jwt", "master"} {
-			file := "paperclip-" + key
-			template := fmt.Sprintf(`{{ with secret "test/data/paperclip/aplikace" }}{{ .Data.data.%s }}{{ end }}`, key)
+	if g.Paperclip || g.Vikunja {
+		app := "paperclip"
+		keys := []string{"auth", "jwt", "master"}
+		if g.Vikunja {
+			app = "vikunja"
+			keys = []string{"secret", "oidc_secret"}
+		}
+		for _, key := range keys {
+			file := app + "-" + key
+			template := fmt.Sprintf(`{{ with secret "test/data/%s/aplikace" }}{{ .Data.data.%s }}{{ end }}`, app, key)
 			config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/"+file, template)
 			outputs[file] = file
 		}
