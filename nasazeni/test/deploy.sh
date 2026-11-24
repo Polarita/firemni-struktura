@@ -14,14 +14,29 @@ dest=/srv/polarita/infra/releases/$commit
 "${guest[@]}" install -d "$dest"
 git archive "$commit" | "${guest[@]}" tar -x -C "$dest"
 tmp=$(mktemp -d)
-trap 'rm -rf "$tmp"' EXIT
+vpn_tmp=$("${guest[@]}" mktemp -d /run/polarita-vpn-test-XXXXXXXX)
+trap 'rm -rf "$tmp"; "${guest[@]}" rm -rf -- "$vpn_tmp"' EXIT
 CGO_ENABLED=0 go build -trimpath -o "$tmp/portal" nasazeni/test/portal.go
 "${inc[@]}" file push --mode 0755 --project polarita "$tmp/portal" "polarita-hq$dest/portal"
 "${guest[@]}" "$dest/nasazeni/test/incus.sh"
 "${guest[@]}" "$dest/nasazeni/test/site.sh"
 "${guest[@]}" "$dest/nasazeni/test/portal.sh" "$dest/portal"
+"${guest[@]}" "$dest/nasazeni/test/hrana.sh"
+"${guest[@]}" curl -fsS --retry 4 --retry-connrefused -o /dev/null http://127.0.0.1:18184/
 sudo -n bash nasazeni/test/vstup.sh
 fqdn=$(tailscale status --json | python3 -c 'import json,sys;print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))')
 "${guest[@]}" cat /srv/polarita/vault/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn"
+"${inc[@]}" file push --project polarita "$(command -v tailscale)" "$(command -v tailscaled || echo /usr/sbin/tailscaled)" "polarita-hq$vpn_tmp/"
+"${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-03
+if command -v dig >/dev/null; then
+    bash nasazeni/test/hrana/inventura-dns.sh >"$tmp/dns.txt"
+    "${inc[@]}" file push --project polarita "$tmp/dns.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-03/verejne-dns-$commit.txt"
+fi
+"${guest[@]}" python3 "$dest/nasazeni/test/hrana/zkouska-vpn.py" "$vpn_tmp" | tee "$tmp/zkouska-vpn.txt"
+"${inc[@]}" file push --project polarita "$tmp/zkouska-vpn.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-03/zkouska-vpn-$commit.txt"
+# Starší vydání vytvořilo přímý vstup. Odstraň ho až po ověření nové cesty.
+if [[ $("${guest[@]}" incus config device get reditelstvi-test portal listen 2>/dev/null || true) == tcp:127.0.0.1:18182 ]]; then
+    "${guest[@]}" incus config device remove reditelstvi-test portal
+fi
 "${guest[@]}" sh -ec 'ln -sfn "$1" /srv/polarita/infra/releases/.current-new; mv -Tf /srv/polarita/infra/releases/.current-new /srv/polarita/infra/releases/current' deploy "$dest"
 printf 'Ověřené přihlášení ve VPN: https://%s/\n' "$fqdn"

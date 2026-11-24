@@ -23,6 +23,8 @@ def check(path, data, status, final_path, needle):
     except urllib.error.HTTPError as error:
         response = error
     with response:
+        if "1.1 polarita-caddy" not in (response.headers.get_all("Via") or []):
+            raise SystemExit("Odpověď neprošla přes Caddy v zóně dmz_edge")
         # Prohlížeč při politice no-referrer může u POST odeslat Origin: null.
         if response.headers.get("Referrer-Policy") != "same-origin":
             raise SystemExit("Prohlížeč potřebuje původ pro odeslání přihlašovacího formuláře")

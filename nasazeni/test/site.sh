@@ -31,6 +31,13 @@ for resource in json.load(sys.stdin).get("resource_changes", []):
         continue
     if resource["address"].startswith(("incus_network.zone[", "incus_profile.zone[")) and actions == ["create"]:
         continue
+    if resource["address"] == "incus_network.zone[\"dmz_edge\"]" and actions == ["update"]:
+        before = dict(resource["change"]["before"]["config"])
+        after = dict(resource["change"]["after"]["config"])
+        before.pop("raw.dnsmasq", None)
+        after.pop("raw.dnsmasq", None)
+        if before == after:
+            continue
     sys.exit("Neočekávaná změna: " + resource["address"])
 '
 tofu apply -input=false "$plan"

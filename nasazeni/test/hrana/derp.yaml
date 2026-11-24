@@ -1,0 +1,20 @@
+regions:
+  999:
+    regionid: 999
+    regioncode: polarita
+    regionname: Polarita TEST
+    nodes:
+      - name: 999a
+        regionid: 999
+        hostname: vpn.polarita.test
+        ipv4: 10.239.31.10
+        ipv6: none
+        derpport: 8443
+        stunport: -1
+      - name: 999b
+        regionid: 999
+        hostname: stun.polarita.test
+        ipv4: 10.239.31.11
+        ipv6: none
+        stunport: 3478
+        stunonly: true

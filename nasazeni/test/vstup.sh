@@ -21,18 +21,18 @@ if ! id polarita-relay >/dev/null 2>&1; then
 fi
 install -d -m 700 -o polarita-relay -g polarita-relay /home/polarita-relay/.ssh
 '
-printf 'restrict,port-forwarding,permitopen="127.0.0.1:18182",command="/bin/false" %s\n' "$(cat key.pub)" |
+printf 'restrict,port-forwarding,permitopen="127.0.0.1:18184",command="/bin/false" %s\n' "$(cat key.pub)" |
     "${guest[@]}" sh -c 'umask 077; cat >/home/polarita-relay/.ssh/authorized_keys; chown polarita-relay:polarita-relay /home/polarita-relay/.ssh/authorized_keys'
 # Uživatel smí jen místní forwarding na jediný port aplikace.
 gateway=$(ip -4 route get "$ip" | awk '{for(i=1;i<=NF;i++) if ($i=="src") print $(i+1)}')
-printf '%s\n' 'Match User polarita-relay' "    AllowUsers polarita-relay@$gateway" '    AllowTcpForwarding local' '    AllowStreamLocalForwarding no' '    PermitOpen 127.0.0.1:18182' '    MaxSessions 0' 'Match all' |
+printf '%s\n' 'Match User polarita-relay' "    AllowUsers polarita-relay@$gateway" '    AllowTcpForwarding local' '    AllowStreamLocalForwarding no' '    PermitOpen 127.0.0.1:18184' '    MaxSessions 0' 'Match all' |
     "${guest[@]}" sh -ec 'cat >/etc/ssh/sshd_config.d/60-polarita-relay.conf; sshd -t; systemctl reload ssh'
 cat >/etc/systemd/system/polarita-test-tunnel.service <<UNIT
 [Unit]
 Description=Privatni spojeni k testovacimu reditelstvi
 After=network-online.target
 [Service]
-ExecStart=/usr/bin/ssh -NT -F /dev/null -i $relay/key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$relay/known_hosts -o ExitOnForwardFailure=yes -o ServerAliveInterval=20 -o ServerAliveCountMax=3 -L 127.0.0.1:18183:127.0.0.1:18182 polarita-relay@$ip
+ExecStart=/usr/bin/ssh -NT -F /dev/null -i $relay/key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$relay/known_hosts -o ExitOnForwardFailure=yes -o ServerAliveInterval=20 -o ServerAliveCountMax=3 -L 127.0.0.1:18183:127.0.0.1:18184 polarita-relay@$ip
 Restart=always
 RestartSec=4
 [Install]

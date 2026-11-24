@@ -1,0 +1,16 @@
+{
+	admin 127.0.0.1:2019
+	auto_https disable_redirects
+}
+
+http://:8080 {
+	bind 127.0.0.1
+	header +Via "1.1 polarita-caddy"
+	reverse_proxy 10.239.32.10:8080
+}
+
+https://vpn.polarita.test:8443 {
+	bind 10.239.31.10
+	tls internal
+	reverse_proxy 10.239.31.11:8080
+}

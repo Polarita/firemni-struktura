@@ -6,12 +6,16 @@ table inet polarita_test {
     }
     chain forwarding {
         type filter hook forward priority -20; policy accept;
+        iifname "dmz_edge" oifname "app_internal" ip saddr 10.239.31.10 ip daddr 10.239.32.10 tcp dport 8080 ct state new,established counter accept
+        iifname "app_internal" oifname "dmz_edge" ip saddr 10.239.32.10 ip daddr 10.239.31.10 tcp sport 8080 ct state established counter accept
         iifname @zones counter drop
         oifname @zones counter drop
     }
     chain local_input {
         type filter hook input priority -20; policy accept;
         iifname @zones ct state established,related accept
+        iifname "dmz_edge" ip daddr 10.239.31.1 udp dport 53 accept
+        iifname "dmz_edge" ip daddr 10.239.31.1 tcp dport 53 accept
         iifname @zones udp sport 68 udp dport 67 accept
         iifname @zones counter drop
     }

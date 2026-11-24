@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"net/netip"
 	"os"
 	"strings"
 	"sync"
@@ -30,6 +31,11 @@ type portal struct {
 }
 
 func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	peer, err := netip.ParseAddrPort(r.RemoteAddr)
+	if err != nil || !(peer.Addr().IsLoopback() || peer.Addr() == netip.MustParseAddr("10.239.31.10")) {
+		http.Error(w, "Přístup vede přes firemní proxy", http.StatusForbidden)
+		return
+	}
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
 	w.Header().Set("Referrer-Policy", "same-origin")
@@ -128,6 +134,6 @@ func main() {
 	}
 	p := &portal{sessions: make(map[string]time.Time)}
 	copy(p.digest[:], b)
-	server := &http.Server{Addr: "127.0.0.1:8080", Handler: p, ReadTimeout: 8 * time.Second, WriteTimeout: 8 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 8192}
+	server := &http.Server{Addr: "0.0.0.0:8080", Handler: p, ReadTimeout: 8 * time.Second, WriteTimeout: 8 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 8192}
 	log.Fatal(server.ListenAndServe())
 }

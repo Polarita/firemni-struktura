@@ -10,13 +10,22 @@ resource "incus_network" "zone" {
   for_each = local.networks
   name     = each.key
   type     = "bridge"
-  config = {
+  config = merge({
     "ipv4.address"  = each.value
     "ipv4.nat"      = "false"
     "ipv4.firewall" = "false"
     "ipv6.address"  = "none"
     "dns.mode"      = "none"
-  }
+    }, each.key == "dmz_edge" ? {
+    "raw.dnsmasq" = <<-DNS
+      no-resolv
+      no-hosts
+      local=/polarita.test/
+      host-record=vpn.polarita.test,10.239.31.10
+      host-record=stun.polarita.test,10.239.31.11
+      dhcp-option=option:dns-server,10.239.31.1
+    DNS
+  } : {})
 }
 resource "incus_profile" "zone" {
   for_each = toset(concat(keys(local.networks), ["sandbox_airgap"]))

@@ -1,0 +1,10 @@
+[Unit]
+Description=Ověřený místní export testovacího Headscale
+After=incus.service
+Requires=incus.service
+RequiresMountsFor=/srv/polarita
+
+[Service]
+Type=oneshot
+ExecStart=/srv/polarita/infra/hrana/zaloha.sh
+UMask=0077
