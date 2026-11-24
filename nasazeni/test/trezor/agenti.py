@@ -17,6 +17,8 @@ CLIENTS = {
     "vaultwarden-test": ("10.239.33.11", 0, 0, "vaultwarden-agent"),
     "pecet-test": ("10.239.32.12", 65534, 65534, "pecet-agent"),
     "keycloak-test": ("10.239.32.11", 1000, 0, "keycloak-agent"),
+    "zulip-test": ("10.239.32.16", 0, 0, "zulip-agent"),
+    "zulip-fronta-test": ("10.239.32.17", 0, 0, "zulip-fronta-agent"),
     "gitea-test": ("10.239.32.13", 17307, 17307, "gitea-agent"),
     "garage-test": ("10.239.33.14", 17306, 17306, "garage-agent"),
     "valkey-test": ("10.239.33.13", 999, 999, "valkey-agent"),
@@ -59,6 +61,7 @@ def deliver(name, manager):
                        {"cidr_list": [cidr], "token_bound_cidrs": [cidr]}, manager)["data"]["secret_id"]
     payload = {"role_id": rid, "secret_id": secret, "uid": uid, "gid": gid, "path": fixture,
                "databases": p.DATABASE_ACCESS.get(name, ()), "seal": name == "pecet-test",
+               "zulip": name == "zulip-test", "zulip_queue": name in ("zulip-test","zulip-fronta-test"),
                "gitea": name == "gitea-test", "garage": name == "garage-test", "caches": p.CACHES if name == "valkey-test" else []}
     run("incus", "exec", "-T", name, "--user", "0", "--group", "0", "--",
         TARGET + "/agent", data=json.dumps(payload).encode())

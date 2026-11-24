@@ -20,16 +20,18 @@ const private = target + "/.polarita-agent"
 const tmpfs = 0x01021994
 
 type grant struct {
-	Gitea     bool     `json:"gitea"`
-	Garage    bool     `json:"garage"`
-	Caches    []string `json:"caches"`
-	Seal      bool     `json:"seal"`
-	Databases []string `json:"databases"`
-	RoleID    string   `json:"role_id"`
-	SecretID  string   `json:"secret_id"`
-	Path      string   `json:"path"`
-	UID       int      `json:"uid"`
-	GID       int      `json:"gid"`
+	Zulip      bool     `json:"zulip"`
+	ZulipQueue bool     `json:"zulip_queue"`
+	Gitea      bool     `json:"gitea"`
+	Garage     bool     `json:"garage"`
+	Caches     []string `json:"caches"`
+	Seal       bool     `json:"seal"`
+	Databases  []string `json:"databases"`
+	RoleID     string   `json:"role_id"`
+	SecretID   string   `json:"secret_id"`
+	Path       string   `json:"path"`
+	UID        int      `json:"uid"`
+	GID        int      `json:"gid"`
 }
 
 func memoryDirectory() error {
@@ -156,6 +158,21 @@ template {
 		template := `{{ with secret "test/data/pki/gitea-test" }}{{ .Data.data.sada }}{{ end }}`
 		config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/gitea-stroj", template)
 		outputs["gitea-stroj"] = "gitea-stroj"
+	}
+	if g.ZulipQueue {
+		fields := map[string][2]string{
+			"zulip__rabbitmq_password":  {"zulip/fronta", "rabbitmq_password"},
+			"zulip__memcached_password": {"zulip/fronta", "memcached_password"},
+		}
+		if g.Zulip {
+			fields["zulip__redis_password"] = [2]string{"valkey/zulip", "heslo"}
+			fields["zulip__secret_key"] = [2]string{"zulip/aplikace", "secret_key"}
+		}
+		for file, field := range fields {
+			template := fmt.Sprintf(`{{ with secret "test/data/%s" }}{{ .Data.data.%s }}{{ end }}`, field[0], field[1])
+			config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/"+file, template)
+			outputs[file] = file
+		}
 	}
 	for _, name := range g.Databases {
 		if !regexp.MustCompile(`^[a-z][a-z0-9_]{0,40}$`).MatchString(name) {
