@@ -32,6 +32,8 @@ provider = {"provider_id": "keycloak", "name": "Ředitelství Polarity", "client
             "settings": {"server_url": f"https://{host}/identita/realms/polarita",
                          "token_auth_method": "client_secret_basic"}}
 os.environ.update({
+    "DJANGO_SETTINGS_MODULE": "polarita_settings",
+    "PYTHONPATH": str(conf) + (os.pathsep + os.environ["PYTHONPATH"] if os.environ.get("PYTHONPATH") else ""),
     "PAPERLESS_URL": url, "PAPERLESS_BIND_ADDR": "10.239.32.21",
     "PAPERLESS_COOKIE_PREFIX": "polarchiv_", "PAPERLESS_PROXY_SSL_HEADER": '["HTTP_X_FORWARDED_PROTO","https"]',
     "PAPERLESS_DBENGINE": "postgresql", "PAPERLESS_DBHOST": "10.239.33.12", "PAPERLESS_DBPORT": "5432",

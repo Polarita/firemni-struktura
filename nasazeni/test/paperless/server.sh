@@ -25,9 +25,9 @@ python3 "$src/../identita/sluzba_oidc.py" "$host" paperless
 "${inside[@]}" sh -ec 'cmp -s /etc/polarita-paperless/hosts /etc/hosts || mount --bind /etc/polarita-paperless/hosts /etc/hosts'
 "${inside[@]}" python3 -c 'import socket, sys; assert {r[4][0] for r in socket.getaddrinfo(sys.argv[1],443)} == {"10.239.32.13"}' "$host"
 restart=false
-for file in postgres.crt oidc.crt url web.py; do
+for file in postgres.crt oidc.crt url polarita_settings.py web.py; do
     from="$tmp/$file"
-    [[ $file != web.py ]] || from="$src/web.py"
+    case $file in *.py) from="$src/$file" ;; esac
     if ! cmp -s "$from" "$work/conf/$file"; then
         install -m0644 "$from" "$work/conf/$file.next"
         mv -T "$work/conf/$file.next" "$work/conf/$file"
