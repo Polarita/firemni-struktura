@@ -13,6 +13,9 @@ while [[ ! -s /run/secrets/pg-zulip || ! -s /run/secrets/zulip__secret_key ||
          ! -s /run/secrets/zulip__social_auth_oidc_secret || ! -f /etc/polarita-zulip/pripraveno ]]; do sleep 3; done
 export SECRETS_postgres_password_FILE=/run/secrets/pg-zulip
 export SETTING_EXTERNAL_HOST="$POLARITA_WEB:8444"
+install -d -m 0700 -o zulip -g zulip /data/test-email
+export SETTING_EMAIL_BACKEND=django.core.mail.backends.filebased.EmailBackend SETTING_EMAIL_FILE_PATH=/data/test-email
+export SETTING_SESSION_COOKIE_NAME=polzulipsid SETTING_CSRF_COOKIE_NAME=polzulipcsrf
 export SETTING_ZULIP_ADMINISTRATOR=spravce@polarita.test
 export SETTING_REMOTE_POSTGRES_HOST=10.239.33.12 SETTING_REMOTE_POSTGRES_SSLMODE=verify-full
 install -d -m 0700 -o zulip -g zulip /home/zulip/.postgresql

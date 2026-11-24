@@ -1,4 +1,4 @@
-# Karta ai zaměstnance č. 18001: Šárka Benešová (ai) — Manažerka lidských zdrojů, mzdové přípravy JMHZ, BOZP a evidence spolupracovníků (`personalista`) · Verze 3.11
+# Karta ai zaměstnance č. 18001: Šárka Benešová (ai) — Manažerka lidských zdrojů, mzdové přípravy JMHZ, BOZP a evidence spolupracovníků (`personalista`) · Verze 3.12
 
 ## 1. Osobní a organizační karta
 
@@ -170,7 +170,7 @@ Připravujeme agendu Oddělení 18 (Lidé, Personalistika, BOZP a Terénní real
 
 ## 6. Zapojení do rozvojových balíčků `S1–S7` (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.11 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
+Balíčky `S1–S7` jsou ve Verzi 3.12 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
 
 * `Blok 13` (`S1`): vybírá smluvní typ a pracovníka v `Clean Room` podle `person_no` — konkrétní dohodu o odpovědnosti (obecná odpovědnost za škodu / dohoda o odpovědnosti za svěřené hodnoty / odpovědnost za ztrátu svěřených věcí) i doložku o sledování zaměstnanců následně vyplňuje deterministický backend generátoru `S1` přímo z šifrované `db_hr_lide` mimo kontext LLM.
 * `Blok 16` (`S4`): poskytuje kiosku verdikt způsobilosti přes `Clean Room`.
