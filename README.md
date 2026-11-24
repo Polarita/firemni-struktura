@@ -265,7 +265,7 @@ Ověř projekt, umístění VM, její systém, disky, síť a volnou paměť. Ev
 
 ### `Blok 7` — Orchestrátor `Paperclip` (`mutation_confirm`), `metadata-schema-kernel`, `Zulip`, oživení `20 ai` a `Eval Stage 1` (`Fáze C · Vrstva 07 · Týdny 5–6`)
 
-**Technický test před předáním.** Spusť agenty ve stavu SHADOW, použij názvy kanálů z kanonu a otestuj rozhodovací frontu na vzorovém spisu. Placení, rozesílání a ostré úkony zůstanou vypnuté.
+**Technický test před předáním.** Spusť agenty ve stavu SHADOW, použij názvy kanálů z kanonu a otestuj rozhodovací frontu na vzorovém spisu. Po obnově zálohy porovnej hierarchii a měsíční rozpočty všech 20 pozic v PostgreSQL s uloženými kartami a ověř výsledek 20/20 ve zprávě Stage 1. Placení, rozesílání a ostré úkony zůstanou vypnuté.
 
 
 * **Vstupní předpoklad:** Splněna celá **Fáze B** (`Bloky 5–6`).

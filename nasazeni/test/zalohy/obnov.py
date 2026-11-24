@@ -49,7 +49,7 @@ def main():
                 raise RuntimeError("Restic nedokončil čtení snapshotu")
         subprocess.run(["incus","file","push","--mode=0755","/srv/polarita/infra/openbao-test/bin/bao",name+"/var/tmp/bao"],check=True)
         subprocess.run(["incus","file","push","--mode=0644",str(TEST/"zalohy/over_soubory.py"),name+"/var/tmp/over_soubory.py"],check=True)
-        for filename in ("over_infrastrukturu.py","identita_vpn.py","over_zulip.py"):
+        for filename in ("over_infrastrukturu.py","identita_vpn.py","over_zulip.py","over_paperclip.py"):
             subprocess.run(["incus","file","push","--mode=0644",str(TEST/"zalohy"/filename),name+"/var/tmp/"+filename],check=True)
         subprocess.run(["incus","exec","-T",name,"--","python3","/var/tmp/over_soubory.py"],check=True)
         subprocess.run(["incus","file","push","--mode=0400",str(TEST/"zalohy/obnov_raft.py"),name+"/run/obnov_raft.py"],check=True)
@@ -69,6 +69,7 @@ gzip -dc /var/tmp/obnova-polarita/cluster.sql.gz |
         if pg.proof(name,"obnova_test").hex()!=saved:
             raise RuntimeError("Schémata databází, účty nebo identita po obnově nesouhlasí")
         subprocess.run(["incus","exec","-T",name,"--","python3","/var/tmp/over_zulip.py"],check=True)
+        subprocess.run(["incus","exec","-T",name,"--","python3","/var/tmp/over_paperclip.py"],check=True)
         if subprocess.run(["incus","exec","-T",name,"--","test","-f","/var/tmp/obnova-polarita/pitr-cil.txt"]).returncode == 0:
             subprocess.run(["incus","exec","-T",name,"--","bash","-se"],input=(TEST/"zalohy/wal-obnov.sh").read_bytes(),check=True)
         mark = WORK/".overena-obnova-next"

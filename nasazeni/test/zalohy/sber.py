@@ -144,6 +144,11 @@ def collect(root):
         shutil.copyfile(app / "zulip-secrets.conf", chat / "zulip-secrets.conf")
         copytree(app / "uploads", chat / "uploads")
     shutil.copyfile("/srv/polarita/infra/zulip-test/conf/pozice.json", chat / "pozice.json")
+    with snapshot("polarita_zfs/data/paperclip") as source:
+        target = root / "paperclip"
+        target.mkdir()
+        shutil.copyfile(source / "pozice.json", target / "pozice.json")
+        copytree(source / "test", target / "data")
     infrastruktura.collect(root, snapshot)
     sums={str(f.relative_to(root)):hashfile(f) for f in root.rglob("*") if not f.is_symlink() and f.is_file()}
     (root/"soubory.sha256.json").write_text(json.dumps(sums,sort_keys=True))
