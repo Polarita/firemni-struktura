@@ -16,6 +16,7 @@ fi
 [[ $(zfs get -Ho value encryptionroot polarita_zfs/data/paperclip) == polarita_zfs ]]
 install -d "$store/test"
 bash "$src/distribuce.sh"
+bash "$src/balicky.sh"
 cd "$work/tofu"
 install -m 0644 "$src/paperclip.tf" "$src/../incus/providers.tf" "$src/../incus/.terraform.lock.hcl" .
 tmp=$(mktemp -d)

@@ -37,4 +37,13 @@ resource "incus_instance" "paperclip" {
       readonly = "true"
     }
   }
+  device {
+    name = "software"
+    type = "disk"
+    properties = {
+      source   = "/var/lib/polarita-paperclip-distribuce"
+      path     = "/opt/paperclip"
+      readonly = "true"
+    }
+  }
 }
