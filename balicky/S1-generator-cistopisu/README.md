@@ -1,4 +1,4 @@
-# Blok 13 · Balíček S1 — Automatizovaný generátor PDF čistopisů smluv a protokolů · Verze 3.17
+# Blok 13 · Balíček S1 — Automatizovaný generátor PDF čistopisů smluv a protokolů · Verze 3.18
 
 Tento dokument je řídicím dokumentem **`Bloku 13`** Rozvojové Etapy II společnosti **Polarita s.r.o.** Balíček povyšuje právní a provozní minimum potvrzené advokátem po převzetí systému na **šablonovaný generátor tiskových PDF čistopisů**: 15 šablon v 8 sestavách s jednotnými proměnnými, vzorová data, generátor [`generate_pdfs.py`](./generate_pdfs.py) a manifest každého dokumentu pro transakční diff `mutation_confirm`. Šablony vyplňují agenti `15001 pravni-specialista`, `14005 zakazky`, `13001 eshop`, `16002 tajemnik` a `18001 personalista`. Balíček nepřidává žádného `ai` agenta ani databázi.
 
@@ -8,7 +8,7 @@ Tento dokument je řídicím dokumentem **`Bloku 13`** Rozvojové Etapy II spole
 
 ## 1. Seznam softwaru a modulů
 
-| Oblast | Soubor / modul | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.17) | Odpovědný `ai` / garant |
+| Oblast | Soubor / modul | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.18) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Šablony** | [`sablony/`](./sablony/) (15× `.md`) | verzováno v `Gitea`, cílově `/srv/polarita/vault/04-Pravo-a-Smlouvy/` | Čistopisy v Markdownu s proměnnými `{{snake_case}}`; první řádek nadpis, druhý řádek `**Spis:** {{spis_id}}`. | `15001` `pravni-specialista` *(technické sestavy `15002` `normovac`)* |
 | **Vzorová data** | [`data/`](./data/) (15× `.json`) | fiktivní hodnoty | Ke každé šabloně plochý JSON se všemi proměnnými — slouží k testu a jako vzor vstupu. Žádné skutečné osobní údaje. | `15001` `pravni-specialista` |
@@ -95,7 +95,7 @@ Připrav koncept dokumentu ke konkrétnímu spisu:
 
 ---
 
-## 5. Stav ve Verzi 3.17
+## 5. Stav ve Verzi 3.18
 
 Balíček je spustitelný a ověřený spuštěním; čeká převod potvrzeného právního minima do šablon. Stav ověřovacího běhu (počet vygenerovaných PDF, počet stran, výsledky testů) je zapsán v souboru [`vystup/OVERENI.md`](./vystup/OVERENI.md).
 

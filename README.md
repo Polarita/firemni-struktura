@@ -1,6 +1,6 @@
-# Polarita s.r.o. — instalace a provoz (Verze 3.17)
+# Polarita s.r.o. — instalace a provoz (Verze 3.18)
 
-Tento návod vede ai od přípravy virtuálního stroje po předání systému správci k uživatelskému testování. Verzi dokumentace a nasazení označuje Git tag `Polarita-3.17`.
+Tento návod vede ai od přípravy virtuálního stroje po předání systému správci k uživatelskému testování. Verzi dokumentace a nasazení označuje Git tag `Polarita-3.18`.
 
 Software a požadované zkoušky pro každý blok popisují [instalační vrstvy](./software/00-SEZNAM-SOFTWARU-README.md). Jádro návrhu tvoří `46 × .md` a čtyři tiskové dokumenty. Repozitář obsahuje návrh celé firmy i spustitelné části. Skutečný stav konkrétní instalace dokládají protokoly z virtuálního stroje.
 
@@ -42,6 +42,8 @@ V přehledu otevři **Spisy**, vyhledej číslo ve tvaru `POL-RRRR-NNNNN` nebo p
 
 Po ověření přihlášení do Paperless a načtení rastrového protokolu z karantény přidá instalátor do přehledu odkaz **Otevřít dokumentový archiv Paperless**. Archiv používá ve VPN port `8448` a testovací účet v Keycloaku. V přejímací zkoušce ai porovná zkušební přílohu s dokladem karantény, ověří české OCR a dohledá uložený protokol podle čísla spisu.
 
+Na kartě testovacího spisu otevři **Převzetí šanonů do 48 hodin**, vyber zkušební PDF do 64 MiB a stiskni **Předat do karantény**. Karta zobrazí čas převzetí a termín za 48 hodin. Opakování stejného požadavku zachová původní potvrzení. Zpracování probíhá na pozadí. Po kontrole a rekonstrukci v izolované karanténě převezme Paperless očištěné PDF a karta zobrazí výsledek OCR. Správce před předáním digitální knihy ještě zkontroluje obsah a lhůty.
+
 Instalátor připraví ve VM čtecí prostor SilverBullet. Každou minutu kontroluje novou revizi znalostního Gitu. Po změně porovná obsah publikovaných stránek přes souborové API s obsahem v Gitu. V `04-Pravo-a-Smlouvy/den-1-pravni-minimum` je zkušební postup pro servisní poptávku. Právní a normová báze obsahuje i vlastní metodiku a bibliografický záznam. Pět periodických kontrol najde správce v databázi `db_erp_lhutnik` v pohledu `polarita_test_lhutnik.plan`.
 
 Na Ejpovicích otevři **přímou HTTPS adresu**, kterou po nasazení vypíše skript. Server pro ni má veřejně důvěryhodný certifikát a stránka je dostupná ve firemní VPN. Interní DNS také poskytuje vstupní stránku na `http://reditelstvi.polarita.cz/`. Prohlížeče vynucující HTTPS na této doméně potřebují přímý odkaz. Pro HTTPS přímo pod firemním názvem se při připojení správy domény vystaví certifikát pro `reditelstvi.polarita.cz`.
@@ -70,7 +72,7 @@ Karanténa zpracovává vzorové PDF a text v pracovní VM bez síťové karty u
 Nasaď Polaritu v režimu TEST na Ejpovicích. Pokračuj od prvního technicky neověřeného kroku, včetně instalace, konfigurace, testování a opravy závad. Proveď všechny dostupné bloky a předej funkční systém k uživatelskému testu. Při předání uveď i každou neověřenou funkci.
 ```
 
-## 1. Základní identita a neměnné pilíře systému (`Verze 3.17`)
+## 1. Základní identita a neměnné pilíře systému (`Verze 3.18`)
 
 * **Společnost a sídlo:** **Polarita s.r.o.**, IČO: `14180324`, DIČ: `CZ14180324`, datová schránka ISDS: `w9bbdva`, výchozí pobočka **`101` (`CZ-101` Praha — Centrála)**: `Na Folimance 2155/15, Vinohrady, 120 00 Praha 2`.
 * **Statutární orgán a odborný garant elektro:** **Václav Šercl** (osobní číslo **`1001`** / `STAT-1001`, revizní technik **TIČR E2A** — osobní *Osvědčení* revizního technika na `5 let` + podnikatelské *Oprávnění* TIČR společnosti na `10 let`), se smluvní zástupností **`Break-Glass`** (`SUB-1007` jednající výhradně pod vlastním Osvědčením RT i vlastním Oprávněním TIČR, náhradní 3. člen komise a jmenovaný bankovní zmocněnec / prokurista — zástupci se v `Decisions` přihlašují vlastním účtem a vlastním hardwarovým klíčem s rolí `break-glass-approver` a smějí potvrdit jen vyjmenované třídy mutací, vše ostatní čeká ve stavu `PAUSED` na `1001`; zapečetěný záložní `YubiKey č. 2` je výhradně osobní náhrada `1001` a nikdy se nikomu nepředává) a dvourychlostním schvalováním **`Decisions`** (`07:30` a `16:30`, u každé změny dat vyvolané `ai` nebo člověkem mimo vyjmenované automatické zápisy atomický transakční diff `před → po` potvrzovaný **`mutation_confirm` / `mutation_cancel`**).
@@ -118,10 +120,10 @@ Před příkazy bloku 1 na vnějším clusteru ověř `incus list polarita-hq --
 
 Tisková PDF jsou výstupy sestavení a **do Gitu se neukládají**: sestaví je skripty ve složce [`nastroje/`](./nastroje/README.md) a hotová jsou přílohou vydání (Release) příslušné verze. Odkazy níže fungují po sestavení.
 
-1. **[00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.17/00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf)** — Hlavní souborná kniha **A4 na výšku** (kompletní organizace, procesy, 8 oddělení, 20 karet `ai`, metodika expanze, zásobník `S1–S7` i tento návod po blocích).
-2. **[01-ORGANIZACNI-MAPA-A3-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.17/01-ORGANIZACNI-MAPA-A3-2026.pdf)** — Jednostránkový nástěnný plakát **A3 na šířku** (organizační strom, pobočky `101–999`, `20 ai`, živý tým `1001+`, tok zakázek a 15 železných pojistek).
-3. **[04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.17/04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf)** — Souborná kniha softwarové a serverové architektury **A4 na výšku** (všech 11 vrstev a realizační prompty Fází A–D).
-4. **[05-SOFTWAROVA-MAPA-A3-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.17/05-SOFTWAROVA-MAPA-A3-2026.pdf)** — Jednostránkový nástěnný plakát softwarové architektury **A3 na šířku** (5 klientských platforem, 4 síťové zóny `polarita-hq`, 11 vrstev a architektonická pravidla).
+1. **[00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.18/00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf)** — Hlavní souborná kniha **A4 na výšku** (kompletní organizace, procesy, 8 oddělení, 20 karet `ai`, metodika expanze, zásobník `S1–S7` i tento návod po blocích).
+2. **[01-ORGANIZACNI-MAPA-A3-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.18/01-ORGANIZACNI-MAPA-A3-2026.pdf)** — Jednostránkový nástěnný plakát **A3 na šířku** (organizační strom, pobočky `101–999`, `20 ai`, živý tým `1001+`, tok zakázek a 15 železných pojistek).
+3. **[04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.18/04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf)** — Souborná kniha softwarové a serverové architektury **A4 na výšku** (všech 11 vrstev a realizační prompty Fází A–D).
+4. **[05-SOFTWAROVA-MAPA-A3-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.18/05-SOFTWAROVA-MAPA-A3-2026.pdf)** — Jednostránkový nástěnný plakát softwarové architektury **A3 na šířku** (5 klientských platforem, 4 síťové zóny `polarita-hq`, 11 vrstev a architektonická pravidla).
 
 ---
 
@@ -149,7 +151,7 @@ Bloky popisují závislosti mezi službami. ai přechází mezi technicky ověř
 
 Po ostrém startu (`Blok 12`, `12/12 PASS`) pokračuje rozvoj **sedmi samostatně spustitelnými bloky** — zapracovanými balíčky `S1–S7` ze zásobníku [03-NAVRHY-BALICKU-NA-POZDEJI.md](./03-NAVRHY-BALICKU-NA-POZDEJI.md). Řídicím dokumentem každého bloku je `README.md` příslušné složky v [`balicky/`](./balicky/README.md). Bloky `13–18` lze spouštět v libovolném pořadí podle obchodních priorit (doporučené pořadí je vzestupné; jediná vazba: přejímka `Bloku 17` používá balíček `S2` z `Bloku 14`); `Blok 19` má vlastní bránu `Go / No-Go`. **Etapa I nevyžaduje spuštění ani závislost žádného z těchto bloků** (`Blok 7` spouští lokální základní 20-scénářovou sadu přímo ve `/srv/polarita/workspace/ai-finops/eval-suite/` bez nasazení `Bloku 14`; základní sada a referenční politika se čtou z repozitáře (`balicky/S2-eval-suite/`) jako data a `Blok 14` sadu teprve rozšiřuje na `157` scénářů a CI bránu) a žádný z nich nemění počet `ai` zaměstnanců (`20`), strop `470 USD / měsíc` ani databázový základ `6 + 9` DB.
 
-| Číslo bloku | Etapa | Název bloku (balíček) | Hlavní řídicí dokument | Klíčová výstupní brána (`DoD`) | Stav ve Verzi 3.17 |
+| Číslo bloku | Etapa | Název bloku (balíček) | Hlavní řídicí dokument | Klíčová výstupní brána (`DoD`) | Stav ve Verzi 3.18 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **`Blok 13`** | Etapa II | Generátor PDF čistopisů smluv a protokolů (`S1`) | [balicky/S1-generator-cistopisu/README.md](./balicky/S1-generator-cistopisu/README.md) | Všech 8 sestav (15 šablon) generuje platné PDF s jednotnými proměnnými a manifestem pro `mutation_confirm`; znění šablon odpovídá právnímu minimu potvrzenému po převzetí a nové vzory potvrdil advokát | Spustitelné a ověřené spuštěním; právní revize čeká |
 | **`Blok 14`** | Etapa II | Rozšířená regresní sada `Eval Suite 100+` (`S2`) | [balicky/S2-eval-suite/README.md](./balicky/S2-eval-suite/README.md) | `VERIFIED_PASS 157/157` (20 základních + 137 rozšířených scénářů), brána v `Gitea Actions`, živý běh proti gateway | Spustitelné a ověřené (dry-run) |
@@ -481,18 +483,18 @@ Následující tabulka mapuje živé účty, osobní vybavení, smlouvy a důkaz
 
 ---
 
-## 4. Kompletní katalog všech 50 dokumentů jádra a rozvojových balíčků (`Verze 3.17`)
+## 4. Kompletní katalog všech 50 dokumentů jádra a rozvojových balíčků (`Verze 3.18`)
 
 ### A. Kořenové zakladatelské, rozvojové a tiskové dokumenty (`9` souborů)
 
 * [README.md](./README.md) — Tento výchozí rozcestník a návod ke zprovoznění systému po blocích `Blok 0` až `Blok 12`.
 * [00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.md](./00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.md) — Hlavní zakladatelský dokument společnosti (`Modrá kniha` v Markdownu vč. Master Playbooku kap. 9.1–9.3 a 15 železných pravidel).
-* [00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.17/00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf) — Tisková souborná kniha **A4 na výšku** celé organizace, oddělení, 20 karet `ai`, metodiky a balíčků `S1–S7`.
-* [01-ORGANIZACNI-MAPA-A3-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.17/01-ORGANIZACNI-MAPA-A3-2026.pdf) — Jednostránkový nástěnný plakát **A3 na šířku** organizační struktury a toků firmy.
+* [00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.18/00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.pdf) — Tisková souborná kniha **A4 na výšku** celé organizace, oddělení, 20 karet `ai`, metodiky a balíčků `S1–S7`.
+* [01-ORGANIZACNI-MAPA-A3-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.18/01-ORGANIZACNI-MAPA-A3-2026.pdf) — Jednostránkový nástěnný plakát **A3 na šířku** organizační struktury a toků firmy.
 * [02-METODIKA-ROZSIROVANI-FIRMY-POBOCKY-ODDELENI-AI-LIDE.md](./02-METODIKA-ROZSIROVANI-FIRMY-POBOCKY-ODDELENI-AI-LIDE.md) — Kuchařka a kopírovací šablony pro zakládání poboček (`102–999`), oddělení (`19+`), nových `ai` agentů a přijímání/ukončování živých lidí (`1002+`).
 * [03-NAVRHY-BALICKU-NA-POZDEJI.md](./03-NAVRHY-BALICKU-NA-POZDEJI.md) — Registr rozvojových balíčků `S1–S7` zapracovaných jako `Bloky 13–19`: **Rozvojová Etapa II (`S1`–`S6`)** a **Strategická Etapa III (`S7` — Polarita Elektro Cloud)**; stav zapracování, zbývající práce a odkazy na řídicí dokumenty ve složce `balicky/` (podrobná zadání převzaly řídicí dokumenty bloků).
-* [04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.17/04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf) — Tisková souborná kniha **A4 na výšku** kompletní softwarové a serverové architektury.
-* [05-SOFTWAROVA-MAPA-A3-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.17/05-SOFTWAROVA-MAPA-A3-2026.pdf) — Jednostránkový nástěnný plakát **A3 na šířku** softwarové a serverové architektury.
+* [04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.18/04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf) — Tisková souborná kniha **A4 na výšku** kompletní softwarové a serverové architektury.
+* [05-SOFTWAROVA-MAPA-A3-2026.pdf](https://github.com/Polarita/firemni-struktura/releases/download/Polarita-3.18/05-SOFTWAROVA-MAPA-A3-2026.pdf) — Jednostránkový nástěnný plakát **A3 na šířku** softwarové a serverové architektury.
 
 * [06-REGISTR-OVERENI-PRAVA-A-NOREM.md](./06-REGISTR-OVERENI-PRAVA-A-NOREM.md) — Právní a normová báze: zásada, že návod neobsahuje čísla předpisů ani označení norem, kdy a z čeho báze po nasazení vzniká, jak se předpisy, normy a smlouvy pravidelně hlídají, postup při jejich změně a registr otevřených technických bodů a rozhodnutí jednatele `1001`.
 

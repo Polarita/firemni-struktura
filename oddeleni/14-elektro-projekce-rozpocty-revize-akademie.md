@@ -1,4 +1,4 @@
-# Charta a provozní řád: Oddělení 14 — Elektro Služby, Projekce, Rozpočty, Revize a Akademie · Verze 3.17
+# Charta a provozní řád: Oddělení 14 — Elektro Služby, Projekce, Rozpočty, Revize a Akademie · Verze 3.18
 
 ## 1. Poslání oddělení
 Hlavní inženýrské, projekční, rozpočtové, revizní a vzdělávací srdce společnosti **Polarita s.r.o.** Zajišťuje kompletní technický životní cyklus elektro zakázky i odborného vzdělávání elektrotechniků: od přečtení stavebních podkladů a nakreslení výkresů CAD/BIM přes položkový rozpočet CS ÚRS a věcné řízení živých realizačních čet v terénu až po výchozí či pravidelnou revizní zprávu, přezkoušení elektrotechniků podle předpisů o odborné způsobilosti v elektrotechnice a dlouhodobou obnovu v Centrálním Lhůtníku.
@@ -50,7 +50,7 @@ Hlavní inženýrské, projekční, rozpočtové, revizní a vzdělávací srdce
 
 ## 6. Rozvojové balíčky Etapy II a III (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.17 zapracovány jako samostatné `Bloky 13–19` (přehled a řídicí dokumenty: [`balicky/README.md`](../balicky/README.md)). Spouštějí se až po `12/12 PASS` Go-Live Gate, nemění složení oddělení ani rozpočty `ai` a oddělení se jich účastní takto:
+Balíčky `S1–S7` jsou ve Verzi 3.18 zapracovány jako samostatné `Bloky 13–19` (přehled a řídicí dokumenty: [`balicky/README.md`](../balicky/README.md)). Spouštějí se až po `12/12 PASS` Go-Live Gate, nemění složení oddělení ani rozpočty `ai` a oddělení se jich účastní takto:
 
 * **`Blok 13` (`S1`):** `14005 zakazky` vyplňuje smlouvy a změnové listy ke spisu `POL-RRRR-NNNNN`; `14001 projektant` a `14003 revizak` dodávají technické údaje pasu a kusového ověření.
 * **`Blok 15` (`S3`):** `14002 rozpoctar` vlastní kalkulační matici a `Hard-Stop` pod minimální marží; `14005 zakazky` kvalifikuje poptávky z konfigurátoru.

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Source of truth for eval_suite_polarita_extended.json (package S2, Version 3.17).
-Zdroj pravdy pro eval_suite_polarita_extended.json (balíček S2, Verze 3.17).
+Source of truth for eval_suite_polarita_extended.json (package S2, Version 3.18).
+Zdroj pravdy pro eval_suite_polarita_extended.json (balíček S2, Verze 3.18).
 
 EN: Scenarios are written here in a compact, reviewable form and exported to JSON.
     Expected results are stated explicitly per scenario; they are NOT derived from
@@ -863,7 +863,7 @@ def build() -> dict[str, Any]:
         "meta": {
             "name": "eval_suite_polarita_extended",
             "version": "2.0",
-            "release_tag": "Polarita-3.17",
+            "release_tag": "Polarita-3.18",
             "description": "Rozšířená regresní sada Eval Suite 100+ (balíček S2) nad 20 základními chytáky Stage 1 / Stage 2.",
             "reference_day": WORK_DAY,
             "pass_threshold_pct": 100,
