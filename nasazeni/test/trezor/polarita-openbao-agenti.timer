@@ -1,0 +1,8 @@
+[Unit]
+Description=Obnova testovacích hodnot v tmpfs po restartu příjemců
+[Timer]
+OnBootSec=75s
+OnUnitInactiveSec=5min
+AccuracySec=5s
+[Install]
+WantedBy=timers.target

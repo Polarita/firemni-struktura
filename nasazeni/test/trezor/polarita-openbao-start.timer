@@ -1,0 +1,8 @@
+[Unit]
+Description=Obnovení trezoru při startu jeho kontejneru
+[Timer]
+OnBootSec=45s
+OnUnitInactiveSec=45s
+AccuracySec=3s
+[Install]
+WantedBy=timers.target

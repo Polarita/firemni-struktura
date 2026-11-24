@@ -1,0 +1,8 @@
+[Unit]
+Description=Doručení testovacích tajemství do paměti oprávněných instancí
+After=polarita-openbao-start.service
+RequiresMountsFor=/srv/polarita/infra/openbao-test
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /srv/polarita/infra/openbao-test/bin/agenti.py
+TimeoutStartSec=240

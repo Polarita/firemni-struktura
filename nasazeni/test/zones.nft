@@ -4,12 +4,20 @@ table inet polarita_test {
         type ifname
         elements = { "app_internal", "data_vault", "dmz_edge" }
     }
+    set klienti_trezoru_dmz {
+        type ipv4_addr
+        elements = { 10.239.31.10, 10.239.31.11, 10.239.31.12 }
+    }
     chain forwarding {
         type filter hook forward priority -20; policy accept;
         # Provoz mezi dvěma porty stejného DMZ mostu dále filtruje tabulka CrowdSec.
         iifname "dmz_edge" oifname "dmz_edge" accept
         iifname "dmz_edge" oifname "app_internal" ip saddr 10.239.31.10 ip daddr 10.239.32.10 tcp dport 8080 ct state new,established counter accept
         iifname "app_internal" oifname "dmz_edge" ip saddr 10.239.32.10 ip daddr 10.239.31.10 tcp sport 8080 ct state established counter accept
+        iifname "dmz_edge" oifname "data_vault" ip saddr @klienti_trezoru_dmz ip daddr 10.239.33.10 tcp dport 8200 ct state new,established counter accept
+        iifname "data_vault" oifname "dmz_edge" ip saddr 10.239.33.10 ip daddr @klienti_trezoru_dmz tcp sport 8200 ct state established counter accept
+        iifname "app_internal" oifname "data_vault" ip saddr 10.239.32.10 ip daddr 10.239.33.10 tcp dport 8200 ct state new,established counter accept
+        iifname "data_vault" oifname "app_internal" ip saddr 10.239.33.10 ip daddr 10.239.32.10 tcp sport 8200 ct state established counter accept
         iifname @zones counter drop
         oifname @zones counter drop
     }

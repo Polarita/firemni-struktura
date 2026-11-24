@@ -1,0 +1,8 @@
+[Unit]
+Description=Start trezoru Polarity s krátkodobým médiem z TPM
+After=incus.service polarita-zfs.service
+RequiresMountsFor=/srv/polarita/infra/openbao-test /srv/polarita/vault/openbao-test
+[Service]
+Type=oneshot
+ExecStart=/srv/polarita/infra/openbao-test/bin/start.sh
+TimeoutStartSec=150

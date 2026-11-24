@@ -1,0 +1,215 @@
+"""Inicializace testovacího Raftu a ověření oddělených rolí. Tajné hodnoty zůstávají v RAM."""
+import fcntl
+import json
+import os
+from pathlib import Path
+import secrets
+import ssl
+import subprocess
+import sys
+import time
+from urllib.error import HTTPError
+from urllib.request import HTTPSHandler, ProxyHandler, Request, build_opener
+
+WORK = Path("/srv/polarita/infra/openbao-test")
+VAULT = Path("/srv/polarita/vault/openbao-test")
+BASE = "https://10.239.33.10:8200/v1/"
+MAINT = "sprava-test"
+FIXTURES = {
+    "16001-ucetni": ["uol-cteni", "banky-cteni"],
+    "17003-spravce-site": ["dns"],
+    "14005-zakazky": ["mapy"],
+    "fleet-gps-bridge": ["mapy"],
+    "12001-marketing": ["reklama-pozastavena"],
+    "asterisk": ["sip"],
+    "stalwart-jadro": ["dkim"],
+    "comm-gateway": ["whatsapp", "chatwoot", "zulip-bot"],
+    "pyhanko": ["organizacni-pecet"],
+    "reditelstvi-test": ["reditelstvi"],
+    "caddy-test": ["caddy"],
+    "headscale-test": ["headscale"],
+    "stalwart-mx-test": ["stalwart-mx"],
+    "11001-ceo": ["agent-11001"],
+    "12002-obsah-geo": ["agent-12002"],
+    "13001-eshop": ["agent-13001"],
+    "13002-nakupci": ["agent-13002"],
+    "14001-projektant": ["agent-14001"],
+    "14002-rozpoctar": ["agent-14002"],
+    "14003-revizak": ["agent-14003"],
+    "14004-skolitel": ["agent-14004"],
+    "15001-pravni-specialista": ["agent-15001"],
+    "15002-normovac": ["agent-15002"],
+    "16002-tajemnik": ["agent-16002"],
+    "17001-programator": ["agent-17001"],
+    "17002-webmaster": ["agent-17002"],
+    "17004-klicnik": ["agent-17004"],
+    "17005-ai-provoz": ["agent-17005"],
+    "18001-personalista": ["agent-18001"],
+    "isds-podatelna-bridge": ["stav-podatelny"],
+    "openbao-test": ["openbao-agent"],
+}
+# Skutečné údaje ISDS vydá až oprávněný proces s ověřeným časem a rozhodnutím.
+DENIED = ["isds-cteni", "isds-odesilani", "eet-vypnuto", "cizi-vzorek"]
+HTTP = None
+
+
+def request(method, path, body=None, token=None):
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["X-Vault-Token"] = token
+    data = None if body is None else json.dumps(body).encode()
+    req = Request(BASE + path, data=data, headers=headers, method=method)
+    with HTTP.open(req, timeout=20) as res:
+        raw = res.read()
+    return json.loads(raw) if raw else {}
+
+
+def protect(name, value):
+    path = VAULT / (name + ".cred")
+    tmp = path.with_suffix(".next")
+    subprocess.run(["systemd-creds", "encrypt", "--with-key=tpm2", "--tpm2-pcrs=7",
+                    "--name=" + name, "-", str(tmp)], input=json.dumps(value).encode(), check=True)
+    tmp.replace(path)
+
+
+def recover(name):
+    data = subprocess.check_output(["systemd-creds", "decrypt", "--name=" + name,
+                                    str(VAULT / (name + ".cred")), "-"])
+    return json.loads(data)
+
+
+def envelope(name, value):
+    path = VAULT / name
+    tmp = path.with_suffix(".next")
+    subprocess.run(["openssl", "cms", "-encrypt", "-binary", "-aes-256-gcm", "-outform", "DER",
+                    "-recip", str(WORK / "test-obnova.crt"), "-keyopt", "rsa_padding_mode:oaep",
+                    "-keyopt", "rsa_oaep_md:sha256", "-out", str(tmp)], check=True,
+                   input=json.dumps(value).encode())
+    tmp.replace(path)
+
+
+def credentials(role, token):
+    base = "auth/approle/role/" + role
+    role_id = request("GET", base + "/role-id", token=token)["data"]["role_id"]
+    secret_id = request("POST", base + "/secret-id", {}, token)["data"]["secret_id"]
+    return {"role_id": role_id, "secret_id": secret_id}
+
+
+def login(creds):
+    return request("POST", "auth/approle/login", creds)["auth"]["client_token"]
+
+
+def allow(path, *caps):
+    return 'path ' + json.dumps(path) + ' { capabilities = ' + json.dumps(caps) + ' }\n'
+
+
+def configure(root):
+    def put(path, body):
+        return request("POST", path, body, root)
+    if "audit-test/" not in request("GET", "sys/audit", token=root)["data"]:
+        raise RuntimeError("Chybí souborový audit nakonfigurovaný serverem")
+    if "test/" not in request("GET", "sys/mounts", token=root)["data"]:
+        put("sys/mounts/test", {"type": "kv", "options": {"version": "2"}})
+    if "approle/" not in request("GET", "sys/auth", token=root)["data"]:
+        put("sys/auth/approle", {"type": "approle"})
+
+    policy = allow("auth/token/revoke-self", "update") + allow("sys/storage/raft/snapshot", "read")
+    for fixture in sorted({x for values in FIXTURES.values() for x in values} | set(DENIED)):
+        policy += allow("test/data/" + fixture, "create", "update")
+    for role, paths in FIXTURES.items():
+        acl = allow("auth/token/revoke-self", "update")
+        for path in paths:
+            acl += allow("test/data/" + path, "read")
+        put("sys/policies/acl/" + role, {"policy": acl})
+        put("auth/approle/role/" + role, {"token_policies": [role], "token_no_default_policy": True,
+            "token_ttl": "120s", "token_max_ttl": "120s", "secret_id_num_uses": 1, "secret_id_ttl": "120s"})
+        base = "auth/approle/role/" + role
+        policy += allow(base + "/role-id", "read") + allow(base + "/secret-id", "update")
+    put("sys/policies/acl/" + MAINT, {"policy": policy})
+    put("auth/approle/role/" + MAINT, {"token_policies": [MAINT], "token_no_default_policy": True,
+        "token_ttl": "4m", "token_max_ttl": "4m", "secret_id_bound_cidrs": ["10.239.33.1/32"],
+        "token_bound_cidrs": ["10.239.33.1/32"]})
+    protect("bao-sprava", credentials(MAINT, root))
+
+
+def expect_forbidden(method, path, token, body=None):
+    try:
+        request(method, path, body, token)
+    except HTTPError as err:
+        if err.code == 403:
+            return
+        raise
+    raise RuntimeError("Neoprávněný přístup prošel: " + path)
+
+
+def verify_roles():
+    manager = login(recover("bao-sprava"))
+    values = {}
+    for fixture in sorted({x for paths in FIXTURES.values() for x in paths} | set(DENIED)):
+        # Zkouška má vlastní pole a cesty pouze v samostatném testovacím KV.
+        values[fixture] = secrets.token_urlsafe(24)
+        request("POST", "test/data/" + fixture, {"data": {"vzorek": values[fixture]}}, manager)
+    for role, paths in FIXTURES.items():
+        token = login(credentials(role, manager))
+        for path in paths:
+            actual = request("GET", "test/data/" + path, token=token)["data"]["data"]["vzorek"]
+            if not secrets.compare_digest(actual, values[path]):
+                raise RuntimeError("Neočekávaná hodnota testovacího tajemství")
+        other = next(path for path in values if path not in paths and path not in DENIED)
+        for path in [other, *DENIED]:
+            expect_forbidden("GET", "test/data/" + path, token)
+        expect_forbidden("POST", "test/data/" + paths[0], token, {"data": {"vzorek": "zapis"}})
+        request("POST", "auth/token/revoke-self", {}, token)
+    request("POST", "auth/token/revoke-self", {}, manager)
+    print(f"{len(FIXTURES)} rolí: povolené čtení ověřeno, zápis a cizí tajemství odmítnuty.", flush=True)
+
+
+def main():
+    global HTTP
+    os.umask(0o077)
+    context = ssl.create_default_context(cafile=str(WORK / "ca.crt"))
+    HTTP = build_opener(ProxyHandler({}), HTTPSHandler(context=context))
+    pending = VAULT / "bao-bootstrap.cred"
+    if not request("GET", "sys/init")["initialized"]:
+        if pending.exists() or (VAULT / "inicializovano").exists():
+            raise RuntimeError("Prázdný Raft nesouhlasí s existujícími údaji instalace")
+        output = subprocess.check_output(["incus", "exec", "-T", "openbao-test", "--", "/usr/local/bin/bao",
+            "operator", "init", "-address=https://127.0.0.1:8200", "-ca-cert=/var/lib/polarita-openbao/tls/server.crt",
+            "-format=json", "-recovery-shares=5", "-recovery-threshold=3"])
+        receipt = json.loads(output)
+        protect("bao-bootstrap", receipt)
+    for _ in range(60):
+        if not request("GET", "sys/seal-status")["sealed"]:
+            break
+        time.sleep(1)
+    else:
+        raise RuntimeError("Trezor je zapečetěný")
+    if pending.exists():
+        init = recover("bao-bootstrap")
+        shares = init["recovery_keys_b64"]
+        if len(shares) != 5 or init["recovery_keys_threshold"] != 3:
+            raise RuntimeError("Chybí potvrzení prahu obnovy")
+        envelope("obnova-podily.cms", {"threshold": 3, "shares": shares})
+        root = init["root_token"]
+        try:
+            request("GET", "auth/token/lookup-self", token=root)
+        except HTTPError as err:
+            if err.code != 403:
+                raise
+        else:
+            configure(root)
+            verify_roles()
+            request("POST", "auth/token/revoke-self", {}, root)
+        expect_forbidden("GET", "auth/token/lookup-self", root)
+        print("Prvotní root token byl zneplatněn. Obnova používá tři podíly z pěti.")
+        (VAULT / "inicializovano").touch(mode=0o600)
+        pending.unlink()
+    verify_roles()
+
+
+if __name__ == "__main__":
+    if subprocess.check_output(["hostname", "-s"]).strip() != b"polarita-hq":
+        sys.exit("Konfigurace patří do VM polarita-hq")
+    with (WORK / ".pristupy-lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        main()

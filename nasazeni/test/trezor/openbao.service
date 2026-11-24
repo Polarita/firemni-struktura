@@ -1,0 +1,15 @@
+[Unit]
+Description=OpenBao pro strojová tajemství v režimu TEST
+After=network.target
+[Service]
+User=openbao
+Group=openbao
+ExecStart=/usr/local/bin/bao server -config=/etc/polarita-openbao/server.hcl
+LimitCORE=0
+MemorySwapMax=0
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/polarita-openbao
