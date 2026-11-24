@@ -17,6 +17,8 @@ Tento dokument definuje znalostní, podatelní, spisovou, komunikační, dispeč
 
 ---
 
+V režimu TEST vytvoří OpenTofu uvnitř `polarita-hq` neprivilegovaný kontejner `vikunja-test`. Instalační skript ověří archiv a spustitelný soubor Vikunja 2.8.0. Úkoly ukládá do samostatné databáze PostgreSQL, přílohy na šifrovaný dataset ZFS. OpenBao předá údaje služby do paměti. Přístup správce poskytuje Keycloak. Skript `nasazeni/test/vikunja/zkouska.py` přes rozhraní VPN ověří založení projektu, změnu a opětovné načtení úkolu i odhlášení. Po sobě odstraní vlastní testovací projekt.
+
 ## 2. Architektonická pravidla a zdůvodnění výběru
 
 1. **360° Karta spisu `POL-RRRR-NNNNN` (`case_id` + `branch_id`, `F28`) s tlačítky `„Pracuj“` (`N2`), `WebRTC` softphonem a 48h převzetím šanonů (`N7`):**
