@@ -215,6 +215,9 @@ karantena() {
     "${guest[@]}" python3 "$dest/nasazeni/test/karantena/zkouska.py" | tee "$tmp/karantena.txt"
     "${inc[@]}" file push --project polarita "$tmp/karantena.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-04/karantena-$commit.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/sanony/instalace.sh"
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
+        python3 nasazeni/test/sanony/overeni.py "https://$fqdn" | tee "$tmp/sanony.txt"
+    "${inc[@]}" file push --project polarita "$tmp/sanony.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/sanony-$commit.txt"
     "${guest[@]}" python3 "$dest/nasazeni/test/paperless/vzor.py" | tee "$tmp/paperless-vzor.txt"
     "${inc[@]}" file push --project polarita "$tmp/paperless-vzor.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-vzor-$commit.txt"
     sudo -n bash nasazeni/test/port-vpn.sh 8448 >/dev/null
