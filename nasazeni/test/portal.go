@@ -201,6 +201,11 @@ func (p *portal) serveMetadata(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer res.Body.Close()
+	if r.Method == http.MethodGet && (strings.HasPrefix(path, "api/kniha/") || strings.HasPrefix(path, "api/sanony/")) {
+		if url := archiveURL(); url != "" {
+			w.Header().Set("X-Polarita-Archiv", url)
+		}
+	}
 	for _, name := range []string{"Content-Type", "ETag"} {
 		if value := res.Header.Get(name); value != "" {
 			w.Header().Set(name, value)
@@ -210,6 +215,19 @@ func (p *portal) serveMetadata(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
 	w.WriteHeader(res.StatusCode)
 	io.Copy(w, res.Body)
+}
+
+const archiveFile = "/usr/local/share/polarita-paperless-url"
+
+var archiveAddress = regexp.MustCompile(`^https://[a-z0-9.-]+\.ts\.net:8448/$`)
+
+func archiveURL() string {
+	address, _ := os.ReadFile(archiveFile)
+	url := strings.TrimSpace(string(address))
+	if archiveAddress.MatchString(url) {
+		return url
+	}
+	return ""
 }
 
 type portalView struct {
@@ -233,13 +251,12 @@ func overview() portalView {
 	_, monitorErr := os.Stat(monitorFile)
 	metadataInfo, metadataErr := os.Stat(metadataSocket)
 	_, gitErr := os.Stat("/usr/local/share/polarita-gitea-oidc.ok")
-	archiv, _ := os.ReadFile("/usr/local/share/polarita-paperless-url")
 	tasks, _ := os.ReadFile("/usr/local/share/polarita-vikunja-url")
 	vaultURL, _ := os.ReadFile("/usr/local/share/polarita-silverbullet-url")
 	chat, _ := os.ReadFile("/usr/local/share/polarita-zulip-url")
 	orchestrator, _ := os.ReadFile("/usr/local/share/polarita-paperclip-url")
 	decisions, _ := os.ReadFile("/usr/local/share/polarita-decisions-url")
-	return portalView{Archiv: strings.TrimSpace(string(archiv)), Tasks: strings.TrimSpace(string(tasks)), Vault: strings.TrimSpace(string(vaultURL)), Metadata: metadataErr == nil && metadataInfo.Mode()&os.ModeSocket != 0, Decisions: strings.TrimSpace(string(decisions)), Paperclip: strings.TrimSpace(string(orchestrator)), Chat: strings.TrimSpace(string(chat)), Dohled: monitorErr == nil, Signed: true, Vzor: vzorErr == nil, Git: gitErr == nil}
+	return portalView{Archiv: archiveURL(), Tasks: strings.TrimSpace(string(tasks)), Vault: strings.TrimSpace(string(vaultURL)), Metadata: metadataErr == nil && metadataInfo.Mode()&os.ModeSocket != 0, Decisions: strings.TrimSpace(string(decisions)), Paperclip: strings.TrimSpace(string(orchestrator)), Chat: strings.TrimSpace(string(chat)), Dohled: monitorErr == nil, Signed: true, Vzor: vzorErr == nil, Git: gitErr == nil}
 }
 
 func (p *portal) login(username, password, previous string) (string, int) {

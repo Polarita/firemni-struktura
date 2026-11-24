@@ -74,6 +74,16 @@ window.addEventListener("hashchange", otevriOdkaz);
 window.addEventListener("popstate", otevriOdkaz);
 if (location.search || location.hash) otevriOdkaz();
 
+function odkazNaDokument(res, id) {
+    const label = "Dokument " + id;
+    const archive = res.headers.get("X-Polarita-Archiv");
+    if (!archive || !Number.isSafeInteger(id) || id < 1) return document.createTextNode(label);
+    const link = document.createElement("a");
+    link.href = new URL("documents/" + id + "/details", archive).href;
+    link.textContent = label;
+    return link;
+}
+
 async function ukazPrijem(kod, current) {
     const res = await fetch("api/sanony/" + encodeURIComponent(kod));
     if (request !== current) return;
@@ -97,6 +107,7 @@ async function ukazPrijem(kod, current) {
         if (states[r.stav]) li.textContent += " · " + states[r.stav];
         list.append(li);
         if (r.dokument && ["ocr-hotovo", "ke-kontrole"].includes(r.stav)) {
+            li.append(" · ", odkazNaDokument(res, r.dokument));
             doklad.add(new Option("Dokument " + r.dokument + " · " + when(r.prijato), r.priloha));
         }
     }
@@ -161,7 +172,7 @@ async function ukazKnihu(kod, current) {
         badge.textContent = stavy[row.stav];
         const den = row.platnost.split("-").reverse().join(". ");
         li.append(row.objekt + " / " + row.zarizeni + " · ", badge,
-            " · platnost do " + den + " · dokument " + row.dokument);
+            " · platnost do " + den + " · ", odkazNaDokument(res, row.dokument));
         list.append(li);
     }
 }
