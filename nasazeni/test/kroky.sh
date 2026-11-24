@@ -191,7 +191,7 @@ obnova_databazi() {
     "${guest[@]}" bash "$dest/nasazeni/test/hrana/obnov-vstup.sh"
     sudo -n bash nasazeni/test/port-vpn.sh 8447 >/dev/null
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
-        python3 nasazeni/test/vikunja/zkouska.py "$fqdn" | tee "$tmp/vikunja.txt"
+        python3 nasazeni/test/vikunja/zkouska.py "$fqdn" --nastenky | tee "$tmp/vikunja.txt"
     "${inc[@]}" file push --project polarita "$tmp/vikunja.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/vikunja-$commit.txt"
     printf 'https://%s:8447/\n' "$fqdn" | "${guest[@]}" incus exec -T reditelstvi-test -- sh -ec 'umask 022; cat >/usr/local/share/.polarita-vikunja-url.next; mv -T /usr/local/share/.polarita-vikunja-url.next /usr/local/share/polarita-vikunja-url'
     "${guest[@]}" bash "$dest/nasazeni/test/archiv/instalace.sh" | tee "$tmp/archiv.txt"
