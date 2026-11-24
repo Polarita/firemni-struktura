@@ -1,9 +1,9 @@
 /**
  * EN: SAMPLE ONLY — NOT EXECUTED. Shared helper of the living manual (Block 18, package S6,
- *     Polarita-3.8). Every spec file imports it and binds it to ITS OWN chapter, so the
+ *     Polarita-3.9). Every spec file imports it and binds it to ITS OWN chapter, so the
  *     helper is written once and no chapter can write into another chapter's manifest.
  * CZ: POUZE VZOR — NEBYL SPUŠTĚN. Sdílená pomocná funkce živé příručky (Blok 18, balíček S6,
- *     Polarita-3.8). Každý soubor testu ji importuje a naváže na SVOU kapitolu, takže je
+ *     Polarita-3.9). Každý soubor testu ji importuje a naváže na SVOU kapitolu, takže je
  *     napsána jednou a žádná kapitola nemůže zapisovat do manifestu jiné kapitoly.
  *
  * EN: Usage in a spec file:
