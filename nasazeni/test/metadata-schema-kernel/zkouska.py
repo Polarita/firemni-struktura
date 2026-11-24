@@ -60,7 +60,9 @@ def over_spisy():
     keys = [str(uuid5(NAMESPACE_URL, "polarita.test/zkouska-spisu/" + str(n))) for n in range(3)]
     def pridat(key):
         status, _, row = request("POST", "/api/spisy", {"pozadavek":key, "branch_id":101})
-        assert status == 200 and row["pozadavek"] == key
+        if status != 200:
+            raise RuntimeError(f"Založení spisu přes místní API vrátilo HTTP {status}.")
+        assert row["pozadavek"] == key
         return row
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
         rows = list(pool.map(pridat, [keys[0], keys[0], *keys[1:]]))

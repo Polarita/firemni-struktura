@@ -35,7 +35,7 @@ DECLARE
     karta polarita_test_spisy.karty%ROWTYPE;
 BEGIN
     IF klic IS NULL OR pobocka IS NULL OR NOT EXISTS (
-        SELECT FROM polarita_test_spisy.pobocka WHERE branch_id=pobocka
+        SELECT FROM polarita_test_spisy.pobocka AS p WHERE p.branch_id=zaloz.pobocka
     ) THEN RETURN jsonb_build_object('chyba','pobocka'); END IF;
     PERFORM pg_advisory_xact_lock(hashtextextended(klic::text,0));
     SELECT * INTO karta FROM polarita_test_spisy.karty WHERE pozadavek=klic;

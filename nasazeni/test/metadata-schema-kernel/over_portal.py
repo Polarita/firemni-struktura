@@ -62,6 +62,7 @@ def main(origin, password):
         subprocess.run(cmd, input=f"DELETE FROM polarita_test_metadata.meta_termin WHERE id='{key}' AND popis='{label}';",
                        text=True, check=True)
     print("Přihlášení přes ředitelství otevřelo formulář, změna vyžadovala správný ETag a po odhlášení API opět odmítlo zápis.")
+    print("Ředitelství založilo nebo načetlo stejný testovací spis a vyhledalo jej podle hlavního čísla i aliasu pobočky 101.")
 
 
 if __name__ == "__main__":
