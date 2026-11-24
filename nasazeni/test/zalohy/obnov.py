@@ -30,6 +30,8 @@ def main():
     with ExitStack() as stack:
         lock=stack.enter_context((WORK/".obnova").open("a"))
         fcntl.flock(lock,fcntl.LOCK_EX)
+        capacity = stack.enter_context(Path("/run/polarita-test-zatez.lock").open("a"))
+        fcntl.flock(capacity, fcntl.LOCK_EX)
         started = time.monotonic()
         records = json.loads(rest(rest_env(),"snapshots","--json","--no-lock",snap,capture_output=True).stdout)
         if len(records)!=1 or records[0]["id"]!=snap:

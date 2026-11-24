@@ -133,15 +133,17 @@ def main():
             pending()
         jobs = [p for p in sorted((BASE / "vstup").iterdir()) if JOB.fullmatch(p.name)]
         if jobs:
-            with worker():
-                for job in jobs:
-                    try:
-                        process(job)
-                    except (OSError, ValueError, subprocess.SubprocessError) as err:
-                        # Do zprávy se nikdy nezapisuje obsah přílohy ani výpis cizího programu.
-                        record(job.name, {"stav": "ceka", "duvod": "chyba-zpracovani", "chyba": type(err).__name__})
-                        job.replace(BASE / "ceka" / job.name)
-                        print(job.name, "ceka", type(err).__name__, flush=True)
+            with Path("/run/polarita-test-zatez.lock").open("a") as capacity:
+                fcntl.flock(capacity, fcntl.LOCK_EX)
+                with worker():
+                    for job in jobs:
+                        try:
+                            process(job)
+                        except (OSError, ValueError, subprocess.SubprocessError) as err:
+                            # Do zprávy se nikdy nezapisuje obsah přílohy ani výpis cizího programu.
+                            record(job.name, {"stav": "ceka", "duvod": "chyba-zpracovani", "chyba": type(err).__name__})
+                            job.replace(BASE / "ceka" / job.name)
+                            print(job.name, "ceka", type(err).__name__, flush=True)
 
 
 if __name__ == "__main__":

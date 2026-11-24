@@ -6,6 +6,8 @@ work=/srv/polarita/infra/gitea-runner-test
 install -d -m 0750 "$work/tofu"
 exec 9>"$work/.instalace"
 flock 9
+exec 8>/run/polarita-test-zatez.lock
+flock 8
 python3 "$src/runner-podklady.py"
 nft -c -f "$src/runner.nft"
 install -d -m 0755 /etc/polarita
