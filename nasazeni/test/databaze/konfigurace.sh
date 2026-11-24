@@ -61,6 +61,7 @@ hostssl sameuser all 10.239.33.1/32 scram-sha-256
 hostssl keycloak keycloak 10.239.32.11/32 scram-sha-256
 hostssl gitea gitea 10.239.32.13/32 scram-sha-256
 hostssl db_paperclip db_paperclip 10.239.32.18/32 scram-sha-256
+hostssl vikunja vikunja 10.239.32.20/32 scram-sha-256
 hostssl zulip zulip 10.239.32.16/32 scram-sha-256
 hostssl sameuser all 127.0.0.1/32 scram-sha-256
 CONF
