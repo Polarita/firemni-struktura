@@ -45,6 +45,14 @@ def configure():
     _, repo = api("GET",path)
     if not repo.get("has_actions") or not repo["private"]:
         raise RuntimeError("Gitea nepotvrdila soukromý repozitář s Actions")
+    if config.get("opakuj"):
+        _, runs = api("GET", path+"/actions/runs?limit=1")
+        if not runs.get("workflow_runs"):
+            raise RuntimeError("Chybí první zkouška CI")
+        run = runs["workflow_runs"][0]
+        if run["conclusion"] == "failure":
+            api("POST", path+"/actions/runs/"+str(run["id"])+"/rerun", expected=(201,202,204))
+            print("Gitea přijala opakování nezdařeného běhu CI.")
     print("Gitea potvrdila soukromý repozitář správce a zapnuté Actions.")
 
 
@@ -58,7 +66,7 @@ def main():
     source = str(Path(__file__).resolve())
     subprocess.run(["incus","file","push","--mode=0644",source,"gitea-test/etc/polarita-gitea/"],check=True)
     subprocess.run(INSIDE + ["python3","/etc/polarita-gitea/repozitar.py"],
-                   input=json.dumps({"admin":ADMIN,"password":admin_password()}).encode(),check=True)
+                   input=json.dumps({"admin":ADMIN,"password":admin_password(),"opakuj":"--opakuj-ci" in sys.argv}).encode(),check=True)
 
 
 if __name__ == "__main__":
