@@ -82,7 +82,9 @@ def collect(root):
     if pg.proof(pg.DB,"postgres").hex()!=original:
         raise RuntimeError("Během sběru se změnila struktura databází")
     (root/"postgres.sha256").write_text(original+"\n")
-    point = pg.inside(pg.DB, "bash", "-se", data=(TEST/"zalohy/wal-sber.sh").read_bytes()).decode().splitlines()[-1]
+    point = subprocess.run(["incus","exec","-T",pg.DB,"--","bash","-se"],
+                           input=(TEST/"zalohy/wal-sber.sh").read_bytes(),stdout=subprocess.PIPE,
+                           check=True,timeout=1800).stdout.decode().splitlines()[-1]
     if not re.fullmatch(r"polarita_[0-9a-f]{32} [0-9A-F]+/[0-9A-F]+ [0-9A-F]+/[0-9A-F]+", point):
         raise RuntimeError("Chybí cílový bod obnovy v potvrzeném WAL segmentu")
     (root/"pitr-cil.txt").write_text(point+"\n")

@@ -9,6 +9,7 @@ cat >/etc/pgbackrest/polarita.conf <<'CONF'
 [global]
 repo1-path=/var/lib/polarita-postgres/pgbackrest
 repo1-retention-full=2
+repo1-bundle=y
 compress-type=zst
 process-max=1
 start-fast=y
