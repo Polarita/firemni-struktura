@@ -1,6 +1,6 @@
-# Brána `Go / No-Go` Strategické Etapy III — Polarita Elektro Cloud · Blok 19 (S7) · Verze 3.10
+# Brána `Go / No-Go` Strategické Etapy III — Polarita Elektro Cloud · Blok 19 (S7) · Verze 3.11
 
-Tento dokument stanoví objektivní spouštěč `Bloku 19`. Doplňuje řídicí dokument [`README.md`](README.md) (kapitola 2, pravidlo 1). Dokud protokol v kapitole 4 nenese verdikt `GO` a podpis `1001`, Blok 19 se nespouští. Brána ve Verzi 3.10 **nebyla měřena** — měření vyžaduje údaje z ostrého provozu po převzetí správcem.
+Tento dokument stanoví objektivní spouštěč `Bloku 19`. Doplňuje řídicí dokument [`README.md`](README.md) (kapitola 2, pravidlo 1). Dokud protokol v kapitole 4 nenese verdikt `GO` a podpis `1001`, Blok 19 se nespouští. Brána ve Verzi 3.11 **nebyla měřena** — měření vyžaduje údaje z ostrého provozu po převzetí správcem.
 
 ---
 

@@ -125,6 +125,10 @@ done
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/zkouska_hovoru.py" | tee -a "$tmp/restic.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/hovory_sber.py" | tee -a "$tmp/restic.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/zalohy/naplanuj.sh"
+"${guest[@]}" bash "$dest/nasazeni/test/dohled/instalace.sh" | tee "$tmp/dohled.txt"
+"${guest[@]}" systemctl start polarita-dohled-sber.service
+"${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn" --dohled
+"${inc[@]}" file push --project polarita "$tmp/dohled.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-06/dohled-$commit.txt"
 "${inc[@]}" file push --project polarita "$tmp/restic.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-06/restic-$commit.txt"
 # Starší vydání vytvořilo přímý vstup. Odstraň ho až po ověření nové cesty.
 if [[ $("${guest[@]}" incus config device get reditelstvi-test portal listen 2>/dev/null || true) == tcp:127.0.0.1:18182 ]]; then

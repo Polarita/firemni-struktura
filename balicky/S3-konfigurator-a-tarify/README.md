@@ -1,4 +1,4 @@
-# Blok 15 · Balíček S3 — Interaktivní konfigurátor balíčků na klíč a GTM kniha tarifů MRR · Verze 3.10
+# Blok 15 · Balíček S3 — Interaktivní konfigurátor balíčků na klíč a GTM kniha tarifů MRR · Verze 3.11
 
 Tento dokument je řídicím dokumentem **`Bloku 15`** Rozvojové Etapy II společnosti **Polarita s.r.o.** Balíček rozšiřuje základní ceník z `Bloku 0` a `Bloku 9` o **jediný verzovaný zdroj cen** ([`cenik.json`](./cenik.json)), deterministické **cenové jádro** ([`pricing.py`](./pricing.py)), **interaktivní konfigurátor** paušálu „Elektro Správa SVJ a Firem“ ([`konfigurator.html`](./konfigurator.html)), obchodní **knihu tarifů MRR** ([`kniha-tarifu-mrr.md`](./kniha-tarifu-mrr.md)) a interní **kalkulační a provizní matici** ([`kalkulacni-matice.md`](./kalkulacni-matice.md)). Nepřidává žádného `ai` agenta ani databázi.
 
@@ -8,7 +8,7 @@ Tento dokument je řídicím dokumentem **`Bloku 15`** Rozvojové Etapy II spole
 
 ## 1. Seznam softwaru a modulů
 
-| Oblast | Soubor / modul | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.10) | Odpovědný `ai` / garant |
+| Oblast | Soubor / modul | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.11) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Jediný zdroj cen** | [`cenik.json`](./cenik.json) | verzováno v `Gitea`, změna jen přes `mutation_confirm` | 3 tarify MRR, 3 balíčky na klíč s cenou od–do, hodinové zúčtovací sazby, přirážka na materiál, minimální krycí příspěvek, stupně provize partnera a sezónní koeficienty. | `14002` `rozpoctar`, `16001` `ucetni` *(schvaluje `1001`)* |
 | **Cenové jádro** | [`pricing.py`](./pricing.py) | čistý `Python` (`Decimal`), bez závislostí | Výpočet měsíčního a ročního paušálu, rozsahu balíčků, ceny práce a materiálu, `Hard-Stop` marže a provize partnera; generuje konfigurátor a přehled cen. Žádný `ai` agent nepočítá ceny zpaměti. | `17001` `programator` *(Judge `16001`)* |
@@ -88,7 +88,7 @@ Zapoj cenové jádro do nacenění zakázek a výpočtu partnerských provizí:
 
 ---
 
-## 5. Stav ve Verzi 3.10
+## 5. Stav ve Verzi 3.11
 
 **Hotovo v této složce a ověřeno spuštěním (14. 11. 2026):**
 
