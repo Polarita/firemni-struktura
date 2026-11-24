@@ -16,8 +16,15 @@ def main():
     marker = b'X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*'
     jobs = [prijem.enqueue(io.BytesIO(data), kind) for data, kind in
             ((sample, "pdf"), (text.encode(), "txt"), (marker, "txt"))]
-    deadline = time.monotonic() + 2400
-    while not all((root/"protokoly"/(job+".json")).exists() for job in jobs):
+    deadline = time.monotonic() + 720 + len(jobs)*1380
+    last = -1
+    while True:
+        done = sum((root/"protokoly"/(job+".json")).is_file() for job in jobs)
+        if done != last:
+            print(f"Karanténa dokončila {done}/{len(jobs)} testovacích příloh.",flush=True)
+            last = done
+        if done == len(jobs):
+            break
         if time.monotonic() >= deadline:
             raise RuntimeError("Fronta nedokončila testovací úlohy")
         time.sleep(5)

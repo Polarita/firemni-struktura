@@ -1,10 +1,12 @@
 """Hostitelská fronta ve firemní VM. Pouze prověřený výsledek může opustit spool."""
 from contextlib import contextmanager
 import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import secrets
 import socket
 import stat
 import subprocess
@@ -23,13 +25,14 @@ def inc(*args, timeout=125):
     return subprocess.run(["incus", *args], stdin=subprocess.DEVNULL, capture_output=True, check=True, timeout=timeout).stdout
 
 
-def atomic_copy(source, target, maximum, mode):
+def atomic_copy(source, target, maximum, mode, expected_digest=None):
     fd = os.open(source, os.O_NOFOLLOW | os.O_NONBLOCK | os.O_RDONLY)
     with os.fdopen(fd, "rb") as reader:
         st = os.fstat(fd)
         if not stat.S_ISREG(st.st_mode) or st.st_nlink != 1 or not 0 < st.st_size <= maximum:
             raise ValueError("Zdroj není samostatný soubor povolené velikosti")
         size = 0
+        checksum = hashlib.sha256()
         with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as writer:
             tmp = Path(writer.name)
             try:
@@ -37,15 +40,19 @@ def atomic_copy(source, target, maximum, mode):
                     size += len(chunk)
                     if size > maximum:
                         raise ValueError("Zdroj překročil velikostní limit")
+                    checksum.update(chunk)
                     writer.write(chunk)
                 if size != st.st_size:
                     raise ValueError("Při kopírování se změnila velikost")
+                if expected_digest is not None and checksum.hexdigest() != expected_digest:
+                    raise ValueError("Nesouhlasí kontrolní součet výsledku")
                 os.fchmod(writer.fileno(), mode)
                 writer.flush()
                 os.fsync(writer.fileno())
                 tmp.replace(target)
             finally:
                 tmp.unlink(missing_ok=True)
+    return checksum.hexdigest()
 
 
 def record(job, status):
@@ -57,6 +64,34 @@ def record(job, status):
     os.replace(f.name, directory / (job + ".json"))
 
 
+def wait_receipt(path, timeout):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            fd = os.open(path, os.O_NOFOLLOW | os.O_NONBLOCK | os.O_RDONLY)
+        except FileNotFoundError:
+            time.sleep(2)
+            continue
+        with os.fdopen(fd,"rb") as reader:
+            meta = os.fstat(fd)
+            if not stat.S_ISREG(meta.st_mode) or meta.st_nlink != 1 or not 0 < meta.st_size <= 4096:
+                raise ValueError("Neplatný formát dokladu offline pracovníka")
+            result = json.loads(reader.read(4097))
+            if not isinstance(result,dict):
+                raise ValueError("Neplatná struktura dokladu offline pracovníka")
+            return result
+    raise TimeoutError("Offline pracovník nedodal doklad v časovém limitu")
+
+
+def put_token(target, token):
+    with tempfile.NamedTemporaryFile(dir=target.parent, mode="w", delete=False) as stream:
+        stream.write(token)
+        stream.flush()
+        os.fchmod(stream.fileno(),0o444)
+        os.fsync(stream.fileno())
+    os.replace(stream.name,target)
+
+
 @contextmanager
 def worker():
     if inc("config", "get", NAME, "user.polarita.role").strip() != NAME.encode():
@@ -64,38 +99,55 @@ def worker():
     # Držíme společný zámek instalace i zpracování. Po přerušení služby obnovíme pracovní VM.
     if inc("list", NAME, "-f", "csv", "-c", "s").strip() == b"RUNNING":
         inc("stop", NAME, "--timeout", "180", timeout=210)
-    inc("start", NAME)
+    token = secrets.token_hex(16)
+    challenge = SPOOL / "in" / ".start"
+    ready = SPOOL / "out" / ".pripraveno"
+    ready.unlink(missing_ok=True)
+    put_token(challenge,token)
     try:
-        for _ in range(120):
-            try:
-                inc("exec", "-T", NAME, "--", "test", "-e", "/opt/polarita/karantena.py", timeout=5)
-                break
-            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-                time.sleep(1)
-        else:
-            raise RuntimeError("Nedokončený start pracovní VM")
-        yield
+        inc("start", NAME)
+        if wait_receipt(ready, 720) != {"start":token}:
+            raise ValueError("Odpověď patří jinému spuštění pracovní VM")
+        yield token
     finally:
-        inc("stop", NAME, "--timeout", "180", timeout=210)
+        challenge.unlink(missing_ok=True)
+        try:
+            if inc("list", NAME, "-f", "csv", "-c", "s").strip() == b"RUNNING":
+                inc("stop", NAME, "--timeout", "180", timeout=220)
+        finally:
+            ready.unlink(missing_ok=True)
 
 
-def process(source):
+def process(source, token):
     job = source.name
     dest = SPOOL / "in" / job
     result = SPOOL / "out" / job
-    atomic_copy(source, dest, 64 * 1024 * 1024, 0o444)
+    receipt = result.with_name(job+".json")
+    command = dest.with_name(job+".povel")
+    command.unlink(missing_ok=True)
+    receipt.unlink(missing_ok=True)
     result.unlink(missing_ok=True)
+    digest = atomic_copy(source, dest, 64 * 1024 * 1024, 0o444)
     try:
-        raw = inc("exec", "-T", "--cwd", "/home/karantena", NAME, "--", "runuser", "-u", "karantena", "--",
-                  "env", "XDG_RUNTIME_DIR=/run/user/17304", "python3", "/opt/polarita/karantena.py", job, timeout=1300)
-        report = json.loads(raw)
-        state = report["stav"]
+        put_token(command,token)
+        message = wait_receipt(receipt, 1380)
+        if (message.get("soubor"), message.get("start"), message.get("sha256")) != (job,token,digest):
+            raise ValueError("Doklad neodpovídá souboru a spuštění pracovní VM")
+        report = message.get("vysledek")
+        if not isinstance(report,dict) or not isinstance(report.get("duvod"),str) or not re.fullmatch(r"[a-zA-Z0-9-]{1,64}",report["duvod"]):
+            raise ValueError("Neplatný důvod výsledku kontroly")
+        state = report.get("stav")
+        if any(type(report[k]) is not int for k in ("signatury_hodin","navrat") if k in report):
+            raise ValueError("Neplatná metrika kontroly")
         if state == "ocisteno":
             expected = {"pdf": "pdf", "txt": "xml"}.get(source.suffix[1:])
-            if expected is None or expected != report["typ"]:
+            if expected is None or expected != report.get("typ"):
                 raise ValueError("Neodpovídá formát čisté přílohy")
             out = BASE / "vysledky" / (source.stem + "." + expected)
-            atomic_copy(result, out, 128 * 1024 * 1024, 0o600)
+            output_hash = report.get("otisk_vystupu")
+            if not isinstance(output_hash,str) or not re.fullmatch(r"[0-9a-f]{64}",output_hash):
+                raise ValueError("Chybí otisk výsledku")
+            atomic_copy(result, out, 128 * 1024 * 1024, 0o600, expected_digest=output_hash)
         elif state not in ("ceka", "odmitnuto"):
             raise ValueError("Neznámý výsledek kontroly")
         archive = {"ocisteno": "prijate", "odmitnuto": "odmitnute", "ceka": "ceka"}[state]
@@ -104,8 +156,10 @@ def process(source):
         source.replace(BASE / archive / job)
         print(job, state, safe_report["duvod"], flush=True)
     finally:
+        command.unlink(missing_ok=True)
         dest.unlink(missing_ok=True)
         result.unlink(missing_ok=True)
+        receipt.unlink(missing_ok=True)
 
 
 def pending():
@@ -135,10 +189,10 @@ def main():
         if jobs:
             with Path("/run/polarita-test-zatez.lock").open("a") as capacity:
                 fcntl.flock(capacity, fcntl.LOCK_EX)
-                with worker():
+                with worker() as token:
                     for job in jobs:
                         try:
-                            process(job)
+                            process(job, token)
                         except (OSError, ValueError, subprocess.SubprocessError) as err:
                             # Do zprávy se nikdy nezapisuje obsah přílohy ani výpis cizího programu.
                             record(job.name, {"stav": "ceka", "duvod": "chyba-zpracovani", "chyba": type(err).__name__})

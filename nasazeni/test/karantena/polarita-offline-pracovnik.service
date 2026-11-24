@@ -1,0 +1,16 @@
+[Unit]
+Description=Kontrola příloh a předání dokladu ve sdíleném svazku offline VM
+After=incus-agent.service user@17304.service polarita-karantena-pamet.service
+Requires=user@17304.service
+[Service]
+Type=simple
+User=karantena
+Group=karantena
+Environment=XDG_RUNTIME_DIR=/run/user/17304
+WorkingDirectory=/home/karantena
+ExecStart=/usr/bin/python3 -B /opt/polarita/obsluha.py
+Restart=on-failure
+RestartSec=10
+UMask=0077
+[Install]
+WantedBy=multi-user.target
