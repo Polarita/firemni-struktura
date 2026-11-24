@@ -69,6 +69,18 @@ def main():
         src.mkdir()
         with tarfile.open(archive, "r:gz") as tar:
             tar.extractall(src, filter="data")
+        cycle = "--zkouska-aigis" in sys.argv
+        if cycle:
+            if not head:
+                raise RuntimeError("Zkouška cyklu potřebuje existující hlavní větev")
+            samples = {
+                "pol_aigis_prvni.py": "from pol_aigis_druhy import odpoved\n\ndef vypocet(n):\n    return odpoved(n-1) if n else 0\n",
+                "pol_aigis_druhy.py": "from pol_aigis_prvni import vypocet\n\ndef odpoved(n):\n    return vypocet(n-1) if n else 0\n",
+                "pol_aigis_start.py": "from pol_aigis_prvni import vypocet\n\nprint(vypocet(2))\n",
+            }
+            for filename, code in samples.items():
+                with (src/filename).open("x") as output:
+                    output.write(code)
         workflow = src/".gitea/workflows/kontrola.yml"
         workflow.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(src/"balicky/ci-gitea-actions-priklad.yml", workflow)
@@ -100,10 +112,15 @@ def main():
             if git("rev-parse", "FETCH_HEAD^{tree}", directory=src) != tree:
                 raise RuntimeError("Existující větev zkoušky obsahuje jiný strom")
         evidence = {"branch": branch, "commit": candidate, "tree": tree}
-        marker = archive.with_name("revize-ci.json")
+        if cycle:
+            evidence["zkouska"] = "aigis-cyklus"
+        marker = archive.with_name("revize-aigis.json" if cycle else "revize-ci.json")
         pending = marker.with_suffix(".next")
         pending.write_text(json.dumps(evidence)+"\n")
         pending.replace(marker)
+        if cycle:
+            print("Gitea obsahuje kontrolní revizi s obousměrnou závislostí.")
+            return
         for name in ("worker","judge"):
             account = "pol-git-"+name
             if subprocess.run(["id","-u",account],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode:

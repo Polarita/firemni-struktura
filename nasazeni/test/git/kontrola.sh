@@ -11,3 +11,7 @@ bash "$src/sken.sh" >&2
 python3 "$src/zdroj_ci.py" "$dest/zdroj-ci.tar.gz" --zkouska-skenu
 python3 "$src/repozitar.py" --ochrana --kandidat "$dest/revize-ci.json"
 python3 "$src/over_ci.py" "$dest/revize-ci.json"
+python3 "$src/zdroj_ci.py" "$dest/zdroj-ci.tar.gz" --zkouska-aigis
+python3 "$src/repozitar.py" --ochrana --kandidat "$dest/revize-aigis.json"
+python3 "$src/over_ci.py" "$dest/revize-aigis.json" --odmitnuty-aigis
+python3 "$src/repozitar.py" --uzavri-aigis --kandidat "$dest/revize-aigis.json"

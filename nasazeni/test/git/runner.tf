@@ -39,4 +39,13 @@ resource "incus_instance" "runner" {
       readonly = "true"
     }
   }
+  device {
+    name = "aigis"
+    type = "disk"
+    properties = {
+      source   = "/srv/polarita/infra/gitea-runner-test/podklady/aigis"
+      path     = "/opt/polarita-aigis"
+      readonly = "true"
+    }
+  }
 }

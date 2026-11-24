@@ -8,6 +8,7 @@ exec 9>"$work/.instalace"
 flock 9
 exec 8>/run/polarita-test-zatez.lock
 flock 8
+bash "$src/aigis/sestav.sh"
 python3 "$src/runner-podklady.py"
 nft -c -f "$src/runner.nft"
 install -d -m 0755 /etc/polarita
@@ -75,5 +76,7 @@ echo "<p>Polarita CI</p>" >"$d/test.html"
 timeout 60 "$c" --disable-gpu --disable-dev-shm-usage --user-data-dir="$d/chrome" --print-to-pdf="$d/test.pdf" "file://$d/test.html"
 "$d/venv/bin/python" -c '\''from pypdf import PdfReader; import sys; assert "Polarita CI" in PdfReader(sys.argv[1]).pages[0].extract_text()'\'' "$d/test.pdf"
 '
+incus file push --mode 0644 "$src/aigis/zkouska.py" gitea-runner-test/opt/polarita-runner/zkouska-aigis.py
+"${inside[@]}" runuser -u pol-ci -- python3 /opt/polarita-runner/zkouska-aigis.py
 systemctl enable --now polarita-gitea-runner.service
 tofu plan -input=false -detailed-exitcode

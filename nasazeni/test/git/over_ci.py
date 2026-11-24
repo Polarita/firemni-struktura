@@ -10,6 +10,7 @@ from pripoj_identitu import DB, INSIDE
 
 if socket.gethostname().split(".")[0] != "polarita-hq":
     raise SystemExit("Zkouška patří do testovací VM")
+negative = "--odmitnuty-aigis" in sys.argv
 candidate = json.loads(Path(sys.argv[1]).read_text())
 branch, head, tree = (candidate[k] for k in ("branch", "commit", "tree"))
 if not all(re.fullmatch(r"[0-9a-f]{40}", value) for value in (tree,head)) or branch not in ("main","instalace/"+tree):
@@ -45,7 +46,9 @@ while time.monotonic() < end:
         run, state = int(run_id), int(status)
         if not re.fullmatch(r"[0-9a-f]{40}", checked) or rev(checked+"^{tree}") != tree:
             raise RuntimeError("Workflow spustilo jiný strom než požadovaný archiv")
-        if state == 1:
+        if negative and state == 1:
+            raise RuntimeError("CI přijalo kontrolní revizi s cyklem")
+        if state == (2 if negative else 1):
             break
         if state not in (0,5,6,7,9):
             raise RuntimeError("Ověřovací workflow skončilo ve stavu "+str(state))
@@ -55,7 +58,25 @@ else:
 steps = subprocess.check_output(DB+[f"""select s.name,s.status from action_task_step s where s.task_id=(
 select task_id from action_run_job where run_id={run} and job_id='kontrola' order by attempt desc limit 1)
 order by s.index"""],text=True).splitlines()
-required = ("Checkout","Python dependencies","Consistency check","S2 Eval Suite","S3 pricing kernel","S1 templates","Working tree","Remove the temporary")
+required = ("Checkout","Python dependencies","Consistency check","AigisCode","S2 Eval Suite","S3 pricing kernel","S1 templates","Working tree","Remove the temporary")
+if negative:
+    # Odmítnutí musí pocházet ze stejného kroku i skutečného vzorku (pád runneru nestačí).
+    from compression import zstd
+    from io import BytesIO
+    if (branch == "main" or len(steps) < 4 or not steps[3].startswith("AigisCode") or not steps[3].endswith("|2")
+            or any(not step.startswith(name) or not step.endswith("|1") for step,name in zip(steps[:3],required[:3]))):
+        raise RuntimeError("Nesouhlasí předešlé kroky nebo zdroj odmítnutí")
+    filename = subprocess.check_output(DB+[f"""select t.log_filename from action_task t join action_run_job j
+        on j.task_id=t.id where j.run_id={run} and j.job_id='kontrola' and t.log_in_storage
+        order by j.attempt desc limit 1"""], text=True).strip()
+    if not re.fullmatch(r"spravce/firemni-struktura-test/[0-9a-f]{2}/[0-9]+\.log\.zst", filename):
+        raise RuntimeError("Chybí nativní uložený log odmítnuté úlohy")
+    raw = subprocess.check_output(INSIDE+["cat", "/var/lib/gitea/data/actions_log/"+filename])
+    with zstd.open(BytesIO(raw),"rt") as stream:
+        if not any("Silný cyklus:" in line and "pol_aigis_prvni.py" in line and "pol_aigis_druhy.py" in line for line in stream):
+            raise RuntimeError("Nativní log neobsahuje obě hrany zkoušeného cyklu")
+    print(f"Gitea Actions odmítla revizi {head} v kroku AigisCode. Log úlohy {run} identifikoval oba soubory cyklu.")
+    sys.exit(0)
 if len(steps) != len(required) or any(not entry.startswith(name) or not entry.endswith("|1") for entry,name in zip(steps,required)):
     raise RuntimeError("Gitea nepotvrdila všechny kroky zkoušky")
 print(f"Gitea Actions potvrdila všech {len(steps)} kroků pro větev {branch}, revizi {checked} a strom {tree}.")
