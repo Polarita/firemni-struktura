@@ -1,0 +1,24 @@
+#!/bin/sh
+set -eu
+pool=polarita_zfs
+disk=/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_incus_data
+guid=$(cat /etc/polarita/zfs/guid)
+test "$(hostname -s)" = polarita-hq
+test "$(lsblk -dno SERIAL "$disk")" = incus_data
+if ! zpool list -H -o name "$pool" >/dev/null 2>&1; then
+    zpool import -N -o cachefile=none -d /dev/disk/by-id "$guid"
+fi
+test "$(zpool get -H -o value guid "$pool")" = "$guid"
+test "$(zpool get -H -o value altroot "$pool")" = '-'
+test "$(zfs get -H -o value mountpoint "$pool")" = /srv/polarita
+if ! printf '%s\n' 402653184 > /sys/module/zfs/parameters/zfs_arc_max; then
+    echo 'polarita-zfs: ARC limit could not be applied at runtime' >&2
+fi
+if [ "$(zfs get -H -o value keystatus "$pool")" != available ]; then
+    zfs load-key -L "file://${CREDENTIALS_DIRECTORY}/polarita-zfs.key" "$pool"
+fi
+for suffix in '' /infra /apps /data /data/incus /data/postgres /data/garage /data/gitea /data/pgbackrest /data/legal-archive /data/vaultwarden /data/airgap-spool /data/airgap-models /data/clamav-db /vault /workspace /backups; do
+    dataset="$pool$suffix"
+    if [ "$(zfs get -H -o value mounted "$dataset")" != yes ]; then zfs mount "$dataset"; fi
+    test "$(findmnt -n -T "/srv/polarita$suffix" -o SOURCE)" = "$dataset"
+done

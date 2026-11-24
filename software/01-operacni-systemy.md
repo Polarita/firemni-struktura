@@ -63,6 +63,8 @@ Proveď nejprve výhradně čtecí (Read-Only) kontrolu cílového stroje a při
 7. Ověř plán proti inventuře a ulož jej před změnou disků.
 ```
 
+Pro prvotní TEST na Ejpovicích provede kroky základní instalace `sudo -n bash nasazeni/test/zaklad.sh`. Přesné jméno projektu, VM a disků ověřuje ve vnějším Incusu. Nový datový svazek musí patřit právě této VM a být prázdný po celé délce. Po vytvoření ZFS instalátor ověří oba způsoby odemčení, vytvoří snímek a vyzkouší restart. U dříve připravené VM provede inventuru.
+
 ### Prompt 2 — Instalace OS a šifrovaného pole, základní inicializace a zabezpečení (`pro 17003 spravce-site` + `17004 klicnik`)
 
 ```text

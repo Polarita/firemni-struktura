@@ -18,6 +18,7 @@ if [[ ! -s test.crt ]]; then
         -subj /CN=Polarita-TEST-obnova -addext keyUsage=keyEncipherment
     mv test.crt.next test.crt
 fi
+if [[ ${1:-} == --pouze-prijemce ]]; then exit 0; fi
 guest=(incus exec -T --project polarita polarita-hq --)
 work=/srv/polarita/infra/openbao-test
 "${guest[@]}" install -d -m 0750 "$work"

@@ -32,6 +32,9 @@ def over():
 set -euo pipefail
 [[ $(hostname -s) == polarita-hq && $(systemd-detect-virt) == kvm ]]
 [[ -c /dev/tpmrm0 && -c /dev/kvm && -d /sys/firmware/efi ]]
+[[ $(cat /sys/class/tpm/tpm0/tpm_version_major) == 2 ]]
+[[ $(od -An -tu1 -j4 -N1 /sys/firmware/efi/efivars/SecureBoot-* | tr -d ' ') == 1 ]]
+systemctl is-active --quiet apt-daily-upgrade.timer
 systemctl is-active --quiet polarita-zfs.service
 systemctl is-active --quiet chrony.service
 systemctl is-active --quiet auditd.service
@@ -53,7 +56,7 @@ printf '%s\\n' "$PRETTY_NAME"
         "cas_utc": datetime.now(timezone.utc).isoformat(), "projekt": "polarita", "vm": vm["name"],
         "uzel": vm["location"], "os": measured, "cpu": config["limits.cpu"], "ram": config["limits.memory"],
         "pool_incus": system["pool"], "systemovy_disk": system["size"], "datovy_disk": volume["config"]["size"],
-        "zfs": "polarita_zfs ONLINE, aes-256-gcm", "vtpm_overilo_klic": True, "kvm": True,
+        "zfs": "polarita_zfs ONLINE, aes-256-gcm", "vtpm_overilo_klic": True, "secure_boot": True, "kvm": True,
         "sluzby": ["auditd", "chrony", "polarita-zfs"],
     }
 

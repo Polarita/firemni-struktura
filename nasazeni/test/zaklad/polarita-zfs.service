@@ -1,0 +1,18 @@
+[Unit]
+Description=Unlock and mount Polarita ZFS datasets using the guest vTPM
+DefaultDependencies=no
+Requires=dev-disk-by\x2did-scsi\x2d0QEMU_QEMU_HARDDISK_incus_data.device dev-disk-by\x2did-scsi\x2d0QEMU_QEMU_HARDDISK_incus_data\x2dpart1.device dev-tpmrm0.device
+Wants=zfs-load-module.service zfs-import.target
+After=dev-disk-by\x2did-scsi\x2d0QEMU_QEMU_HARDDISK_incus_data.device dev-disk-by\x2did-scsi\x2d0QEMU_QEMU_HARDDISK_incus_data\x2dpart1.device dev-tpmrm0.device zfs-load-module.service zfs-import.target systemd-remount-fs.service
+Before=zfs-mount.service local-fs.target umount.target
+Conflicts=umount.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+LoadCredentialEncrypted=polarita-zfs.key:/etc/polarita/zfs/vtpm.cred
+ExecStart=/etc/polarita/zfs/start
+TimeoutStartSec=90s
+
+[Install]
+RequiredBy=local-fs.target

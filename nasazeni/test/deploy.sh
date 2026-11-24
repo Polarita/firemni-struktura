@@ -7,6 +7,7 @@ tag=$(python3 -c 'import json; print(json.load(open("nastroje/kanon.json"))["rel
 commit=$(git rev-parse HEAD)
 [[ $(git rev-list -n 1 "$tag") == "$commit" ]]
 git diff --quiet HEAD -- nasazeni/test
+sudo -n bash nasazeni/test/zaklad.sh
 inc=(sudo -n incus)
 guest=("${inc[@]}" exec -T --project polarita polarita-hq --)
 [[ $("${guest[@]}" hostname -s) == polarita-hq ]]
