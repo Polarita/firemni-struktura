@@ -133,7 +133,7 @@ def configure(root):
     for fixture in sorted({x for values in FIXTURES.values() for x in values} | set(DENIED)):
         policy += allow("test/data/" + fixture, "create", "update")
     policy += allow("test/metadata/pki/organizace-test", "read") + allow("test/data/pki/organizace-test", "create")
-    for suffix in ("pki/valkey-test", *("valkey/" + name for name in CACHES)):
+    for suffix in ("pki/valkey-test", *("valkey/" + name for name in CACHES), "valkey-overeni/server"):
         policy += allow("test/metadata/" + suffix, "read") + allow("test/data/" + suffix, "create")
     for name in DATABASES:
         policy += allow("test/metadata/databaze/" + name, "read")
@@ -143,9 +143,9 @@ def configure(root):
         for path in paths:
             acl += allow("test/data/" + path, "read")
         if role == "valkey-test":
-            acl += allow("test/data/pki/valkey-test", "read")
+            acl += allow("test/data/pki/valkey-test", "read") + allow("test/data/valkey-overeni/server", "read")
         for name in CACHES:
-            if role in ("valkey-test", "cache-" + name):
+            if role == "cache-" + name:
                 acl += allow("test/data/valkey/" + name, "read")
         if role == "pecet-test":
             acl += allow("test/data/pki/organizace-test", "read")
@@ -194,7 +194,7 @@ def initialize_seal(manager):
 
 def initialize_cache(manager):
     from valkey_test import tls_bundle
-    for suffix in ("pki/valkey-test", *("valkey/" + name for name in CACHES)):
+    for suffix in ("pki/valkey-test", *("valkey/" + name for name in CACHES), "valkey-overeni/server"):
         try:
             meta = request("GET", "test/metadata/" + suffix, token=manager)["data"]
             version = meta["versions"][str(meta["current_version"])]
@@ -205,9 +205,17 @@ def initialize_cache(manager):
                 raise
             if suffix == "pki/valkey-test":
                 fields = tls_bundle()
+            elif suffix == "valkey-overeni/server":
+                fields = {}
+                for name in CACHES:
+                    token = login(credentials("cache-" + name, manager))
+                    try:
+                        data = request("GET", "test/data/valkey/" + name, token=token)["data"]["data"]
+                        fields[name] = hashlib.sha256(data["heslo"].encode()).hexdigest()
+                    finally:
+                        request("POST", "auth/token/revoke-self", {}, token)
             else:
-                password = secrets.token_urlsafe(32)
-                fields = {"heslo": password, "hash": hashlib.sha256(password.encode()).hexdigest()}
+                fields = {"heslo": secrets.token_urlsafe(32)}
             request("POST", "test/data/" + suffix, {"options": {"cas": 0}, "data": fields}, manager)
 
 

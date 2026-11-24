@@ -87,6 +87,12 @@ def main():
         denied(c, "NOAUTH", "PING")
     manager = p.login(p.recover("bao-sprava"))
     try:
+        server = p.login(p.credentials("valkey-test", manager))
+        try:
+            for name in p.CACHES:
+                p.expect_forbidden("GET", "test/data/valkey/" + name, server)
+        finally:
+            p.request("POST", "auth/token/revoke-self", {}, server)
         for name in p.CACHES:
             token = p.login(p.credentials("cache-" + name, manager))
             try:

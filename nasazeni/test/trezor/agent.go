@@ -124,7 +124,7 @@ template {
 			if !regexp.MustCompile(`^[a-z]{1,20}$`).MatchString(name) {
 				return fmt.Errorf("neplatné jméno klienta Valkey")
 			}
-			acl += fmt.Sprintf("user %s reset on #{{ with secret \"test/data/valkey/%s\" }}{{ .Data.data.hash }}{{ end }} ~%s:* +ping +get +set +del +expire +ttl\n", name, name, name)
+			acl += fmt.Sprintf("user %s reset on #{{ with secret \"test/data/valkey-overeni/server\" }}{{ .Data.data.%s }}{{ end }} ~%s:* +ping +get +set +del +expire +ttl\n", name, name, name)
 		}
 		config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/valkey-acl", acl)
 		outputs["valkey-acl"] = "valkey-acl"
