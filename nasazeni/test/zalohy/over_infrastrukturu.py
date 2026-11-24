@@ -61,6 +61,7 @@ def verify(root):
                 path.parent.mkdir(parents=True,exist_ok=True)
                 with mx.extractfile(item) as source,path.open("xb") as out:
                     shutil.copyfileobj(source,out)
-            subprocess.run(["ldb","--db="+str(database),"--ignore_unknown_options","checkconsistency"],
+            subprocess.run(["java","-XX:+UseSerialGC","-Xmx48m","-cp","/opt/polarita-rocksdb/*:/opt/polarita-rocksdb",
+                            "RocksSonda","kontrola",str(database)],
                            check=True,stdout=subprocess.DEVNULL)
     print("Obnovené stavy OpenTofu a inventář Incusu obsahují firemní služby. SQLite Headscale prošla kontrolou integrity, obnovené RocksDB MX prošlo nativní kontrolou konzistence.")

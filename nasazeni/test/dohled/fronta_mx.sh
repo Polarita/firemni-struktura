@@ -9,6 +9,5 @@ systemd-run --quiet --pipe --wait --collect -p PrivateNetwork=yes -p ProtectSyst
     -p "ReadOnlyPaths=$db" /bin/bash -ec '
         set -euo pipefail
         t=$(mktemp -d)
-        ldb --db="$1" --secondary_path="$t/cache" --column_family=e --ignore_unknown_options scan --no_value --key_hex |
-            awk '\''/^0x[0-9A-Fa-f]{16}$/ {n++;next} {bad=1} END {if (bad) exit 1; print n+0}'\''
+        exec java -XX:+UseSerialGC -Xms8m -Xmx48m -cp "/opt/polarita-rocksdb/*:/opt/polarita-rocksdb" RocksSonda fronta "$1" "$t/cache"
     ' fronta "$db"

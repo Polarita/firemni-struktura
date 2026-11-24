@@ -3,7 +3,7 @@ set -euo pipefail
 [[ $(hostname -s) == polarita-hq && $EUID == 0 ]]
 src=$(cd "$(dirname "$0")" && pwd)
 [[ $src =~ ^/srv/polarita/infra/(stavba|releases)/[0-9a-f]{40}/nasazeni/test/dohled$ ]]
-DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=120 -y --no-install-recommends install rocksdb-tools=9.11.2-1
+bash "$src/../zalohy/rocks.sh"
 install -m 0644 "$src"/polarita-dohled-{sber.timer,vzorek.socket,vzorek@.service} /etc/systemd/system/
 cat >/etc/systemd/system/polarita-dohled-sber.service <<UNIT
 [Unit]
