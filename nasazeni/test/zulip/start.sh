@@ -15,6 +15,9 @@ export SECRETS_postgres_password_FILE=/run/secrets/pg-zulip
 export SETTING_EXTERNAL_HOST="$POLARITA_WEB:8444"
 export SETTING_ZULIP_ADMINISTRATOR=spravce@polarita.test
 export SETTING_REMOTE_POSTGRES_HOST=10.239.33.12 SETTING_REMOTE_POSTGRES_SSLMODE=verify-full
+install -d -m 0700 -o zulip -g zulip /home/zulip/.postgresql
+install -m 0444 /etc/polarita-zulip/postgres.crt /home/zulip/.postgresql/root.crt
+export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 export PGSSLROOTCERT=/etc/polarita-zulip/postgres.crt
 export SETTING_REDIS_HOST=10.239.33.13 SETTING_MEMCACHED_LOCATION=10.239.32.17:11211
 export SETTING_RABBITMQ_HOST=10.239.32.17 SETTING_RABBITMQ_USERNAME=zulip

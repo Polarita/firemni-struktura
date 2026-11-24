@@ -67,6 +67,8 @@ CGO_ENABLED=0 go build -trimpath -o "$tmp/agent" nasazeni/test/trezor/agent.go
 "${guest[@]}" bash "$dest/nasazeni/test/git/instalace.sh" "https://$fqdn/git/"
 "${guest[@]}" bash "$dest/nasazeni/test/git/runner.sh"
 "${guest[@]}" bash "$dest/nasazeni/test/git/vstup.sh" "https://$fqdn/git/"
+"${guest[@]}" bash "$dest/nasazeni/test/zulip/fronta.sh"
+"${guest[@]}" bash "$dest/nasazeni/test/zulip/aplikace.sh" "$fqdn"
 sudo -n bash nasazeni/test/trezor/prijemce.sh
 if "${guest[@]}" test -e /srv/polarita/data/bootstrap-test/openbao-test/inicializovano; then
     sudo -n python3 nasazeni/test/trezor/rozsireni.py "$dest/nasazeni/test/trezor"
@@ -121,6 +123,7 @@ done
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/zkouska_pristupu.py" | tee "$tmp/restic.txt"
 sudo -n bash nasazeni/test/zalohy/zkouska_obalky.sh "$dest/nasazeni/test/zalohy" | tee -a "$tmp/restic.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/dohled/instalace.sh" | tee "$tmp/dohled.txt"
+"${guest[@]}" bash "$dest/nasazeni/test/zulip/spust.sh" "$fqdn"
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/sber.py" | tee -a "$tmp/restic.txt"
 "${guest[@]}" python3 "$dest/nasazeni/test/zalohy/obnov.py" | tee -a "$tmp/restic.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/zalohy/retence.sh" | tee -a "$tmp/restic.txt"
