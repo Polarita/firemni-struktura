@@ -1,0 +1,7 @@
+[Unit]
+Description=Aktualizace znalostních stránek SilverBullet z firemního Gitu
+RequiresMountsFor=/srv/polarita/vault /srv/polarita/data/silverbullet-test
+After=incus.service
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /srv/polarita/infra/silverbullet-test/obnov.sh

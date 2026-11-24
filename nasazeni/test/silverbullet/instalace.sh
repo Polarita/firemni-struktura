@@ -16,7 +16,8 @@ fi
 [[ $(findmnt -no SOURCE --mountpoint "$data") == polarita_zfs/data/silverbullet-test ]]
 [[ $(zfs get -Ho value encryptionroot polarita_zfs/data/silverbullet-test) == polarita_zfs ]]
 install -dm0755 "$data/overene"
-python3 "$src/pohled.py"
+install -m0644 "$src/pohled.py" "$src/obnov.sh" "$work/"
+python3 "$work/pohled.py"
 python3 "$src/distribuce.py"
 cd "$work/tofu"
 install -m0644 "$src/silverbullet.tf" "$src/../incus/providers.tf" "$src/../incus/.terraform.lock.hcl" .
@@ -70,4 +71,8 @@ for attempt in range(45):
         time.sleep(1)
 print("SilverBullet vydal přes vlastní souborové API registr poboček z ověřeného znalostního Gitu.")
 PY
+install -m0644 "$src"/polarita-silverbullet-export.{timer,service} /etc/systemd/system/
+systemctl daemon-reload
+systemctl start polarita-silverbullet-export.service
+systemctl enable --now polarita-silverbullet-export.timer
 tofu plan -input=false -detailed-exitcode

@@ -1,0 +1,8 @@
+[Unit]
+Description=Kontrola nových revizí znalostního Gitu pro SilverBullet
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=1min
+AccuracySec=5s
+[Install]
+WantedBy=timers.target
