@@ -3,6 +3,7 @@ from html.parser import HTMLParser
 from http.cookiejar import CookieJar
 import re
 import sys
+from urllib.error import HTTPError
 from urllib.parse import urlencode, urljoin, urlsplit
 from urllib.request import build_opener, HTTPCookieProcessor, HTTPRedirectHandler, Request
 
@@ -57,9 +58,17 @@ with web.open(start, timeout=20) as response:
     if b"silverbullet" not in response.read().lower():
         raise RuntimeError("Chybí HTML aplikace SilverBullet")
 # Po odhlášení z aplikace musí chráněná kontrola relace vrátit 401 i při trvajícím SSO.
-from urllib.error import HTTPError
-with web.open(start+"oauth2/sign_out?rd="+start+"oauth2/sign_in",timeout=20) as response:
-    response.read()
+class BezPresmerovani(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+logout = build_opener(BezPresmerovani(), HTTPCookieProcessor(jar))
+try:
+    with logout.open(start+"oauth2/sign_out", timeout=15) as response:
+        response.read()
+except HTTPError as err:
+    if err.code not in (302, 303):
+        raise
 try:
     web.open(start+"oauth2/auth", timeout=10)
 except HTTPError as err:

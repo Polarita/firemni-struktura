@@ -23,7 +23,13 @@ cd "$work/tofu"
 install -m0644 "$src/silverbullet.tf" "$src/../incus/providers.tf" "$src/../incus/.terraform.lock.hcl" .
 tmp=$(mktemp -d)
 trap 'rm -r -- "$tmp"' EXIT
-tofu init -input=false -lockfile=readonly
+# Hrana byla v této VM nasazena dříve se stejným zámkem poskytovatele Incus.
+mirror=/srv/polarita/infra/hrana/.terraform/providers
+if [[ -d $mirror ]] && cmp -s .terraform.lock.hcl /srv/polarita/infra/hrana/.terraform.lock.hcl; then
+    tofu init -input=false -lockfile=readonly -plugin-dir="$mirror"
+else
+    tofu init -input=false -lockfile=readonly
+fi
 tofu validate
 tofu plan -input=false -out="$tmp/plan"
 tofu show -json "$tmp/plan" | python3 -c '
