@@ -12,14 +12,15 @@ def query(sql):
     result = subprocess.run(
         ["runuser", "-u", "postgres", "--", "psql", "-XqAt", "-v", "ON_ERROR_STOP=1",
          "-U", "obnova_test", "-d", "zulip"],
-        input=sql, text=True, capture_output=True, check=True,
+        # Oficiální migrace používají vlastní schéma role zulip. Starší snímky mohly mít tabulky v public.
+        input="SET search_path TO pg_catalog, zulip, public;\n" + sql, text=True, capture_output=True, check=True,
     )
     return result.stdout.splitlines()
 
 
 def verify(root):
     data = root / "zulip"
-    if not data.exists() and query("SELECT to_regclass('public.zerver_realm') IS NULL") == ["t"]:
+    if not data.exists() and query("SELECT to_regclass('zerver_realm') IS NULL") == ["t"]:
         return  # Vydání před instalací chatu.
     secrets = configparser.RawConfigParser()
     with (data / "zulip-secrets.conf").open() as stream:
