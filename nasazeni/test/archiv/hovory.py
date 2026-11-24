@@ -1,4 +1,5 @@
 """Převzetí označeného spisového hovoru z Garage. Zdroje se uvolní až po ověření všech tří zápisů."""
+from contextlib import closing
 from datetime import datetime, timezone
 import fcntl
 import hashlib
@@ -79,7 +80,7 @@ def transfer(s3, key, metadata):
                 if missing(e):
                     return False
                 raise
-            with obj["Body"] as body:
+            with closing(obj["Body"]) as body:
                 if ({k.lower():v for k,v in obj["Metadata"].items()} != metadata or not 0 < obj["ContentLength"] <= 128*1024*1024):
                     raise ValueError("Části hovoru nemají shodné předávací údaje nebo přípustnou délku")
                 file = tmp/part
@@ -103,7 +104,7 @@ def transfer(s3, key, metadata):
             if missing(e):
                 continue
             raise
-        with obj["Body"] as stream:
+        with closing(obj["Body"]) as stream:
             if {k.lower():v for k,v in obj["Metadata"].items()} != metadata or hashlib.file_digest(stream,"sha256").hexdigest()!=record["casti"][part]["sha256"]:
                 raise ValueError("Obsah se po předání změnil")
     for source_key in paths.values():
