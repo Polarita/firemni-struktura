@@ -26,11 +26,19 @@ store=/srv/polarita/data/paperclip
 install -m 0600 "$manifest" "$store/.rozhodnuti.next"
 mv -T "$store/.rozhodnuti.next" "$store/rozhodnuti.json"
 echo 'Paperclip zapsal obě nativní volby správce TEST. Oddělená databázová služba ověřila jeho identitu a celý diff. Potvrzení změnilo první spis a zamítnutí zachovalo druhý.'
-python3 - "$manifest" "$fqdn" <<'PY'
+url=$(python3 - "$manifest" "$fqdn" <<'PY'
 from pathlib import Path
 import json
 import sys
 from uuid import UUID
 item,=(r for r in json.loads(Path(sys.argv[1]).read_text()) if r['obsah']['polarita']['spis']=='TEST-POL-0000-00013')
-print(f"Uživatelský vzor TEST-POL-0000-00013: https://{sys.argv[2]}:8445/approvals/{UUID(item['approval'])}")
+print(f"https://{sys.argv[2]}:8445/approvals/{UUID(item['approval'])}")
 PY
+)
+printf '%s\n' "$url" | incus exec -T reditelstvi-test -- sh -ec '
+    umask 022
+    dest=/usr/local/share/polarita-decisions-url
+    cat > "$dest.next"
+    mv -T "$dest.next" "$dest"
+'
+echo "Uživatelský vzor TEST-POL-0000-00013: $url"

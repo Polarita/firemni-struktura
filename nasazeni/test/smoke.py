@@ -1,5 +1,6 @@
 """Protokol přihlášení. HTTPS adresa je argument, aktuální heslo vstupuje na stdin."""
 import http.cookiejar
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -49,6 +50,12 @@ for flag, port in (("--paperclip", 8445), ("--zulip", 8444)):
         if f'href="{expected}"' not in overview:
             raise SystemExit("V přehledu správce chybí odkaz na " + expected)
         print("Přehled přihlášeného správce obsahuje odkaz na " + expected)
+if "--decisions" in sys.argv:
+    match = re.search(re.escape('href="' + origin + ':8445/approvals/') +
+                      r'([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})">Vyzkoušet rozhodnutí ve vzorovém spisu</a>', overview)
+    if not match:
+        raise SystemExit("V přehledu správce chybí odkaz na vzorové rozhodnutí v Paperclipu")
+    print("Přihlášený správce má v přehledu přímý odkaz na vzorový spis Decisions.")
 check("/konfigurator", None, 200, "/konfigurator", "Konfigurátor paušálu")
 if "--dohled" in sys.argv:
     check("/dohled", None, 200, "/dohled", "Checkmk · polarita-hq")
