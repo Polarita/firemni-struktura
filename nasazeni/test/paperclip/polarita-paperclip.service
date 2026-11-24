@@ -2,6 +2,10 @@
 Description=Paperclip pro testovací ředitelství Polarity
 After=network-online.target
 Wants=network-online.target
+ConditionPathExists=/run/secrets/pg-db_paperclip
+ConditionPathExists=/run/secrets/paperclip-auth
+ConditionPathExists=/run/secrets/paperclip-jwt
+ConditionPathExists=/run/secrets/paperclip-master
 StartLimitIntervalSec=300
 StartLimitBurst=4
 

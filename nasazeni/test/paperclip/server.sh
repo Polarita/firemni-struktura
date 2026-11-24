@@ -18,7 +18,7 @@ chmod 0700 /var/lib/paperclip
 install -d -m 0755 /etc/polarita-paperclip
 INNER
 incus file push --mode=0644 "$src/start.sh" paperclip-test/etc/polarita-paperclip/
-incus file push --mode=0644 "$src/polarita-paperclip.service" paperclip-test/etc/systemd/system/
+incus file push --mode=0644 "$src"/polarita-paperclip.{service,timer} paperclip-test/etc/systemd/system/
 incus file push --mode=0644 /srv/polarita/infra/postgres-test/ca.crt paperclip-test/etc/polarita-paperclip/postgres.crt
 # Drizzle má samostatný žurnál migrací. Vlastnictví omezujeme na schéma v databázi Paperclipu.
 incus exec -T postgres-test -- runuser -u postgres -- psql -Xq -v ON_ERROR_STOP=1 -d db_paperclip <<'SQL'
@@ -38,7 +38,7 @@ SQL
     fi
 } | "${inside[@]}" install -m 0644 /dev/stdin /etc/polarita-paperclip/server.env
 "${inside[@]}" systemctl daemon-reload
-"${inside[@]}" systemctl enable polarita-paperclip.service
+"${inside[@]}" systemctl enable --now polarita-paperclip.timer
 "${inside[@]}" systemctl restart polarita-paperclip.service
 for step in {1..180}; do
     if "${inside[@]}" curl -fsS -m 4 -H "Host: $fqdn:8445" http://127.0.0.1:3100/api/health 2>/dev/null |

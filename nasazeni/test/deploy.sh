@@ -78,6 +78,7 @@ fi
 "${guest[@]}" bash "$dest/nasazeni/test/trezor/instalace.sh" "$dest/agent" | tee "$tmp/trezor.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/databaze/aplikace.sh" | tee "$tmp/databaze.txt"
 "${guest[@]}" bash "$dest/nasazeni/test/paperclip/server.sh" "$fqdn" | tee "$tmp/paperclip.txt"
+"${guest[@]}" bash "$dest/nasazeni/test/paperclip/spravce.sh" "$fqdn" | tee -a "$tmp/paperclip.txt"
 "${guest[@]}" touch /srv/polarita/infra/keycloak-test/conf/databaze-pripravena
 "${guest[@]}" bash "$dest/nasazeni/test/trezor/zkouska-startu.sh" | tee "$tmp/restart.txt"
 sudo -n python3 nasazeni/test/trezor/zkouska-obnovy.py "$dest/nasazeni/test/trezor" | tee "$tmp/obnova.txt"

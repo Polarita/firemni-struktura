@@ -1,0 +1,10 @@
+[Unit]
+Description=Spustí Paperclip po doručení strojových údajů z OpenBao
+
+[Timer]
+OnBootSec=45s
+OnCalendar=minutely
+Unit=polarita-paperclip.service
+
+[Install]
+WantedBy=timers.target
