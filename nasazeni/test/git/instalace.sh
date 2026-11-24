@@ -28,7 +28,7 @@ for item in json.load(sys.stdin).get("resource_changes", []):
 tofu apply -input=false "$tmp/plan"
 inside=(incus exec -T gitea-test --)
 "${inside[@]}" sh -ec 'for i in $(seq 1 60); do if test -S /run/systemd/private && mountpoint -q /var/lib/gitea; then exit 0; fi; sleep 1; done; exit 1'
-bash "$src/balicky.sh" gitea-test git=1:2.53.0-1ubuntu1.1
+bash "$src/../incus/balicky.sh" gitea-test git=1:2.53.0-1ubuntu1.1
 "${inside[@]}" bash -ec '
 getent group gitea-test >/dev/null || groupadd --gid 17307 gitea-test
 getent passwd gitea-test >/dev/null || useradd --uid 17307 --gid gitea-test --no-create-home --home-dir /var/lib/gitea/home --shell /usr/sbin/nologin gitea-test

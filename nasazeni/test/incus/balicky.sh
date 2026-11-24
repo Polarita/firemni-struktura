@@ -4,7 +4,7 @@ set -euo pipefail
 [[ $(hostname -s) == polarita-hq ]]
 target=$1
 shift
-[[ $target == gitea-test || $target == gitea-runner-test ]]
+[[ $target == gitea-test || $target == gitea-runner-test || $target == restic-test || $target == obnova-restic-test ]]
 [[ $# -gt 0 ]]
 tmp=$(mktemp -d)
 trap 'rm -r -- "$tmp"' EXIT

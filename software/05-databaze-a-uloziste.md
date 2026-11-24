@@ -12,7 +12,7 @@ Deset oblastí ve `/srv/polarita/vault` používá vlastní místní Git. Instal
 
 ### Ověřená archivní kopie deníku
 
-Na Ejpovicích hostitelská úloha uloží testovací list deníku po ověření pečeti a časového razítka. Dokument a průvodní záznam mají nastavený příznak neměnnosti. Kontrolní součet ze snímku chráněného příkazem `zfs hold` musí odpovídat originálu. Při opakování se stejným obsahem a agendou vrátí úloha tentýž dokument. Instalace zkouší čtení, přepsání a smazání pod účtem s právem číst archiv. Příjem z podatelny, účetnictví a telefonní ústředny se ověřuje při zapojování těchto služeb.
+Na Ejpovicích hostitelská úloha uloží testovací list deníku po ověření pečeti a časového razítka. Dokument a průvodní záznam mají nastavený příznak neměnnosti. Kontrolní součet ze snímku chráněného příkazem `zfs hold` musí odpovídat originálu. Při opakování se stejným obsahem a agendou vrátí úloha tentýž dokument. Instalace zkouší čtení, přepsání a smazání pod účtem s právem číst archiv. Hostitelská úloha přebírá z Garage spisový hovor se stereo WAV, přepisem a délkou retence 3 až 10 let. Před uvolněním obou zdrojů ověří oba obsahy a předávací záznam ze zamčených snímků. Stejný požadavek lze zopakovat i po přerušení úklidu. Zkouška používá výhradně syntetické audio. Napojení skutečné telefonní ústředny se ověřuje v bloku 11.
 
 ## 1. Seznam vybraného softwaru
 

@@ -1,0 +1,19 @@
+[Unit]
+Description=Záložní repozitář TEST v režimu append-only
+After=network-online.target
+RequiresMountsFor=/var/lib/restic-test
+ConditionPathIsMountPoint=/var/lib/restic-test
+[Service]
+User=pol-restic
+Group=pol-restic
+ExecStart=/usr/bin/restic-rest-server --listen 10.239.33.15:8443 --path /var/lib/restic-test/data --append-only --private-repos --htpasswd-file /etc/polarita-restic/htpasswd --tls --tls-cert /etc/polarita-restic/server.crt --tls-key /etc/polarita-restic/server.key
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/restic-test/data
+UMask=0077
+Restart=on-failure
+RestartSec=3
+[Install]
+WantedBy=multi-user.target

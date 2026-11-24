@@ -44,7 +44,7 @@ ip -4 route get 10.239.32.13 | grep -F "dev eth0" >/dev/null
 test ! -e /opt/polarita-openbao/agent
 test ! -e /run/secrets/polarita-test'
 mapfile -t packages < <(python3 -c 'import json,sys; print(*(name+"="+ver for name,ver in json.load(open(sys.argv[1])).items()),sep="\n")' "$src/runner-balicky.json")
-bash "$src/balicky.sh" "$vm" "${packages[@]}"
+bash "$src/../incus/balicky.sh" "$vm" "${packages[@]}"
 "${inside[@]}" bash -ec '
 getent group pol-ci >/dev/null || groupadd --gid 17308 pol-ci
 getent passwd pol-ci >/dev/null || useradd --uid 17308 --gid pol-ci --create-home --home-dir /var/lib/polarita-ci --shell /usr/sbin/nologin pol-ci
