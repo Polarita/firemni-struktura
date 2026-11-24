@@ -1,4 +1,4 @@
-# Karta ai zaměstnance č. 15002: Zdeněk Fiala (ai) — Metodik technických norem ČSN, metrologie a QA verifikátor (`normovac`) · Verze 3.12
+# Karta ai zaměstnance č. 15002: Zdeněk Fiala (ai) — Metodik technických norem ČSN, metrologie a QA verifikátor (`normovac`) · Verze 3.13
 
 ## 1. Osobní a organizační karta
 
@@ -172,7 +172,7 @@ Zahajujeme činnost správy technických norem, metrologie a QA verifikace spole
 
 ## 6. Zapojení do rozvojových balíčků `S1–S7` (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.12 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
+Balíčky `S1–S7` jsou ve Verzi 3.13 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
 
 * `Blok 13` (`S1`): normová revize sestavy č. 5 (pas, kusové ověření, prohlášení o shodě).
 * `Blok 14` (`S2`): nezávislý `Judge` normových scénářů.

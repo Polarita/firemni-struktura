@@ -1,9 +1,9 @@
 /**
- * EN: Unexecuted sample for Block 18 (package S6, Polarita-3.12). Once the
+ * EN: Unexecuted sample for Block 18 (package S6, Polarita-3.13). Once the
  *     case-file application runs in the polarita-hq VM on Ejpovice, adapt the
  *     selectors, labels and synthetic seed record to that deployment before
  *     running this test.
- * CZ: Nespouštěný vzor pro Blok 18 (balíček S6, Polarita-3.12). Po nasazení
+ * CZ: Nespouštěný vzor pro Blok 18 (balíček S6, Polarita-3.13). Po nasazení
  *     Karty spisu uvnitř VM polarita-hq na Ejpovicích uprav selektory, popisky
  *     obrazovek a syntetický záznam podle aplikace. Potom spusť test.
  *
