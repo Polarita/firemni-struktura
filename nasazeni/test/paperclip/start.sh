@@ -11,4 +11,6 @@ PAPERCLIP_SECRETS_MASTER_KEY=$(</run/secrets/paperclip-master)
    $PAPERCLIP_AGENT_JWT_SECRET =~ ^[a-zA-Z0-9_-]{48,128}$ &&
    $PAPERCLIP_SECRETS_MASTER_KEY =~ ^[a-f0-9]{64}$ ]]
 export BETTER_AUTH_SECRET PAPERCLIP_AGENT_JWT_SECRET PAPERCLIP_SECRETS_MASTER_KEY
-exec /opt/node/bin/node /opt/paperclip/current/node_modules/@paperclipai/server/dist/index.js
+# Server porovnává argv[1] s import.meta.url. Node překládá symlink vydání při importu modulu.
+entry=$(realpath -e /opt/paperclip/current/node_modules/@paperclipai/server/dist/index.js)
+exec /opt/node/bin/node "$entry"
