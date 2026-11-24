@@ -90,8 +90,9 @@ if len(sys.argv) > 2:
     print(f"Účet správce přečetl přes HTTPS dokument {doc_id} s výsledkem OCR a vazbou na spis {case}.")
 logout = origin + "/accounts/logout/"
 url, form = page(logout)
-if not form.csrf or url != logout:
-    raise RuntimeError("Archiv nenabídl odhlášení")
-page(logout, {"csrfmiddlewaretoken": form.csrf}, logout)
+# Paperless v3 ukončuje přihlášení i při GET. Pokud vrátí potvrzovací
+# formulář, odešleme jej. O výsledku rozhoduje nový požadavek na chráněný profil.
+if url == logout and form.csrf:
+    page(logout, {"csrfmiddlewaretoken": form.csrf}, logout)
 denied(origin + "/api/profile/", (401, 403))
 print("Paperless ověřil správce z Keycloaku, po odhlášení uzavřel profil a odmítl přímé nahrání mimo karanténu.")
