@@ -73,6 +73,8 @@ RequiresMountsFor=/var/lib/polarita-postgres
 Type=notify
 User=postgres
 Group=postgres
+# Kromě klientských procesů potřebuje PostgreSQL místo pro WAL a autovacuum.
+TasksMax=96
 RuntimeDirectory=postgresql
 RuntimeDirectoryMode=0755
 ExecStart=/usr/lib/postgresql/18/bin/postgres -D /var/lib/polarita-postgres/db -c config_file=/etc/polarita-postgres/postgresql.conf
