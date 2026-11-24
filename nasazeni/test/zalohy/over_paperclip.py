@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 import socket
 import subprocess
+from uuid import UUID
 
 
 def query(sql):
@@ -24,20 +25,35 @@ def verify(root):
     company = (plan["company"], plan["budget_cents"])
     rows = query("""
         SELECT json_build_array(c.name, c.budget_monthly_cents, a.metadata->>'polaritaId',
-            a.name, parent.metadata->>'polaritaId', a.budget_monthly_cents)
+            a.name, parent.metadata->>'polaritaId', a.budget_monthly_cents,
+            c.id, a.id, a.adapter_config->>'instructionsFilePath')
         FROM agents a JOIN companies c ON c.id=a.company_id
         LEFT JOIN agents parent ON parent.id=a.reports_to AND parent.company_id=a.company_id
         WHERE a.metadata->>'polaritaId' IS NOT NULL
     """)
-    actual = [tuple(json.loads(row)) for row in rows]
+    actual = []
+    files = (data / "data").resolve(strict=True)
+    for row in rows:
+        name, budget, code, agent_name, parent, allocation, company_id, agent_id, filename = json.loads(row)
+        if (name, budget) != company:
+            continue
+        relative = (Path("instances/default/companies") / str(UUID(company_id))
+                    / "agents" / str(UUID(agent_id)) / "instructions/AGENTS.md")
+        if filename != str(Path("/var/lib/paperclip") / relative):
+            raise RuntimeError("Obnovená pozice má jinou cestu instrukce " + code)
+        instruction = files / relative
+        if instruction.resolve(strict=True) != instruction:
+            raise RuntimeError("Obnovená instrukce vede na jinou cestu " + code)
+        digest = hashlib.sha256(instruction.read_bytes()).hexdigest()
+        actual.append((name, budget, code, agent_name, parent, allocation, digest))
     expected = []
     for item in plan["agents"]:
         if hashlib.sha256(item["prompt"].encode()).hexdigest() != item["prompt_sha256"]:
             raise RuntimeError("Nesouhlasí otisk instrukce pozice " + item["id"])
         parent = None if item["reports_to"] == "1001" else item["reports_to"]
-        expected.append((*company, item["id"], f'{item["name"]} (ai {item["id"]})', parent, item["operating_cents"]))
-    if len(expected) != 20 or sorted(row for row in actual if row[:2] == company) != sorted(expected):
-        raise RuntimeError("Obnovené vedení, vztahy nebo rozpočty Paperclipu neodpovídají kartám")
+        expected.append((*company, item["id"], f'{item["name"]} (ai {item["id"]})', parent, item["operating_cents"], item["prompt_sha256"]))
+    if len(expected) != 20 or sorted(actual) != sorted(expected):
+        raise RuntimeError("Obnovené vedení, instrukce, vztahy nebo rozpočty Paperclipu neodpovídají kartám")
     eval_root = (data / "data/eval").resolve(strict=True)
     last = (eval_root / "posledni-stage1").resolve(strict=True)
     if last.parent != eval_root or not re.fullmatch(r"stage1\.[a-zA-Z0-9]{8}", last.name):
@@ -47,7 +63,7 @@ def verify(root):
     if (result["mode"], result["suite"], result["evidence"], result["passed"], result["total"],
         result["failed"], result["verdict"]) != ("dry-run", "base", "REFERENCE_POLICY", 20, 20, 0, "VERIFIED_PASS"):
         raise RuntimeError("Obnovený výsledek Stage 1 nesouhlasí")
-    print("Obnova Paperclipu ověřila organizační strom, rozpočty dvaceti pozic a výsledek Stage 1.")
+    print("Obnova Paperclipu ověřila organizační strom, instrukce i rozpočty dvaceti pozic a výsledek Stage 1.")
 
 
 if __name__ == "__main__":
