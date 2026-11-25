@@ -32,7 +32,9 @@ stage=$("${inside[@]}" mktemp -d "$stage_root/polarita-deb-XXXXXXXX")
 "${inside[@]}" install -d -m 0755 "$stage/lists/partial"
 tar -cf - -C "$tmp/deb" . | "${inside[@]}" tar -xf - -C "$stage"
 incus file push --mode=0755 "$src/instaluj-deb.sh" "$target$stage/instaluj-deb.sh"
-if [[ $stage_root == /run ]]; then
+# Šablona editoru používá pouze Xvfb. Nad celou instalací dohlíží služba
+# v polarita-hq, i když uvnitř šablony není dostupná systémová sběrnice.
+if [[ $stage_root == /run || $target == qet-nastroje-test ]]; then
     "${inside[@]}" sh "$stage/instaluj-deb.sh" "$stage"
     exit 0
 fi
