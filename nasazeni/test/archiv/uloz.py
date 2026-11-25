@@ -16,7 +16,7 @@ DATA = ROOT / "test"
 DATASET = "polarita_zfs/data/legal-archive/test"
 READER = "polarita-archiv-test"
 AREAS = ("ucetnictvi-a-isdoc-10let", "mzdy-30-45let", "smlouvy-a-plne-moci", "revize-a-pasporty",
-         "stavebni-deniky-10let", "datova-schranka-zfo-10let", "hovory-legal-hold-10let")
+         "stavebni-deniky-10let", "datova-schranka-zfo-10let", "hovory-legal-hold-10let", "odborna-zpusobilost")
 
 
 def run(*args):

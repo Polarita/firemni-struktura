@@ -13,7 +13,7 @@ use mod_customcert\service\persistence_helper;
 use mod_customcert\service\template_repository;
 
 $action = $argv[1] ?? '';
-if (gethostname() !== 'akademie-test' || $CFG->dbname !== 'db_akademie' || !in_array($action, ['pdf', 'over'], true)) {
+if (gethostname() !== 'akademie-test' || $CFG->dbname !== 'db_akademie' || !in_array($action, ['doklad', 'pdf', 'over'], true)) {
     throw new RuntimeException('Vydání vzoru vyžaduje testovací Akademii.');
 }
 $admin = get_complete_user_data('username', 'spravce');
@@ -77,6 +77,12 @@ if (!$DB->record_exists('customcert_issues', $criteria)) {
     certificate_issue_service::create()->issue_certificate((int)$cert->id, (int)$recipient->id);
 }
 $transaction->allow_commit();
+if ($action === 'doklad') {
+    $issue = $DB->get_record('customcert_issues', $criteria, '*', MUST_EXIST);
+    $issued = (new DateTimeImmutable('@' . $issue->timecreated))->setTimezone(new DateTimeZone('Europe/Prague'));
+    echo $issued->format('Y') . ' ' . hash('sha256', $CFG->wwwroot . ':' . $issue->id . ':' . $issue->code) . "\n";
+    exit;
+}
 $pdf = pdf_generation_service::create()->generate_pdf($template, false, (int)$recipient->id, true);
 if (!is_string($pdf) || !str_starts_with($pdf, '%PDF-')) {
     throw new RuntimeException('Custom Certificate nevygeneroval vydaný dokument.');
