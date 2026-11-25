@@ -35,7 +35,9 @@ async function confirmCart() {
 }
 async function showCart() {
     const path = "carts/" + state().cart;
-    cart = (await store(path)).cart;
+    const fields = new URLSearchParams({ fields: "id,completed_at,currency_code,total,shipping_total,items.variant_id,items.quantity,items.title,shipping_methods.name,shipping_methods.shipping_option_id" });
+    const readCart = async () => (await store(path + "?" + fields)).cart;
+    cart = await readCart();
     if (cart.completed_at) {
         await confirmCart();
         return;
@@ -43,7 +45,8 @@ async function showCart() {
     if (!cart.shipping_methods.some(s => s.shipping_option_id === config.shipping_option_id)) {
         const options = (await store("shipping-options?" + new URLSearchParams({ cart_id: cart.id }))).shipping_options;
         if (!options.some(o => o.id === config.shipping_option_id)) throw new Error("Osobní odběr momentálně není dostupný.");
-        cart = (await store(path + "/shipping-methods", { option_id: config.shipping_option_id })).cart;
+        await store(path + "/shipping-methods", { option_id: config.shipping_option_id });
+        cart = await readCart();
     }
     const item = cart.items[0];
     if (cart.items.length !== 1 || item.quantity !== 1 || item.variant_id !== variant.id) throw new Error("Obsah testovacího košíku se změnil.");
