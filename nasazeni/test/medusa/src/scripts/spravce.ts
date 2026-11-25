@@ -18,7 +18,7 @@ export default async function pripravSpravce({ container }: ExecArgs) {
   }
   let user = existing[0]
   if (!user) {
-    const roles = []
+    const roles: { role_id: string }[] = []
     if (MedusaModule.isInstalled(Modules.RBAC)) {
       const rbac = container.resolve(Modules.RBAC)
       const [role] = await rbac.listRbacRoles({ id: RBAC_SUPER_ADMIN_ROLE_ID })
@@ -28,7 +28,7 @@ export default async function pripravSpravce({ container }: ExecArgs) {
     await workflows.run("create-users-workflow", {
       input: { users: [{ email, roles, metadata: { polarita_test: fixture } }] },
     })
-    ;[user] = await users.listUsers({ email })
+    user = (await users.listUsers({ email }))[0]
   }
   if (!user || user.metadata?.polarita_test !== fixture) throw new Error("Nesouhlasí vlastník testovacího účtu.")
   // Po výpadku mezi registrací a propojením ověří původní heslo vlastnictví existující identity.
