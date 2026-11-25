@@ -119,7 +119,9 @@ def main():
                     return True
 
                 ready = povolene_cteni("test/metadata/akademie/aplikace", manager)
-                for name, path in (("keycloak-test", "test/data/databaze/keycloak"),
+                ready = ready and povolene_cteni("test/metadata/akademie/rest", manager)
+                for name, path in (("compliance-bridge-test", "test/data/akademie/rest"),
+                                   ("keycloak-test", "test/data/databaze/keycloak"),
                                    ("akademie-test", "test/data/akademie/aplikace")):
                     token = p.login(p.credentials(name, manager))
                     try:

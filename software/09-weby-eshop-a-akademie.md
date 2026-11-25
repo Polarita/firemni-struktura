@@ -104,6 +104,8 @@ V TEST použij fiktivní zkoušené osoby a vzorový protokol označený jako te
 
 ---
 
+Při testu propojení s Moodle si služba Compliance Bridge vyžádá z OpenBao vlastní token. Nativní služba Moodle povoluje jedinou čtecí funkci pro známky ve cvičném kurzu. Po vyhodnocení archů ověř, že služba přečetla u účastníka A výsledek 100 % a u účastníka B výsledek 50 %. Součástí stejné zkoušky je odmítnutí výpisu uživatelů, dotazu mimo kurz a přístupu účtu bridge ke klíči OIDC. Komunikace s REST rozhraním probíhá uvnitř firemní VM přes místní síťové rozhraní kontejneru Akademie.
+
 V testovací evidenci `db_gdpr_zkousky` čte role `polarita_ai_masked` pohledy `pouceni`, `elektrotechnik` a `vedouci` ve schématu `akademie_prehled_test`. Každý vrací anonymní identifikátor `person_no` a příznak `zpusobily` podle posledního archivovaného výsledku příslušného druhu a data jeho platnosti. Instalátor na dočasných záznamech ověřuje také zamítnutí přístupu k šifrovanému obsahu a ochranu uloženého otisku archivního dokumentu před přepsáním.
 
 ### Provozní zkouška retenčního seznamu
