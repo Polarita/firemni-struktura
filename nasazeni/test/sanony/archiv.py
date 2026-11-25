@@ -52,7 +52,10 @@ def process(row):
             pdf.seek(0)
             command = ["incus","exec","-T","paperless-test","--","/command/with-contenv","/command/s6-setuidgid",
                        "paperless","python3","/etc/polarita-paperless/prijmi_dokument.py",case,digest,"--sanon"]
-            res = subprocess.run(command, stdin=pdf, capture_output=True, timeout=1800, check=True)
+            # OCR stejného PDF soutěží s další offline rekonstrukcí o paměť a disk VM.
+            with Path("/run/polarita-test-zatez.lock").open("a") as capacity:
+                fcntl.flock(capacity, fcntl.LOCK_EX)
+                res = subprocess.run(command, stdin=pdf, capture_output=True, timeout=1800, check=True)
         data = json.loads(res.stdout.strip().splitlines()[-1])
         if type(data["dokument"]) is not int or data["dokument"] < 1 or type(data["ocr"]) is not bool:
             raise ValueError("Archiv nepotvrdil dokument")

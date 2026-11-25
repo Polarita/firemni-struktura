@@ -73,7 +73,9 @@ with (work / ".vzor").open("a") as lock:
     (work / "conf" / "over_dokument.py.next").write_bytes(script.read_bytes())
     (work / "conf" / "over_dokument.py.next").chmod(0o644)
     (work / "conf" / "over_dokument.py.next").replace(work / "conf" / "over_dokument.py")
-    with cleaned.open("rb") as pdf:
+    # Kapacitu získáme až po převzetí výsledku z offline VM.
+    with cleaned.open("rb") as pdf, Path("/run/polarita-test-zatez.lock").open("a") as capacity:
+        fcntl.flock(capacity, fcntl.LOCK_EX)
         subprocess.run(["incus", "exec", "-T", "paperless-test", "--", "/command/with-contenv",
             "/command/s6-setuidgid", "paperless", "python3", inside, case, checksum],
             stdin=pdf, check=True, timeout=1800)
