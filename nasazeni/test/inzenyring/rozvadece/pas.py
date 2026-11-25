@@ -16,16 +16,14 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "revize"))
 from publikace import WORK, publikuj, run
 from spisy_rz import VARIANTY, id_spisu
+sys.path.insert(0, str(HERE.parents[1]))
+from pdf_qr import precti, vytiskni
 
 S1 = HERE.parents[3] / "balicky/S1-generator-cistopisu/data"
 PDF = "vyrobni-pas.pdf"
 KODY = ("pevnost_materialu kryti vzdalenosti ochrana_pred_urazem vestavba vnitrni_obvody "
         "svorky dielektricke otepleni zkratova_odolnost emc mechanicka_funkce").split()
 KUS = "kryti vzdalenosti ochrana_pred_urazem vestavba vnitrni_obvody svorky mechanicka_funkce dielektricke zapojeni_a_funkce".split()
-QR = """import sys, zxingcpp
-code = zxingcpp.create_barcode(sys.argv[1], zxingcpp.BarcodeFormat.QRCode)
-print(zxingcpp.write_barcode_to_svg(code))
-"""
 
 
 def model():
@@ -91,7 +89,7 @@ def nacti_vydani(uid, host):
 
 
 def over_pdf(pdf, serial, case, url):
-    scan = run("paperless-test", "python3", "/usr/local/share/polarita-qr.py", user="65534", data=pdf).decode().strip()
+    scan = precti(pdf)
     if scan != url:
         raise ValueError("QR na vytištěném štítku neotevírá knihu správného spisu.")
     return over_strany(pdf, serial, case)
@@ -112,11 +110,8 @@ def vydej(host):
         uid = str(id_spisu(variant))
         case, serial = rozvadec_spisu(uid)
         url = f"https://{host}/lhutnik-test/spisy?spis={case}&oddil=kniha"
-        svg = run("paperless-test","python3","-c",QR,url,user="65534").decode()
-        data = dict(common, spis=case, cislo=serial, oznaceni="RP1", qr=svg)
-        pdf = run("reditelstvi-test", "/usr/local/bin/polarita-typst","compile","--ignore-system-fonts","--creation-timestamp","0",
-                  "--root","/usr/local/share/polarita-revize-test","--input","model="+json.dumps(data,ensure_ascii=False),
-                  "-","-",user="65534",data=(HERE/"pas.typ").read_bytes())
+        data = dict(common, spis=case, cislo=serial, oznaceni="RP1")
+        pdf = vytiskni(HERE/"pas.typ", data, url)
         if over_pdf(pdf, serial, case, url) != common["den"]:
             raise ValueError("Pas obsahuje jiné datum posouzení.")
         digest = hashlib.sha256(pdf).hexdigest()

@@ -9,6 +9,7 @@ from xml.etree import ElementTree as ET
 
 from lxml import etree
 from isdoc import NS, davka, sestav
+from tisk import model
 
 
 class IsdocTest(unittest.TestCase):
@@ -36,6 +37,18 @@ class IsdocTest(unittest.TestCase):
             p["polozky"][0][key]=val
             with self.subTest(key=key,val=val),self.assertRaises(ValueError):
                 sestav(self.faktura,self.klic,self.spis,p)
+
+    def test_tisk_sdili_podklad_s_isdoc(self):
+        raw = sestav(self.faktura, self.klic, self.spis, self.vzory["kladny"])
+        tisk, qr = model(raw, self.spis)
+        self.assertEqual(tisk["celkem"], "1297.28")
+        self.assertEqual(tisk["dan"], "225.15")
+        self.assertEqual([r["popis"] for r in tisk["radky"]], [r["popis"] for r in self.vzory["kladny"]["polozky"]])
+        self.assertEqual(qr, "SPD*1.0*ACC:CZ7900000000000000000000*AM:1297.28*CC:CZK*X-VS:202600001*MSG:TEST NEHRADIT")
+        with self.assertRaises(ValueError):
+            model(raw, "POL-2026-00009")
+        with self.assertRaises(ValueError):
+            model(raw.replace(b">CZK<",b">EUR<"), self.spis)
 
     def test_davka(self):
         a={"spis":self.spis,"faktura":self.faktura,"predavka":"ORG-UOL-2026-00001"}

@@ -74,15 +74,17 @@ async function otevri(url, options) {
     byId("cisla-dokladu").replaceChildren(...(data.doklady_registru || []).map(doklad => {
         const polozka = document.createElement("li");
         polozka.textContent = typy[doklad.druh] + " · " + doklad.cislo;
-        if (doklad.export_sha256) {
-            const faktura = doklad.druh === "FAK";
-            const soubor = doklad.cislo + (faktura ? ".isdoc" : ".xml");
+        const pridatOdkaz = (pripona, nazev) => {
+            const soubor = doklad.cislo + pripona;
             const odkaz = document.createElement("a");
             odkaz.href = "api/finance/" + encodeURIComponent(data.case_id) + "/" + encodeURIComponent(soubor);
             odkaz.download = soubor;
-            odkaz.textContent = faktura ? "Stáhnout fakturu ISDOC" : "Stáhnout účetní předávku XML";
+            odkaz.textContent = nazev;
             polozka.append(" · ", odkaz);
-        }
+        };
+        if (doklad.pdf_sha256) pridatOdkaz(".pdf", "Stáhnout fakturu PDF");
+        if (doklad.export_sha256 && doklad.druh === "FAK") pridatOdkaz(".isdoc", "Stáhnout fakturu ISDOC");
+        if (doklad.export_sha256 && doklad.druh === "ORG-UOL") pridatOdkaz(".xml", "Stáhnout účetní předávku XML");
         return polozka;
     }));
     ukazMetodiky(data);

@@ -10,6 +10,7 @@ import tempfile
 
 from lxml import etree
 from isdoc import davka, sestav
+from tisk import stejnopis
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent/"registry"))
@@ -76,6 +77,17 @@ SELECT EXISTS(SELECT FROM polarita_registr_test.isdoc WHERE faktura=:'fid{i}' AN
 \\if :shoda
 \\else
 DO $$ BEGIN RAISE EXCEPTION 'Nesouhlasí identita nebo dříve vydaný obsah faktury'; END $$;
+\\endif""")
+        pdf = stejnopis(raw, spis)
+        # Větší bytea předáváme po standardním vstupu. Do SQL vstupuje pouze hex z bytes.
+        transakce.append(f"""INSERT INTO polarita_registr_test.tisk_faktury(faktura,soubor)
+VALUES(:'fid{i}',decode('{pdf.hex()}','hex')) ON CONFLICT(faktura) DO NOTHING;
+SELECT EXISTS(SELECT FROM polarita_registr_test.tisk_faktury WHERE faktura=:'fid{i}'
+ AND sha256='{sha256(pdf).hexdigest()}') AS stejny_tisk
+\\gset
+\\if :stejny_tisk
+\\else
+DO $$ BEGIN RAISE EXCEPTION 'Tisk faktury již existuje s jiným obsahem'; END $$;
 \\endif""")
     obsah = davka(faktury)
     digest = sha256(obsah).hexdigest()
