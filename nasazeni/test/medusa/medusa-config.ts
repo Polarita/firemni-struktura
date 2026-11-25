@@ -15,9 +15,14 @@ module.exports = defineConfig({
     databaseSchema: "public",
     sessionOptions: { name: "pol_medusa_sid", resave: false, saveUninitialized: false },
     databaseDriverOptions: {
-      ssl: build ? false : { ca: readFileSync("/etc/polarita-medusa/postgres.crt", "utf8"),
-        servername: "postgres.polarita.test", rejectUnauthorized: true, minVersion: "TLSv1.3" },
-      connectionTimeoutMillis: 25000, pool: { min: 0, max: 4 },
+      connection: {
+        ssl: build ? false : {
+          ca: readFileSync("/etc/polarita-medusa/postgres.crt", "utf8"),
+          servername: "postgres.polarita.test", rejectUnauthorized: true, minVersion: "TLSv1.3",
+        },
+        connectionTimeoutMillis: 25000,
+      },
+      pool: { min: 0, max: 4 },
     },
     http: { storeCors: origin, adminCors: origin, authCors: origin,
       jwtSecret: secret("medusa-jwt"), cookieSecret: secret("medusa-cookie") },

@@ -30,7 +30,7 @@ if [[ ! -d $release ]]; then
         -p NoNewPrivileges=yes -p ProtectHome=yes -p InaccessiblePaths=/srv -p UMask=0022
         -p "BindPaths=$tmp:/var/lib/polarita-medusa-build" -p "BindPaths=$cache:/var/cache/polarita-medusa-build"
         -p "BindReadOnlyPaths=$node:/opt/polarita-medusa-node" -p 'ReadWritePaths=/var/lib/polarita-medusa-build /var/cache/polarita-medusa-build'
-        -p WorkingDirectory=/var/lib/polarita-medusa-build -p MemoryHigh=750M -p MemoryMax=1200M -p MemorySwapMax=192M -p CPUQuota=70% -p Nice=10 -p IOWeight=10 -p IOSchedulingClass=idle
+        -p WorkingDirectory=/var/lib/polarita-medusa-build -p MemoryMax=1200M -p MemorySwapMax=192M -p CPUQuota=70% -p Nice=10 -p IOWeight=10 -p IOSchedulingClass=idle
         -E PATH=/opt/polarita-medusa-node/bin:/usr/bin:/bin -E HOME=/var/lib/polarita-medusa-build
         -E npm_config_cache=/var/cache/polarita-medusa-build -E MEDUSA_DISABLE_TELEMETRY=true
         -E POLARITA_MEDUSA_BUILD=1 -E NODE_OPTIONS=--max-old-space-size=768)
@@ -48,17 +48,17 @@ if [[ ! -d $release ]]; then
     }
     case $phase in ''|zavislosti|server|admin) ;; *) echo 'Neznámý stav sestavení Medusy.' >&2; exit 1 ;; esac
     if [[ -z $phase ]]; then
-        "${run[@]}" /usr/bin/env npm ci --ignore-scripts --prefer-offline --no-audit --no-fund --registry=https://registry.npmjs.org/
+        "${run[@]}" -p MemoryHigh=750M /usr/bin/env npm ci --ignore-scripts --prefer-offline --no-audit --no-fund --registry=https://registry.npmjs.org/
         [[ -x $tmp/node_modules/.bin/medusa ]]
         dokonci zavislosti
     fi
     if [[ $phase == zavislosti ]]; then
-        "${run[@]}" -p PrivateNetwork=yes -E POLARITA_MEDUSA_BACKEND=1 /usr/bin/env npm run build
+        "${run[@]}" -p MemoryHigh=750M -p PrivateNetwork=yes -E POLARITA_MEDUSA_BACKEND=1 /usr/bin/env npm run build
         [[ -s $tmp/.medusa/server/medusa-config.js ]]
         dokonci server
     fi
     if [[ $phase == server ]]; then
-        "${run[@]}" -p PrivateNetwork=yes /usr/bin/env npm run build -- --admin-only
+        "${run[@]}" -p MemoryHigh=896M -p PrivateNetwork=yes /usr/bin/env npm run build -- --admin-only
         [[ -s $tmp/.medusa/admin/index.html ]]
         dokonci admin
     fi

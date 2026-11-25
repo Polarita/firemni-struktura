@@ -20,6 +20,8 @@ previous=$(readlink "$root/current" || true)
 [[ -z $previous || $previous =~ ^releases/[a-f0-9]{64}$ ]]
 incus file push --mode=0644 "$src/over_db.cjs" medusa-test/etc/polarita-medusa/over_db.cjs
 incus exec -T medusa-test --user 17309 --group 17309 -- /opt/node/bin/node /etc/polarita-medusa/over_db.cjs "/opt/medusa/$rev/package.json"
+incus file push --mode=0644 "$src/over_moduly.cjs" medusa-test/etc/polarita-medusa/over_moduly.cjs
+incus exec -T medusa-test --user 17309 --group 17309 -- /opt/node/bin/node /etc/polarita-medusa/over_moduly.cjs "/opt/medusa/$rev"
 incus file push --mode=0644 "$src/polarita-medusa.service" medusa-test/etc/systemd/system/polarita-medusa.service
 "${inside[@]}" install -dm0750 -o medusa -g medusa /var/lib/medusa
 "${inside[@]}" systemctl daemon-reload
