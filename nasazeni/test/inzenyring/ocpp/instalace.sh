@@ -12,7 +12,7 @@ trap 'rm -rf -- "$tmp"' EXIT
 while read -r digest url; do
     [[ $digest =~ ^[a-f0-9]{64}$ && $url == https://files.pythonhosted.org/* ]]
     name=${url##*/}
-    if ! (cd "$cache" && echo "$digest  $name" | sha256sum --check --status) 2>/dev/null; then
+    if [[ ! -f $cache/$name ]] || ! (cd "$cache" && echo "$digest  $name" | sha256sum --check --status); then
         curl -fsSL --retry 3 --max-time 90 --proto '=https' --proto-redir '=https' "$url" -o "$tmp/$name"
         (cd "$tmp" && echo "$digest  $name" | sha256sum -c --status)
         install -m0644 "$tmp/$name" "$cache/.$name.next"
