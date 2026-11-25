@@ -293,6 +293,7 @@ obnova() {
 }
 
 web() {
+    "${guest[@]}" bash "$dest/nasazeni/test/medusa/priprava.sh"
     "${guest[@]}" bash "$dest/nasazeni/test/umami/over.sh" | tee "$tmp/umami.txt"
     sudo -n bash nasazeni/test/port-vpn.sh 8449 >/dev/null
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
