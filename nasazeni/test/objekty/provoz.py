@@ -166,8 +166,11 @@ def uloz_testovaci_hovor(s3, wav, otisk):
         digest = hashlib.sha256()
         for cast in iter(lambda: body.read(65536), b""):
             digest.update(cast)
-    if digest.hexdigest() != otisk or ulozeno["Metadata"].get("sha256") != otisk:
-        raise ValueError("Garage vrátila jinou nahrávku.")
+    if digest.hexdigest() != otisk:
+        raise ValueError("Obsah nahrávky v Garage má jiný otisk.")
+    metadata = {name.lower(): value for name, value in ulozeno["Metadata"].items()}
+    if metadata.get("sha256") != otisk:
+        raise ValueError("V metadatech nahrávky Garage chybí správný otisk.")
     print(f"Garage ověřena zpětným čtením přes HTTPS: s3://hovory/{key}")
 
 
