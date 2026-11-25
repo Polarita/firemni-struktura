@@ -1,4 +1,4 @@
-# Charta a provozní řád: Oddělení 17 — IT, Vývoj, Kyberbezpečnost a ai Platforma · Verze 3.22
+# Charta a provozní řád: Oddělení 17 — IT, Vývoj, Kyberbezpečnost a ai Platforma · Verze 3.23
 
 ## 1. Poslání oddělení
 Zajišťovat nepřetržitý, rychlý, kyberneticky odolný a nákladově úsporný provoz čistého firemního Linux serveru (`polarita-hq`, Ubuntu Server LTS), všech webů, e-shopu, vzdělávacího portálu Moodle LTS, **Portálu spolupracovníků** pro živý tým v terénu, **softwarové telefonní ústředny `Asterisk`, lokální hlasové analytiky `WhisperX`, poštovního serveru `Stalwart Mail`, zákaznického omnichannelu `Chatwoot CE` a interního komunikačního hubu `Zulip` (`K1`–`K5`)**, **6 izolovaných doménových databází + 9 izolovaných servisních databází v PostgreSQL (`0× MySQL`, `0× MongoDB`)**, inženýrských nástrojů pro projekci a rozpočty, trezoru tajemství OpenBao i samotného ai orchestrátoru a sdílené paměti společnosti.
@@ -47,7 +47,7 @@ Zajišťovat nepřetržitý, rychlý, kyberneticky odolný a nákladově úsporn
 
 ## 6. Rozvojové balíčky Etapy II a III (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.22 zapracovány jako samostatné `Bloky 13–19` (přehled a řídicí dokumenty: [`balicky/README.md`](../balicky/README.md)). Spouštějí se až po `12/12 PASS` Go-Live Gate, nemění složení oddělení ani rozpočty `ai` a oddělení se jich účastní takto:
+Balíčky `S1–S7` jsou ve Verzi 3.23 zapracovány jako samostatné `Bloky 13–19` (přehled a řídicí dokumenty: [`balicky/README.md`](../balicky/README.md)). Spouštějí se až po `12/12 PASS` Go-Live Gate, nemění složení oddělení ani rozpočty `ai` a oddělení se jich účastní takto:
 
 * **`Bloky 13–19`:** `17001 programator` vyvíjí všechny nové moduly (`generate_document`, `/eval/decide`, `dilensky-terminal`, `pujcovna-meridel`, `esign-bridge`, `voice-agent`, `manual-builder`, multi-tenant jádro); `17004 klicnik` je bezpečnostním `Judge` každého z nich.
 * **`Blok 14` (`S2`):** `17005 ai-provoz` provozuje sadu 157 scénářů jako bránu v `Gitea Actions`; `17003 spravce-site` drží CI a testovací endpoint za `Headscale VPN`.

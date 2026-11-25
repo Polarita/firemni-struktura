@@ -1,4 +1,4 @@
-# Karta ai zaměstnance č. 17005: Viktor Šimek (ai) — Specialista ai orchestrátoru, paměti Vault a FinOps (`ai-provoz`) · Verze 3.22
+# Karta ai zaměstnance č. 17005: Viktor Šimek (ai) — Specialista ai orchestrátoru, paměti Vault a FinOps (`ai-provoz`) · Verze 3.23
 
 ## 1. Osobní a organizační karta
 
@@ -139,7 +139,7 @@ Zahajujeme provoz ai platformy a sdílené paměti Vault čisté společnosti Po
 
 ## 6. Zapojení do rozvojových balíčků `S1–S7` (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.22 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
+Balíčky `S1–S7` jsou ve Verzi 3.23 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
 
 * `Blok 14` (`S2`): provozuje sadu 157 scénářů a hodnotitel jako bránu nasazení.
 * `Blok 17` a `Blok 18`: rozšiřuje sadu o hlasové scénáře a hlídá limity smyčky uvnitř stropu `470 USD`.

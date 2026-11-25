@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Deterministic evaluator of the Polarita Eval Suite 100+ (package S2, Version 3.22).
-Deterministický hodnotitel sady Eval Suite 100+ Polarita (balíček S2, Verze 3.22).
+Deterministic evaluator of the Polarita Eval Suite 100+ (package S2, Version 3.23).
+Deterministický hodnotitel sady Eval Suite 100+ Polarita (balíček S2, Verze 3.23).
 
 EN: Runs every scenario of eval_suite_polarita_extended.json either against the built-in
     reference policy (dry-run, no network, no paid services) or against a live gateway
