@@ -61,11 +61,27 @@ def entries(tree):
         yield mode, oid.decode("ascii"), name.decode("utf-8")
 
 
+def nacti_blob(reader, oid):
+    # Každý objekt čteme celý. Přitom kontrolujeme pořadí odpovědí i typ objektu.
+    reader.stdin.write(oid.encode("ascii")+b"\n")
+    reader.stdin.flush()
+    header = reader.stdout.readline().split()
+    if len(header) != 3 or header[:2] != [oid.encode("ascii"), b"blob"] or not header[2].isdigit():
+        raise Refused("Git nepotvrdil obsah kontrolovaného objektu.")
+    size = int(header[2])
+    raw = reader.stdout.read(size)
+    if len(raw) != size or reader.stdout.read(1) != b"\n":
+        raise Refused("Git nepředal úplný obsah kontrolovaného objektu.")
+    return raw
+
+
 def scan(trees):
     areas = set(AREAS.read_text().splitlines())
     seals = set(SEALS.read_text().splitlines()) if SEALS.exists() else set()
     seen = set()
-    with tempfile.TemporaryDirectory(prefix="polarita-znalosti-") as tmp:
+    with (tempfile.TemporaryDirectory(prefix="polarita-znalosti-") as tmp,
+          subprocess.Popen(["git", "cat-file", "--batch"], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                           stderr=subprocess.DEVNULL) as reader):
         stage = Path(tmp)
         names = set()
         for tree in trees:
@@ -82,7 +98,7 @@ def scan(trees):
                 if key in seen:
                     continue
                 seen.add(key)
-                raw = git("cat-file", "blob", oid)
+                raw = nacti_blob(reader, oid)
                 if is_pdf:
                     if hashlib.sha256(raw).hexdigest()+" "+path.name not in seals:
                         raise Refused("PDF neodpovídá ověřenému vzoru z testovací pečetící služby.")
