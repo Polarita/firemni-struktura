@@ -109,19 +109,25 @@ def main():
                         raise
                     break
             else:
-                role = p.login(p.credentials("keycloak-test", manager))
-                try:
+                def povolene_cteni(path, token):
                     try:
-                        p.request("GET", "test/data/databaze/keycloak", token=role)
+                        p.request("GET", path, token=token)
                     except HTTPError as err:
-                        if err.code == 404:
-                            return 0
-                        if err.code != 403:
-                            raise
-                    else:
-                        return 0
-                finally:
-                    p.request("POST", "auth/token/revoke-self", {}, role)
+                        if err.code in (403, 404):
+                            return err.code == 404
+                        raise
+                    return True
+
+                ready = povolene_cteni("test/metadata/akademie/aplikace", manager)
+                for name, path in (("keycloak-test", "test/data/databaze/keycloak"),
+                                   ("akademie-test", "test/data/akademie/aplikace")):
+                    token = p.login(p.credentials(name, manager))
+                    try:
+                        ready = povolene_cteni(path, token) and ready
+                    finally:
+                        p.request("POST", "auth/token/revoke-self", {}, token)
+                if ready:
+                    return 0
         if "--kontrola" in sys.argv:
             return 42
         shares = json.load(sys.stdin)

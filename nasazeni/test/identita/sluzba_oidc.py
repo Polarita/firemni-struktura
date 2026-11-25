@@ -14,6 +14,7 @@ from sprava_klientu import MANAGER, REALM, api, find_client, manager_token, secr
 if os.geteuid() or socket.gethostname().split(".")[0] != "polarita-hq":
     raise SystemExit("Konfigurace klienta patří do firemní VM")
 profiles = {
+    "moodle": (8451, "/admin/oauth2callback.php", "/run/secrets/akademie-oidc_secret"),
     "zulip": (8444, "/complete/oidc/", "/run/secrets/zulip__social_auth_oidc_secret"),
     "paperless": (8448, "/accounts/oidc/keycloak/login/callback/", "/run/secrets/paperless-oidc_secret"),
     "vikunja": (8447, "/auth/openid/keycloak", "/run/secrets/vikunja-oidc_secret"),
@@ -32,7 +33,8 @@ if not client or client["protocol"] != "openid-connect":
     raise RuntimeError(f"Chybí testovací klient {name}")
 path = REALM+"/clients/"+client["id"]
 origin = f"https://{host}:{port}"
-key = subprocess.check_output(["incus","exec","-T",name+"-test","--","cat",secret_path]).decode()
+instance = "akademie-test" if name == "moodle" else name + "-test"
+key = subprocess.check_output(["incus", "exec", "-T", instance, "--", "cat", secret_path]).decode()
 if not re.fullmatch("[A-Za-z0-9_-]{48,100}", key):
     raise RuntimeError("Neplatný klientský klíč")
 desired = {"enabled":True,"publicClient":False,"standardFlowEnabled":True,"implicitFlowEnabled":False,

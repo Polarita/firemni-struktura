@@ -300,6 +300,7 @@ web() {
     "${guest[@]}" python3 "$dest/nasazeni/test/akademie/podklady.py" | tee "$tmp/akademie-podklady.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/akademie/php.sh"
     "${guest[@]}" bash "$dest/nasazeni/test/akademie/spojeni.sh" | tee "$tmp/akademie-spojeni.txt"
+    "${guest[@]}" bash "$dest/nasazeni/test/akademie/identita.sh" "$fqdn"
     "${guest[@]}" bash "$dest/nasazeni/test/akademie/aplikace.sh"
     "${guest[@]}" bash "$dest/nasazeni/test/akademie/databaze.sh" "$fqdn"
     "${guest[@]}" bash "$dest/nasazeni/test/akademie/cache.sh" | tee "$tmp/akademie-cache.txt"

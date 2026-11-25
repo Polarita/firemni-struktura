@@ -170,10 +170,13 @@ template {
 		config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/gitea-stroj", template)
 		outputs["gitea-stroj"] = "gitea-stroj"
 	}
-	if g.Paperclip || g.Vikunja || g.Paperless || g.Umami || g.Medusa {
+	if g.Paperclip || g.Vikunja || g.Paperless || g.Umami || g.Medusa || g.Akademie {
 		app := "paperclip"
 		keys := []string{"secret", "oidc_secret"}
 		switch {
+		case g.Akademie:
+			app = "akademie"
+			keys = []string{"oidc_secret"}
 		case g.Medusa:
 			app = "medusa"
 			keys = []string{"jwt", "cookie"}
