@@ -86,6 +86,9 @@ def deliver(name, manager):
 def deliver_with_token(name, credentials):
     for attempt in range(2):
         try:
+            if attempt:
+                # Na pomalém disku načti binárku před vydáním krátkodobého přístupu.
+                run("incus", "exec", "-T", name, "--", TARGET + "/bao", "version")
             manager = p.login(credentials)
             try:
                 deliver(name, manager)

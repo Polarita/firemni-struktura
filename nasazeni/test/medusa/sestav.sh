@@ -25,7 +25,7 @@ if [[ ! -d $release ]]; then
         -p NoNewPrivileges=yes -p ProtectHome=yes -p InaccessiblePaths=/srv -p UMask=0022
         -p "BindPaths=$tmp:/var/lib/polarita-medusa-build" -p "BindPaths=$cache:/var/cache/polarita-medusa-build"
         -p "BindReadOnlyPaths=$node:/opt/polarita-medusa-node" -p 'ReadWritePaths=/var/lib/polarita-medusa-build /var/cache/polarita-medusa-build'
-        -p WorkingDirectory=/var/lib/polarita-medusa-build -p MemoryHigh=750M -p MemoryMax=1200M -p CPUQuota=70% -p Nice=10
+        -p WorkingDirectory=/var/lib/polarita-medusa-build -p MemoryHigh=750M -p MemoryMax=1200M -p CPUQuota=70% -p Nice=10 -p IOWeight=10 -p IOSchedulingClass=idle
         -E PATH=/opt/polarita-medusa-node/bin:/usr/bin:/bin -E HOME=/var/lib/polarita-medusa-build
         -E npm_config_cache=/var/cache/polarita-medusa-build -E MEDUSA_DISABLE_TELEMETRY=true
         -E POLARITA_MEDUSA_BUILD=1 -E NODE_OPTIONS=--max-old-space-size=768)
