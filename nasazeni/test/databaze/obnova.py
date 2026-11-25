@@ -2,7 +2,6 @@
 from contextlib import ExitStack
 import fcntl
 import gzip
-import hashlib
 import os
 from pathlib import Path
 import secrets
@@ -10,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 BASE = Path("/srv/polarita/backups/postgres")
 DB = "postgres-test"
@@ -28,24 +28,25 @@ def inside(name, *args, data=b""):
 
 
 def proof(name, user):
-    def sql(database, query):
-        return inside(name, "runuser", "-u", "postgres", "--", "psql", "-XqAt", "-v", "ON_ERROR_STOP=1",
-                      "-h", "/run/postgresql", "-U", user, "-d", database, data=query.encode())
-    names = sql("postgres", "select datname from pg_database where not datistemplate and datname <> 'postgres' order by 1")
-    if len(names.splitlines()) != 15:
-        raise RuntimeError("Nesouhlasí počet obnovených databází")
-    checks = [names]
-    for db in names.decode().splitlines():
-        checks.append(sql(db, "select extname,extversion from pg_extension order by 1"))
-        checks.append(sql(db, "select schemaname,tablename from pg_tables where schemaname not in "
-                              "('information_schema','pg_catalog') order by 1,2"))
-    checks.append(sql("postgres", "select rolname,rolpassword from pg_authid join pg_database "
-                                  "on rolname=datname where rolcanlogin and not rolsuper order by 1"))
-    checks.append(sql("keycloak", "select id,name from realm order by id"))
-    checks.append(sql("keycloak", "select id,username from user_entity where username='spravce'"))
-    if not checks[-1].strip():
-        raise RuntimeError("Chybí testovací správce v databázi Keycloaku")
-    return hashlib.sha256(b"\x00".join(checks)).digest()
+    program = Path(__file__).with_name("otisk.py").read_bytes()
+    prikaz = ["incus", "exec", "-T", name, "--", "runuser", "-u", "postgres", "--", "python3", "-B", "-", user]
+    for pokus in range(3):
+        try:
+            vysledek = subprocess.run(prikaz, input=program, capture_output=True, timeout=300)
+        except subprocess.TimeoutExpired:
+            duvod = "časový limit"
+        else:
+            if vysledek.returncode == 0:
+                if len(vysledek.stdout) != 32:
+                    raise RuntimeError("Databázová instance vrátila neplatný kontrolní otisk")
+                return vysledek.stdout
+            if vysledek.returncode == 65:
+                raise RuntimeError("Neodpovídá počet databází nebo identita správce")
+            duvod = f"návratový kód {vysledek.returncode}"
+        if pokus < 2:
+            print(f"Čtení otisku v {name} se přerušilo ({duvod}), opakuji za 10 sekund.", file=sys.stderr, flush=True)
+            time.sleep(10)
+    raise RuntimeError(f"Kontrolní otisk v {name} nelze přečíst ({duvod})")
 
 
 def start_restore_cluster(name):
