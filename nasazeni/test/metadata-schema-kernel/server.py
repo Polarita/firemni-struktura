@@ -10,6 +10,7 @@ import sys
 from uuid import UUID
 from urllib.parse import urlsplit
 
+import dlm
 import kniha
 import ocpp_cteni
 import sqlite3
@@ -168,6 +169,9 @@ class Handler(BaseHTTPRequestHandler):
                 prehled = slozka_spisu(karta, "revize") / "prehled.json"
                 if prehled.is_file():
                     karta["revizni_navrh"] = json.loads(prehled.read_bytes())
+                bilance = dlm.pro_spis(karta["pozadavek"])
+                if bilance is not None:
+                    karta["bilance_EV"] = bilance
                 self.reply(200, karta)
             return
         if self.command == "POST" and path == route:

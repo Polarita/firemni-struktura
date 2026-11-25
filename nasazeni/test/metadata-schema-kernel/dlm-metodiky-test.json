@@ -1,0 +1,7 @@
+[
+  {
+    "kod": "SIM-DLM-01/1", "model": "odporovy-trojfazovy", "ucel": "simulace",
+    "od": "2026-01-01", "do": "2026-12-31",
+    "minimum_EV_A": 6, "soudobost": {"stala": "1", "prerusovana": "0.5"}
+  }
+]

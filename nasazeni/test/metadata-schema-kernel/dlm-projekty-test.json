@@ -1,0 +1,96 @@
+{
+  "a71690af-a55f-50f0-a65d-11e7a0058fd5": {
+    "model": "odporovy-trojfazovy",
+    "ucel": "simulace",
+    "den": "2026-11-25",
+    "fazove_napeti_V": "230",
+    "limit_A": {
+      "L1": "32",
+      "L2": "32",
+      "L3": "32"
+    },
+    "skupiny": [
+      {
+        "druh": "stala",
+        "instalovano_W": {
+          "L1": "2300",
+          "L2": "3450",
+          "L3": "920"
+        }
+      },
+      {
+        "druh": "prerusovana",
+        "instalovano_W": {
+          "L1": "1840",
+          "L2": "2300",
+          "L3": "920"
+        }
+      }
+    ],
+    "vozidla": [
+      {
+        "id": "EV-A",
+        "faze": [
+          "L1",
+          "L2",
+          "L3"
+        ],
+        "pozadavek_A": 16
+      },
+      {
+        "id": "EV-B",
+        "faze": [
+          "L1"
+        ],
+        "pozadavek_A": 16
+      }
+    ]
+  },
+  "4990c818-a000-5770-b80a-eac3489c8ce7": {
+    "model": "odporovy-trojfazovy",
+    "ucel": "simulace",
+    "den": "2026-11-25",
+    "fazove_napeti_V": "230",
+    "limit_A": {
+      "L1": "32",
+      "L2": "32",
+      "L3": "32"
+    },
+    "skupiny": [
+      {
+        "druh": "stala",
+        "instalovano_W": {
+          "L1": "2300",
+          "L2": "6210.01",
+          "L3": "920"
+        }
+      },
+      {
+        "druh": "prerusovana",
+        "instalovano_W": {
+          "L1": "1840",
+          "L2": "2300",
+          "L3": "920"
+        }
+      }
+    ],
+    "vozidla": [
+      {
+        "id": "EV-A",
+        "faze": [
+          "L1",
+          "L2",
+          "L3"
+        ],
+        "pozadavek_A": 16
+      },
+      {
+        "id": "EV-B",
+        "faze": [
+          "L1"
+        ],
+        "pozadavek_A": 16
+      }
+    ]
+  }
+}

@@ -115,6 +115,10 @@ Rozšiř inženýrské jádro cad-urs-engine o deterministický modul přípravy
 
 ---
 
+### Projektová bilance nabíjení v TESTu
+
+Testovací registr vybírá metodiku podle data návrhu, druhu modelu a účelu. V odporovém modelu počítá činný příkon zvlášť pro každou fázi z instalovaných výkonů a součinitelů soudobosti skupin. Pořadí vozidel určuje přednost při přidělování minimálního proudu. Další celé ampéry model rozděluje střídavě mezi přijatá vozidla a ověřuje dostupný výkon na všech připojených fázích. Přetížení kterékoliv fáze již při základní spotřebě znamená nulový příděl pro všechna vozidla. Karta spisu zobrazuje modelovou bilanci odděleně od telemetrie stanice. Výpočet slouží pro projektovou simulaci uvnitř TESTu.
+
 ### Servisní diagnostika nabíječek v TESTu
 
 V kartě testovacího spisu se zobrazí poslední známý stav každého konektoru, čas původního hlášení a počet přijatých zpráv. Uvnitř VM běží přijímač OCPP-J 2.1 nad soukromým unixovým socketem. Registr přiřazuje stanici ke spisu. Vzorové stanice sjednají protokol WebSocket, odešlou zprávy `StatusNotification` a přečtou odpovědi. Opakovaný přenos stejné zprávy zachová jeden záznam. Pozdě doručená starší zpráva nepřepíše novější stav. Čtecí kanál odmítá příkazy `Reset` a `UpdateFirmware`. Samostatnou cestu řízených servisních zásahů popisuje Prompt 3. [Specifikace OCPP 2.1 vydavatele](https://openchargealliance.org/my-oca/ocpp/)

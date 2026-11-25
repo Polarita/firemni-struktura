@@ -69,6 +69,7 @@ async function otevri(url, options) {
     for (const format of ["xc4", "xlsx"]) {
         byId(format).href = "api/rozpocty/" + encodeURIComponent(data.case_id) + "/nabidka." + format;
     }
+    ukazBilanci(data.bilance_EV);
     byId("ocpp").hidden = true;
     byId("vykopy").hidden = true;
     byId("trasy").replaceChildren();
@@ -117,6 +118,25 @@ async function otevriOdkaz() {
 window.addEventListener("hashchange", otevriOdkaz);
 window.addEventListener("popstate", otevriOdkaz);
 if (location.search || location.hash) otevriOdkaz();
+
+function ukazBilanci(bilance) {
+    byId("dlm").hidden = !bilance;
+    if (!bilance) return;
+    const cislo = value => Number(value).toLocaleString("cs-CZ", {maximumFractionDigits: 12});
+    const stav = bilance.pretizene_faze.length
+        ? "Přetížení " + bilance.pretizene_faze.join(", ") + ". Příděl pro nabíjení je nulový."
+        : "Zatížení všech fází se vejde do limitu.";
+    byId("dlm-souhrn").textContent = bilance.metodika + " · " + bilance.den + " · Soudobý příkon "
+        + cislo(bilance.soudoby_prikon_W) + " W. " + stav;
+    byId("dlm-faze").replaceChildren(...Object.entries(bilance.faze).map(([faze, hodnoty]) => {
+        const tr = document.createElement("tr");
+        for (const udaj of [faze, cislo(hodnoty.soudoby_prikon_W) + " W", hodnoty.prideleno_EV_A + " A",
+                 cislo(hodnoty.rezerva_po_EV_W) + " W"]) tr.insertCell().textContent = udaj;
+        return tr;
+    }));
+    byId("dlm-vozidla").textContent = Object.entries(bilance.vozidla_A)
+        .map(([vozidlo, proud]) => vozidlo + " · " + proud + " A").join(", ");
+}
 
 function odkazNaDokument(res, id) {
     const label = "Dokument " + id;

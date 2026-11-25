@@ -122,7 +122,12 @@ jobs:
           2753568d3f9e80a2a63e7e0b9faa8647b5fca14e0fca2d003dfe3dfb9f76329c  nasazeni/test/inzenyring/revize/posouzeni.py
           9f9713d6978c344c7c096a198cfb4ce2c09aade8ce94f58e925f9a6876e405db  nasazeni/test/metadata-schema-kernel/vykop.py
           7a5965a09aab83e8aeca142a0181a1490cf3e22190e6dede4eb8d4f6dfb7612d  nasazeni/test/inzenyring/vzor/metodika.json
+          d5980e98d71ecca8d338874b282a7dedb005a9218307f948dda52c74e6f8098a  nasazeni/test/metadata-schema-kernel/dlm.py
+          469465858b58f27bc8f4f4a6470f1125758cd6d13ca6bf553520ad85bccb88fc  nasazeni/test/metadata-schema-kernel/dlm-metodiky-test.json
+          9c8b5f834f54142125c4210167f538f0bd60aab513824b583c4715641a84a5be  nasazeni/test/metadata-schema-kernel/dlm-projekty-test.json
+          ac089e7d2a0172fa273398523d8406414c065aeca6a79ac5c27c9500b02a27ca  nasazeni/test/inzenyring/test_dlm.py
           OTISKY
+          python3 -m unittest discover -s nasazeni/test/inzenyring -p test_dlm.py
           python3 - <<'PY'
           import sys
           from pathlib import Path
