@@ -5,6 +5,8 @@ Tento dokument definuje znalostní, podatelní, spisovou, komunikační, dispeč
 ---
 
 
+Po úspěchu zkoušek úkolovníku, příjmu a archivace PDF, knihy objektu a webu zapíše instalátor výsledek přes `agent_vault log` do oblasti `08-Deniky-a-Predavky`. Předávka obsahuje zdrojovou revizi, SHA-256 a přesný výstup zkoušky. Účet `11001` přečte uloženou stránku v režimu SHADOW. Instalátor porovná její obsah včetně zakončení řádků se zdrojovým protokolem.
+
 **Příjem skenů v TEST.** Přihlášený správce předává PDF z karty spisu přes VPN. PostgreSQL v `db_erp_lhutnik` páruje identifikátor přílohy se spisem, otiskem a časem převzetí. Termín běží 48 hodin od prvního přijetí. Opakovaný požadavek se shodnými bajty vrací stejné potvrzení. Výměna obsahu pod týmž identifikátorem vrací HTTP 409. Vstup prochází ClamAV a rastrovou rekonstrukcí v oddělené karanténě. Zpracovatel před importem kontroluje doklad i otisk a zapisuje identifikátor dokumentu vrácený Paperless. Při odmítnutí přílohy nebo prázdném OCR zobrazí karta stav pro správce. Dokončení OCR a předání zkontrolované digitální knihy mají samostatný význam.
 
 Časová osa v testovací kartě řadí události podle uloženého času. Zahrnuje založení spisu, první převzetí PDF, výsledek karantény nebo OCR se známým časem a každou zapsanou revizi zařízení včetně předchozích revizí. Další komunikační kanály mají integrační zkoušky v bloku 11.

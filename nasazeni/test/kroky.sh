@@ -197,6 +197,7 @@ obnova_databazi() {
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/vikunja/zkouska.py "$fqdn" --nastenky | tee "$tmp/vikunja.txt"
     "${inc[@]}" file push --project polarita "$tmp/vikunja.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/vikunja-$commit.txt"
+    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 08 "$commit" vikunja
     printf 'https://%s:8447/\n' "$fqdn" | "${guest[@]}" incus exec -T reditelstvi-test -- sh -ec 'umask 022; cat >/usr/local/share/.polarita-vikunja-url.next; mv -T /usr/local/share/.polarita-vikunja-url.next /usr/local/share/polarita-vikunja-url'
     "${guest[@]}" bash "$dest/nasazeni/test/archiv/instalace.sh" | tee "$tmp/archiv.txt"
     for proof in identita postgres databaze obnova-databazi znalosti valkey garage archiv gitea; do
@@ -234,6 +235,7 @@ karantena() {
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/sanony/zkouska_knihy.py "https://$fqdn" | tee "$tmp/kniha-objektu.txt"
     "${inc[@]}" file push --project polarita "$tmp/kniha-objektu.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/kniha-objektu-$commit.txt"
+    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 08 "$commit" sanony paperless-vzor paperless-prihlaseni paperless-cteni kniha-objektu
 }
 
 zalohy() {
@@ -281,9 +283,11 @@ obnova() {
 web() {
     "${guest[@]}" bash "$dest/nasazeni/test/web/instalace.sh" | tee "$tmp/web.txt"
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
-        python3 nasazeni/test/web/over_portal.py "https://$fqdn" | tee -a "$tmp/web.txt"
+        python3 nasazeni/test/web/over_portal.py "https://$fqdn" | tee "$tmp/web-pristup.txt" | tee -a "$tmp/web.txt"
     "${guest[@]}" install -d -m0750 /srv/polarita/workspace/dukazy/blok-09
     "${inc[@]}" file push --project polarita "$tmp/web.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/web-$commit.txt"
+    "${inc[@]}" file push --project polarita "$tmp/web-pristup.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/web-pristup-$commit.txt"
+    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 09 "$commit" web-pristup
 }
 
 predani() {
