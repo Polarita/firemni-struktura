@@ -28,6 +28,8 @@ Po ověření analytiky v přehledu otevři **Otevřít návštěvnost webu v Um
 
 Po zkoušce retenčního e-mailingu najdeš v **Znalostní paměti** předávku s názvem `b09-ecomail`. V první kampani dostanou servisní nabídku dva vzoroví příjemci. Po odhlášení jednoho z nich má druhá kampaň jediného příjemce. Výsledek může útvar reklamy přečíst nástrojem `ecomail_list_campaigns`. Testovací zprávy zůstávají v místní schránce uvnitř `polarita-hq`.
 
+V předávce `b09-reklamace` ve **Znalostní paměti** je zkouška dvou reklamací v databázi e-shopu. U první dorazila zpráva později než samotné uplatnění reklamace. U druhé se čas uplatnění doložil až při dodatečném posouzení. U obou můžeš ověřit, že změna kategorie zachovala původní čas.
+
 Na testovacím firemním webu otevři v zápatí **Nastavení reklamního měření**. Měření je při první návštěvě vypnuté. Tlačítkem **Povolit měření** vyzkoušíš místní reklamní značku, tlačítkem **Odmítnout měření** souhlas odvoláš. Prohlížeč si pamatuje tvoji volbu i po přechodu na jinou stránku webu.
 
 Po zprovoznění Checkmk ředitelství zpřístupní stránku **Stav firemních služeb**. U každé služby uvidíš poslední měření a čas v UTC. V bloku 7 se přidají sondy přihlášení Zulipu a dostupnosti Paperclipu. Výpadek i obnovu služby zapisuje Checkmk do soukromého kanálu **17-it-secops** v Zulipu. Instalační zkouška ověřuje obě zprávy také po obnově ze zálohy.

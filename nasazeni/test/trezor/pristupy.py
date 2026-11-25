@@ -85,7 +85,8 @@ def request(method, path, body=None, token=None):
         headers["X-Vault-Token"] = token
     data = None if body is None else json.dumps(body).encode()
     req = Request(BASE + path, data=data, headers=headers, method=method)
-    with HTTP.open(req, timeout=20) as res:
+    # Při souběhu se sestavením aplikace v TEST odpověď trezoru přesáhla 20 sekund.
+    with HTTP.open(req, timeout=90) as res:
         raw = res.read()
     return json.loads(raw) if raw else {}
 

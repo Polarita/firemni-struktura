@@ -6,6 +6,9 @@ work=/srv/polarita/infra/openbao-test
 [[ ! -e $work/uzamceno ]]
 exec 8>"$work/.zkouska-startu"
 flock 8
+# Dobíhající klient nesmí přijít o trezor uprostřed vydávání přístupu.
+exec 9>"$work/.install-lock"
+flock 9
 "$work/bin/sprava.sh" uzamknout
 trap '"$work/bin/sprava.sh" odemknout' EXIT
 systemctl start polarita-openbao-start.service
@@ -20,5 +23,6 @@ incus exec openbao-test -- test ! -e /run/openbao-seal/klíč
 "$work/bin/sprava.sh" odemknout
 trap - EXIT
 incus exec openbao-test -- test ! -e /run/openbao-seal/klíč
+flock -u 9
 systemctl start polarita-openbao-agenti.service
 echo 'Restart trezoru odstranil tajemství z tmpfs. Úmyslný zámek vydržel. Po odemčení TPM každá připojená služba získala své údaje a ověřila shodu.'

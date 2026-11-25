@@ -29,6 +29,14 @@ resource "incus_instance" "medusa" {
     }
   }
   device {
+    name = "vstup-dmz"
+    type = "proxy"
+    properties = {
+      listen  = "tcp:10.239.31.1:18450"
+      connect = "tcp:127.0.0.1:9000"
+    }
+  }
+  device {
     name = "software"
     type = "disk"
     properties = {

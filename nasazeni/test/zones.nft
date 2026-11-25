@@ -43,8 +43,8 @@ table inet polarita_test {
     }
     chain local_input {
         type filter hook input priority -20; policy accept;
-        iifname "dmz_edge" ip saddr 10.239.31.10 ip daddr 10.239.31.1 tcp dport 18449 counter accept
-        ip daddr 10.239.31.1 tcp dport 18449 counter drop
+        iifname "dmz_edge" ip saddr 10.239.31.10 ip daddr 10.239.31.1 tcp dport { 18449, 18450 } counter accept
+        ip daddr 10.239.31.1 tcp dport { 18449, 18450 } counter drop
         iifname @zones ct state established,related accept
         iifname "dmz_edge" ip saddr 10.239.31.13 ip daddr 10.239.31.1 tcp dport 443 ct state new,established accept
         iifname "dmz_edge" ip daddr 10.239.31.1 udp dport 53 accept

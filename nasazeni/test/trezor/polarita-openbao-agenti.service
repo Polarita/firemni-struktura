@@ -5,4 +5,6 @@ RequiresMountsFor=/srv/polarita/infra/openbao-test
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/flock --shared --nonblock --conflict-exit-code 0 /srv/polarita/infra/openbao-test/.install-lock /usr/bin/python3 /srv/polarita/infra/openbao-test/bin/agenti.py
-TimeoutStartSec=12min
+# Klienti mají vlastní časové limity a jeden opravný pokus. Celý průchod
+# čeká i na disk a další běh plánuje časovač až po jeho ukončení.
+TimeoutStartSec=infinity

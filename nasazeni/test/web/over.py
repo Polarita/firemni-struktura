@@ -38,10 +38,13 @@ class Stranka(HTMLParser):
 
 
 def over(root, ceny):
-    files = {"index.html", "prevzeti-sanonu/index.html", "kalkulacka-svj/index.html", "llms.txt", "souhlas.js", "reklama-test.js"}
+    files = {"index.html", "prevzeti-sanonu/index.html", "kalkulacka-svj/index.html", "llms.txt", "souhlas.js", "reklama-test.js", "obchod/index.html", "obchod/nakup.js"}
     found = {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
     if found != files or any(p.is_symlink() for p in root.rglob("*")):
         raise ValueError("Sada veřejných souborů se liší od očekávaného výstupu Astro.")
+    shop = (root/"obchod/index.html").read_text()
+    if 'src="./nakup.js"' not in shop or 'id="odeslat"' not in shop:
+        raise ValueError("V sestavení chybí ovládání testovacího nákupu.")
     home, transfer = Stranka(), Stranka()
     home.feed((root/"index.html").read_text())
     transfer.feed((root/"prevzeti-sanonu/index.html").read_text())

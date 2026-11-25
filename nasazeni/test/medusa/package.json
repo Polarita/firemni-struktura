@@ -2,12 +2,23 @@
   "name": "polarita-medusa-test",
   "private": true,
   "version": "1.0.0",
-  "engines": { "node": ">=22.22.0" },
-  "scripts": { "build": "medusa build", "start": "medusa start" },
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "scripts": {
+    "build": "medusa build",
+    "start": "medusa start"
+  },
   "dependencies": {
     "@medusajs/admin-sdk": "2.23.0",
     "@medusajs/cli": "2.23.0",
     "@medusajs/framework": "2.23.0",
-    "@medusajs/medusa": "2.23.0"
+    "@medusajs/medusa": "2.23.0",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "ts-node": "10.9.2",
+    "tsconfig-paths": "4.2.0"
   }
 }

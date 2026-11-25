@@ -70,7 +70,8 @@ if [[ ! -d $release ]]; then
     done
     out="$cache/$rev/dist"
     python3 "$src/over.py" "$out" "$tmp/src/cenik-verejny.json"
-    install -d "$tmp/dist/prevzeti-sanonu" "$tmp/dist/kalkulacka-svj"
+    install -d "$tmp/dist/obchod" "$tmp/dist/prevzeti-sanonu" "$tmp/dist/kalkulacka-svj"
+    install -m0644 "$out/obchod/index.html" "$out/obchod/nakup.js" "$tmp/dist/obchod/"
     install -m0644 "$out/kalkulacka-svj/index.html" "$tmp/dist/kalkulacka-svj/"
     install -m0644 "$out/index.html" "$out/llms.txt" "$out/souhlas.js" "$out/reklama-test.js" "$tmp/dist/"
     install -m0644 "$out/prevzeti-sanonu/index.html" "$tmp/dist/prevzeti-sanonu/"
@@ -87,11 +88,11 @@ inside=(incus exec -T "$vm" --)
 if ! "${inside[@]}" test -d "$web/$rev"; then
     "${inside[@]}" mkdir -p "$web/.$rev-next"
     tar -cf - -C "$release/dist" . | "${inside[@]}" tar xf - -C "$web/.$rev-next"
-    (cd "$release/dist" && sha256sum index.html llms.txt souhlas.js reklama-test.js prevzeti-sanonu/index.html kalkulacka-svj/index.html) |
+    (cd "$release/dist" && sha256sum index.html obchod/index.html obchod/nakup.js llms.txt souhlas.js reklama-test.js prevzeti-sanonu/index.html kalkulacka-svj/index.html) |
         "${inside[@]}" sh -ec 'cd "$1"; sha256sum -c -' web "$web/.$rev-next"
     "${inside[@]}" mv -T "$web/.$rev-next" "$web/$rev"
 fi
-(cd "$release/dist" && sha256sum index.html llms.txt souhlas.js reklama-test.js prevzeti-sanonu/index.html kalkulacka-svj/index.html) |
+(cd "$release/dist" && sha256sum index.html obchod/index.html obchod/nakup.js llms.txt souhlas.js reklama-test.js prevzeti-sanonu/index.html kalkulacka-svj/index.html) |
     "${inside[@]}" sh -ec 'cd "$1"; sha256sum -c -' web "$web/$rev"
 "${inside[@]}" sh -ec 'cd "$1"; ln -sfn "$2" .current-next; mv -Tf .current-next current' web "$web" "$rev"
 ln -sfn "releases/$rev" "$apps/.current-next"
