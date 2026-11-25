@@ -54,6 +54,23 @@ def install(name, files):
             run("incus", "file", "push", "-p", "--mode=" + mode, str(source), remote)
 
 
+def odvolej(token, povolene_cteni):
+    """Ztracené potvrzení odvolání ověř na cestě přístupné platnému tokenu."""
+    try:
+        p.request("POST", "auth/token/revoke-self", {}, token)
+        return
+    except (TimeoutError, ConnectionError, URLError) as err:
+        cause = err.reason if isinstance(err, URLError) else err
+        if not isinstance(cause, (TimeoutError, ConnectionError)):
+            raise
+    try:
+        p.request("POST", "auth/token/revoke-self", {}, token)
+    except p.HTTPError as err:
+        if err.code != 403:
+            raise
+        p.expect_forbidden("GET", povolene_cteni, token)
+
+
 def deliver(name, manager):
     ip, uid, gid, fixture = CLIENTS[name]
     if name == "umami-test":
@@ -75,7 +92,7 @@ def deliver(name, manager):
     try:
         value = p.request("GET", "test/data/" + fixture, token=token)["data"]["data"]["vzorek"]
     finally:
-        p.request("POST", "auth/token/revoke-self", {}, token)
+        odvolej(token, "test/data/" + fixture)
     actual = run("incus", "exec", "-T", name, "--user", str(uid), "--group", str(gid),
                  "--", TARGET + "/agent", "--overit")
     if actual.decode() != hashlib.sha256(value.encode()).hexdigest():
@@ -93,7 +110,7 @@ def deliver_with_token(name, credentials):
             try:
                 deliver(name, manager)
             finally:
-                p.request("POST", "auth/token/revoke-self", {}, manager)
+                odvolej(manager, "auth/approle/role/" + name + "/role-id")
             return
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired, TimeoutError, ConnectionError, URLError) as exc:
             cause = exc.reason if isinstance(exc, URLError) else exc
