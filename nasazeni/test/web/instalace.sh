@@ -46,9 +46,12 @@ if [[ ! -d $release ]]; then
         if [[ -f $stamp && $(cat "$stamp") == "$rev" ]]; then continue; fi
         if systemctl is-failed --quiet "$unit"; then systemctl reset-failed "$unit"; fi
         if [[ $(systemctl show -p LoadState --value "$unit") == not-found ]]; then
-            net=()
-            if [[ $phase == sestaveni ]]; then net=(-p PrivateNetwork=yes); fi
-            "${build[@]}" --unit="$unit" "${net[@]}" /bin/bash /opt/polarita-web-src/sestav.sh "$phase" "$rev" ||
+            phase_options=()
+            if [[ $phase == sestaveni ]]; then
+                # CacheDirectory dynamického účtu má noexec. CLI a nativní moduly potřebuje až offline sestavení.
+                phase_options=(-p PrivateNetwork=yes -p "ExecPaths=$(realpath "$cache")/$rev/node_modules")
+            fi
+            "${build[@]}" --unit="$unit" "${phase_options[@]}" /bin/bash /opt/polarita-web-src/sestav.sh "$phase" "$rev" ||
                 systemctl cat "$unit" >/dev/null
         fi
         while true; do
