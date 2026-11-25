@@ -18,6 +18,12 @@ Správce může zkoušet portál už během instalace. Dokončení celého průc
 2. Otevři [ředitelství ve firemní VPN](http://reditelstvi.polarita.cz/). Úvodní stránka tě automaticky přesměruje na zabezpečený přihlašovací formulář. Pokud prohlížeč vyžaduje HTTPS už pro úvodní adresu nebo zařízení nepoužívá firemní DNS, použij přímý odkaz HTTPS předaný instalační ai. Ta ho najde na Ejpovicích v řádku `Ověřené přihlášení ve VPN`.
 3. Na stránce **Ředitelství Polarity** zadej jméno **spravce** a zapamatovatelné heslo vygenerované pro tuto instalaci. ai ti heslo předá soukromě. Pro první přihlášení stačí jméno a heslo. Osobní certifikáty a hardwarové klíče se zapojí po otestování a převzetí správcem.
 
+Pokud potřebuješ heslo znovu, na počítači s již nastaveným správcovským SSH přístupem k Ejpovicím otevři PowerShell. Na následujícím řádku nahraď `uzivatel@ejpovice` svou obvyklou SSH adresou serveru. Příkaz zobrazí stávající testovací heslo ve tvém terminálu. Stejné přihlášení funguje i v prohlížeči telefonu přes Tailscale.
+
+```powershell
+ssh uzivatel@ejpovice "sudo -n incus exec -T --project polarita polarita-hq -- cat /srv/polarita/data/bootstrap-test/test-login/heslo"
+```
+
 Po přihlášení otevři konfigurátor paušálu Elektro Správa a vyzkoušej výpočet ceny. V odkazu **Otevřít správce hesel Vaultwarden** použij `spravce@polarita.test` a stejné testovací heslo. V organizaci **Polarita TEST** najdeš kolekce oddělení 11 až 18.
 
 Ředitelství běží uvnitř VM `polarita-hq` v projektu `polarita` na Ejpovicích. Rozhraní Incusu slouží ke správě virtuálních strojů. Server zajišťuje certifikát pro HTTPS. Přístup správce v této instalaci je omezený na testovací data.
