@@ -375,6 +375,7 @@ web() {
 vykresy() {
     "${guest[@]}" bash "$dest/nasazeni/test/cad/offline.sh" | tee "$tmp/cad-vykresy.txt"
     "${inc[@]}" file push --project polarita "$tmp/cad-vykresy.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-10/cad-vykresy-$commit.txt"
+    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 10 "$commit" cad-vykresy
 }
 
 predani() {

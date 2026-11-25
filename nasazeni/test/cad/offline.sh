@@ -50,7 +50,7 @@ sha256sum --check --strict --status SHA256SUMS
 pip=(pip-*.whl)
 [[ ${#pip[@]} == 1 ]]
 PYTHONPATH="$PWD/${pip[0]}" python3 -m pip --isolated --disable-pip-version-check install --no-index \
-    --no-cache-dir --ignore-installed --no-compile --only-binary=:all: --require-hashes --target "$tmp" -r requirements.txt
+    --no-cache-dir --ignore-installed --no-compile --only-binary=:all: --require-hashes --target "$tmp" -r requirements.txt >&2
 chmod 0755 "$tmp"
 mv -T "$tmp" "$2/lib"
 INSTALL
