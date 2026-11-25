@@ -287,7 +287,10 @@ web() {
     "${guest[@]}" install -d -m0750 /srv/polarita/workspace/dukazy/blok-09
     "${inc[@]}" file push --project polarita "$tmp/web.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/web-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/web-pristup.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/web-pristup-$commit.txt"
-    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 09 "$commit" web-pristup
+    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 09 "$commit" web-pristup | tee "$tmp/web-predavka.jsonl"
+    "${guest[@]}" systemctl start polarita-silverbullet-export.service
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
+        python3 nasazeni/test/silverbullet/zkouska_prihlaseni.py "$fqdn" --predavky "$tmp/web-predavka.jsonl"
 }
 
 predani() {
