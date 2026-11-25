@@ -1,0 +1,10 @@
+[Unit]
+Description=Odhlášení z retenčního seznamu TEST
+[Socket]
+ListenStream=/run/polarita-ecomail-test/odhlaseni.sock
+DirectoryMode=0700
+SocketMode=0600
+Accept=yes
+MaxConnections=8
+[Install]
+WantedBy=sockets.target

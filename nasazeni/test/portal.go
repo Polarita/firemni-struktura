@@ -318,6 +318,10 @@ func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Cizí původ požadavku", 403)
 		return
 	}
+	if strings.HasPrefix(r.URL.Path, odberPrefix) {
+		potvrzeniOdhlaseni(w, r)
+		return
+	}
 	if strings.HasPrefix(r.URL.Path, metadataPath) {
 		p.metadata(w, r)
 		return

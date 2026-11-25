@@ -18,7 +18,7 @@ REPORTS = {
     "gsc_list_sites": {"siteEntry": [{"siteUrl": "sc-domain:polarita.test", "permissionLevel": "siteOwner"}]},
     "zbozi_list_offers": {"offers": [{"id": "TEST-Z1", "currency": "CZK"}]},
     "heureka_list_offers": {"offers": [{"id": "TEST-H1", "currency": "CZK"}]},
-    "ecomail_list_campaigns": {"campaigns": []},
+    "ecomail_list_campaigns": {},
     "umami_conversions": {},
     "poas_margin": {"available": False, "planned_block": 11},
 }
@@ -65,6 +65,11 @@ async def call_tool(name, arguments):
             result["available"] = 0 <= age.total_seconds() <= 900
         except FileNotFoundError:
             result = {"available": False, "event": "prevzeti-sanonu"}
+    elif name == "ecomail_list_campaigns":
+        try:
+            result = json.loads(Path("/var/lib/polarita-ecomail-test/kampane.json").read_text())
+        except FileNotFoundError:
+            result = {"available": False, "campaigns": []}
     elif name in REPORTS:
         result = REPORTS[name]
     else:

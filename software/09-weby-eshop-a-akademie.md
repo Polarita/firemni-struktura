@@ -99,6 +99,10 @@ V TEST použij fiktivní zkoušené osoby a vzorový protokol označený jako te
 
 ---
 
+### Provozní zkouška retenčního seznamu
+
+Instalátor vytvoří pět syntetických kontaktů v místním protějšku Ecomailu. Do první kampaně zařadí kontakt s výslovným souhlasem a stávajícího zákazníka s nabídkou obdobné služby a možností ji odmítnout při získání kontaktu. Zprávy s podpisem DKIM uloží do testovací schránky na šifrovaném svazku. Ověří podpis a provede odhlášení z hlavičky zprávy přes HTTPS ve VPN. Pouhé zobrazení odkazu a kontrola náhledu druhého příjemce zachovají jeho odběr. Druhá kampaň po opakovaném importu ověří trvalé odhlášení i doručení zbývajícímu příjemci. Reklamní MCP zpřístupní počty podle kampaně a titulu. Připojení živého účtu Ecomail patří k přechodu po převzetí správcem.
+
 ## 4. Ověřitelné podmínky dokončení Bloku 9
 
 - [ ] Web **`polarita.cz`** (běžící v `app_internal` za `Caddy` v `dmz_edge`; včetně základního ceníku služeb a tarifů MRR, **Kalkulačky rizik SVJ**, portálu **48h převzetí šanonů**, **Digitální knihy objektu** a vstupu **Servisního Helpdesku**) běží na **`Astro (latest)`** s bezpečným směrováním příloh do karantény `/srv/polarita/workspace/karantena` a odtud hostitelskou jednotkou `systemd` přes `airgap-spool` do `sandbox_airgap` (zkušební soubor prošel celým tokem).

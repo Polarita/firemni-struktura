@@ -1,0 +1,19 @@
+[Unit]
+RequiresMountsFor=/srv/polarita/workspace
+[Service]
+User=pol-ecomail-test
+ExecStart=/usr/bin/python3 -I /opt/polarita-ecomail-test/retence.py request
+StandardInput=socket
+StandardOutput=socket
+RuntimeMaxSec=25
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+InaccessiblePaths=/etc/polarita-ecomail-test
+ReadWritePaths=/srv/polarita/workspace/ecomail-test
