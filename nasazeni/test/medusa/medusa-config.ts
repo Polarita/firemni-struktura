@@ -13,6 +13,7 @@ module.exports = defineConfig({
     databaseUrl: build ? "postgresql://localhost/build" :
       "postgresql://db_eshop:" + encodeURIComponent(secret("pg-db_eshop")) + "@10.239.33.12:5432/db_eshop",
     databaseSchema: "public",
+    sessionOptions: { name: "pol_medusa_sid", resave: false, saveUninitialized: false },
     databaseDriverOptions: {
       ssl: build ? false : { ca: readFileSync("/etc/polarita-medusa/postgres.crt", "utf8"),
         servername: "postgres.polarita.test", rejectUnauthorized: true, minVersion: "TLSv1.3" },

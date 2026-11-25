@@ -3,6 +3,14 @@ set -euo pipefail
 [[ $(hostname -s) == polarita-hq && $EUID == 0 ]]
 src=$(cd "$(dirname "$0")" && pwd)
 inside=(incus exec -T medusa-test --)
+host=${1:-}
+if [[ -z $host ]]; then
+    url=$(incus exec -T gitea-test -- cat /etc/polarita-gitea/url)
+    host=${url#https://}
+    host=${host%%/*}
+fi
+[[ $host =~ ^[a-z0-9.-]+[.]ts[.]net$ ]]
+printf 'MEDUSA_TEST_ORIGIN=https://%s:8450\n' "$host" | "${inside[@]}" sh -ec 'umask 022; cat > /etc/polarita-medusa/.vstup-next; mv -T /etc/polarita-medusa/.vstup-next /etc/polarita-medusa/vstup.env'
 root=/srv/polarita/apps/medusa-test
 exec 9>/run/polarita-medusa-spusteni.lock
 flock 9
@@ -23,6 +31,15 @@ if [[ $active != "$rev" || $previous != "$rev" ]]; then
         -E HOME=/var/lib/medusa -E NODE_OPTIONS=--max-old-space-size=550 \
         /opt/node/bin/node "/opt/medusa/$rev/node_modules/@medusajs/cli/cli.js" db:migrate \
             --concurrency 1 --execute-safe-links --execute-safe-search
+    if ! "${inside[@]}" test -f /etc/polarita-medusa/spravce-pripraven; then
+        "${inside[@]}" systemd-run --quiet --pipe --wait --collect --service-type=exec -p User=medusa -p Group=medusa \
+            -p "WorkingDirectory=/opt/medusa/$rev/.medusa/server" -p NoNewPrivileges=yes -p PrivateTmp=yes \
+            -E PATH=/opt/node/bin:/usr/bin:/bin -E NODE_ENV=production -E MEDUSA_DISABLE_TELEMETRY=true \
+            -E HOME=/var/lib/medusa -E NODE_OPTIONS=--max-old-space-size=550 \
+            /opt/node/bin/node "/opt/medusa/$rev/node_modules/@medusajs/cli/cli.js" exec ./src/scripts/spravce.js \
+            </srv/polarita/data/bootstrap-test/test-login/heslo
+        "${inside[@]}" touch /etc/polarita-medusa/spravce-pripraven
+    fi
     ln -sfn "$rev" "$root/.current-next"
     mv -Tf "$root/.current-next" "$root/current"
 fi
@@ -45,7 +62,8 @@ done
 exit 1
 RUN
 }
-if ! activate; then
+incus file push --mode=0644 "$src/prihlaseni.py" medusa-test/etc/polarita-medusa/prihlaseni.py
+if ! activate || ! "${inside[@]}" python3 /etc/polarita-medusa/prihlaseni.py 127.0.0.1 </srv/polarita/data/bootstrap-test/test-login/heslo; then
     if [[ -n $previous && $previous != "$rev" ]]; then
         ln -sfn "$previous" "$root/.current-next"
         mv -Tf "$root/.current-next" "$root/current"
