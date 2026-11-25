@@ -24,5 +24,6 @@ $CFG->dataroot = '/var/lib/polarita-akademie/' . $schema;
 $CFG->directorypermissions = 0700;
 $CFG->sessioncookie = 'PolAkademie';
 $CFG->cookiesecure = true;
+$CFG->forcelogin = true;
 $CFG->noemailever = true;
 $CFG->disableupdateautodeploy = true;

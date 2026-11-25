@@ -26,6 +26,17 @@ http://:8080 {
 	bind 127.0.0.1
 	header +Via "1.1 polarita-caddy"
 	route {
+		@akademie header_regexp Host ^[a-z0-9.-]+[.]ts[.]net:8451$
+		handle @akademie {
+			header X-Robots-Tag "noindex, nofollow"
+			reverse_proxy 10.239.32.24:8080 {
+				header_up Cookie "MoodleSessionPolAkademie={http.request.cookie.MoodleSessionPolAkademie}; MOODLEID1_PolAkademie={http.request.cookie.MOODLEID1_PolAkademie}"
+				header_up -Authorization
+				header_up -Remote-User
+				header_up X-Forwarded-Proto https
+			}
+		}
+		request_header Cookie "(^|; *)(MoodleSessionPolAkademie|MOODLEID1_PolAkademie)=[^;]*" ""
 		@eshop header_regexp Host ^[a-z0-9.-]+[.]ts[.]net:8450$
 		handle @eshop {
 			route {
