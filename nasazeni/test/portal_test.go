@@ -80,6 +80,7 @@ func TestBookSurvivesLogin(t *testing.T) {
 	p := &portal{digest: sha256.Sum256([]byte("synthetic")), sessions: make(map[string]time.Time)}
 	visit := func(method, path, body string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(method, path, strings.NewReader(body))
+		req.RemoteAddr = "127.0.0.1:4000"
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		res := httptest.NewRecorder()
 		p.ServeHTTP(res, req)
