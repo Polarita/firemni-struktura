@@ -6,8 +6,20 @@ src=$(cd "$(dirname "$0")" && pwd)
 lock=$src/postgres.lock.json
 base=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["base"])' "$lock")
 mapfile -t packages < <(python3 -c 'import json,sys;print(*(k+"="+v for k,v in json.load(open(sys.argv[1]))["packages"].items()),sep="\n")' "$lock")
-key=$(sha256sum "$lock" | cut -c1-16)
+# O aliasu rozhodují pouze vstupy sestavení. Text kompatibility lze aktualizovat samostatně.
+key=$(python3 - "$lock" <<'PYKEY'
+import hashlib
+import json
+import sys
+with open(sys.argv[1]) as stream:
+    record = json.load(stream)
+fields = {key: record[key] for key in ("base", "postgresql_major", "packages")}
+print(hashlib.sha256(json.dumps(fields, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:16])
+PYKEY
+)
 alias=polarita-postgres-test-$key
+if [[ ${1:-} == --alias ]]; then echo "$alias"; exit 0; fi
+[[ $# == 0 ]]
 work=/srv/polarita/infra/postgres-test
 install -d -m 0750 "$work"
 exec 9>"$work/.obraz-lock"

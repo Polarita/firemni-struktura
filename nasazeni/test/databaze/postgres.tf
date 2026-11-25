@@ -6,6 +6,10 @@ resource "incus_instance" "postgres" {
   name     = "postgres-test"
   image    = var.postgres_image
   profiles = ["default", "data_vault"]
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [image]
+  }
   config = {
     "boot.autostart"     = "true"
     "limits.processes"   = "320"
