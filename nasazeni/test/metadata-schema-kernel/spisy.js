@@ -36,6 +36,10 @@ async function otevri(url, options) {
     byId("zapis-revize").open = false;
     byId("stav-knihy").textContent = "";
     byId("terminy").replaceChildren();
+    byId("rozpocet").hidden = !data.ma_rozpocet;
+    for (const format of ["xc4", "xlsx"]) {
+        byId(format).href = "api/rozpocty/" + encodeURIComponent(data.case_id) + "/nabidka." + format;
+    }
     byId("vykopy").hidden = true;
     byId("trasy").replaceChildren();
     await Promise.all([ukazVykopy(data.case_id, current), ukazPrijem(data.case_id, current), ukazKnihu(data.case_id, current)]);

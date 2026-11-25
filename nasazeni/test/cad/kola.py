@@ -16,17 +16,17 @@ def checksum(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
-def prepare(cache):
+def prepare(cache, lockfile=Path(__file__).with_name("kola.lock")):
     if sys.version_info[:2] != (3, 14) or platform.machine() != "x86_64":
-        raise RuntimeError("Balíčky CAD vyžadují CPython 3.14 pro amd64.")
+        raise RuntimeError("Ověřené balíčky vyžadují CPython 3.14 pro amd64.")
     cache.mkdir(mode=0o700, parents=True, exist_ok=True)
-    for line in Path(__file__).with_name("kola.lock").read_text().splitlines():
+    for line in lockfile.read_text().splitlines():
         url, digest = line.split("#sha256=")
         parts = urlsplit(url)
         name = Path(parts.path).name
         if (parts.scheme != "https" or parts.netloc != "files.pythonhosted.org"
                 or not re.fullmatch(r"[A-Za-z0-9_.+-]+\.whl", name) or not re.fullmatch(r"[a-f0-9]{64}", digest)):
-            raise ValueError("Neplatný záznam v seznamu balíčků CAD.")
+            raise ValueError("Neplatný záznam v seznamu balíčků.")
         target = cache / name
         if target.is_file() and checksum(target) == digest:
             continue

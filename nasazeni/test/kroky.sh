@@ -20,6 +20,7 @@ upload=$("${guest[@]}" mktemp "$dest/.zdroj-ci-XXXXXXXX")
 "${inc[@]}" file push --mode 0600 --project polarita "$tmp/zdroj-ci.tar.gz" "polarita-hq$upload"
 "${guest[@]}" bash -ec 'sum=$(sha256sum "$1"); [[ ${sum%% *} == "$3" ]]; mv -T "$1" "$2"' -- "$upload" "$dest/zdroj-ci.tar.gz" "${digest%% *}"
 "${guest[@]}" tar -xzf "$dest/zdroj-ci.tar.gz" -C "$dest"
+"${guest[@]}" python3 "$dest/nasazeni/test/zaklad/distribuce.py"
 "${guest[@]}" bash "$dest/nasazeni/test/zaklad/pamet.sh"
 "${guest[@]}" python3 "$dest/nasazeni/test/pamet/soukrome.py"
 "${guest[@]}" bash "$dest/nasazeni/test/karantena/kvm-host.sh"
@@ -382,6 +383,7 @@ vykresy() {
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/inzenyring/prijem.py "https://$fqdn"
     "${guest[@]}" bash "$dest/nasazeni/test/inzenyring/instalace.sh"
+    "${guest[@]}" bash "$dest/nasazeni/test/inzenyring/rozpocet/publikuj.sh" | tee "$tmp/rozpocet.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/qet/schema.sh" | tee "$tmp/qet-schema.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/cad/offline.sh" | tee "$tmp/cad-vykresy.txt"
     local cad_verze
@@ -389,7 +391,7 @@ vykresy() {
     "${guest[@]}" python3 "$dest/nasazeni/test/cad/tok.py" "$cad_verze" | tee -a "$tmp/cad-vykresy.txt"
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/inzenyring/zkouska.py "https://$fqdn" | tee "$tmp/dtm-spis.txt"
-    cat "$tmp/qet-schema.txt" "$tmp/dtm-spis.txt" >> "$tmp/cad-vykresy.txt"
+    cat "$tmp/rozpocet.txt" "$tmp/qet-schema.txt" "$tmp/dtm-spis.txt" >> "$tmp/cad-vykresy.txt"
     "${inc[@]}" file push --project polarita "$tmp/cad-vykresy.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-10/cad-vykresy-$commit.txt"
     "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 10 "$commit" cad-vykresy
 }

@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import socketserver
 import sys
+from uuid import UUID
 from urllib.parse import urlsplit
 
 import kniha
@@ -13,6 +14,10 @@ import vykop_api
 from model import load, unique
 from spisy import casova_osa, najdi, prevzate_sanony, zaloz
 from zaznamy import Problem, query, read, write
+
+
+def rozpocet(karta):
+    return Path("/opt/polarita-inzenyring-test/rozpocty") / str(UUID(karta["pozadavek"])) / "current"
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -67,6 +72,18 @@ class Handler(BaseHTTPRequestHandler):
         if self.command == "POST" and path == "/api/spisy":
             self.reply(200, zaloz(data, self.request_body()))
             return
+        if self.command == "GET" and path.startswith("/api/rozpocty/"):
+            parts = path.removeprefix("/api/rozpocty/").split("/")
+            formats = {"nabidka.xc4": "application/octet-stream",
+                       "nabidka.xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
+            if len(parts) != 2 or parts[1] not in formats:
+                raise Problem(404, "Neznámý formát nabídky.")
+            karta = najdi(data, parts[0])
+            file = rozpocet(karta) / parts[1]
+            if not file.is_file():
+                raise Problem(404, "Spis nemá tuto nabídku.")
+            self.reply(200, file.read_bytes(), formats[parts[1]])
+            return
         if path.startswith("/api/vykopy/") and self.command in ("GET", "POST"):
             post = self.command == "POST"
             self.reply(200, vykop_api.kontrola(data, path.removeprefix("/api/vykopy/"),
@@ -85,7 +102,10 @@ class Handler(BaseHTTPRequestHandler):
             if len(parts) in (2, 3) and parts[1] == "osa":
                 self.reply(200, casova_osa(data, parts[0], parts[2] if len(parts) == 3 else None))
             else:
-                self.reply(200, najdi(data, parts[0] if len(parts) == 1 else ""))
+                karta = najdi(data, parts[0] if len(parts) == 1 else "")
+                if (rozpocet(karta) / "SHA256SUMS").is_file():
+                    karta["ma_rozpocet"] = True
+                self.reply(200, karta)
             return
         if self.command == "POST" and path == route:
             row = write(data, self.request_body())

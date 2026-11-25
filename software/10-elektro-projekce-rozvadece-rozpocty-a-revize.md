@@ -72,6 +72,12 @@ V ředitelství otevři **Spisy** a kartu projektu. Oddíl **Kontrola výkopů v
 
 Instalátor předá dva vzorové PDF dokumenty přes portál do karantény a Paperless. Technická zkouška používá výhradně smyšlené podklady a zkušební rozměry pro trasu R-TEST-01. Pro skutečný projekt stanoví pravidla normovač a podklady dodají příslušní správci sítí.
 
+#### Nabídkový rozpočet v testovacím spisu
+
+Instalátor ve VM `polarita-hq` vezme [modelový výkaz výměr](../nasazeni/test/inzenyring/rozpocet/vykaz-test.json), přepočítá položky na haléře a zapíše nabídku XC4 NZ. Před zpřístupněním obou souborů převede nabídku do Excelu a zpět, ověří ji proti schématu vydavatele a porovná výsledek s původním XC4. Správce otevře modelový spis a v oddílu **Nabídkový rozpočet** si stáhne oba formáty. [Datový předpis XC4 NZ](https://www.xc4.cz/podrobnosti/nz)
+
+V listu **Položky** lze změnit množství, jednotkovou cenu a číselnou skupinu práce. List **Kontrola** ukazuje obsazení všech devíti skupin. Při zpětném převodu nástroj zachová strom stavby, ověří úplnost skupin a přepočítá celkovou cenu. Pro vydání nabídky se stejným identifikátorem musí zůstat zachovány všechny původní položky. Pro nový testovací výkaz lze dodat vlastní identifikátory i ceny. [Převodní nástroj](../nasazeni/test/inzenyring/rozpocet/rozpocet.py)
+
 ### Prompt 2 — Vývoj deterministického inženýrského, výkopového (`DTM ČR`) a rozpočtového jádra `cad-urs-engine` (normy z normové báze `15002 normovac` — `F03`) (`pro 17001`, `14001`, `14002` a Judge `15002`)
 
 ```text
