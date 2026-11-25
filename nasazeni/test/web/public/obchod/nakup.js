@@ -1,15 +1,15 @@
 "use strict";
 const el = (id) => document.getElementById(id);
 const money = (amount, code) => new Intl.NumberFormat("cs-CZ", { style: "currency", currency: code.toUpperCase() }).format(amount);
-const storageKey = "polarita-obchod-test-v1";
+const cartStorageName = "polarita-obchod-test-v1";
 let config, product, variant, cart;
 let busy = false;
 
 function state() {
-    return JSON.parse(sessionStorage.getItem(storageKey) || "{}");
+    return JSON.parse(sessionStorage.getItem(cartStorageName) || "{}");
 }
 function save(value) {
-    sessionStorage.setItem(storageKey, JSON.stringify(value));
+    sessionStorage.setItem(cartStorageName, JSON.stringify(value));
 }
 async function store(path, body) {
     const headers = { "x-publishable-api-key": config.publishable };
