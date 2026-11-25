@@ -32,4 +32,5 @@ if awk 'NR>1 && $1 !~ /^\/dev\/zram[0-9]+$/ {other=1} END {exit other}' /proc/sw
     printf '%s\n' 'vm.swappiness = 120' > /etc/sysctl.d/62-polarita-zram.conf
     sysctl -q -p /etc/sysctl.d/62-polarita-zram.conf
 fi
+bash "$(dirname "$0")/diskova-rezerva.sh"
 echo 'Ve VM jsou aktivní dvě komprimovaná zařízení po 2 GiB.'
