@@ -1,4 +1,4 @@
-# Společné jádro pravidel systémových promptů všech 20 ai zaměstnanců · Verze 3.30.2
+# Společné jádro pravidel systémových promptů všech 20 ai zaměstnanců · Verze 3.30.3
 
 Tento soubor je **jediným zdrojem společných pravidel**, která musí obsahovat systémový prompt každého `ai` zaměstnance (`11001`–`18001`). Pravidla se do karet neopisují ručně: skript [`nastroje/sync_prompt_core.py`](../nastroje/sync_prompt_core.py) je vkládá jako poslední číslovaný oddíl systémového promptu (kap. 4 každé karty) a kontrola [`nastroje/check_consistency.py`](../nastroje/check_consistency.py) hlídá, že znění ve všech 20 kartách přesně odpovídá tomuto zdroji.
 

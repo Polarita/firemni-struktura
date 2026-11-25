@@ -1,4 +1,4 @@
-# Blok 14 · Balíček S2 — Rozšířená regresní sada `Eval Suite 100+` (syntetické stereo stopy + webový trendový report) · Verze 3.30.2
+# Blok 14 · Balíček S2 — Rozšířená regresní sada `Eval Suite 100+` (syntetické stereo stopy + webový trendový report) · Verze 3.30.3
 
 Tento dokument je řídicím dokumentem **`Bloku 14`** Rozvojové Etapy II společnosti **Polarita s.r.o.** Balíček rozšiřuje základní sadu **20 chytáků** z `Bloku 7` (`Stage 1`) a `Bloku 12` (`Stage 2`) na hloubkovou regresní sadu **157 scénářů** (20 základních + 137 rozšířených, z toho 17 se syntetickou stereo stopou) a přidává k ní deterministický hodnotitel, který pustí změnu promptu nebo modelu dál jen při skóre **`100 % VERIFIED_PASS`**. Nepřidává žádného `ai` agenta, žádnou databázi ani placenou službu a běží uvnitř stropu `470 USD / měsíc` (dry-run nestojí nic).
 
@@ -6,7 +6,7 @@ Tento dokument je řídicím dokumentem **`Bloku 14`** Rozvojové Etapy II spole
 
 ## 1. Seznam softwaru a modulů
 
-| Oblast | Soubor / modul | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.30.2) | Odpovědný `ai` / garant |
+| Oblast | Soubor / modul | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.30.3) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Datová sada** | [`eval_suite_polarita_extended.json`](./eval_suite_polarita_extended.json) *(export z [`build_dataset.py`](./build_dataset.py))* | verzováno v `Gitea` | 157 scénářů ve 13 kategoriích: strukturovaná událost, očekávané rozhodnutí, kód důvodu, povinné a zakázané akce, právní opora. Základní sada `ES-001` až `ES-020` je závazným výčtem 20 chytáků `Stage 1 / Stage 2`. | `17005` `ai-provoz` *(Judge `15001`, `15002`)* |
 | **Referenční politika** | [`reference_policy.py`](./reference_policy.py) | čistý `Python` bez závislostí | 25 deterministických pravidel (`Hard-Stop`, `FAIL_CLOSED`, `Decisions`) jako maketa nástrojové vrstvy pro dry-run a spustitelná specifikace, které musí odpovídat živý gateway. Nikdy nevolá jazykový model ani síť. | `17001` `programator` *(kontrola `17004` `klicnik`)* |
@@ -102,7 +102,7 @@ Při každém novém pravidle, incidentu nebo balíčku doplň sadu o scénáře
 
 ---
 
-## 5. Stav ve Verzi 3.30.2
+## 5. Stav ve Verzi 3.30.3
 
 **Hotovo v této složce a ověřeno spuštěním (`Python 3.12`, Windows, 14. 11. 2026):**
 
