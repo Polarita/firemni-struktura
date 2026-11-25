@@ -1,6 +1,6 @@
-# Blok 17 · Balíček S5 — Dvoustranný elektronický podpis smluv a noční hlasová ai recepční · Verze 3.20
+# Blok 17 · Balíček S5 — Dvoustranný elektronický podpis smluv a noční hlasová ai recepční · Verze 3.20.1
 
-Tento řídicí dokument definuje **Blok 17 Rozvojové Etapy II** společnosti **Polarita s.r.o.** (release `Polarita-3.20`). Navazuje na komunikační jádro **`K1–K5`** z Bloků 7–11 (`Zulip` z Bloku 7; `Asterisk`, `WhisperX`, `Silero VAD + librosa`, `Stalwart Mail`, `Chatwoot CE` a 8cestný router `comm-gateway` z Bloku 11), na 3 kryptografické domény podpisů z Bloku 4 (`JSignPdf` nad čipem `QSCD`, serverová pečeť `pyHanko`) a na 360° Kartu spisu `POL-RRRR-NNNNN` z Bloku 8. Blok lze spustit až po `12/12 PASS` Go-Live Gate (Blok 12); na Blocích 13, 15, 16 a 18 nezávisí. Jediná výslovná vazba: přejímka v Promptu 3 používá balíček `S2` (`balicky/S2-eval-suite/`, Blok 14).
+Tento řídicí dokument definuje **Blok 17 Rozvojové Etapy II** společnosti **Polarita s.r.o.** (release `Polarita-3.20.1`). Navazuje na komunikační jádro **`K1–K5`** z Bloků 7–11 (`Zulip` z Bloku 7; `Asterisk`, `WhisperX`, `Silero VAD + librosa`, `Stalwart Mail`, `Chatwoot CE` a 8cestný router `comm-gateway` z Bloku 11), na 3 kryptografické domény podpisů z Bloku 4 (`JSignPdf` nad čipem `QSCD`, serverová pečeť `pyHanko`) a na 360° Kartu spisu `POL-RRRR-NNNNN` z Bloku 8. Blok lze spustit až po `12/12 PASS` Go-Live Gate (Blok 12); na Blocích 13, 15, 16 a 18 nezávisí. Jediná výslovná vazba: přejímka v Promptu 3 používá balíček `S2` (`balicky/S2-eval-suite/`, Blok 14).
 
 **Nevzniká žádný nový agent ani oddělení:** hlasová recepční je provozní režim `16002 tajemnik` (Anna Sedláčková), podpisový konektor obsluhují `17001 programator` a `15001 pravni-specialista`. Počet `20 ai` zaměstnanců i strop **`470 USD / měsíc`** se nemění — hlasová recepční má vlastní měřený podlimit uvnitř kvóty `16002` (výše podlimitu: `NÁVRH — ke schválení 1001`). **Nevzniká žádná nová databáze:** obálky podpisů i tikety hovorů žijí v dedikovaných schématech `db_erp_lhutnik` řízených `metadata-schema-kernel`, nahrávky v `Garage`, podepsané listiny v `legal-archive`; `0× Docker` na hostiteli (`Incus + OpenTofu`), tajemství jen v `OpenBao`.
 
@@ -60,7 +60,7 @@ Tento řídicí dokument definuje **Blok 17 Rozvojové Etapy II** společnosti *
 ### Prompt 1 — Vývoj konektoru `esign-bridge` (`pro 17001 programator` + `15001 pravni-specialista`)
 
 ```text
-Jsi hlavní vývojář (17001 programator) ve spolupráci s právní specialistkou (15001 pravni-specialista) a pod nezávislou kontrolou Judge (17004 klicnik). Vyviň v jazyce Python (latest) konektor esign-bridge pro dvoustranný elektronický podpis smluv dle Verze 3.20, pokrytý automatickými testy (pytest) proti testovacímu prostředí poskytovatele. Připravuješ pouze koncepty (DRAFT): nic sám neodesíláš a nic nepodepisuješ.
+Jsi hlavní vývojář (17001 programator) ve spolupráci s právní specialistkou (15001 pravni-specialista) a pod nezávislou kontrolou Judge (17004 klicnik). Vyviň v jazyce Python (latest) konektor esign-bridge pro dvoustranný elektronický podpis smluv dle Verze 3.20.1, pokrytý automatickými testy (pytest) proti testovacímu prostředí poskytovatele. Připravuješ pouze koncepty (DRAFT): nic sám neodesíláš a nic nepodepisuješ.
 
 1. Datový model a stavový automat:
    a) Založ deklarativním YAML schématem přes metadata-schema-kernel dedikované schéma v db_erp_lhutnik (žádná nová databáze) pro obálky podpisů: envelope_id, case_id POL-RRRR-NNNNN, branch_id, typ listiny, otisk SHA-256, úroveň podpisu, kanál, platnost, stav.
@@ -86,7 +86,7 @@ Jsi hlavní vývojář (17001 programator) ve spolupráci s právní specialistk
 ### Prompt 2 — Vývoj a nasazení hlasové recepční `voice-agent` (`pro 17001 programator` + `16002 tajemnik` + `17003 spravce-site`)
 
 ```text
-Jsi hlavní vývojář (17001 programator) spolu s tajemnicí (16002 tajemnik) a správcem sítě (17003 spravce-site). Vyviň a v zóně app_internal připrav službu voice-agent (vlastní kód v jazyce Python nad Asterisk ARI, latest) jako provozní režim 16002 tajemnik dle Verze 3.20. Nezakládej nového agenta ani novou databázi; rozpočet běží v měřeném podlimitu 16002.
+Jsi hlavní vývojář (17001 programator) spolu s tajemnicí (16002 tajemnik) a správcem sítě (17003 spravce-site). Vyviň a v zóně app_internal připrav službu voice-agent (vlastní kód v jazyce Python nad Asterisk ARI, latest) jako provozní režim 16002 tajemnik dle Verze 3.20.1. Nezakládej nového agenta ani novou databázi; rozpočet běží v měřeném podlimitu 16002.
 
 1. Napojení na ústřednu (17003):
    a) V dialplánu Asterisk směruj hovor do aplikace voice-agent jen mimo pracovní dobu nebo při plném vytížení linky podle konfigurace; funkci lze vypnout jedním příznakem. Neotvírej žádný veřejný port; SIP 5060 a 5061 zůstávají zavřené.
@@ -113,7 +113,7 @@ Jsi hlavní vývojář (17001 programator) spolu s tajemnicí (16002 tajemnik) a
 ### Prompt 3 — Bezpečnostní a právní přejímka a rozšíření Eval Suite o hlasové scénáře (`pro 17004 klicnik` + `15001 pravni-specialista` + `17005 ai-provoz`)
 
 ```text
-Jsi nezávislý verifikátor Judge (17004 klicnik) spolu s právní specialistkou (15001 pravni-specialista) a správcem ai provozu (17005 ai-provoz). Proveď v čistém kontextu přejímku Bloku 17 dle Verze 3.20. Nálezy zapisuj jako PASS, FAIL nebo NEOVĚŘENO; nic neopravuj sám a nic nevydávej za ověřené bez důkazu.
+Jsi nezávislý verifikátor Judge (17004 klicnik) spolu s právní specialistkou (15001 pravni-specialista) a správcem ai provozu (17005 ai-provoz). Proveď v čistém kontextu přejímku Bloku 17 dle Verze 3.20.1. Nálezy zapisuj jako PASS, FAIL nebo NEOVĚŘENO; nic neopravuj sám a nic nevydávej za ověřené bez důkazu.
 
 1. Bezpečnostní přejímka esign-bridge (17004):
    a) Ověř, že API klíč a tajemství webhooku jsou jen v OpenBao a nevyskytují se v logu, Gitu, Zulip ani konfiguraci (gitleaks).
@@ -146,7 +146,7 @@ Jsi nezávislý verifikátor Judge (17004 klicnik) spolu s právní specialistko
 
 ---
 
-## 5. Stav ve Verzi 3.20
+## 5. Stav ve Verzi 3.20.1
 
 **Hotovo v této složce (dokumentační a konfigurační artefakty):**
 

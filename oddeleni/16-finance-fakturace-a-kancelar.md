@@ -1,4 +1,4 @@
-# Charta a provozní řád: Oddělení 16 — Finance, Fakturace a Kancelář · Verze 3.20
+# Charta a provozní řád: Oddělení 16 — Finance, Fakturace a Kancelář · Verze 3.20.1
 
 ## 1. Poslání oddělení
 Udržovat stoprocentní pořádek ve financích, fakturaci, daňových režimech DPH, mzdových a subdodavatelských nákladech, párování bankovních účtů s účetnictvím zpracovávaným kanceláří **UOL (`ORG-UOL`)**, příchozí komunikaci a termínech celé společnosti **Polarita s.r.o.** Zajišťuje, aby jednatel Václav Šercl každé ráno v 07:00 dostal na jedinou obrazovku přesný obraz firmy bez nutnosti ručně procházet e-maily, datovou schránku nebo výpisy z bank.
@@ -44,7 +44,7 @@ Udržovat stoprocentní pořádek ve financích, fakturaci, daňových režimech
 
 ## 6. Rozvojové balíčky Etapy II a III (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.20 zapracovány jako samostatné `Bloky 13–19` (přehled a řídicí dokumenty: [`balicky/README.md`](../balicky/README.md)). Spouštějí se až po `12/12 PASS` Go-Live Gate, nemění složení oddělení ani rozpočty `ai` a oddělení se jich účastní takto:
+Balíčky `S1–S7` jsou ve Verzi 3.20.1 zapracovány jako samostatné `Bloky 13–19` (přehled a řídicí dokumenty: [`balicky/README.md`](../balicky/README.md)). Spouštějí se až po `12/12 PASS` Go-Live Gate, nemění složení oddělení ani rozpočty `ai` a oddělení se jich účastní takto:
 
 * **`Blok 13` (`S1`):** `16002 tajemnik` vyplňuje předžalobní výzvu, plnou moc a protokol `Break-Glass`; `16001 ucetni` dodává údaje pohledávek.
 * **`Blok 15` (`S3`):** `16001 ucetni` předkládá ceník ke schválení a počítá trvalou provizi partnerů (`10–15 %` z uhrazeného MRR) do provizního ledgeru.

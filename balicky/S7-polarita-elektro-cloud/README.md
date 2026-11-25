@@ -1,6 +1,6 @@
-# Blok 19 · Balíček S7 — Polarita Elektro Cloud (oborový SaaS spin-off, N9) · Verze 3.20
+# Blok 19 · Balíček S7 — Polarita Elektro Cloud (oborový SaaS spin-off, N9) · Verze 3.20.1
 
-Tento dokument je řídicím dokumentem **`Bloku 19`** Strategické Etapy III společnosti **Polarita s.r.o.** (balíček `S7`, vlna `N9`, release `Polarita-3.20`). Vychází ze strategického vzoru `TRITON IT → Draivix`: firma si nejprve postaví, v ostrém provozu odladí a vyčistí vlastní `ai-first` systém (Etapa I, `Bloky 0–12`, na serveru `polarita-hq`) a teprve po objektivně změřené bráně **`Go / No-Go`** jej otevře trhu jako oborovou SaaS platformu **„Polarita Elektro Cloud“** pro elektro firmy a revizní techniky v ČR a SR. Platforma běží ve **vlastním produkčním klastru zcela odděleném od `polarita-hq`**; všichni tenanti sdílejí jednotné aplikační schéma s vynuceným **`PostgreSQL Row-Level Security`** (`FORCE` + `AS RESTRICTIVE` + složený klíč `(tenant_id, id)`, s možností vyhrazeného schématu jen jako volitelného enterprise nadstandardu), vlastní šifrovací klíč v **`OpenBao`** a vlastní režim **`Clean Room`**. Ve Verzi 3.20 je připravena architektura, brána a vzory — **Blok 19 se nespouští, dokud brána není splněna a schválena `1001`**.
+Tento dokument je řídicím dokumentem **`Bloku 19`** Strategické Etapy III společnosti **Polarita s.r.o.** (balíček `S7`, vlna `N9`, release `Polarita-3.20.1`). Vychází ze strategického vzoru `TRITON IT → Draivix`: firma si nejprve postaví, v ostrém provozu odladí a vyčistí vlastní `ai-first` systém (Etapa I, `Bloky 0–12`, na serveru `polarita-hq`) a teprve po objektivně změřené bráně **`Go / No-Go`** jej otevře trhu jako oborovou SaaS platformu **„Polarita Elektro Cloud“** pro elektro firmy a revizní techniky v ČR a SR. Platforma běží ve **vlastním produkčním klastru zcela odděleném od `polarita-hq`**; všichni tenanti sdílejí jednotné aplikační schéma s vynuceným **`PostgreSQL Row-Level Security`** (`FORCE` + `AS RESTRICTIVE` + složený klíč `(tenant_id, id)`, s možností vyhrazeného schématu jen jako volitelného enterprise nadstandardu), vlastní šifrovací klíč v **`OpenBao`** a vlastní režim **`Clean Room`**. Ve Verzi 3.20.1 je připravena architektura, brána a vzory — **Blok 19 se nespouští, dokud brána není splněna a schválena `1001`**.
 
 Soubory balíčku: tento `README.md`, brána [`go-no-go-gate.md`](go-no-go-gate.md), vzor izolace [`rls-vzor.sql`](rls-vzor.sql) s doplňkovým testem přihlášení a recyklovaného spojení [`rls-pool-test.sql`](rls-pool-test.sql), struktura tarifů [`tarify-saas.md`](tarify-saas.md) a osnova podmínek [`licencni-podminky-osnova.md`](licencni-podminky-osnova.md).
 
@@ -126,7 +126,7 @@ Tento prompt smí být spuštěn až po podpisu GO a po prošlých testech izola
 
 ---
 
-## 5. Stav ve Verzi 3.20
+## 5. Stav ve Verzi 3.20.1
 
 **Hotové v této složce (architektura, brána a vzory):**
 
@@ -142,4 +142,4 @@ Tento prompt smí být spuštěn až po podpisu GO a po prošlých testech izola
 - Pořízení a stavba SaaS klastru, rozšíření `metadata-schema-kernel` o tenanty, měření tokenů, klientský portál a onboarding pilotního tenanta.
 - Měření brány samotné — vyžaduje 12–18 měsíců ostrého provozu na serveru `polarita-hq` po převzetí do produkce.
 
-Polarita Elektro Cloud ve Verzi 3.20 **není spuštěn, nasazen ani nabízen zákazníkům**; neexistuje žádný tenant, klastr ani uzavřená smlouva. Blok 19 se spustí nejdříve po splnění brány a podpisu `1001`.
+Polarita Elektro Cloud ve Verzi 3.20.1 **není spuštěn, nasazen ani nabízen zákazníkům**; neexistuje žádný tenant, klastr ani uzavřená smlouva. Blok 19 se spustí nejdříve po splnění brány a podpisu `1001`.
