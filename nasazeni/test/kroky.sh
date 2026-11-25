@@ -358,7 +358,7 @@ web() {
 
 predani() {
     "${guest[@]}" systemctl start polarita-dohled-sber.service
-    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn" --dohled --paperclip --zulip --decisions
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn" --dohled --paperclip --zulip --decisions --akademie
     "${inc[@]}" file push --project polarita "$tmp/dohled.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-06/dohled-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/restic.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-06/restic-$commit.txt"
     "${guest[@]}" python3 "$dest/nasazeni/test/pamet/podklady.py" --predat | tee "$tmp/prenos-dokladu.json"

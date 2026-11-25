@@ -55,9 +55,9 @@ check("/konfigurator", None, 200, "/", "Přihlášení do testovacího prostřed
 check("/prihlasit", {"username": "spravce", "password": "neplatne"}, 401, "/prihlasit", "nesouhlasí")
 check("/prihlasit", {"username": "spravce", "password": secret}, 200, "/prehled", "Jste přihlášeni")
 overview = check("/prehled", None, 200, "/prehled", "Jste přihlášeni")
-for flag, port in (("--paperclip", 8445), ("--zulip", 8444)):
+for flag, suffix in (("--paperclip", ":8445/"), ("--zulip", ":8444/"), ("--akademie", ":8451/my/")):
     if flag in sys.argv:
-        expected = f'{origin}:{port}/'
+        expected = origin + suffix
         if f'href="{expected}"' not in overview:
             raise SystemExit("V přehledu správce chybí odkaz na " + expected)
         print("Přehled přihlášeného správce obsahuje odkaz na " + expected)
