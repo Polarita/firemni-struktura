@@ -3,6 +3,7 @@ from contextlib import closing, contextmanager
 from datetime import datetime, timezone, timedelta
 import argparse
 import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -146,9 +147,43 @@ def verify(keys):
     print("Zkušební nahrávka a přepis z 84. dne prošly stejnou úlohou výmazu jako běžné hovory.")
 
 
+def uloz_testovaci_hovor(s3, wav, otisk):
+    with wav.open("rb") as source:
+        if hashlib.file_digest(source, "sha256").hexdigest() != otisk:
+            raise ValueError("Otisk stereo nahrávky před uložením nesouhlasí.")
+        source.seek(0)
+        key = f"zkouska/asterisk/{otisk}.wav"
+        obj = {"Bucket": "hovory", "Key": key}
+        try:
+            s3.head_object(**obj)
+        except ClientError as error:
+            if error.response["ResponseMetadata"]["HTTPStatusCode"] != 404:
+                raise
+            s3.put_object(**obj, Body=source, ContentType="audio/wav",
+                          Metadata={"porizeno": datetime.now(timezone.utc).isoformat(), "sha256": otisk})
+    ulozeno = s3.get_object(**obj)
+    with ulozeno["Body"] as body:
+        digest = hashlib.sha256()
+        for cast in iter(lambda: body.read(65536), b""):
+            digest.update(cast)
+    if digest.hexdigest() != otisk or ulozeno["Metadata"].get("sha256") != otisk:
+        raise ValueError("Garage vrátila jinou nahrávku.")
+    print(f"Garage ověřena zpětným čtením přes HTTPS: s3://hovory/{key}")
+
+
 def main():
     if os.geteuid() or socket.gethostname().split(".")[0] != "polarita-hq":
         raise SystemExit("Správa objektů patří do polarita-hq")
+    if sys.argv[1:2] == ["--testovaci-hovor"]:
+        parser = argparse.ArgumentParser(description="Uložení nahrávky interních klapek TEST")
+        parser.add_argument("wav", type=Path)
+        parser.add_argument("sha256")
+        args = parser.parse_args(sys.argv[2:])
+        with manager() as admin:
+            key = key_for("hovory", admin)
+        with closing(client(key)) as s3:
+            uloz_testovaci_hovor(s3, args.wav, args.sha256)
+        return
     if sys.argv[1:2] == ["--spisovy-hovor"]:
         parser = argparse.ArgumentParser(description="Předání stereo WAV a přepisu do testovacího spisu")
         parser.add_argument("--spis",required=True)

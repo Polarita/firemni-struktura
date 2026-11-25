@@ -5,7 +5,7 @@ set -euo pipefail
 src=$(cd "$(dirname "$0")" && pwd)
 target=$1
 shift
-[[ $target == zulip-fronta-test || $target == checkmk-test || $target == postgres-test || $target == gitea-test || $target == gitea-runner-test || $target == aigis-build-test || $target == qet-nastroje-test || $target == restic-test || $target =~ ^restic-obnova-[a-f0-9]{12}$ ]]
+[[ $target == asterisk-test || $target == zulip-fronta-test || $target == checkmk-test || $target == postgres-test || $target == gitea-test || $target == gitea-runner-test || $target == aigis-build-test || $target == qet-nastroje-test || $target == restic-test || $target =~ ^restic-obnova-[a-f0-9]{12}$ ]]
 [[ $# -gt 0 ]]
 tmp=$(mktemp -d)
 trap 'rm -r -- "$tmp"' EXIT
@@ -26,7 +26,7 @@ install -d -m 0755 "$tmp/deb/partial"
 apt-get -o "Dir::State::status=$tmp/status" -o "Dir::Cache::archives=$tmp/deb" --download-only --no-install-recommends -y install "$@"
 inside=(incus exec -T "$target" --)
 stage_root=/run
-if [[ $target == aigis-build-test || $target == gitea-runner-test || $target == qet-nastroje-test ]]; then stage_root=/var/tmp; fi
+if [[ $target == asterisk-test || $target == aigis-build-test || $target == gitea-runner-test || $target == qet-nastroje-test ]]; then stage_root=/var/tmp; fi
 stage=$("${inside[@]}" mktemp -d "$stage_root/polarita-deb-XXXXXXXX")
 [[ $stage == "$stage_root"/polarita-deb-* ]]
 "${inside[@]}" install -d -m 0755 "$stage/lists/partial"

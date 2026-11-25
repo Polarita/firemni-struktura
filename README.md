@@ -419,7 +419,7 @@ V kartě testovacího spisu lze po archivaci podkladů prověřit výkopovou tra
 
 ### `Blok 11` — Sdílený `cz-sk-registry-kernel`, `finance-uol-marze-engine`, `portal-spolupracovniku`, `Traccar` a komunikační ústředna `K1–K5` (`Fáze D · Vrstva 11 · Týdny 7–10`)
 
-**Technický test před předáním.** Zpracuj syntetický bankovní výpis, pracovníka a testovací hovor mezi interními klapkami. Porovnej výstupy s předlohou a ověř, že služba neodeslala žádný pokyn do živé banky ani telefonu.
+**Technický test před předáním.** Zpracuj syntetický bankovní výpis, pracovníka a testovací hovor mezi interními klapkami. Porovnej výstupy s předlohou a ověř, že služba neodeslala žádný pokyn do živé banky ani telefonu. U hovoru 8101 → 8202 ověř oba směry zvuku a porovnej kontrolní součet stereo nahrávky se souborem přečteným z koše `hovory` v Garage.
 
 
 * **Vstupní předpoklad:** Splněn `Blok 10`.

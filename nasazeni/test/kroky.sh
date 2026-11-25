@@ -427,10 +427,12 @@ registr_dokladu() {
         python3 nasazeni/test/finance/over_portal.py "https://$fqdn" "$tmp/isdoc.txt" | tee -a "$tmp/registr-dokladu.txt"
     cat "$tmp/isdoc.txt" >>"$tmp/registr-dokladu.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/finance/provize.sh" | tee "$tmp/provize.txt"
+    "${guest[@]}" bash "$dest/nasazeni/test/telefon/zkouska.sh" "$commit" | tee "$tmp/telefon.txt"
     "${guest[@]}" install -dm0750 /srv/polarita/workspace/dukazy/blok-11
     "${inc[@]}" file push --project polarita "$tmp/registr-dokladu.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-11/registr-dokladu-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/provize.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-11/provize-$commit.txt"
-    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 11 "$commit" registr-dokladu provize
+    "${inc[@]}" file push --project polarita "$tmp/telefon.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-11/telefon-$commit.txt"
+    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 11 "$commit" registr-dokladu provize telefon
 }
 
 predani() {
