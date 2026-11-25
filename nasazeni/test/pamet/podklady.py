@@ -28,7 +28,7 @@ def priprav_text(cesta, data):
     except UnicodeDecodeError:
         # Dva původní zápisy z konzole Windows obsahují poškozené bajty.
         # Čitelné potvrzení přihlášení a odhlášení nevyžaduje odhad kódové stránky.
-        if not re.fullmatch(r"blok-03/chrome-mourek-3\.3(?:\.2)?\.txt", cesta):
+        if not re.fullmatch(r"blok-03/chrome-[a-z0-9-]+-3\.3(?:\.2)?\.txt", cesta):
             raise
         lines = data.splitlines()
         if not (len(lines) == 5 and b"Chrome" in lines[1] and b"HTTPS" in lines[3]
