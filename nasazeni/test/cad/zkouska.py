@@ -1,4 +1,4 @@
-"""Prověř skutečnou vektorovou geometrii obou PDF ve vypnuté síti."""
+"""Prověř skutečnou vektorovou geometrii výstupních PDF ve vypnuté síti."""
 from pathlib import Path
 from copy import deepcopy
 import hashlib
@@ -75,12 +75,13 @@ def main(directory):
     doc.modelspace().add_lwpolyline([(0, 0), (30, 0), (30, 10), (0, 10)], close=True)
     doc.saveas(source)
     shutil.copyfile(Path(__file__).with_name("vzor.ifc"), directory / "vzor.ifc")
-    # R2000 má přímé kódování v LibreDWG a stejnou známou geometrii jako původní DXF.
     dwg = directory / "vzor.dwg"
-    subprocess.run(["dxf2dwg", "-a", "r2000", "-o", dwg, source], stdin=subprocess.DEVNULL, check=True)
+    shutil.copyfile(Path(__file__).with_name("Line.dwg"), dwg)
     with dwg.open("rb") as header:
         assert header.read(6) == b"AC1015", "Vzorek nemá binární hlavičku DWG R2000."
-    for extension, ratio in (("dxf", 3), ("ifc", 6), ("dwg", 3)):
+    # Line.txt v téže distribuci uvádí konce přímky odečtené původním AutoCADem.
+    ratio_dwg = abs((21.6078 - 11.0307) / (2.81192 - 16.6375))
+    for extension, ratio in (("dxf", 3), ("ifc", 6), ("dwg", ratio_dwg)):
         target = directory / f"vzor-{extension}.pdf"
         convert(directory / f"vzor.{extension}", target)
         box = check(target, ratio)

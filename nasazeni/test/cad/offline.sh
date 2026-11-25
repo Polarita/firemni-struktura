@@ -71,6 +71,9 @@ for file in prevod.py mereni.py zkouska.py vzor.ifc; do
     incus file push --mode=0644 "$src/$file" "$vm$code/$file.next"
     "${run[@]}" mv -T "$code/$file.next" "$code/$file"
 done
+# Binární DWG i referenční souřadnice pocházejí z nezávislého vzorku AutoCAD v distribuci GNU.
+tar -xOf /var/cache/polarita-cad-test/libredwg/libredwg-0.14.tar.xz libredwg-0.14/test/test-data/2000/Line.dwg |
+    "${run[@]}" bash -ec 'umask 022; cat >"$1/Line.dwg.next"; echo "358fc09c7c27737ba3b500eac122caee4c83c270f5ccb8a9f7f8f3d4b763d937  $1/Line.dwg.next" | sha256sum -c --status; chmod 0644 "$1/Line.dwg.next"; mv -T "$1/Line.dwg.next" "$1/Line.dwg"' -- "$code"
 job=$("${run[@]}" runuser -u nobody -- mktemp -d /var/tmp/polarita-vykres-XXXXXXXX)
 [[ $job =~ ^/var/tmp/polarita-vykres-[A-Za-z0-9]{8}$ ]]
 "${run[@]}" runuser -u nobody -- env HOME="$job" PATH="$code/libredwg:/usr/bin:/bin" PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$base/$key/lib" \
