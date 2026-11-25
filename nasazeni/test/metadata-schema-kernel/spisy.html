@@ -10,6 +10,7 @@
 <form id="sanony"><label for="sken">Sken ve formátu PDF (nejvýše 64 MiB)</label><input type="file" id="sken" accept="application/pdf,.pdf" required><button id="odeslat">Předat do karantény</button></form>
 <p id="prijem" role="status"></p><h4>Poslední potvrzení o převzetí</h4><ul id="prevzate"></ul>
 <section id="vyrobni-cisla" hidden><h3>Rozváděče ve spisu</h3><ul id="seznam-rozvadecu"></ul></section>
+<section id="ocpp" hidden><h3>Servisní diagnostika nabíječek</h3><p>Poslední hlášení konektorů z OCPP 2.1 v prostředí TEST.</p><ul id="ocpp-stavy"></ul></section>
 <section id="revizni-navrh" hidden><h3>Návrh revizní zprávy</h3><p id="vysledek-revize"></p><a id="revize-pdf" download="navrh-revize.pdf">Stáhnout návrh PDF</a> · <a id="revize-pas" hidden download>Stáhnout pas použitý v revizi</a> <a id="revize-rozhodnuti">Otevřít posouzení v Decisions</a></section>
 <section id="rozpocet" hidden><h3>Nabídkový rozpočet</h3><a id="xc4" download="nabidka.xc4">Stáhnout XC4</a> · <a id="xlsx" download="nabidka.xlsx">Stáhnout Excel</a></section>
 <section id="vykopy" hidden><h3>Kontrola výkopů v TESTu</h3><ul id="trasy"></ul></section>

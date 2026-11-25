@@ -58,6 +58,8 @@ Ve Vikunje má správce tři nástěnky **Zakázkové**, **Montážní** a **SLA
 
 V přehledu otevři **Spisy**, vyhledej číslo ve tvaru `POL-RRRR-NNNNN` nebo pobočkový alias a zkopíruj adresu otevřené karty. Přímý odkaz funguje i v novém prohlížeči. Po přihlášení tě ředitelství vrátí na vybraný spis. Nástroj MCP `spisy_najdi` načte stejnou kartu s oprávněním ke čtení.
 
+V části **Servisní diagnostika nabíječek** zobrazí karta spisu čas a stav posledního hlášení OCPP. Stanice EV-TEST-01 hlásí volný konektor a EV-TEST-02 poruchu. Počet hlášení umožňuje ověřit, že opakované odeslání stejné zprávy nevytvořilo další záznam.
+
 V obou cvičných revizních spisech najdeš v kartě **Rozváděče ve spisu** přidělené výrobní číslo a odkaz **Stáhnout výrobní pas a štítek (TEST, PDF)**. Pět stran obsahuje předlohu štítku s QR do digitální knihy, pas s modelovým výpočtem oteplení, protokol návrhu, kusový protokol a nepodepsaný návrh EU prohlášení. Revizní zpráva uvádí výrobní číslo a otisk přesně toho PDF pasu, ze kterého vychází. Odkaz **Stáhnout pas použitý v revizi** otevře tuto verzi i po vydání novějšího pasu. V části **Návrh revizní zprávy** otevřeš PDF nebo související posouzení v Decisions. Instalátor vypíše skutečná čísla spisů. Jeden vzor splní obě modelové meze a druhý uvede závadu v bodě M1. Oba můžeš zkontrolovat stejným přihlášením jako ředitelství.
 
 Po ověření přihlášení do Paperless a načtení rastrového protokolu z karantény přidá instalátor do přehledu odkaz **Otevřít dokumentový archiv Paperless**. Archiv používá ve VPN port `8448` a testovací účet v Keycloaku. V přejímací zkoušce ai porovná zkušební přílohu s dokladem karantény, ověří české OCR a dohledá uložený protokol podle čísla spisu.

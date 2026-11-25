@@ -69,9 +69,10 @@ async function otevri(url, options) {
     for (const format of ["xc4", "xlsx"]) {
         byId(format).href = "api/rozpocty/" + encodeURIComponent(data.case_id) + "/nabidka." + format;
     }
+    byId("ocpp").hidden = true;
     byId("vykopy").hidden = true;
     byId("trasy").replaceChildren();
-    await Promise.all([ukazVykopy(data.case_id, current), ukazPrijem(data.case_id, current), ukazKnihu(data.case_id, current)]);
+    await Promise.all([ukazVykopy(data.case_id, current), ukazPrijem(data.case_id, current), ukazKnihu(data.case_id, current), ukazOcpp(data.case_id, current)]);
     if (otevritKnihu && current === request) byId("kniha-objektu").scrollIntoView();
 }
 
@@ -321,5 +322,29 @@ async function ukazVykopy(kod, current) {
             item.append(" ", submit);
         }
         byId("trasy").append(item);
+    }
+}
+
+async function ukazOcpp(kod, current) {
+    const seznam = byId("ocpp-stavy");
+    const stavy = {Available:"K dispozici", Occupied:"Obsazený", Reserved:"Rezervovaný", Unavailable:"Nedostupný", Faulted:"Porucha"};
+    try {
+        const odpoved = await fetch("api/ocpp/" + encodeURIComponent(kod));
+        if (!odpoved.ok) throw new Error();
+        const data = await odpoved.json();
+        if (current !== request) return;
+        seznam.replaceChildren(...data.map(row => {
+            const li = document.createElement("li");
+            li.textContent = row.stanice + " · EVSE " + row.evse + ", konektor " + row.konektor + " · " +
+                stavy[row.stav] + " · " + new Date(row.cas).toLocaleString("cs-CZ") + " · počet hlášení " + row.pocet;
+            return li;
+        }));
+        byId("ocpp").hidden = data.length === 0;
+    } catch {
+        if (current !== request) return;
+        const li = document.createElement("li");
+        li.textContent = "Telemetrii se nepodařilo načíst.";
+        seznam.replaceChildren(li);
+        byId("ocpp").hidden = false;
     }
 }

@@ -1,0 +1,22 @@
+[Unit]
+Description=Příjem čtecí telemetrie OCPP v ředitelství TEST
+After=local-fs.target
+
+[Service]
+User=pol_ocpp_test
+Group=pol_metadata_api
+StateDirectory=polarita-ocpp-test
+StateDirectoryMode=0750
+RuntimeDirectory=polarita-ocpp-test
+RuntimeDirectoryMode=0700
+UMask=0027
+ExecStart=/usr/bin/python3 -I /opt/polarita-ocpp-test/current/prijem.py
+Restart=on-failure
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+RestrictAddressFamilies=AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

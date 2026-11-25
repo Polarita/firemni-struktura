@@ -399,6 +399,9 @@ vykresy() {
         python3 nasazeni/test/inzenyring/revize/spisy_rz.py "https://$fqdn" --over | tee "$tmp/revizni-zpravy.txt"
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/inzenyring/rozvadece/over_portal.py "https://$fqdn" | tee -a "$tmp/vyrobni-pasy.txt"
+    "${guest[@]}" bash "$dest/nasazeni/test/inzenyring/ocpp/instalace.sh" | tee "$tmp/ocpp.txt"
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
+        python3 nasazeni/test/inzenyring/ocpp/over_portal.py "https://$fqdn" | tee -a "$tmp/ocpp.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/qet/schema.sh" | tee "$tmp/qet-schema.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/cad/offline.sh" | tee "$tmp/cad-vykresy.txt"
     local cad_verze
@@ -406,7 +409,7 @@ vykresy() {
     "${guest[@]}" python3 "$dest/nasazeni/test/cad/tok.py" "$cad_verze" | tee -a "$tmp/cad-vykresy.txt"
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/inzenyring/zkouska.py "https://$fqdn" | tee "$tmp/dtm-spis.txt"
-    cat "$tmp/rozpocet.txt" "$tmp/vyrobni-pasy.txt" "$tmp/revizni-zpravy.txt" "$tmp/qet-schema.txt" "$tmp/dtm-spis.txt" >> "$tmp/cad-vykresy.txt"
+    cat "$tmp/rozpocet.txt" "$tmp/ocpp.txt" "$tmp/vyrobni-pasy.txt" "$tmp/revizni-zpravy.txt" "$tmp/qet-schema.txt" "$tmp/dtm-spis.txt" >> "$tmp/cad-vykresy.txt"
     "${inc[@]}" file push --project polarita "$tmp/cad-vykresy.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-10/cad-vykresy-$commit.txt"
     "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 10 "$commit" cad-vykresy
 }

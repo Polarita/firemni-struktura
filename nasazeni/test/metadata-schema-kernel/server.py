@@ -11,6 +11,8 @@ from uuid import UUID
 from urllib.parse import urlsplit
 
 import kniha
+import ocpp_cteni
+import sqlite3
 import vykop_api
 from model import load, unique
 from spisy import casova_osa, najdi, prevzate_sanony, zaloz
@@ -84,6 +86,14 @@ class Handler(BaseHTTPRequestHandler):
             return
         if self.command == "POST" and path == "/api/spisy":
             self.reply(200, zaloz(data, self.request_body()))
+            return
+        if self.command == "GET" and path.startswith("/api/ocpp/"):
+            case = najdi(data, path.removeprefix("/api/ocpp/"))["case_id"]
+            try:
+                states = ocpp_cteni.stav(case)
+            except sqlite3.Error:
+                raise Problem(503, "Příjem telemetrie je dočasně nedostupný.")
+            self.reply(200, states)
             return
         if self.command == "GET" and path.startswith("/api/pasy/"):
             match = re.fullmatch(r"/api/pasy/([^/]+)/(RZ-[0-9]{4}-[0-9]{5})/(?:([0-9a-f]{64})/)?vyrobni-pas\.pdf", path)
