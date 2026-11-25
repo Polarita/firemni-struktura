@@ -8,6 +8,9 @@ proved_kroky() {
     if [[ -n $posledni ]]; then
         if over_vstup; then
             printf 'Návaznost ověřena po kroku %s.\n' "$posledni"
+        elif [[ $? == 74 ]]; then
+            printf 'Kontrola přihlášení vypršela. Zachovávám průběh po kroku %s.\n' "$posledni" >&2
+            return 74
         else
             printf 'Vstup po přerušení vyžaduje opravu, začínám od portálu.\n'
             posledni=

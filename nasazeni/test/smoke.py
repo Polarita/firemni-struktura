@@ -16,11 +16,11 @@ jar = http.cookiejar.CookieJar()
 browser = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
 
 
-def check(path, data, status, final_path, needle):
+def request_page(path, data, status, final_path, needle):
     body = urllib.parse.urlencode(data).encode() if data is not None else None
     request = urllib.request.Request(origin + path, data=body, headers={"Origin": origin})
     try:
-        response = browser.open(request, timeout=10)
+        response = browser.open(request, timeout=60)
     except urllib.error.HTTPError as error:
         response = error
     with response:
@@ -35,6 +35,17 @@ def check(path, data, status, final_path, needle):
             raise SystemExit(f"Chyba testu {path}, HTTP {response.code}")
     print(f"OK {path} → {final_path} (HTTP {status})")
     return page
+
+
+def check(path, data, status, final_path, needle):
+    try:
+        return request_page(path, data, status, final_path, needle)
+    except (TimeoutError, urllib.error.URLError) as error:
+        reason = error.reason if isinstance(error, urllib.error.URLError) else error
+        if not isinstance(reason, TimeoutError):
+            raise
+        print(f"Ředitelství neodpovědělo včas při kontrole {path}.", file=sys.stderr)
+        raise SystemExit(74) from None
 
 
 check("/prehled", None, 200, "/", "Přihlášení do testovacího prostředí")

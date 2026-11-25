@@ -25,7 +25,10 @@ treti() {
     echo 3 >> "$dir/provedene"
     [[ $(cat "$tmp/overeni.txt") == $'prvni\ndruhy' ]]
 }
-over_vstup() { [[ ! -e $dir/porucha ]]; }
+over_vstup() {
+    if [[ -e $dir/timeout ]]; then return 74; fi
+    [[ ! -e $dir/porucha ]]
+}
 beh() (
     set -euo pipefail
     tmp=$(mktemp -d -p "$dir")
@@ -45,6 +48,14 @@ test_preruseni() {
 }
 cil=revize/vm/pool/vpn/aktivni
 test_preruseni
+touch "$dir/timeout"
+set +e
+beh
+rc=$?
+set -e
+[[ $rc == 74 && $(cat "$dir/provedene") == $'1\n2' ]]
+cmp "$dir/ulozeno" "$stav/prubeh.json"
+rm "$dir/timeout"
 beh
 [[ $(cat "$dir/provedene") == $'1\n2\n2\n3' && ! -e $stav/prubeh.json ]]
 : > "$dir/provedene"
