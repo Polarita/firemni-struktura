@@ -27,8 +27,22 @@ def unpack(name, root, dest):
                 shutil.copyfileobj(src, out)
 
 
+def uprav_offlinequiz(plugin):
+    # Moodle 5.3 používá pro omezení přístupu podle skupin vlastní dostupnost aktivity.
+    library = plugin / "lib.php"
+    if digest(library) != "3a457847c14738a1556570199b8fb0a6574ac1e80e4e86aad930687b75ecfb82":
+        raise ValueError("Lokální oprava Offline Quiz je určena pouze pro ověřený soubor vydání 5.2.0.")
+    source = library.read_bytes()
+    obsolete = b"        case FEATURE_GROUPMEMBERSONLY:\n            return true;\n"
+    if source.count(obsolete) != 1:
+        raise ValueError("Nelze určit deklaraci odstraněnou v Moodle 5.3.")
+    note = b"        // Polarita TEST, 2026-11-25: Moodle 5.3 handles group access via availability.\n"
+    library.write_bytes(source.replace(obsolete, note))
+
+
 if __name__ == "__main__":
     base = Path(sys.argv[1])
     unpack("mod_customcert-5.3.5.zip", "customcert", base / "public/mod/customcert")
     unpack("mod_offlinequiz-5.2.0.zip", "moodle-mod_offlinequiz-5.2.0", base / "public/mod/offlinequiz")
     unpack("cs-5.3.zip", "cs", base / "jazyk/cs")
+    uprav_offlinequiz(base / "public/mod/offlinequiz")

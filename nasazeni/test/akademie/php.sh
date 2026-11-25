@@ -56,7 +56,7 @@ bfacad4ca61899ce20d4a0d439f29339f66541561b67506364efb88e27dee870  lists/snapshot
 INDEXY
 packages=(php8.4-fpm php8.4-cli php8.4-pgsql php8.4-xml php8.4-mbstring php8.4-curl
           php8.4-zip php8.4-gd php8.4-intl php8.4-soap php8.4-redis php8.4-opcache
-          nginx-light composer unzip ca-certificates)
+          php8.4-imagick imagemagick nginx-light composer unzip ca-certificates)
 # Seznam URI zahrnuje jen balíčky, které podle stavu cíle ještě scházejí.
 apt-get --download-only --no-install-recommends -y install "${packages[@]}"
 unset APT_CONFIG
@@ -90,7 +90,7 @@ fi
         mv -T "$conf.next" "$conf"
     done
     php8.4 -r '\''if (PHP_MAJOR_VERSION !== 8 || PHP_MINOR_VERSION !== 4 || PHP_INT_SIZE !== 8 || (int)ini_get("max_input_vars") < 5000) exit(1);
-    foreach (["sodium", "curl", "gd", "intl", "mbstring", "pgsql", "redis", "soap", "zip", "xmlreader"] as $module) {
+    foreach (["sodium", "curl", "gd", "imagick", "intl", "mbstring", "pgsql", "redis", "soap", "zip", "xmlreader"] as $module) {
         if (!extension_loaded($module)) { fwrite(STDERR, "Chybí PHP modul $module\n"); exit(1); }
     }
     echo "PHP ".PHP_VERSION." a rozšíření Akademie ověřeny.\n";'\''
