@@ -2,16 +2,27 @@
 # Týmové aplikace mohou odkládat neaktivní stránky do komprimované RAM ředitelství.
 set -euo pipefail
 [[ $(hostname -s) == polarita-hq && $EUID == 0 ]]
-awk 'NR>1 && $1 !~ /^\/dev\/zram[0-9]+$/ {other=1} END {exit (NR<2 || other)}' /proc/swaps || exit 0
+# Vedle zram může existovat šifrovaná rezerva z instalátoru. Do volné zram ji nezapočítávej.
+reserve=$(readlink -e /dev/mapper/poltestswap || true)
+if [[ -n $reserve ]]; then
+    sys=/sys/class/block/${reserve##*/}
+    [[ $(cat "$sys/dm/uuid") == CRYPT-PLAIN-poltestswap ]] || exit 0
+    [[ $(cat "$sys"/slaves/loop*/loop/backing_file) == /var/lib/polarita-test-swap/rezerva.img ]] || exit 0
+fi
+free_zram=$(awk -v reserve="$reserve" '
+    NR == 1 {next}
+    $1 ~ /^\/dev\/zram[0-9]+$/ {free += $3 - $4; found=1; if ($5 <= 10) low=1; next}
+    reserve != "" && ($1 == reserve || $1 == "/dev/mapper/poltestswap") && $5 == 10 {disk=1; next}
+    {other=1}
+    END {if (!found || other || (disk && low)) exit 1; print free + 0}' /proc/swaps) || exit 0
 zulip=512
 paperclip=256
 paperless=256
 umami=0
-if awk '/^MemTotal:/ {small = $2 < 7 * 1024 * 1024}
-        /^SwapFree:/ {free = $2 >= 512 * 1024} END {exit !(small && free)}' /proc/meminfo; then
+if (( free_zram >= 512 * 1024 )) && awk '/^MemTotal:/ {exit !($2 < 7 * 1024 * 1024)}' /proc/meminfo; then
     zulip=768
     # Při dostatku volné zram mohou služby uvolnit více místa pro soubory z Ceph.
-    if awk '/^SwapFree:/ {exit !($2 >= 1024 * 1024)}' /proc/meminfo; then
+    if (( free_zram >= 1024 * 1024 )); then
         zulip=1024
         paperclip=384
         paperless=512
