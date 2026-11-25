@@ -1,0 +1,13 @@
+{
+  "revize": "6b326b418daec7b40261bfda93a6c39eb4b232334928b79620a78da780929bf5",
+  "mapa": "0f00d265e6a3093ee3d986dd57a21f5f1e9e0e78182da3b7ceda784eea87892b",
+  "vyjadreni": {
+    "SIT-TEST-A": {
+      "revize": "6b326b418daec7b40261bfda93a6c39eb4b232334928b79620a78da780929bf5",
+      "sha256": "0f03c7fb87e3daee7d5626777a6ec64511fc6bdee5d77125fcf65045e32cd63d",
+      "plati_od": "2025-01-01",
+      "plati_do": "2035-12-31",
+      "souhlas": true
+    }
+  }
+}

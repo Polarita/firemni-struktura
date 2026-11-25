@@ -1,0 +1,8 @@
+{
+  "kod": "TEST-DTM-01",
+  "ucel": "simulace",
+  "plati_od": "2025-01-01",
+  "plati_do": "2035-12-31",
+  "kryti_mm": "850",
+  "odstup_mm": {"krizeni": "400", "soubeh": "500"}
+}

@@ -1,0 +1,10 @@
+{
+  "oznaceni": "R-TEST-01",
+  "hladina": "EL_VYKOPY_DTM_SITE",
+  "spravci": ["SIT-TEST-A"],
+  "body_mm": [[0, 0], [3000, 0], [3000, 2000]],
+  "useky": [
+    {"od": 0, "do": 1, "spravce": "SIT-TEST-A", "stret": "krizeni", "kryti_mm": "880.25", "odstup_mm": "410.5"},
+    {"od": 1, "do": 2, "spravce": "SIT-TEST-A", "stret": "soubeh", "kryti_mm": "870.0", "odstup_mm": "515.5"}
+  ]
+}

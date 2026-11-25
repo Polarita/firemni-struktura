@@ -378,6 +378,8 @@ Na Ejpovicích spusť `sudo -n bash nasazeni/test/vm.sh`. Skript použije existu
 
 Instalátor připraví knihovny CAD a spustí převod vzorů DXF, DWG R2000 a IFC v bezsíťové zóně uvnitř `polarita-hq`. U každého výstupu zkontroluje vektorovou geometrii a rozměry na stránce A4. Na hotovém PDF odměří trasu podle dvou nezávislých známých kót. Ve vzoru odpovídají úseky 30 mm a 10 mm trase 40 mm. Všechny tři formáty přijímá karanténa. Originál spojí s výsledkem pomocí kontrolních součtů a po antivirové kontrole předává rekonstruované PDF. Výkresy, PDF, zadání měření, výsledek a kontrolní součty uloží do `/srv/polarita/workspace/dukazy/blok-10/`. [Instalace a zkouška převodu](./nasazeni/test/cad/offline.sh)
 
+V kartě testovacího spisu lze po archivaci podkladů prověřit výkopovou trasu. Ředitelství vypíše chybějící vyjádření správce, nedostatečné krytí nebo odstup. [Postup zkoušky ve spisu](./software/10-elektro-projekce-rozvadece-rozpocty-a-revize.md#výkopová-brána-ve-spisu)
+
 * **Vstupní předpoklad:** Splněn `Blok 9`.
 * **Řídicí dokument a prompty:** [software/10-elektro-projekce-rozvadece-rozpocty-a-revize.md](./software/10-elektro-projekce-rozvadece-rozpocty-a-revize.md) *(Prompty 1, 2 a 3)*, [oddeleni/14-elektro-projekce-rozpocty-revize-akademie.md](./oddeleni/14-elektro-projekce-rozpocty-revize-akademie.md), [oddeleni/15-pravo-legislativa-a-normy-csn.md](./oddeleni/15-pravo-legislativa-a-normy-csn.md).
 * **Postup krok za krokem:**

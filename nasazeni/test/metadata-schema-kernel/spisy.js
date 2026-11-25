@@ -36,7 +36,9 @@ async function otevri(url, options) {
     byId("zapis-revize").open = false;
     byId("stav-knihy").textContent = "";
     byId("terminy").replaceChildren();
-    await Promise.all([ukazPrijem(data.case_id, current), ukazKnihu(data.case_id, current)]);
+    byId("vykopy").hidden = true;
+    byId("trasy").replaceChildren();
+    await Promise.all([ukazVykopy(data.case_id, current), ukazPrijem(data.case_id, current), ukazKnihu(data.case_id, current)]);
 }
 
 button.addEventListener("click", async () => {
@@ -249,3 +251,40 @@ function obnovOsu() {
 }
 byId("osa").addEventListener("toggle", obnovOsu);
 byId("starsi").addEventListener("click", () => nactiOsu(dalsiPozice));
+
+async function ukazVykopy(kod, current) {
+    const url = "api/vykopy/" + encodeURIComponent(kod);
+    const response = await fetch(url);
+    if (current !== request) return;
+    if (!response.ok) {
+        byId("vykopy").hidden = false;
+        byId("trasy").textContent = "Stav výkopů se nepodařilo načíst.";
+        return;
+    }
+    const rows = await response.json();
+    if (current !== request) return;
+    byId("vykopy").hidden = rows.length === 0;
+    for (const row of rows) {
+        const item = document.createElement("li");
+        item.textContent = row.trasa + " · " + (row.duvody.length ? row.duvody.join(" ") : "Podklady jsou úplné.");
+        if (row.stav === "pripraveno-test") {
+            const submit = document.createElement("button");
+            submit.type = "button";
+            submit.textContent = "Uvolnit v testu";
+            submit.addEventListener("click", async () => {
+                submit.disabled = true;
+                try {
+                    const res = await fetch(url, {method:"POST", headers:{"Content-Type":"application/json"},
+                        body:JSON.stringify({trasa:row.trasa, revize:row.revize})});
+                    const saved = await res.json();
+                    if (!res.ok) throw new Error(saved.error);
+                    item.textContent = saved.trasa + " · Uvolněno v testu pro den " + saved.den + ".";
+                } catch (error) {
+                    item.textContent = row.trasa + " · " + error.message;
+                }
+            });
+            item.append(" ", submit);
+        }
+        byId("trasy").append(item);
+    }
+}

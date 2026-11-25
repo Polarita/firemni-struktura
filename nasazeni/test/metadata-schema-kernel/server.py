@@ -9,6 +9,7 @@ import sys
 from urllib.parse import urlsplit
 
 import kniha
+import vykop_api
 from model import load, unique
 from spisy import casova_osa, najdi, prevzate_sanony, zaloz
 from zaznamy import Problem, query, read, write
@@ -65,6 +66,11 @@ class Handler(BaseHTTPRequestHandler):
             return
         if self.command == "POST" and path == "/api/spisy":
             self.reply(200, zaloz(data, self.request_body()))
+            return
+        if path.startswith("/api/vykopy/") and self.command in ("GET", "POST"):
+            post = self.command == "POST"
+            self.reply(200, vykop_api.kontrola(data, path.removeprefix("/api/vykopy/"),
+                                               self.request_body() if post else None, uvolnit=post))
             return
         if path.startswith("/api/kniha/") and self.command in ("GET", "POST"):
             kod = path.removeprefix("/api/kniha/")

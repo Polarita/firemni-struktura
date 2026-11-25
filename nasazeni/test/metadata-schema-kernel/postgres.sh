@@ -59,6 +59,7 @@ GRANT INSERT (popis,dny,vyrizeno), UPDATE (popis,dny,vyrizeno,version) ON polari
 SQL
 "${db[@]}" <"$src/spisy.sql"
 "${db[@]}" <"$src/sanony.sql"
+"${db[@]}" <"$src/vykop.sql"
 "${db[@]}" <"$src/kniha.sql"
 "${db[@]}" <"$src/osa.sql"
 "${db[@]}" <"$src/zkousky.sql"

@@ -66,6 +66,12 @@ V bezsíťové pracovní VM poskytuje příkaz `polarita-cad-mereni vykres.pdf k
 
 Instalátor vytvoří ve složce důkazů bloku 10 vzor `kalibrace.json` a jeho výsledek `mereni.json`. Alespoň dvě známé kóty musí mít různé směry. V režimu TEST je přípustný rozdíl měřítek nejvýše 1 % vůči nejmenšímu z nich. Chybějící nebo nesouhlasná kalibrace ukončí příkaz chybou `FAIL_CLOSED` před zveřejněním délky.
 
+### Výkopová brána ve spisu
+
+V ředitelství otevři **Spisy** a kartu projektu. Oddíl **Kontrola výkopů v TESTu** zobrazuje trasu a důvody případné blokace. Při stisku **Uvolnit v testu** systém znovu načte dnešní datum, revizi, metodiku a archivované přílohy daného spisu. Vyžaduje soupis sítí, platné souhlasné vyjádření každého správce a měření všech úseků. Krytí a odstup při křížení nebo souběhu porovnává v milimetrech s verzovanou zkušební metodikou. Při změně podkladů během zápisu vyžádá novou kontrolu.
+
+Instalátor předá dva vzorové PDF dokumenty přes portál do karantény a Paperless. Technická zkouška používá výhradně smyšlené podklady a zkušební rozměry pro trasu R-TEST-01. Pro skutečný projekt stanoví pravidla normovač a podklady dodají příslušní správci sítí.
+
 ### Prompt 2 — Vývoj deterministického inženýrského, výkopového (`DTM ČR`) a rozpočtového jádra `cad-urs-engine` (normy z normové báze `15002 normovac` — `F03`) (`pro 17001`, `14001`, `14002` a Judge `15002`)
 
 ```text

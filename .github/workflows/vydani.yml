@@ -19,6 +19,8 @@ jobs:
           python -m venv "$RUNNER_TEMP/pdf-env"
           source "$RUNNER_TEMP/pdf-env/bin/activate"
           pip install -r nastroje/requirements.txt -r balicky/S1-generator-cistopisu/requirements.txt
+          pip install pytest==9.2.0 pytest-cov==7.1.0 coverage==7.17.5
+          python -m pytest -q --cov=vykop --cov-branch --cov-fail-under=100 nasazeni/test/inzenyring/test_vykop.py
           bash nasazeni/test/zkouska-prubehu.sh
           for suite in nastroje balicky/S1-generator-cistopisu balicky/S2-eval-suite balicky/S3-konfigurator-a-tarify; do
             python -m unittest discover -s "$suite"
