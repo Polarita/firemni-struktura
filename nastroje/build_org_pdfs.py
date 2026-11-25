@@ -1345,7 +1345,7 @@ def build_book_html() -> str:
         <tr>
           <td><strong>ČÁST 0</strong><br>Výchozí bod &amp; Bloky 0–12</td>
           <td><a href="#{doc_slug('README.md')}">README.md</a></td>
-          <td>Hlavní rozcestník systému, <strong>provozní protokol realizačního <code>ai</code> agenta (<code>kap. 0</code> — subagenti, oponentura jinou <code>ai</code> a předání <code>11001 ceo</code>)</strong>, číselná soustava (<code>2/3/4/5</code> + <code>ORG-*</code>), <strong>návod po blocích (<code>Blok 0–12</code> · <code>Týdny 0–12</code> · <code>Eval 20/20</code>)</strong> a katalog všech 50 dokumentů.</td>
+          <td>Hlavní rozcestník systému, <strong>automatická instalace TEST podle kapitoly 0</strong>, první přihlášení účtem <code>spravce</code> a předání systému správci, číselná soustava (<code>2/3/4/5</code> + <code>ORG-*</code>), <strong>návod po blocích (<code>Blok 0–12</code> · <code>Týdny 0–12</code> · <code>Eval 20/20</code>)</strong> a katalog všech 50 dokumentů.</td>
         </tr>
         <tr>
           <td><strong>ČÁST I</strong><br>Hlavní plán &amp; Master Playbook</td>
