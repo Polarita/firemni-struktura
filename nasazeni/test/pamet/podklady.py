@@ -12,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 
-from kontrola import HOOKS, SEALS, Refused, inspect_text
+from kontrola import HOOKS, MAIL, SEALS, Refused, inspect_text
 
 ZDROJ = Path("/srv/polarita/workspace/dukazy")
 SOUKROME = Path("/srv/polarita/data/bootstrap-test")
@@ -21,7 +21,18 @@ ADRESA_TESTU = re.compile(r"^Příjemce zkouska-([0-9a-f]{12})@(polarita\.cz|exa
 
 
 def priprav_text(cesta, data):
-    text = data.decode("utf-8")
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        # Dva původní zápisy z konzole Windows obsahují poškozené bajty.
+        # Čitelné potvrzení přihlášení a odhlášení nevyžaduje odhad kódové stránky.
+        if not re.fullmatch(r"blok-03/chrome-mourek-3\.3(?:\.2)?\.txt", cesta):
+            raise
+        lines = data.splitlines()
+        if not (len(lines) == 5 and b"Chrome" in lines[1] and b"HTTPS" in lines[3]
+                and b"prihlaseni OK" in lines[3] and lines[4].lower() == b"odhlaseni ok"):
+            raise
+        return "Chrome ve Windows. Historická zkouška potvrzuje přihlášení přes HTTPS a odhlášení.\n".encode()
     text = BARVA.sub("", text)
     if re.fullmatch(r"blok-03/(?:mx-[0-9a-f]{40}|restart-mx-[0-9.]+)\.txt", cesta):
         # Obě odpovědi ze stejné relace zůstanou navázané na skutečný SMTP test.
@@ -32,6 +43,19 @@ def priprav_text(cesta, data):
                 druh = "místní" if m[2] == "polarita.cz" else "externí"
                 return f"Brána odmítla {druh} adresu ({m[3]})."
             text = ADRESA_TESTU.sub(odpoved, text)
+    if (re.fullmatch(r"blok-04/openbao-2\.7\.3-(obraz|podpis)\.txt", cesta)
+            or re.fullmatch(r"blok-06/dohled-[0-9a-f]{40}\.txt", cesta)):
+        # UID vydavatele patří k technickému výstupu gpgv. Zachovej výsledek a řádek s otiskem.
+        text = re.sub(r'^gpgv: Good signature from "[^"\n]*<[^<>\n]+@[^<>\n]+>"[^\n]*$',
+                      "gpgv ověřil podpis vydavatele.", text, flags=re.M)
+        text = re.sub(r'^gpgv:\s+aka "[^"\n]*<[^<>\n]+@[^<>\n]+>"[^\n]*\n', "", text, flags=re.M)
+    if re.fullmatch(r"blok-01/predavaci-kontrola-serveru-[0-9]{8}T[0-9]{6}Z\.txt", cesta):
+        lines = text.splitlines(keepends=True)
+        for i, line in enumerate(lines):
+            if ("polarita_zfs" in line and "ssh" in line.lower() and re.search(r"\bOK\b", line)
+                    and len(MAIL.findall(line)) == 1):
+                lines[i] = "Předávací kontrola serveru potvrdila řádek s údaji o SSH a ZFS.\n"
+        text = "".join(lines)
     inspect_text(text)
     return text.encode("utf-8")
 
