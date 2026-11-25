@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 cd /app
-while ! test -s /run/secrets/umami-two_factor || ! test -s /run/secrets/pg-umami || ! test -s /run/secrets/umami-secret; do sleep 5; done
+while ! test -f /etc/polarita-umami/databaze-pripravena || ! test -s /run/secrets/umami-two_factor || ! test -s /run/secrets/pg-umami || ! test -s /run/secrets/umami-secret; do sleep 5; done
 # Agent vydává heslo PostgreSQL v URL-safe abecedě. Soukromé údaje zůstanou v paměti procesu.
 export APP_SECRET="$(cat /run/secrets/umami-secret)"
 export TWO_FACTOR_ENCRYPTION_KEY="$(cat /run/secrets/umami-two_factor)"

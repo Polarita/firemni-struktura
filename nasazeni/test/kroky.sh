@@ -127,6 +127,7 @@ trezor() {
 
 databaze() {
     "${guest[@]}" bash "$dest/nasazeni/test/databaze/aplikace.sh" | tee "$tmp/databaze.txt"
+    "${guest[@]}" bash "$dest/nasazeni/test/umami/db-ready.sh"
 }
 
 paperclip() {
