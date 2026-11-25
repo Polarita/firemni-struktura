@@ -1,4 +1,4 @@
-# Scénář noční hlasové ai recepční (`voice-agent`, režim `16002 tajemnik`) · Blok 17 · Verze 3.25
+# Scénář noční hlasové ai recepční (`voice-agent`, režim `16002 tajemnik`) · Blok 17 · Verze 3.26
 
 Tento dokument je závazná předloha hovoru pro hlasovou recepční. Doplňuje řídicí dokument [README.md](README.md) (pravidla 11–23). Jde o návrh: služba `voice-agent` není naprogramována ani nasazena, znění hlášek a všechny číselné parametry schvaluje `1001`. Recepční smí říkat jen věty z tohoto scénáře a jejich věcně shodné obměny; nic dalšího jménem firmy neslibuje.
 

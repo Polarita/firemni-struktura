@@ -1,4 +1,4 @@
-# 06 — Zálohování odolné proti ransomwaru (`3-2-1-1-0` + týdenní datová obnova + čtvrtletní DR drill) a monitoring · Verze 3.25
+# 06 — Zálohování odolné proti ransomwaru (`3-2-1-1-0` + týdenní datová obnova + čtvrtletní DR drill) a monitoring · Verze 3.26
 
 Tento dokument definuje zálohovací a dohledovou vrstvu společnosti **Polarita s.r.o.** (oddělení `17` — `17003 spravce-site` pod kontrolou `17004 klicnik`) — víceúrovňovou ochranu dat, automatické každotýdenní ověření datové obnovitelnosti záloh všech `6` doménových i `9` servisních databází, čtvrtletní end-to-end zkoušku obnovy celé infrastruktury na čistý stroj (*Full Bare-Metal / VM DR Drill*) a distribuovaný monitoring s acyklickým pořadím nasazení a okamžitým out-of-band varováním na mobil i počítač.
 
@@ -10,7 +10,7 @@ V režimu TEST instalační ai zřídí záložní server, obnovovací instanci 
 
 ## 1. Seznam vybraného softwaru
 
-| Oblast | Vybraný software | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.25) | Odpovědný `ai` / garant |
+| Oblast | Vybraný software | Kanál / Režim | Role a použití v Polarita s.r.o. (Verze 3.26) | Odpovědný `ai` / garant |
 | :--- | :--- | :--- | :--- | :--- |
 | **Šifrované geograficky oddělené zálohování (proti ransomwaru)** | **Restic** + **Restic REST Server** *(režim `--append-only`)* | `latest` | Klientsky šifrované, deduplikované zálohování `/srv/polarita/` přes privátní VPN `Headscale` na druhý fyzicky oddělený server v jiné lokalitě. Serverová komponenta **`Restic REST Server (--append-only)`** zaručuje, že klient na `polarita-hq` má jen `append-only` přístup a nemůže přes něj smazat či přepsat dřívější zálohy. Retenci (`forget/prune`) spouští výhradně místní úloha na záložním uzlu; správcovský přístup k záložnímu uzlu má jen `1001` vlastním klíčem, který není uložen na `polarita-hq`. | `17003` `spravce-site` *(kontrola klíčů `17004` `klicnik`)* |
 | **Lokální atomické snapshoty úložiště** | **Sanoid** *(nad `OpenZFS`; u větve `ext4 / LVM thin` blokové snapshoty `LVM thin` / API hypervizoru)* | `latest` | Automatická správa 15minutových, hodinových, denních a měsíčních snapshotů `OpenZFS` (a u větve `ext4 / LVM thin` blokových snapshotů `LVM thin` či API hypervizoru) pro rychlý návrat stavu při nepovedené aktualizaci nebo lidské chybě se změřenou dobou návratu. | `17003` `spravce-site` |
