@@ -1,0 +1,41 @@
+name: Opakovat zveřejnění ověřeného vydání
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag vydání Polarity
+        required: true
+        type: string
+  push:
+    branches: ['obnova-vydani/**']
+permissions:
+  actions: write
+  contents: read
+jobs:
+  opakovani:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Navázat na původní vydání
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ZVOLENY_TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag=${ZVOLENY_TAG:-${GITHUB_REF_NAME##*/}}
+          [[ $tag =~ ^Polarita-[0-9]+(\.[0-9]+){1,2}$ ]]
+          repo="repos/$GITHUB_REPOSITORY"
+          rev=$(gh api "$repo/commits/$tag" --jq '.sha')
+          [[ $rev =~ ^[a-f0-9]{40}$ ]]
+          runs=$(gh api "$repo/actions/workflows/vydani.yml/runs?event=push&head_sha=$rev")
+          run=$(jq -ce --arg tag "$tag" --arg rev "$rev" '
+            [.workflow_runs[] | select(.head_branch==$tag and .head_sha==$rev)] | max_by(.run_started_at) // empty' <<<"$runs")
+          if [[ $(jq -r .status <<<"$run") != completed || $(jq -r .conclusion <<<"$run") == success ]]; then
+            echo "Původní běh už pokračuje nebo vydání uspělo."
+            exit 0
+          fi
+          id=$(jq -er .id <<<"$run")
+          jobs=$(gh api "$repo/actions/runs/$id/jobs")
+          jq -e 'any(.jobs[]; any(.steps[]; .name=="Ověřit zdroje a sestavit tiskové dokumenty" and .conclusion=="success") and
+                              any(.steps[]; .name=="Zveřejnit ověřené přílohy" and .conclusion=="failure"))' <<<"$jobs" >/dev/null
+          gh run rerun "$id" --failed --repo "$GITHUB_REPOSITORY"
