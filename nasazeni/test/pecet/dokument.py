@@ -5,7 +5,8 @@ import json
 from pathlib import Path
 import sys
 
-ALLOWED = {"predavaci-protokol", "seznameni-monitoring", "archivni-kopie-deniku"}
+SAMPLES = {"predavaci-protokol", "seznameni-monitoring", "archivni-kopie-deniku"}
+ALLOWED = SAMPLES | {"cvicny-protokol-komise"}
 
 
 def seal(kind, data, bundle):
@@ -81,7 +82,7 @@ def sample(kind):
 def main():
     import os
     import stat
-    if len(sys.argv) == 3 and sys.argv[1] == "--vzor" and sys.argv[2] in ALLOWED:
+    if len(sys.argv) == 3 and sys.argv[1] == "--vzor" and sys.argv[2] in SAMPLES:
         sys.stdout.buffer.write(sample(sys.argv[2]))
         return
     if sys.argv[1:] == ["--verejny-koren"]:

@@ -6,6 +6,8 @@ exec 8>/run/polarita-akademie-vydani.lock
 flock 8
 vm=akademie-test
 php=(incus exec -T "$vm" --user 33 --group 33 -- php8.4 -d zend.exception_ignore_args=1 /etc/polarita-akademie/vydani.php)
+incus file push --mode=0644 "$src/komise.php" "$vm/etc/polarita-akademie/.komise.next"
+incus exec -T "$vm" -- mv -T /etc/polarita-akademie/.komise.next /etc/polarita-akademie/komise.php
 incus file push --mode=0644 "$src/vydani.php" "$vm/etc/polarita-akademie/.vydani.next"
 incus exec -T "$vm" -- mv -T /etc/polarita-akademie/.vydani.next /etc/polarita-akademie/vydani.php
 incus file push --mode=0644 "$src/cti_qr.py" paperless-test/usr/local/share/.polarita-qr.next

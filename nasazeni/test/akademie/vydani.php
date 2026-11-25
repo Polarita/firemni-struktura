@@ -13,7 +13,7 @@ use mod_customcert\service\persistence_helper;
 use mod_customcert\service\template_repository;
 
 $action = $argv[1] ?? '';
-if (gethostname() !== 'akademie-test' || $CFG->dbname !== 'db_akademie' || !in_array($action, ['doklad', 'pdf', 'over'], true)) {
+if (gethostname() !== 'akademie-test' || $CFG->dbname !== 'db_akademie' || !in_array($action, ['doklad', 'pdf', 'over', 'komise'], true)) {
     throw new RuntimeException('Vydání vzoru vyžaduje testovací Akademii.');
 }
 $admin = get_complete_user_data('username', 'spravce');
@@ -44,6 +44,10 @@ foreach (['b' => 1, 'a' => 2] as $variant => $points) {
 }
 $recipient = get_complete_user_data('username', 'test-akademie-a');
 $criteria = ['customcertid' => $cert->id, 'userid' => $recipient->id];
+if ($action === 'komise') {
+    require __DIR__ . '/komise.php';
+    exit;
+}
 if ($action === 'over') {
     $url = trim(stream_get_contents(STDIN, 4096));
     $endpoint = $CFG->wwwroot . '/mod/customcert/verify_certificate.php?';

@@ -356,7 +356,7 @@ Na Ejpovicích spusť `sudo -n bash nasazeni/test/vm.sh`. Skript použije existu
 
 ### `Blok 9` — Web `polarita.cz` (Kalkulačka SVJ, ceník + 48h šanony), `Umami`, e-shop `polarita.eu` (`Elektro WMS`) a `Akademie` (`Fáze D · Vrstva 09 · Týdny 7–10`)
 
-**Technický test před předáním.** Objednávku, vrácení zboží a platbu proveď v testovacím obchodě s místní platební odpovědí. Ověř skladový pohyb a stav objednávky z prohlížeče.
+**Technický test před předáním.** Objednávku, vrácení zboží a platbu proveď v testovacím obchodě s místní platební odpovědí. Ověř skladový pohyb a stav objednávky z prohlížeče. V přehledu ředitelství otevři zapečetěný PDF protokol cvičné komise Akademie a porovnej jeho výsledek s vyhodnoceným archem.
 
 
 * **Vstupní předpoklad:** Splněna celá **Fáze C** (`Bloky 7–8`).

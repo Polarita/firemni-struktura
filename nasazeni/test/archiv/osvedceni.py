@@ -17,13 +17,18 @@ def archivuj(source, year):
             raise ValueError("Vydané osvědčení není PDF.")
         stream.seek(0)
         digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    uloz_a_over_pdf(source, digest, year)
+    print(f"Archiv TEST uchoval vydané PDF v agendě odborné způsobilosti pod SHA-256 {digest}. "
+          "Obsah souhlasí při čtení ze snímku chráněného zfs hold.")
+
+
+def uloz_a_over_pdf(source, digest, year):
     final, snapshot = uloz.store(source, "odborna-zpusobilost", "pdf", digest, year)
     saved = uloz.DATA / ".zfs/snapshot" / snapshot.split("@")[1] / final.relative_to(uloz.DATA)
     with saved.open("rb") as stream:
         if hashlib.file_digest(stream, "sha256").hexdigest() != digest:
             raise RuntimeError("Osvědčení v archivním snímku se liší od vydaného PDF.")
-    print(f"Archiv TEST uchoval vydané PDF v agendě odborné způsobilosti pod SHA-256 {digest}. "
-          "Obsah souhlasí při čtení ze snímku chráněného zfs hold.")
+
 
 
 if __name__ == "__main__":

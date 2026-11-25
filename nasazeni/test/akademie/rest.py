@@ -9,6 +9,7 @@ import socket
 import ssl
 import subprocess
 import sys
+import tempfile
 from urllib.parse import urlencode
 
 SRC = Path(__file__).resolve().parent
@@ -65,6 +66,7 @@ def check_grade(result, ids, user):
     items = [item for item in grade["gradeitems"] if item.get("cmid") == ids["cm"] and item.get("itemmodule") == "offlinequiz"]
     if len(items) != 1 or items[0].get("grademax") != 100 or items[0].get("graderaw") != {"a": 100, "b": 50}[user]:
         raise ValueError("Výsledek Offline Quiz přes REST se liší od naskenovaných archů.")
+    return {"userid": grade["userid"], "procent": int(items[0]["graderaw"])}
 
 
 def main(only_vault):
@@ -87,8 +89,10 @@ def main(only_vault):
     ids = json.loads(inside(["php8.4", "-d", "zend.exception_ignore_args=1", dest], key.encode(), user=33))
     if set(ids) != {"course", "cm", "a", "b"} or not all(type(n) is int and n > 0 for n in ids.values()):
         raise ValueError("Chybí identifikace účastníků cvičného kurzu.")
+    grades = {}
     for user in ("a", "b"):
-        check_grade(call(host, key, FUNCTION, courseid=ids["course"], userid=ids[user]), ids, user)
+        result = call(host, key, FUNCTION, courseid=ids["course"], userid=ids[user])
+        grades[user] = check_grade(result, ids, user)
     for result, expected in (
             (call(host, key, "core_user_get_users", **{"criteria[0][key]": "username", "criteria[0][value]": "spravce"}), "accessexception"),
             (call(host, key, FUNCTION, courseid=1, userid=ids["a"]), "restrictedcontextexception")):
@@ -96,6 +100,7 @@ def main(only_vault):
             raise ValueError("Služba nepotvrdila omezení na jedinou funkci a cvičný kurz.")
     print("Compliance Bridge přečetl přes Moodle REST dvě známky z Offline Quiz (100 % a 50 %). "
           "Moodle odmítl výpis uživatelů i čtení mimo kurz. OpenBao odmítl účtu bridge čtení klíče OIDC.")
+    return {"course": ids["course"], "cm": ids["cm"], "znamky": grades}
 
 
 if __name__ == "__main__":
@@ -103,7 +108,20 @@ if __name__ == "__main__":
         raise SystemExit("Bridge patří do firemní VM.")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--over-trezor", action="store_true")
+    parser.add_argument("--pro-komisi", action="store_true")
     options = parser.parse_args()
     with open("/run/polarita-akademie-rest.lock", "a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        main(options.over_trezor)
+        if options.over_trezor and options.pro_komisi:
+            parser.error("Protokol komise potřebuje oba výsledky z Moodle.")
+        report = main(options.over_trezor)
+        if options.pro_komisi:
+            folder = Path("/srv/polarita/workspace/dukazy/blok-09")
+            with tempfile.NamedTemporaryFile(mode="w", dir=folder, delete=False) as stream:
+                tmp = Path(stream.name)
+                try:
+                    json.dump(report, stream)
+                    stream.flush()
+                    os.replace(tmp, folder / "akademie-znamky.json")
+                finally:
+                    tmp.unlink(missing_ok=True)

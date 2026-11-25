@@ -1,4 +1,5 @@
 """Protokol přihlášení. HTTPS adresa je argument, aktuální heslo vstupuje na stdin."""
+import hashlib
 import http.cookiejar
 import re
 import sys
@@ -61,6 +62,15 @@ for flag, suffix in (("--paperclip", ":8445/"), ("--zulip", ":8444/"), ("--akade
         if f'href="{expected}"' not in overview:
             raise SystemExit("V přehledu správce chybí odkaz na " + expected)
         print("Přehled přihlášeného správce obsahuje odkaz na " + expected)
+if "--protokol-komise" in sys.argv:
+    document = re.search(r'href="(/akademie-test/doklady/([0-9a-f]{64})\.pdf)">Stáhnout protokol', overview)
+    if document is None:
+        raise SystemExit("V přehledu chybí komisní protokol Akademie.")
+    with browser.open(origin + document[1], timeout=60) as response:
+        if (response.url != origin + document[1] or response.headers.get_content_type() != "application/pdf"
+                or hashlib.file_digest(response, "sha256").hexdigest() != document[2]):
+            raise SystemExit("Stažený komisní protokol má jiný obsah.")
+    print("Správce stáhl přímo z přehledu zapečetěný komisní protokol s odpovídajícím SHA-256.")
 if "--decisions" in sys.argv:
     match = re.search(re.escape('href="' + origin + ':8445/') + r'[A-Z][A-Z0-9]{0,15}/approvals/' +
                       r'([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})">Vyzkoušet rozhodnutí ve vzorovém spisu</a>', overview)
@@ -72,3 +82,5 @@ if "--dohled" in sys.argv:
     check("/dohled", None, 200, "/dohled", "Checkmk · polarita-hq")
 check("/odhlasit", {}, 200, "/", "Přihlášení do testovacího prostředí")
 check("/prehled", None, 200, "/", "Přihlášení do testovacího prostředí")
+if "--protokol-komise" in sys.argv:
+    check(document[1], None, 200, "/", "Přihlášení do testovacího prostředí")

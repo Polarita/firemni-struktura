@@ -15,6 +15,11 @@ class Board:
         self.cookies = {}
 
     def call(self, method, path, data=None, allowed=(200,)):
+        body = json.dumps(data).encode() if data is not None else None
+        raw = self.request(method, path, body, "application/json", allowed)
+        return json.loads(raw) if raw else None
+
+    def request(self, method, path, body=None, content_type=None, allowed=(200,)):
         if not path.startswith("/api/"):
             raise ValueError("Neznámá cesta Paperclipu")
         connection = http.client.HTTPConnection("127.0.0.1", 3100, timeout=30)
@@ -23,9 +28,9 @@ class Board:
                        "Accept": "application/json", "X-Forwarded-Proto": "https"}
             if self.cookies:
                 headers["Cookie"] = "; ".join(f"{k}={v}" for k, v in self.cookies.items())
-            if data is not None:
-                headers["Content-Type"] = "application/json"
-            connection.request(method, path, json.dumps(data).encode() if data is not None else None, headers)
+            if body is not None:
+                headers["Content-Type"] = content_type
+            connection.request(method, path, body, headers)
             response = connection.getresponse()
             for header, value in response.getheaders():
                 if header.lower() == "set-cookie":
@@ -39,7 +44,7 @@ class Board:
             raw = response.read()
             if response.status not in allowed:
                 raise RuntimeError(f"Paperclip odmítl {method} {path} (HTTP {response.status})")
-            return json.loads(raw) if raw else None
+            return raw
         finally:
             connection.close()
 
