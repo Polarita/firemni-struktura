@@ -114,6 +114,7 @@ tym() {
     "${guest[@]}" bash "$dest/nasazeni/test/paperclip/priprava.sh"
     "${guest[@]}" bash "$dest/nasazeni/test/zulip/fronta.sh"
     "${guest[@]}" bash "$dest/nasazeni/test/zulip/aplikace.sh" "$fqdn"
+    "${guest[@]}" bash "$dest/nasazeni/test/karantena/pamet-fronty.sh"
 }
 
 trezor() {
