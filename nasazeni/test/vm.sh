@@ -37,7 +37,7 @@ if [[ $("${inc[@]}" config get "$vm" user.polarita.zalozeni) == instalator-test 
     owner=$("${inc[@]}" config get "$vm" volatile.uuid)
     [[ $owner =~ ^[0-9a-f-]{36}$ ]]
     if ! "${inc[@]}" storage volume show "$pool" "$disk" >/dev/null 2>&1; then
-        "${inc[@]}" storage volume create "$pool" "$disk" --type block size=32GiB "user.polarita.vm=$owner"
+        "${inc[@]}" storage volume create "$pool" "$disk" --type block size=48GiB "user.polarita.vm=$owner"
     fi
     [[ $("${inc[@]}" storage volume get "$pool" "$disk" user.polarita.vm) == "$owner" ]]
     devices=$("${inc[@]}" config device list "$vm")

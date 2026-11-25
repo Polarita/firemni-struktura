@@ -11,6 +11,10 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 INFRA = Path("/srv/polarita/infra")
 CACHE = Path("/var/cache/polarita-distribuce")
 BALIKY = {
+    "akademie-test/distribuce/moodle-5.3.1.tgz": "820ee2bcd89acc6b91df255b2010bbbab108f29952ab78895a79c4feabf541e7",
+    "openbao-test/balicky/openbao_2.7.3_linux_amd64.deb": "0800c71469c1d7a5d5c9fb37ce0e441cad97d9fe122dab70391c8371e290b935",
+    "paperclip-test/distribuce/node-v24.22.3-linux-x64.tar.xz": "4f2b175a6d53a5c617a80dba2676238a0688cef28c6da4eba35c7d844e66fcfb",
+    "paperclip-test/distribuce/server-2026.1117.0.tgz": "74225a8a2349581d9f4519e2b5088e46c8afb37b9beac0990640088796f5e61f",
     "karantena-test/priprava/dangerzone-full_0.11.1_amd64.deb": "0ae0a0db9befc71afcff1af0c65400d61af8f923c6100c4c77d5866b11da80da",
     "checkmk-test/zdroje/check-mk-community-2.5.0p21_0.resolute_amd64.deb": "1c0b8dc37dc6afe69b9165b657e141e5b37381e6fb2f84f95a8c638654b58309",
     "gitea-runner-test/podklady/chromium-159.0.8154.6.zip": "77a6442fd3c8acd3bef9e1067fc26f5ef464277d22f0e8cb58dc3e4077a3e458",
