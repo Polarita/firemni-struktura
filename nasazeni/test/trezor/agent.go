@@ -21,6 +21,7 @@ const private = target + "/.polarita-agent"
 const tmpfs = 0x01021994
 
 type grant struct {
+	Akademie   bool     `json:"akademie"`
 	Medusa     bool     `json:"medusa"`
 	Umami      bool     `json:"umami"`
 	Paperless  bool     `json:"paperless"`
@@ -188,6 +189,12 @@ template {
 			config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/"+file, template)
 			outputs[file] = file
 		}
+	}
+	if g.Akademie {
+		const file = "valkey-akademie"
+		template := `{{ with secret "test/data/valkey/akademie" }}{{ .Data.data.heslo }}{{ end }}`
+		config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/"+file, template)
+		outputs[file] = file
 	}
 	if g.ZulipQueue {
 		fields := map[string][2]string{

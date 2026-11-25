@@ -67,13 +67,14 @@ FIXTURES.update({"s3-" + name: ["objekty-klient-" + name] for name in BUCKETS})
 FIXTURES["gitea-test"] = ["gitea-agent"]
 FIXTURES["paperclip-test"] = ["paperclip-agent"]
 FIXTURES["paperless-test"] = ["paperless-agent"]
+FIXTURES["akademie-test"] = ["akademie-agent"]
 FIXTURES["medusa-test"] = ["medusa-agent"]
 FIXTURES["umami-test"] = ["umami-agent"]
 FIXTURES["vikunja-test"] = ["vikunja-agent"]
 FIXTURES["zulip-test"] = ["zulip-agent"]
 FIXTURES["dohled-zulip"] = ["dohled-zulip-agent"]
 FIXTURES["zulip-fronta-test"] = ["zulip-fronta-agent"]
-DATABASE_ACCESS = {"medusa-test": ("db_eshop",), "umami-test": ("umami",), "paperless-test": ("paperless",), "vikunja-test": ("vikunja",), "paperclip-test": ("db_paperclip",), "zulip-test": ("zulip",), "postgres-test": DATABASES, "keycloak-test": ("keycloak",), "gitea-test": ("gitea",)}
+DATABASE_ACCESS = {"akademie-test": ("db_akademie",), "medusa-test": ("db_eshop",), "umami-test": ("umami",), "paperless-test": ("paperless",), "vikunja-test": ("vikunja",), "paperclip-test": ("db_paperclip",), "zulip-test": ("zulip",), "postgres-test": DATABASES, "keycloak-test": ("keycloak",), "gitea-test": ("gitea",)}
 # Skutečné údaje ISDS vydá až oprávněný proces s ověřeným časem a rozhodnutím.
 DENIED = ["isds-cteni", "isds-odesilani", "eet-vypnuto", "cizi-vzorek"]
 HTTP = None
@@ -166,6 +167,8 @@ def configure(root):
                 acl += allow("test/data/valkey/" + name, "read")
         if role == "paperless-test":
             acl += allow("test/data/paperless/aplikace", "read")
+        if role == "akademie-test":
+            acl += allow("test/data/valkey/akademie", "read")
         if role == "medusa-test":
             acl += allow("test/data/medusa/aplikace", "read")
         if role == "umami-test":

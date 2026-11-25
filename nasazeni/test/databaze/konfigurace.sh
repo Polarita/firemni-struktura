@@ -63,6 +63,7 @@ hostssl keycloak keycloak 10.239.32.11/32 scram-sha-256
 hostssl gitea gitea 10.239.32.13/32 scram-sha-256
 hostssl db_paperclip db_paperclip 10.239.32.18/32 scram-sha-256
 hostssl paperless paperless 10.239.32.21/32 scram-sha-256
+hostssl db_akademie db_akademie 10.239.32.24/32 scram-sha-256
 hostssl db_eshop db_eshop 10.239.32.23/32 scram-sha-256
 hostssl umami umami 10.239.32.22/32 scram-sha-256
 hostssl vikunja vikunja 10.239.32.20/32 scram-sha-256

@@ -299,6 +299,7 @@ obnova() {
 web() {
     "${guest[@]}" python3 "$dest/nasazeni/test/akademie/podklady.py" | tee "$tmp/akademie-podklady.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/akademie/php.sh"
+    "${guest[@]}" bash "$dest/nasazeni/test/akademie/spojeni.sh"
     "${guest[@]}" bash "$dest/nasazeni/test/akademie/aplikace.sh"
     "${guest[@]}" bash "$dest/nasazeni/test/medusa/rma.sh" | tee "$tmp/reklamace.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/medusa/bubny.sh" | tee "$tmp/bubny.txt"
