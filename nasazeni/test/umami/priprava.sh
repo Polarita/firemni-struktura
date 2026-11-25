@@ -7,6 +7,9 @@ bash "$src/obraz.sh"
 install -dm0755 "$work/conf" "$work/tofu"
 exec 9>"$work/.instalace"
 flock 9
+reload="$work/.obnovit-start"
+if [[ -f $work/conf/start.sh ]] && ! cmp -s "$src/start.sh" "$work/conf/start.sh"; then touch "$reload"; fi
+install -m0644 "$src/db-host.sh" "$work/conf/db-host.sh"
 install -m0755 "$src/start.sh" "$work/conf/start.sh"
 install -m0644 "$src/over.mjs" "$work/conf/over.mjs"
 incus file pull postgres-test/var/lib/polarita-postgres/pki/server.crt "$work/conf/postgres.next"
@@ -29,3 +32,8 @@ for r in json.load(sys.stdin).get("resource_changes",[]):
     if r["address"]!="incus_instance.umami" or a not in (["create"],["update"]): sys.exit("Neočekávaná změna "+r["address"])'
 tofu apply -input=false "$plan"
 tofu plan -input=false -detailed-exitcode
+if [[ -f $reload ]]; then
+    [[ $(incus config get umami-test user.polarita.role) == umami-test ]]
+    incus restart umami-test
+    rm -f -- "$reload"
+fi

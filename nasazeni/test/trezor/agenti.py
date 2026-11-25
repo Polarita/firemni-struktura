@@ -55,6 +55,9 @@ def install(name, files):
 
 def deliver(name, manager):
     ip, uid, gid, fixture = CLIENTS[name]
+    if name == "umami-test":
+        run("incus", "exec", "-T", name, "--user", "0", "--group", "0", "--",
+            "sh", "/etc/polarita-umami/db-host.sh")
     base = "auth/approle/role/" + name
     rid = p.request("GET", base + "/role-id", token=manager)["data"]["role_id"]
     cidr = ip + "/32"
