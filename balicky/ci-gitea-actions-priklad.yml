@@ -114,6 +114,24 @@ jobs:
           python3 generate_pdfs.py --check
           python3 -m unittest test_generate_pdfs
 
+      - name: Engineering formulas / Připnuté výpočty a metodiky TEST
+        run: |
+          sha256sum --strict -c - <<'OTISKY'
+          c74f2f6315178cea6a962c405804be19b35b9592383c3cf170155eaa30f1c6ec  nasazeni/test/inzenyring/rozvadece/teplota.py
+          8358a8bc60b729422cdfb879417a9ee38a966e69879761450e64d1ed1c9e3331  nasazeni/test/inzenyring/rozvadece/metodika-test.json
+          2753568d3f9e80a2a63e7e0b9faa8647b5fca14e0fca2d003dfe3dfb9f76329c  nasazeni/test/inzenyring/revize/posouzeni.py
+          9f9713d6978c344c7c096a198cfb4ce2c09aade8ce94f58e925f9a6876e405db  nasazeni/test/metadata-schema-kernel/vykop.py
+          7a5965a09aab83e8aeca142a0181a1490cf3e22190e6dede4eb8d4f6dfb7612d  nasazeni/test/inzenyring/vzor/metodika.json
+          OTISKY
+          python3 - <<'PY'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, str(Path("nasazeni/test/inzenyring/rozvadece").resolve()))
+          from pas import model
+          result = model()["teplo"]
+          assert result == {"ztrata_W":"96","stred_K":"18","vrch_K":"24","uvnitr_C":"59","mez_C":"60"}, result
+          PY
+
       - name: Working tree must stay clean / Pracovní strom musí zůstat čistý
         run: |
           test -z "$(git status --porcelain)" || { git status --porcelain; exit 1; }

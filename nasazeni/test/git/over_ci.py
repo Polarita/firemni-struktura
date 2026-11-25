@@ -58,7 +58,7 @@ else:
 steps = subprocess.check_output(DB+[f"""select s.name,s.status from action_task_step s where s.task_id=(
 select task_id from action_run_job where run_id={run} and job_id='kontrola' order by attempt desc limit 1)
 order by s.index"""],text=True).splitlines()
-required = ("Checkout","Python dependencies","Consistency check","AigisCode","S2 Eval Suite","S3 pricing kernel","S1 templates","Working tree","Remove the temporary")
+required = ("Checkout","Python dependencies","Consistency check","AigisCode","S2 Eval Suite","S3 pricing kernel","S1 templates","Engineering formulas","Working tree","Remove the temporary")
 if negative:
     # Odmítnutí musí pocházet ze stejného kroku i skutečného vzorku (pád runneru nestačí).
     from compression import zstd
