@@ -65,7 +65,7 @@ def main():
     sql("CREATE SCHEMA IF NOT EXISTS polarita; CREATE SCHEMA IF NOT EXISTS vault_search; "
         "CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA vault_search", "db_erp_lhutnik")
     sql("CREATE EXTENSION IF NOT EXISTS pg_trgm", "vikunja")
-    for name in ("db_hr_lide", "db_gdpr_zkousky"):
+    for name in ("db_hr_lide", "db_gdpr_zkousky", "umami"):
         sql("CREATE EXTENSION IF NOT EXISTS pgcrypto", name)
     print("PostgreSQL připravil 6 doménových a 9 servisních databází se samostatnými účty.")
 
