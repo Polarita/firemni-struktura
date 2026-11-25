@@ -20,13 +20,20 @@ def sha(path):
 
 def check(sample, job):
     receipt = BASE / "protokoly" / (job + ".json")
+    # Hodinový časovač vrací přechodně nedokončenou úlohu do stejné fronty.
     deadline = time.monotonic() + 720 + 3 * 1620
+    retry = False
     while time.monotonic() < deadline:
         if receipt.exists():
             report = json.loads(receipt.read_text())
-            if report["stav"] != "ocisteno":
+            if report["stav"] == "ceka":
+                if not retry:
+                    deadline += 2 * 3600 + 1620
+                    retry = True
+                    print(f"Karanténa zopakuje příjem {job}, důvod {report['duvod']}.", flush=True)
+            elif report["stav"] != "ocisteno":
                 raise RuntimeError(f"Karanténa ukončila {job} ve stavu {report['stav']}, důvod {report['duvod']}.")
-            if (BASE / "prijate" / job).is_file():
+            elif (BASE / "prijate" / job).is_file():
                 break
         time.sleep(3)
     else:
