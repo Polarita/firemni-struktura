@@ -57,6 +57,12 @@ async function otevri(url, options) {
         const vysledek = revize.stav === "navrh-zaporny" ? "Záporný návrh. Závady: " + revize.zavady.join(", ") : "Kladný návrh.";
         byId("vysledek-revize").textContent = vysledek + " Čeká na odborné posouzení. Předání do provozu je zablokované.";
         byId("revize-pdf").href = "api/revize/" + encodeURIComponent(data.case_id) + "/navrh.pdf";
+        const pasRevize = byId("revize-pas");
+        pasRevize.hidden = !revize.vydani_pasu;
+        if (revize.vydani_pasu) {
+            pasRevize.href = ["api/pasy", data.case_id, revize.vyrobni_cislo, revize.vydani_pasu, "vyrobni-pas.pdf"].join("/");
+            pasRevize.download = revize.vyrobni_cislo + "-podklad-revize.pdf";
+        }
         byId("revize-rozhodnuti").href = revize.rozhodnuti;
     }
     byId("rozpocet").hidden = !data.ma_rozpocet;

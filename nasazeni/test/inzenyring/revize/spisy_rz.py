@@ -32,7 +32,11 @@ def over(origin, password, kontrola):
             serial = panel["vyrobni_cislo"]
             if not re.fullmatch(r"RZ-[0-9]{4}-[0-9]{5}", serial) or serial in serials:
                 raise ValueError("Karta nemá vlastní platné výrobní číslo rozváděče.")
-            if info["vyrobni_cislo"] != serial or info["pas_sha256"] != panel["pas"]["pdf_sha256"]:
+            rev = info["vydani_pasu"]
+            if not re.fullmatch(r"[a-f0-9]{64}", rev):
+                raise ValueError("Revize nemá platné vydání pasu.")
+            podklad = call("GET", f"/lhutnik-test/api/pasy/{case}/{serial}/{rev}/vyrobni-pas.pdf")
+            if info["vyrobni_cislo"] != serial or info["pas_sha256"] != hashlib.sha256(podklad).hexdigest():
                 raise ValueError("Revizní návrh odkazuje na jiné vydání výrobního pasu.")
             serials.add(serial)
             pdf = call("GET", "/lhutnik-test/api/revize/"+case+"/navrh.pdf")

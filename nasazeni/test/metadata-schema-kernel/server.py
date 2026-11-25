@@ -21,8 +21,8 @@ def slozka_spisu(karta, oddil):
     return Path("/opt/polarita-inzenyring-test") / oddil / str(UUID(karta["pozadavek"])) / "current"
 
 
-def pas_rozvadece(karta, serial):
-    base = slozka_spisu(karta, "pasy").parent / serial / "current"
+def pas_rozvadece(karta, serial, vydani="current"):
+    base = slozka_spisu(karta, "pasy").parent / serial / vydani
     # Získat jedno neměnné vydání i během souběžné aktualizace ukazatele current.
     directory = base.resolve()
     info = directory / "prehled.json"
@@ -86,17 +86,20 @@ class Handler(BaseHTTPRequestHandler):
             self.reply(200, zaloz(data, self.request_body()))
             return
         if self.command == "GET" and path.startswith("/api/pasy/"):
-            parts = path.removeprefix("/api/pasy/").split("/")
-            if len(parts) != 3 or not re.fullmatch(r"RZ-[0-9]{4}-[0-9]{5}", parts[1]) or parts[2] != "vyrobni-pas.pdf":
+            match = re.fullmatch(r"/api/pasy/([^/]+)/(RZ-[0-9]{4}-[0-9]{5})/(?:([0-9a-f]{64})/)?vyrobni-pas\.pdf", path)
+            if not match:
                 raise Problem(404, "Neznámý výrobní pas.")
-            karta = najdi(data, parts[0])
+            kod, serial, vydani = match.groups()
+            karta = najdi(data, kod)
             cisla = query(data, """SELECT to_json(count(*)) FROM polarita_test_spisy.vyrobni_cisla
-                          WHERE case_id=:'kod' AND vyrobni_cislo=:'serial';""", kod=karta["case_id"], serial=parts[1])
-            pas = pas_rozvadece(karta, parts[1]) if cisla == 1 else None
+                          WHERE case_id=:'kod' AND vyrobni_cislo=:'serial';""", kod=karta["case_id"], serial=serial)
+            pas = pas_rozvadece(karta, serial, vydani or "current") if cisla == 1 else None
             if not pas:
                 raise Problem(404, "Ve spisu chybí vydání pasu pro tento kus.")
             directory, info = pas
-            raw = (directory / parts[2]).read_bytes()
+            raw = (directory / "vyrobni-pas.pdf").read_bytes()
+            if vydani and sha256((directory / "SHA256SUMS").read_bytes()).hexdigest() != vydani:
+                raise Problem(409, "Manifest neodpovídá požadovanému vydání.")
             if sha256(raw).hexdigest() != info["pdf_sha256"]:
                 raise Problem(409, "Obsah vydaného PDF se změnil.")
             self.reply(200, raw, "application/pdf")
