@@ -177,10 +177,10 @@ class RuleTests(unittest.TestCase):
 
     def test_peppol_machine_identifiers(self) -> None:
         script = cc.ROOT / "nasazeni/test/finance/peppol/pravidla.sh"
-        token = "PEPPOL-EN16931-UBL.sch"
-        self.assertEqual(self.errors(cc.check_forbidden, token, False, path=script), [])
-        self.assertTrue(self.errors(cc.check_forbidden, token+" a EN 12345", False, path=script))
-        self.assertTrue(self.errors(cc.check_forbidden, token, True, path=cc.ROOT/"README.md"))
+        filename = "PEPPOL-EN16931-UBL.sch"
+        self.assertEqual(self.errors(cc.check_forbidden, filename, False, path=script), [])
+        self.assertTrue(self.errors(cc.check_forbidden, filename+" a EN 12345", False, path=script))
+        self.assertTrue(self.errors(cc.check_forbidden, filename, True, path=cc.ROOT/"README.md"))
 
     def test_forbidden_term_is_caught_with_a_non_breaking_space(self) -> None:
         for planted in (f"montér §{NBSP}6", "montér §&nbsp;6", f"zák. č. 250/2021{NBSP}Sb.", f"ČSN{NBSP}EN 61439", f"docker{NBSP}run x",
