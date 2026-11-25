@@ -25,7 +25,7 @@ model() {
 }
 model tokenizer.json 0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39
 model onnx/model_quantized.onnx f80102d3f2a1229f387d3c81909990d8945513e347b0eab049f7de3c6f98c193
-recipe=$(cd "$src" && sha256sum cli.py pamet.py doklady.py hledani.py uv-requirements.txt zaklad.py | sha256sum | cut -d' ' -f1)
+recipe=$(cd "$src" && sha256sum cli.py pamet.py doklady.py zkouska_dokladu.py hledani.py uv-requirements.txt zaklad.py | sha256sum | cut -d' ' -f1)
 dir=$root/$recipe
 install -dm0755 "$dir"
 if ! [[ -s $dir/pripraveno ]]; then
@@ -33,7 +33,7 @@ if ! [[ -s $dir/pripraveno ]]; then
     export UV_CACHE_DIR=/var/cache/polarita-uv/sdk UV_NO_CONFIG=1 UV_NO_PROGRESS=1
     "$uv" venv --allow-existing --no-python-downloads --python /usr/bin/python3 "$dir/sdk"
     "$uv" pip sync --only-binary=:all: --require-hashes --python "$dir/sdk/bin/python" "$src/uv-requirements.txt"
-    install -m0644 "$src"/{cli,pamet,doklady,hledani,zaklad}.py "$dir/"
+    install -m0644 "$src"/{cli,pamet,doklady,zkouska_dokladu,hledani,zaklad}.py "$dir/"
     "$dir/sdk/bin/python" -Es -c 'import onnxruntime,psycopg,tokenizers'
     echo "$recipe" >"$dir/pripraveno"
 fi
@@ -44,6 +44,7 @@ aktivuj_cli() {
     install -m0755 "$src/spust.sh" /usr/local/sbin/.agent_vault-next
     mv -Tf /usr/local/sbin/.agent_vault-next /usr/local/sbin/agent_vault
 }
+runuser -u polarita-pamet -- /usr/bin/python3 -Es "$dir/zkouska_dokladu.py"
 if [[ $# == 1 ]]; then
     aktivuj_cli
     exit 0
