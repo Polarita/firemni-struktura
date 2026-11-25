@@ -16,22 +16,13 @@ CACHE = Path("/srv/polarita/infra/gitea-runner-test/podklady/astro")
 LOCK = Path(__file__).resolve().parents[1] / "web/package-lock.json"
 
 
-def main():
-    if os.geteuid() or socket.gethostname().split(".")[0] != "polarita-hq":
-        raise SystemExit("Příprava CI patří do firemní VM.")
-    package = json.loads(LOCK.read_text())["packages"]["node_modules/astro"]
-    version = package["version"]
-    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
-        raise ValueError("Neplatná verze Astro")
-    url = f"https://registry.npmjs.org/astro/-/astro-{version}.tgz"
-    if package["resolved"] != url:
-        raise ValueError("Neznámý zdroj Astro")
+def download(url, filename, integrity):
     CACHE.mkdir(parents=True, exist_ok=True)
-    archive = CACHE / f"astro-{version}.tgz"
+    archive = CACHE / filename
     def matches(path):
         with path.open("rb") as f:
             sha = hashlib.file_digest(f, "sha512").digest()
-        return "sha512-" + base64.b64encode(sha).decode() == package["integrity"]
+        return "sha512-" + base64.b64encode(sha).decode() == integrity
     if not archive.is_file() or not matches(archive):
         with urlopen(url, timeout=60) as response, NamedTemporaryFile(dir=CACHE, delete=False) as out:
             path = Path(out.name)
@@ -44,6 +35,20 @@ def main():
                 path.replace(archive)
             finally:
                 path.unlink(missing_ok=True)
+    return archive
+
+
+def main():
+    if os.geteuid() or socket.gethostname().split(".")[0] != "polarita-hq":
+        raise SystemExit("Příprava CI patří do firemní VM.")
+    package = json.loads(LOCK.read_text())["packages"]["node_modules/astro"]
+    version = package["version"]
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
+        raise ValueError("Neplatná verze Astro")
+    url = f"https://registry.npmjs.org/astro/-/astro-{version}.tgz"
+    if package["resolved"] != url:
+        raise ValueError("Neznámý zdroj Astro")
+    archive = download(url, f"astro-{version}.tgz", package["integrity"])
     inc = ["incus", "exec", "-T", RUNNER, "--"]
     dest = "/opt/polarita-astro-config/" + version
     subprocess.run(inc + ["install", "-dm0755", dest + "/tsconfigs", "/node_modules"], check=True)
@@ -61,6 +66,37 @@ def main():
         mv -Tf .polarita-astro-next astro
         runuser -u pol-ci -- test -r /node_modules/astro/tsconfigs/base.json
         ''', "--", dest], check=True)
+    packages = json.loads(LOCK.read_text())["packages"]
+    binding = packages["node_modules/@astrojs/compiler-binding-linux-x64-gnu"]
+    binding_version = binding["version"]
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", binding_version):
+        raise ValueError("Neplatná verze kompilátoru Astro")
+    url = "https://registry.npmjs.org/@astrojs/compiler-binding-linux-x64-gnu/-/compiler-binding-linux-x64-gnu-" + binding_version + ".tgz"
+    if binding["resolved"] != url:
+        raise ValueError("Neznámý zdroj kompilátoru Astro")
+    archive = download(url, "compiler-" + binding_version + ".tgz", binding["integrity"])
+    root = "/opt/polarita-astro-ci"
+    subprocess.run(inc + ["install", "-dm0755", root], check=True)
+    subprocess.run(["bash", str(LOCK.parent.parent / "medusa/node.sh")], check=True)
+    node = Path("/srv/polarita/infra/medusa-test/distribuce/node-v26.13.1-linux-x64")
+    def install(source, target, mode):
+        with source.open("rb") as f:
+            digest = hashlib.file_digest(f, "sha256").hexdigest()
+        remote = root + "/" + target
+        current = subprocess.run(inc + ["sha256sum", remote], capture_output=True, text=True)
+        if current.returncode == 0 and current.stdout.split()[0] == digest:
+            return
+        subprocess.run(["incus", "file", "push", "--mode=" + mode, str(source), RUNNER + remote + ".next"], check=True)
+        subprocess.run(inc + ["mv", "-T", remote + ".next", remote], check=True)
+    with tarfile.open(archive) as t, NamedTemporaryFile(dir=CACHE) as out:
+        with t.extractfile("package/astro.linux-x64-gnu.node") as src:
+            while chunk := src.read(1024 * 1024):
+                out.write(chunk)
+        out.flush()
+        install(Path(out.name), "compiler.node", "0644")
+    install(node / "bin/node", "node", "0755")
+    install(node / "LICENSE", "LICENSE-node", "0644")
+    install(Path(__file__).with_name("aigis") / "astro.cjs", "astro.cjs", "0644")
     print(f"Runner má mimo pracovní stromy původní pravidla TypeScriptu z Astro {version}.")
 
 

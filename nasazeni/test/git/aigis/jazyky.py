@@ -59,6 +59,7 @@ def sql(text):
 def over(root, unsupported, tools_dir):
     counts = Counter()
     java = []
+    astro = []
     for item in unsupported:
         relative = Path(item["file_path"])
         path = root / relative
@@ -72,6 +73,8 @@ def over(root, unsupported, tools_dir):
             subprocess.run(["/bin/bash","-n",path],check=True,timeout=30)
         elif lang == "go":
             subprocess.run(["gofmt",path],stdout=subprocess.DEVNULL,check=True,timeout=30)
+        elif lang == "astro":
+            astro.append(path)
         elif lang == "java":
             java.append(path)
         elif lang == "sql":
@@ -81,6 +84,9 @@ def over(root, unsupported, tools_dir):
                 raise ValueError("Kontrola PostgreSQL selhala: " + str(relative)) from error
         else:
             raise ValueError("Chybí kontrola jazyka: " + lang)
+    if astro:
+        subprocess.run(["/opt/polarita-astro-ci/node", "/opt/polarita-astro-ci/astro.cjs", *astro],
+                       check=True, timeout=120)
     if java:
         program = tools_dir / "KontrolaJavy.java"
         program.write_text(JAVA)
