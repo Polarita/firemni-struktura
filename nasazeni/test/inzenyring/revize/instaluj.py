@@ -12,6 +12,7 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 
+from over_tisk import overit
 from priprav import priprav
 from spisy_rz import id_spisu, VARIANTY
 
@@ -49,6 +50,7 @@ def nasad(host):
                   user="65534",data=(HERE/"navrh.typ").read_bytes())
         if not pdf.startswith(b"%PDF-") or len(pdf)<1000:
             raise ValueError("Sazba nevrátila platný návrh.")
+        pages = overit(pdf, model)
         digest = hashlib.sha256(pdf).hexdigest()
         packet = {"model":model,"pdf":base64.b64encode(pdf).decode(),"pdf_sha256":digest,"heslo":LOGIN.read_text().strip()}
         response = run(board,"python3",path+"/rozhodnuti_rz.py",host,user="65534",data=json.dumps(packet).encode())
@@ -77,7 +79,7 @@ fi
 (cd "$2" && sha256sum --status -c SHA256SUMS)
 ln -sfn "$2" .current.next
 mv -Tf .current.next current''',"--",base,rev,data=tar)
-        print(f'{case} · {model["stav"]} · {digest} · {result["rozhodnuti"]}',flush=True)
+        print(f'{case} · {model["stav"]} · {pages} str. · {digest} · {result["rozhodnuti"]}',flush=True)
 
 
 if __name__ == "__main__":
