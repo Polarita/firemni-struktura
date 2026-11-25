@@ -65,7 +65,8 @@ def objednej(call, token, fixtures):
             raise RuntimeError("Místní testovací platba nedokončila objednávku.")
         state["order"] = completed["order"]["id"]
         save(state)
-    order = call("GET", "/admin/orders/" + state["order"], 200, token=token)["order"]
+    order_fields = urlencode({"fields": "id,email,currency_code,total,display_id,payment_status,items.variant_id,items.quantity"})
+    order = call("GET", "/admin/orders/" + state["order"] + "?" + order_fields, 200, token=token)["order"]
     if (order["email"] != email or order["currency_code"] != "czk" or order["total"] != 80
             or len(order["items"]) != 1 or order["items"][0]["variant_id"] != variant
             or order["items"][0]["quantity"] != 1 or order["payment_status"] not in ("authorized","captured")):

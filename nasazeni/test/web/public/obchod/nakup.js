@@ -78,7 +78,8 @@ async function add() {
     await showCart();
 }
 async function checkout() {
-    cart = (await store("carts/" + state().cart)).cart;
+    const fields = new URLSearchParams({ fields: "id,completed_at,payment_collection.id,payment_collection.payment_sessions.provider_id" });
+    cart = (await store("carts/" + state().cart + "?" + fields)).cart;
     if (!cart.completed_at) {
         const collection = cart.payment_collection || (await store("payment-collections", { cart_id: cart.id })).payment_collection;
         if (!(collection.payment_sessions || []).some(s => s.provider_id === "pp_system_default")) {
