@@ -295,6 +295,7 @@ obnova() {
 
 web() {
     "${guest[@]}" bash "$dest/nasazeni/test/medusa/rma.sh" | tee "$tmp/reklamace.txt"
+    "${guest[@]}" bash "$dest/nasazeni/test/medusa/bubny.sh" | tee "$tmp/bubny.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/umami/over.sh" | tee "$tmp/umami.txt"
     sudo -n bash nasazeni/test/port-vpn.sh 8449 >/dev/null
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
@@ -308,9 +309,10 @@ web() {
     "${inc[@]}" file push --project polarita "$tmp/web.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/web-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/web-pristup.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/web-pristup-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/reklamace.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/reklamace-$commit.txt"
+    "${inc[@]}" file push --project polarita "$tmp/bubny.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/bubny-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/ecomail.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/ecomail-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/umami.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/umami-$commit.txt"
-    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 09 "$commit" umami ecomail reklamace web-pristup | tee "$tmp/web-predavka.jsonl"
+    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 09 "$commit" umami ecomail reklamace bubny web-pristup | tee "$tmp/web-predavka.jsonl"
     "${guest[@]}" systemctl start polarita-silverbullet-export.service
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/silverbullet/zkouska_prihlaseni.py "$fqdn" --predavky "$tmp/web-predavka.jsonl"
