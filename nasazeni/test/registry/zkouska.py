@@ -1,6 +1,5 @@
 """Trvalé syntetické doklady a transakční zkoušky společných číselných řad."""
 from concurrent.futures import ThreadPoolExecutor
-from hashlib import sha256
 import json
 from pathlib import Path
 import re
@@ -10,6 +9,7 @@ import sys
 from uuid import uuid5
 
 from spisy_rz import id_spisu
+from vzorove_doklady import doklady
 
 
 def sql(dotaz, *, chyba=None, **parametry):
@@ -28,20 +28,6 @@ def sql(dotaz, *, chyba=None, **parametry):
 
 PRIDEL = """SET LOCAL ROLE pol_registr_doklady;
 SELECT polarita_registr_test.pridel_doklad(:'klic',:'spis',:'druh',:'otisk');"""
-
-
-def doklady(vzory):
-    rows = []
-    for varianta,polozky in vzory.items():
-        spis = id_spisu(varianta)
-        if set(polozky) != {"FAK","ORG-UOL","VYD"}:
-            raise ValueError("Chybí vzor účetní nebo skladové řady.")
-        for druh,popis in polozky.items():
-            source = json.dumps({"spis":str(spis),"druh":druh,"popis":popis,"rezim":"TEST"},
-                                sort_keys=True,ensure_ascii=False,separators=(",",":")).encode()
-            rows.append({"spis":str(spis),"druh":druh,"klic":str(uuid5(spis,"registr-test/"+druh)),
-                         "otisk":sha256(source).hexdigest()})
-    return rows
 
 
 def pridel(row):

@@ -60,6 +60,7 @@ SQL
 "${db[@]}" <"$src/spisy.sql"
 "${db[@]}" <"$src/rozvadece.sql"
 "${db[@]}" <"$src/registr-spisu.sql"
+"${db[@]}" <"$src/finance.sql"
 "${db[@]}" <"$src/sanony.sql"
 "${db[@]}" <"$src/vykop.sql"
 "${db[@]}" <"$src/kniha.sql"

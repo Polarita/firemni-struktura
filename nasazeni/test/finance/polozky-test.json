@@ -1,0 +1,15 @@
+{
+  "kladny": {
+    "datum": "2026-11-25", "odberatel": "Modelový zákazník Alfa TEST",
+    "polozky": [
+      {"popis": "Cvičná projekční práce", "mnozstvi": "2.50", "jednotka": "HUR", "cena_CZK": "410.25", "sazba": "21"},
+      {"popis": "Cvičný materiál", "mnozstvi": "3", "jednotka": "C62", "cena_CZK": "15.50", "sazba": "21"}
+    ]
+  },
+  "zaporny": {
+    "datum": "2026-11-25", "odberatel": "Modelový zákazník Beta TEST",
+    "polozky": [
+      {"popis": "Cvičná diagnostická práce", "mnozstvi": "1.75", "jednotka": "HUR", "cena_CZK": "210.50", "sazba": "21"}
+    ]
+  }
+}
