@@ -42,6 +42,11 @@ if ! echo "$(cat "$work/bao.sha256")  $work/bin/bao" | sha256sum --check --statu
     install -m 0755 "$tmp/bao" "$work/bin/bao"
 fi
 install -m 0644 "$src"/polarita-openbao-{start,agenti}.{service,timer} /etc/systemd/system/
+# Starší TEST uložil stejný dvanáctiminutový limit do lokálního přepisu jednotky.
+old=/etc/systemd/system/polarita-openbao-agenti.service.d/cas-test.conf
+if [[ -f $old ]] && printf '[Service]\nTimeoutStartSec=12min\n' | cmp -s - "$old"; then
+    rm -- "$old"
+fi
 systemctl daemon-reload
 bash "$src/klic.sh"
 systemctl start polarita-openbao-start.service
