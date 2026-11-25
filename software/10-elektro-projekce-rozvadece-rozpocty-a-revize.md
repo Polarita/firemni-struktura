@@ -54,6 +54,10 @@ Jsi správce serveru (17003 spravce-site) ve spolupráci s hlavním vývojářem
    - Striktně v dokumentaci i konfiguraci odděl AEC sadu CadCraft (getcadcraft.com) od samostatného kreativního nástroje ArtCraft (getartcraft.com), který slouží výhradně pro grafiku a vizuály oddělení 12 a 13 a nikdy není označován za CAD/BIM software.
 ```
 
+### Zkouška nativního schématu QElectroTech
+
+Instalátor v `polarita-hq` ověří kontrolní součet vydání QElectroTech 0.100 a připraví zastavenou šablonu s virtuálním displejem. Pro zkoušku vytvoří dočasný kontejner bez sítě. V editoru pod běžným účtem otevře schéma 741, přes **Uložit jako** zapíše nový soubor a porovná polohu značek i propojené svorky na každém listu. Oba soubory a jejich SHA-256 uloží do důkazů bloku 10. [Instalační zkouška](../nasazeni/test/qet/schema.sh)
+
 ### Ověření měřítka PDF v pracovní VM
 
 Do příjmu karantény vlož obsah souboru přes `prijem.py dxf`, `prijem.py dwg` nebo `prijem.py ifc`. Instalátor sestaví nástroje GNU LibreDWG 0.14 z archivu ověřeného podle SHA-256. Pro zkoušku DWG vytvoří binární vzor R2000 a po převodu změří poměr stran vykresleného obdélníku. Potvrzené ID propojuje originál, protokol antivirové kontroly i výsledný půdorys. Bezsíťový pracovník předá vykreslené PDF do Dangerzone a ověří, že z rekonstrukce vyšla pasivní rastrová kopie. Každé další měření svázané s tímto výstupem vyžaduje jeho vlastní SHA-256.

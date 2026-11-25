@@ -379,10 +379,12 @@ web() {
 }
 
 vykresy() {
+    "${guest[@]}" bash "$dest/nasazeni/test/qet/schema.sh" | tee "$tmp/qet-schema.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/cad/offline.sh" | tee "$tmp/cad-vykresy.txt"
     local cad_verze
     cad_verze=$(bash nasazeni/test/cad/offline.sh --revize)
     "${guest[@]}" python3 "$dest/nasazeni/test/cad/tok.py" "$cad_verze" | tee -a "$tmp/cad-vykresy.txt"
+    cat "$tmp/qet-schema.txt" >> "$tmp/cad-vykresy.txt"
     "${inc[@]}" file push --project polarita "$tmp/cad-vykresy.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-10/cad-vykresy-$commit.txt"
     "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 10 "$commit" cad-vykresy
 }
