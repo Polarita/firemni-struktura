@@ -27,7 +27,8 @@ def objednej(call, token, fixtures):
 
     state = json.loads(STATE.read_text()) if STATE.exists() else {}
     region = fixtures["region_id"]
-    product = store("GET", "products/" + fixtures["product_id"] + "?" + urlencode({"region_id": region}))["product"]
+    pricing = urlencode({"region_id": region, "fields": "id,variants.id,variants.sku,*variants.calculated_price"})
+    product = store("GET", "products/" + fixtures["product_id"] + "?" + pricing)["product"]
     variants = [v for v in product["variants"] if v["sku"] == "POL-TEST-PASKA-01"]
     if len(variants) != 1 or variants[0]["calculated_price"]["calculated_amount"] != 80:
         raise RuntimeError("Zákazník nemá správnou variantu nebo cenu.")
