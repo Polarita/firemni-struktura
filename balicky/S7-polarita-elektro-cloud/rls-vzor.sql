@@ -1,5 +1,5 @@
 -- =====================================================================================
--- rls-vzor.sql — Polarita Elektro Cloud · Blok 19 (S7) · Verze 3.27.1 (Polarita-3.27.1)
+-- rls-vzor.sql — Polarita Elektro Cloud · Blok 19 (S7) · Verze 3.28 (Polarita-3.28)
 --
 -- EN: This design pattern passed its assertions on disposable PostgreSQL 18.7.
 -- CZ: Tento návrhový vzor prošel kontrolami na dočasné instanci PostgreSQL 18.7.
