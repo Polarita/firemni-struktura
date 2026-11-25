@@ -10,6 +10,11 @@ incus file push --mode=0644 "$src/nginx.conf" "$vm/etc/nginx/sites-available/.po
 "${inside[@]}" bash -se <<'WEB'
 set -euo pipefail
 cd /etc/nginx
+# Moodle porovnává kanonický port s FastCGI SERVER_PORT ještě před obsluhou přihlášení.
+# Ponech systémové parametry včetně sanitizace Host a nahraď pouze port této VPN služby.
+awk '$1 == "fastcgi_param" && $2 == "SERVER_PORT" { $3="8451;"; count++ } { print } END { if (count != 1) exit 1 }' \
+    fastcgi_params >polarita-akademie-fastcgi.conf.next
+mv -T polarita-akademie-fastcgi.conf.next polarita-akademie-fastcgi.conf
 mv -T sites-available/.polarita-akademie-next sites-available/polarita-akademie
 if [[ -L sites-enabled/default && $(readlink -f sites-enabled/default) == /etc/nginx/sites-available/default ]]; then
     unlink sites-enabled/default
@@ -38,8 +43,9 @@ origin=$("${inside[@]}" cat /etc/polarita-akademie/url)
 [[ $origin =~ ^https://[a-z0-9.-]+\.ts\.net:8451$ ]]
 tmp=$(mktemp)
 trap 'unlink "$tmp"' EXIT
-curl --silent --show-error --fail --retry 2 --retry-connrefused --max-time 120 -H "Host: ${origin#https://}" \
-    http://10.239.32.24:8080/login/index.php -o "$tmp"
+status=$(curl --silent --show-error --fail --retry 2 --retry-connrefused --max-time 120 -H "Host: ${origin#https://}" \
+    http://10.239.32.24:8080/login/index.php -o "$tmp" -w '%{http_code}')
+[[ $status == 200 ]] || { echo "Přihlašovací formulář Moodle vrátil HTTP $status." >&2; exit 1; }
 grep -q 'name="logintoken"' "$tmp"
 grep -q 'name="username"' "$tmp"
 echo 'Nginx a PHP-FPM zobrazily skutečný přihlašovací formulář Moodle v interní síti.'
