@@ -50,6 +50,20 @@ if [[ -d $out/$recipe ]]; then
     cmp "$pending/SHA256SUMS" "$out/$recipe/SHA256SUMS"
     (cd "$out/$recipe" && sha256sum -c --status SHA256SUMS)
 else
+    # Při změně pravidel CI mohou program i knihovna zůstat bajtově totožné.
+    # Reflink ponechá nové revizi vlastní soubor a předchozí revizi lze číst samostatně.
+    for file in aigiscode lib/libkuzu.so; do
+        previous="$out/current/$file"
+        if [[ -f $previous ]] && cmp -s "$previous" "$pending/$file"; then
+            if cp --reflink=always -- "$previous" "$pending/.klon"; then
+                chmod --reference="$pending/$file" "$pending/.klon"
+                mv -T "$pending/.klon" "$pending/$file"
+            else
+                rm -f -- "$pending/.klon"
+            fi
+        fi
+    done
+    (cd "$pending" && sha256sum -c --status SHA256SUMS)
     mv -T "$pending" "$out/$recipe"
 fi
 # Konstantní cesty v RPATH a v runneru vždy odkazují do jediné úplné revize.
