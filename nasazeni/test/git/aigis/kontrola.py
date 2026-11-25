@@ -28,10 +28,14 @@ def check(root, output):
     result, report, guard = analyze(root, output)
     reports = [report]
     if result.returncode:
-        expected = "native input coverage is incomplete; see input_coverage and semantic-graph.json parse_outcomes"
-        blocks = [item for item in guard["triggers"] if item["level"] == "Block"]
-        if (result.returncode != 1 or result.stderr.strip() != expected or len(blocks) != 1
-                or set(blocks[0]["provenance"]) != {"semantic_graph.parse_outcomes", "summary.input_coverage"}):
+        expected = ["native input coverage is incomplete; see input_coverage and semantic-graph.json parse_outcomes"]
+        reasons = [("semantic_graph.parse_outcomes", "summary.input_coverage")]
+        orphan = report["dead_code"]["backend_orphan_coverage"]
+        if orphan["status"] == "deferred_input_coverage" and orphan["gap_count"] == 0:
+            expected.append("Backend orphan analysis is deferred because native input coverage is incomplete.")
+            reasons.append(("dead_code.backend_orphan_coverage",))
+        blocks = [tuple(sorted(item["provenance"])) for item in guard["triggers"] if item["level"] == "Block"]
+        if result.returncode != 1 or result.stderr.splitlines() != expected or sorted(blocks) != sorted(reasons):
             raise RuntimeError("Úplná kontrola neuspěla také mimo evidenci nepodporovaných jazyků")
         coverage = report["input_coverage"]
         if (coverage["status"] != "incomplete" or not coverage["unsupported_source_files"]
@@ -53,6 +57,10 @@ def check(root, output):
         target.mkdir()
         result, report, guard = analyze(projection, target)
         reports.append(report)
+        if orphan["status"] == "deferred_input_coverage":
+            completed = report["dead_code"]["backend_orphan_coverage"]
+            if completed["status"] != "complete" or completed["gap_count"]:
+                raise RuntimeError("Opakovaná analýza nedokončila kontrolu osiřelých backendových souborů")
         second = json.loads((target/"semantic-graph.json").read_bytes())
         if graph["files"] != second["files"]:
             raise RuntimeError("Opakovaná analýza změnila seznam podporovaných zdrojů")

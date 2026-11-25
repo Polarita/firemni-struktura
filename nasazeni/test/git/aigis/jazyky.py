@@ -48,8 +48,8 @@ def sql(text):
             else:
                 raise ValueError("Nepodporovaný nebo neplatný příkaz psql: " + name)
         else:
-            # psql odesílá příkaz končící gset stejně jako při středníku.
-            line = re.sub(r"\s+\\gset\s*$", ";", line)
+            # Obě zakončení psql odešlou SQL serveru. Cíl výstupu při kontrole neotevíráme.
+            line = re.sub(r"\s+\\(?:gset|g[ \t]+/dev/null)\s*$", ";", line)
             line = re.sub(r"(?<!:):'([A-Za-z_][A-Za-z_0-9]*)'", "'test'", line)
             statements.append(line)
     if conditions:

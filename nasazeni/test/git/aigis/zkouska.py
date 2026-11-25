@@ -13,14 +13,15 @@ with tempfile.TemporaryDirectory() as temporary:
     second = root/"druhy.py"
     second.write_text('def odpoved(n):\n    return n + 1\n')
     if "--jazyky" in sys.argv:
+        (root/"index.php").write_text('<?php echo "TEST";\n')
         (root/"vstup.sh").write_text("#!/bin/sh\ntrue\n")
         (root/"web.astro").write_text("---\nconst hello = 1;\n---\n<p>{hello}</p>")
-        (root/"dotaz.sql").write_text("SELECT 1;\n")
+        (root/"dotaz.sql").write_text("SELECT 1 \\g /dev/null\nSELECT 2 \\gset\n")
         (root/"zdroj.go").write_text("package test\nfunc hodnot() int { return 1 }\n")
         (root/"Ukazka.java").write_text("class Ukazka { int hodnota() { return 1; } }\n")
     subprocess.run([sys.executable, gate, root], check=True)
     if "--jazyky" in sys.argv:
-        for name, bad in (("web.astro","---\nconst hello = ;\n---\n<p />"), ("vstup.sh","if then"),("dotaz.sql","SELECT FROM;"),
+        for name, bad in (("web.astro","---\nconst hello = ;\n---\n<p />"), ("vstup.sh","if then"),("dotaz.sql","SELECT FROM \\g /dev/null"),
                           ("zdroj.go","package test }"),("Ukazka.java","class Ukazka { ??? }")):
             source = root/name
             original = source.read_bytes()
