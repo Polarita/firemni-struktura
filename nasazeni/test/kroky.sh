@@ -306,6 +306,12 @@ predani() {
     "${inc[@]}" file push --project polarita "$tmp/restic.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-06/restic-$commit.txt"
     "${guest[@]}" python3 "$dest/nasazeni/test/pamet/podklady.py" --predat | tee "$tmp/prenos-dokladu.json"
     "${inc[@]}" file push --project polarita "$tmp/prenos-dokladu.json" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/prenos-dokladu-$commit.json"
+    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/predavka_dokladu.py" <"$tmp/prenos-dokladu.json" | tee "$tmp/prenos-dokladu.txt"
+    "${inc[@]}" file push --project polarita "$tmp/prenos-dokladu.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/prenos-dokladu-$commit.txt"
+    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 08 "$commit" prenos-dokladu >"$tmp/prenos-do-pameti.jsonl"
+    "${guest[@]}" systemctl start polarita-silverbullet-export.service
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
+        python3 nasazeni/test/silverbullet/zkouska_prihlaseni.py "$fqdn" --predavky "$tmp/prenos-do-pameti.jsonl"
     # Starší vydání vytvořilo přímý vstup. Odstraň ho až po ověření nové cesty.
     if [[ $("${guest[@]}" incus config device get reditelstvi-test portal listen 2>/dev/null || true) == tcp:127.0.0.1:18182 ]]; then
         "${guest[@]}" incus config device remove reditelstvi-test portal
