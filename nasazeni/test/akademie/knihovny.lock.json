@@ -1,0 +1,242 @@
+{
+  "aws/aws-crt-php": {
+    "reference": "d71d9906c7bb63a28295447ba12e74723bd3730e",
+    "sha256": "82c04ea2c7985f06e5a1ef4ba56a231e8ac051d490796c406c821c253f6d38be"
+  },
+  "aws/aws-sdk-php": {
+    "reference": "5b3f65a158a0e822586d110192ee78c6565b4f06",
+    "sha256": "3d84f90da5fecf94320ae71375fa770124524ebdb0c84d1609c53dd268c0a79c"
+  },
+  "composer/ca-bundle": {
+    "reference": "0c8abba0634f637bd78c4e451981da368d403463",
+    "sha256": "f74b2ae8cc0f344dda60ba200a259143c0795b3eb408a4cb94a8f77021f55ead"
+  },
+  "composer/pcre": {
+    "reference": "b2bed4734f0cc156ee1fe9c0da2550420d99a21e",
+    "sha256": "c2b9daddc8d3341c50fc91eeecabb2b8f2a0fbd81e02b8b93ae22c35b61639b2"
+  },
+  "defuse/php-encryption": {
+    "reference": "f53396c2d34225064647a05ca76c1da9d99e5828",
+    "sha256": "1f5fd23a62c48996bc5d0d2fa9f3c8db5462cb36a511803fdae1559bb8b595bc"
+  },
+  "ezyang/htmlpurifier": {
+    "reference": "b287d2a16aceffbf6e0295559b39662612b77fcf",
+    "sha256": "78926fd6bbc5e75670297cbb0466f41cb0144782f77ac77c5b2c786e5d492ecd"
+  },
+  "firebase/php-jwt": {
+    "reference": "d1e91ecf8c598d073d0995afa8cd5c75c6e19e66",
+    "sha256": "8e5537059edd732e95c67f221a5a059f5dc008a94c4305ace8de84bb11375b0d"
+  },
+  "geoip2/geoip2": {
+    "reference": "b7aa58760a6bf89a608dd92ee2d9436b52557ce2",
+    "sha256": "d47fccb1e2712b301d561abfa6ed1d69487129ee45b68ae51a600ecc88467965"
+  },
+  "guzzlehttp/guzzle": {
+    "reference": "b51ac707cfa420b7bfd4e4d5e510ba8008e822b4",
+    "sha256": "bb1961cc5df51f89e6d078f84f8394dcee1e8e3a5cc860428a4ca383fbdf80d8"
+  },
+  "guzzlehttp/promises": {
+    "reference": "481557b130ef3790cf82b713667b43030dc9c957",
+    "sha256": "4e03bff9b9335b428ae5f39325ea22b82646392db99806181c029d8c2d520e99"
+  },
+  "guzzlehttp/psr7": {
+    "reference": "21dc724a0583619cd1652f673303492272778051",
+    "sha256": "5fba2920fe8b47ea272cfa00e728fbdc3b612f96f10a8ea95859413de37a19c2"
+  },
+  "html2text/html2text": {
+    "reference": "3b443cbe302b52eb5806a21a9dbd79524203970a",
+    "sha256": "f2c9382bca54c6a8b3157fc8fe57ba65d4317f2e9ad7078095f85feb968b0265"
+  },
+  "kevinrob/guzzle-cache-middleware": {
+    "reference": "3d63aaf136c5a52ce751a63c2169b3a49b26841f",
+    "sha256": "46530b0bfb3ded27ba97b66ab21a508d925b9133fc690e29de25df4e0685a65f"
+  },
+  "laravel/serializable-closure": {
+    "reference": "7cfc24e4fa2cca045fb8dd2a797a2b2b13b655ed",
+    "sha256": "5374fc7e8577209d98f3230307a8c4f8e5d795f86506cdb23c070cdc3d982f51"
+  },
+  "lbuchs/webauthn": {
+    "reference": "20adb4a240c3997bd8cac7dc4dde38ab0bea0ed1",
+    "sha256": "feeb913eb4c325ef181514d5feab41ad24784961a4581ae5e69148c975d20e8f"
+  },
+  "lcobucci/jwt": {
+    "reference": "bb3e9f21e4196e8afc41def81ef649c164bca25e",
+    "sha256": "cc3e977011f08b854c04817b55bbc52889fd207b71e873ae10ba55f46c7f4e14"
+  },
+  "league/event": {
+    "reference": "ec38ff7ea10cad7d99a79ac937fbcffb9334c210",
+    "sha256": "4f66a741a7a3ef6d8183d1bb3194896d0db444832c02cb0b5d99835f884ac96a"
+  },
+  "league/oauth2-server": {
+    "reference": "9d2f6fc0a0b5aa1bb02506971d3a4ecff2c6526c",
+    "sha256": "68510197f10a326d498c1b699cb75f8432a46eb50497385adbd9b522524c296b"
+  },
+  "league/uri": {
+    "reference": "08cf38e3924d4f56238125547b5720496fac8fd4",
+    "sha256": "7b2f3f64531b576a74ab0932903de0ba0f5937e4044d053c87c672094f487dc9"
+  },
+  "league/uri-interfaces": {
+    "reference": "85d5c77c5d6d3af6c54db4a78246364908f3c928",
+    "sha256": "3d1f73528daae322e093f25b7ff6cc82b5f5553cd41b803999dff125ad073f98"
+  },
+  "maennchen/zipstream-php": {
+    "reference": "9712d8fa4cdf9240380b01eb4be55ad8dcf71416",
+    "sha256": "a80c5fecc19dcbebd01e42c59f6722fa634f7efdd8d016beef0995dd11433d3c"
+  },
+  "matthiasmullie/minify": {
+    "reference": "76ba4a5f555fd7bf4aa408af608e991569076671",
+    "sha256": "562e545ffda4adba9c46a2fafed27d7a6f99b8d51fe0a56b781f4325289cd679"
+  },
+  "matthiasmullie/path-converter": {
+    "reference": "e7d13b2c7e2f2268e1424aaed02085518afa02d9",
+    "sha256": "79481872937049d0ec74da0ce18fc292df3eb7531dbf867c824437be8ad9822c"
+  },
+  "maxmind-db/reader": {
+    "reference": "815939e006b7e68062b540ec9e86aaa8be2b6ce4",
+    "sha256": "3c9a2c98c392b35055cdc3e47b1df8f2b3d4944c5aa36a100000aea333513b4b"
+  },
+  "maxmind/web-service-common": {
+    "reference": "c309236b5a5555b96cf560089ec3cead12d845d2",
+    "sha256": "9398b7ab1aaec21cf2b73420db99d8462e8fc813aeb4d1439e5cc100a8a52766"
+  },
+  "michelf/php-markdown": {
+    "reference": "eb176f173fbac58a045aff78e55f833264b34e71",
+    "sha256": "c3c37aacb00fa3e743798bb81be25384c8c55dc81660e1072ef18a3cf1090663"
+  },
+  "monolog/monolog": {
+    "reference": "10d85740180ecba7896c87e06a166e0c95a0e3b6",
+    "sha256": "f51c6e93e5542a857d010c857bbac3a913796f0426d2dfbfeb4a4d62f00e582e"
+  },
+  "mtdowling/jmespath.php": {
+    "reference": "a2a865e05d5f420b50cc2f85bb78d565db12a6bc",
+    "sha256": "a1d36dac3388f46ae5b91565b54aa9f07df104e29486bc6ba6422c770a3f3b4b"
+  },
+  "mustache/mustache": {
+    "reference": "176b6b21d68516dd5107a63ab71b0050e518b7a4",
+    "sha256": "410707085aa91c006820a92b9366e8a59827a598d1d0c001fe255b3e856066b6"
+  },
+  "nikic/fast-route": {
+    "reference": "181d480e08d9476e61381e04a71b34dc0432e812",
+    "sha256": "91dc73d089f6c9d77c189bd8df20c94144ff79c9c4a2429535cddc07ea8e586a"
+  },
+  "openspout/openspout": {
+    "reference": "41f045c1f632e1474e15d4c7bc3abcb4a153563d",
+    "sha256": "ab221c284b841c3d5509df8a01c1797dad8c2beb73c884b9d9baa8177edd5379"
+  },
+  "paragonie/random_compat": {
+    "reference": "996434e5492cb4c3edcb9168db6fbb1359ef965a",
+    "sha256": "ddcfc73490d9c864de6a52185058fb1f516cd2ba63869c4c7230b654a8a2c74f"
+  },
+  "php-di/invoker": {
+    "reference": "3c1ddfdef181431fbc4be83378f6d036d59e81e1",
+    "sha256": "a6d671bd379053b3a5db6aaf8320ca18d3adcca87dc2461f91d6127bf47c3d4e"
+  },
+  "php-di/php-di": {
+    "reference": "f88054cc052e40dbe7b383c8817c19442d480352",
+    "sha256": "039d923b4b2deff8d716c7fc9f7b5904bed2920324ec0e4ff2752fc7113df6b2"
+  },
+  "phpmailer/phpmailer": {
+    "reference": "2f5c94fe7493efc213f643c23b1b1c249d40f47e",
+    "sha256": "deade07e493a44c72e38ade564371e10aaba2e2d5e9e518cfdc7aafa9bc115bb"
+  },
+  "phpxmlrpc/phpxmlrpc": {
+    "reference": "06b9d7275d637f6859527091a54a5edfe8a16749",
+    "sha256": "effccf8cd3a79c3221a9f3933a7400eb74ddc559ce30094c402fe31f16cce37a"
+  },
+  "psr/cache": {
+    "reference": "aa5030cfa5405eccfdcb1083ce040c2cb8d253bf",
+    "sha256": "88d63083b654a7ca847e926fcf8e3c35b0a7dd1bde960d8674ba10b2b8f4361f"
+  },
+  "psr/clock": {
+    "reference": "e41a24703d4560fd0acb709162f73b8adfc3aa0d",
+    "sha256": "72a2682083efc51108e5d7d0e880d45d85236100692c86d093c3f6f9205ae573"
+  },
+  "psr/container": {
+    "reference": "c71ecc56dfe541dbd90c5360474fbc405f8d5963",
+    "sha256": "3111f5b69d3a0f690f5f92d7aeacfb247f5ebd3c175088cce4b098e5d1b06ad7"
+  },
+  "psr/event-dispatcher": {
+    "reference": "dbefd12671e8a14ec7f180cab83036ed26714bb0",
+    "sha256": "4d6a674cfd89a9957ead82e31ee4df785b2b1d215693add73184729a9a66d116"
+  },
+  "psr/http-client": {
+    "reference": "bb5906edc1c324c9a05aa0873d40117941e5fa90",
+    "sha256": "5d3fc583e721d451a0cc2073680476236199cd1680a0d9da1756e8152496deb5"
+  },
+  "psr/http-factory": {
+    "reference": "2b4765fddfe3b508ac62f829e852b1501d3f6e8a",
+    "sha256": "a3c397252b6c1c15e60ad6fae927d61edbf4059f3473080bb1b3b40deabf80d2"
+  },
+  "psr/http-message": {
+    "reference": "402d35bcb92c70c026d1a6a9883f06b2ead23d71",
+    "sha256": "d561d2c36e2e3c0ee8b54e0e9652b3bfa13cd763e5e6f93400969001f3a7968d"
+  },
+  "psr/http-server-handler": {
+    "reference": "84c4fb66179be4caaf8e97bd239203245302e7d4",
+    "sha256": "b4e05ba08e4a03f66b4a94936bf0a4f8f885f69bfe64d770a0c867d64340aa31"
+  },
+  "psr/http-server-middleware": {
+    "reference": "c1481f747daaa6a0782775cd6a8c26a1bf4a3829",
+    "sha256": "4bc24a30f219b1eb46f8f175fe27e125cf8b029d4ce3e6c4f34b2429c6877b82"
+  },
+  "psr/log": {
+    "reference": "f16e1d5863e37f8d8c2a01719f5b34baa2b714d3",
+    "sha256": "1e8dcf2df933fc3440b29146c5ca4e93ece51c5c7a9ac9653d926ec971c90892"
+  },
+  "psr/simple-cache": {
+    "reference": "764e0b3939f5ca87cb904f570ef9be2d78a07865",
+    "sha256": "e899e363a85c26b3f1a621182b6eed2a37a71d823410ac949a1cbfd4b655ec41"
+  },
+  "ralouphie/getallheaders": {
+    "reference": "120b605dfeb996808c31b6477290a714d356e822",
+    "sha256": "ef0165da5690da666ab4cb88bb4cec0d50372e3e7c922532c5795a3567b367af"
+  },
+  "redeyeventures/geopattern": {
+    "reference": "734369fad6460dc0ee841d280ce766367c56bfa6",
+    "sha256": "264410ecd844003273696be299ac82139c8ad933c524dd8eb9c153b090260ede"
+  },
+  "simplepie/simplepie": {
+    "reference": "76cccb1b2c5dcaf44f304c925ab30c0f48643992",
+    "sha256": "8ea2655a4d148d825b38054783018e7e9ba52621328ae80d3ca338709fa2ca85"
+  },
+  "slim/slim": {
+    "reference": "e12cb05ca2a14e8f459d019e87a31dc915b80470",
+    "sha256": "49395510f180140ad3781616eb2b30d448c3e4fb3e462eb42d5a25b8c911284e"
+  },
+  "spatie/php-cloneable": {
+    "reference": "6e40ee757f1c1e17fdc1a5561669f6137c81e167",
+    "sha256": "2ff4abc139592e3d119c759f0610e668db186accffff6d9323a1a82b1a89d154"
+  },
+  "symfony/console": {
+    "reference": "23d6f88a29f6d0eac45bd77d70307adf83ba7ab0",
+    "sha256": "e043aff4827b0ceb3c8741bd8a1e63c1a337278eaa2a5dc6b28c2bd7728d7a7b"
+  },
+  "symfony/deprecation-contracts": {
+    "reference": "63afe740e99a13ba87ec199bb07bbdee937a5b62",
+    "sha256": "7e357a38d42e163006ee3d5131aeabb81b3634167dc159023563a131ab969fae"
+  },
+  "symfony/polyfill-ctype": {
+    "reference": "141046a8f9477948ff284fa65be2095baafb94f2",
+    "sha256": "922b0c6b24d1bcb6447d051edc1fc4526bcca5f88ddc4a27d885507872ceecc1"
+  },
+  "symfony/polyfill-intl-grapheme": {
+    "reference": "bb899c1db0aa8127dc3afe8cda4a67eb24915f8d",
+    "sha256": "e789490fbac9691af1127a269a45f86ebe676b71d90551790dea2329184340db"
+  },
+  "symfony/polyfill-intl-normalizer": {
+    "reference": "aa20edea75bd9c48cfecc8360922e5a6e5c44502",
+    "sha256": "495d2be5618ae41b1dbb7424b5e40128c01dc8ec00294f12d6dd23d199e3c2df"
+  },
+  "symfony/polyfill-mbstring": {
+    "reference": "d3d318bad5e7a1bfbd026009c8bfb8d8f99ae6b6",
+    "sha256": "36b2903d9d9b319bdcf6ec968604ad4bbfa0aabc1f9088ac18c8f633c6e76d31"
+  },
+  "symfony/service-contracts": {
+    "reference": "15e6a07ec2a2c75ceb1b21dd98105ee8456d2257",
+    "sha256": "ec305155895d781bc8bec81011a35dea55c88f849b2a6a2e0b689195f4b0f66d"
+  },
+  "symfony/string": {
+    "reference": "e394af32256bf9e7bf80849d95e589167c10097b",
+    "sha256": "ffa214d0371e808d275031ed6c243b5ebce857b66f24cb52fa57f5dbd6552182"
+  }
+}
