@@ -15,6 +15,10 @@ run=(systemd-run --quiet --pipe --wait --collect --service-type=exec)
 python=("$dir/sdk/bin/python" -Es "$dir/cli.py")
 case ${1:-} in
     get-context) exec "${run[@]}" "${common[@]}" "${python[@]}" "$@" ;;
+    prijmi-doklady)
+        [[ $# == 1 && $actor == instalace ]]
+        exec "${run[@]}" "${common[@]}" -p ReadWritePaths=/srv/polarita/vault "${python[@]}" "$@"
+        ;;
     log|adr) exec "${run[@]}" "${common[@]}" -p ReadWritePaths=/srv/polarita/vault "${python[@]}" "$@" ;;
     search|index)
         # Jediná aktivní inference sdílí dostupnou paměť VM mezi dvaceti rolemi.

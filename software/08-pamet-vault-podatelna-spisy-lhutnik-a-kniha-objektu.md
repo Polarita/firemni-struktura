@@ -5,7 +5,7 @@ Tento dokument definuje znalostní, podatelní, spisovou, komunikační, dispeč
 ---
 
 
-Při přípravě přenosu bloků 0–7 vytvoří `nasazeni/test/pamet/podklady.py` na soukromém šifrovaném datasetu pracovní kopii. U každého dokladu zaznamená původní SHA-256 a u přijaté kopie i výsledný SHA-256. Z terminálových výpisů odstraní barevné značky. U párové SMTP zkoušky nahradí vygenerované místní a externí adresy jejich rolí a zachová skutečné odpovědi serveru. Nezpracované nálezy zůstanou evidované v neveřejném indexu.
+Při přípravě přenosu bloků 0–7 vytvoří `nasazeni/test/pamet/podklady.py` na soukromém šifrovaném datasetu pracovní kopii. U každého dokladu zaznamená původní SHA-256 a u přijaté kopie i výsledný SHA-256. Z terminálových výpisů odstraní barevné značky. U párové SMTP zkoušky nahradí vygenerované místní a externí adresy jejich rolí a zachová skutečné odpovědi serveru. Nezpracované nálezy zůstanou evidované v neveřejném indexu. Při předání volba `--predat` uchová originály v neměnném snímku workspace, porovná je se soukromým indexem a pošle celou připravenou sadu do `agent_vault prijmi-doklady`. Znalostní účet zapíše osm složek do `07-IT-a-Architektura/` jedním commitem a zpětně načte každý objekt z Gitu pro kontrolu SHA-256.
 
 Po úspěchu zkoušek úkolovníku, příjmu a archivace PDF, knihy objektu a webu zapíše instalátor výsledek přes `agent_vault log` do oblasti `08-Deniky-a-Predavky`. Předávka obsahuje zdrojovou revizi, SHA-256 a přesný výstup zkoušky. Účet `11001` přečte uloženou stránku v režimu SHADOW. Instalátor porovná její obsah včetně zakončení řádků se zdrojovým protokolem.
 

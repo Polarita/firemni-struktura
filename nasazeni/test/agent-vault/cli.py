@@ -13,6 +13,7 @@ def main():
     q.add_argument("query")
     q.add_argument("--limit",type=int,default=5)
     commands.add_parser("index")
+    commands.add_parser("prijmi-doklady")
     args = p.parse_args()
     if args.action=="get-context":
         rev, entries = snapshot()
@@ -27,6 +28,9 @@ def main():
         if len(data)>32768:
             raise ValueError("Záznam přesahuje 32 KiB.")
         result = record(args.action,args.key,data.decode("utf-8"))
+    elif args.action=="prijmi-doklady":
+        from doklady import prijmi
+        result = prijmi(sys.stdin.buffer)
     elif args.action=="index":
         from hledani import refresh
         result = {"revize":refresh()}

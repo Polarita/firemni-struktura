@@ -304,6 +304,8 @@ predani() {
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn" --dohled --paperclip --zulip --decisions
     "${inc[@]}" file push --project polarita "$tmp/dohled.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-06/dohled-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/restic.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-06/restic-$commit.txt"
+    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/podklady.py" --predat | tee "$tmp/prenos-dokladu.json"
+    "${inc[@]}" file push --project polarita "$tmp/prenos-dokladu.json" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/prenos-dokladu-$commit.json"
     # Starší vydání vytvořilo přímý vstup. Odstraň ho až po ověření nové cesty.
     if [[ $("${guest[@]}" incus config device get reditelstvi-test portal listen 2>/dev/null || true) == tcp:127.0.0.1:18182 ]]; then
         "${guest[@]}" incus config device remove reditelstvi-test portal

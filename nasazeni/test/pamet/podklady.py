@@ -1,5 +1,6 @@
-"""Připraví neveřejnou přejímku důkazů 0–7. Zdroj ani znalostní Git nemění."""
+"""Připraví neveřejnou přejímku důkazů 0–7 a na vyžádání předá ověřenou sadu do Vaultu."""
 from collections import Counter
+import argparse
 import fcntl
 import hashlib
 import json
@@ -11,6 +12,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import tarfile
 
 from kontrola import HOOKS, MAIL, SEALS, Refused, inspect_text
 
@@ -128,9 +130,58 @@ def priprav(vystup):
     return Counter(rec["stav"] for rec in records)
 
 
+def predej(saved, digest):
+    records = json.loads((saved/"index.json").read_bytes())
+    if any("cil_sha256" not in rec for rec in records):
+        raise ValueError("Předávka obsahuje nevyřešený soukromý nález.")
+    dataset = "polarita_zfs/workspace"
+    if subprocess.check_output(["findmnt", "-no", "SOURCE", "-T", ZDROJ], text=True).strip() != dataset:
+        raise ValueError("Nesouhlasí zdrojový dataset přejímky.")
+    name = "doklady-" + digest
+    snap = dataset + "@" + name
+    with (saved.parent/".predani.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        existing = subprocess.check_output(["zfs", "list", "-H", "-d", "1", "-t", "snapshot",
+                                           "-o", "name", dataset], text=True).splitlines()
+        if snap not in existing:
+            subprocess.run(["zfs", "snapshot", snap], check=True)
+        source = ZDROJ.parent / ".zfs/snapshot" / name / ZDROJ.name
+        paths = {p.relative_to(source).as_posix() for i in range(8)
+                 for p in (source/f"blok-{i:02}").rglob("*") if not p.is_dir() or p.is_symlink()}
+        if paths != {r["cesta"] for r in records}:
+            raise ValueError("Zdroj se během přípravy změnil. Zopakuj přejímku.")
+        password = (SOUKROME / "test-login/heslo").read_bytes().strip()
+        if not password:
+            raise ValueError("Chybí ověřovací údaj TEST.")
+        with tempfile.TemporaryFile(dir=saved.parent) as pack:
+            with tarfile.open(fileobj=pack, mode="w") as tar:
+                for rec in records:
+                    path = rec["cesta"]
+                    if hashlib.sha256((source/path).read_bytes()).hexdigest() != rec["zdroj_sha256"]:
+                        raise ValueError("Zdroj přejímky se změnil před snímkem.")
+                    with (saved/"soubory"/path).open("rb") as f:
+                        data = f.read()
+                        if hashlib.sha256(data).hexdigest() != rec["cil_sha256"] or password in data:
+                            raise ValueError("Neplatná pracovní kopie přejímky.")
+                        item = tarfile.TarInfo(path)
+                        item.size = len(data)
+                        f.seek(0)
+                        tar.addfile(item, f)
+            pack.seek(0)
+            result = subprocess.run(["/usr/local/bin/agent_vault", "prijmi-doklady"], stdin=pack,
+                                    stdout=subprocess.PIPE, check=True)
+        proof = json.loads(result.stdout)
+        if proof["bloky"] != 8 or proof["overene_soubory"] != len(records):
+            raise RuntimeError("Agent nepotvrdil přijetí celé sady.")
+        return dict(proof, snimek=snap)
+
+
 if __name__ == "__main__":
     if os.geteuid() or os.uname().nodename.split(".")[0] != "polarita-hq":
         sys.exit("Přejímka patří na polarita-hq.")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--predat", action="store_true", help="Ulož kompletní prověřenou sadu do Vaultu.")
+    args = parser.parse_args()
     os.umask(0o077)
     if subprocess.check_output(["findmnt","-no","SOURCE","-T",SOUKROME], text=True).strip() != "polarita_zfs/data/bootstrap-test":
         sys.exit("Chybí soukromý dataset.")
@@ -155,4 +206,7 @@ if __name__ == "__main__":
     except BaseException:
         shutil.rmtree(dst, ignore_errors=True)
         raise
-    print(json.dumps({"pracovni_kopie": str(saved), "vysledek": result}, ensure_ascii=False))
+    report = {"pracovni_kopie": str(saved), "vysledek": result}
+    if args.predat:
+        report["predani"] = predej(saved, digest)
+    print(json.dumps(report, ensure_ascii=False))
