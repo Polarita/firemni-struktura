@@ -12,13 +12,17 @@ jobs:
       - name: Ověřit zdroje a sestavit tiskové dokumenty
         env:
           POLARITA_PDF_BROWSER: /usr/bin/google-chrome
+          POLARITA_REQUIRE_BROWSER: "1"
         run: |
           set -euo pipefail
           test "$GITHUB_REF_NAME" = "$(python -c 'import json; print(json.load(open("nastroje/kanon.json"))["release_tag"])')"
           python -m venv "$RUNNER_TEMP/pdf-env"
           source "$RUNNER_TEMP/pdf-env/bin/activate"
           pip install -r nastroje/requirements.txt -r balicky/S1-generator-cistopisu/requirements.txt
-          python -m unittest discover -s nastroje
+          bash nasazeni/test/zkouska-prubehu.sh
+          for suite in nastroje balicky/S1-generator-cistopisu balicky/S2-eval-suite balicky/S3-konfigurator-a-tarify; do
+            python -m unittest discover -s "$suite"
+          done
           python nastroje/check_consistency.py
           python nastroje/sync_prompt_core.py --check
           python nastroje/build_org_pdfs.py

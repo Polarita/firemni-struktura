@@ -1,4 +1,4 @@
-# Fronta 30min vývojové smyčky UI — pravidla · Blok 18 (S6) · Verze 3.23
+# Fronta 30min vývojové smyčky UI — pravidla · Blok 18 (S6) · Verze 3.24
 
 Tento dokument stanoví pravidla fronty drobných interních úprav ne-normového UI a tiskových sestav nad **`metadata-schema-kernel`**. Doplňuje řídicí dokument [`README.md`](README.md) (kapitola 2, pravidla 5–7). Spuštění smyčky ve VM `polarita-hq` a jeho výsledek se zaznamenají při přejímce Bloku 18.
 

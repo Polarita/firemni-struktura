@@ -28,6 +28,13 @@ prepare() {
 }
 prepare zram0 60-polarita-zulip.conf zstd 100
 prepare zram1 62-polarita-stavba.conf lz4 80
+# Při sestavení administrace dosáhla Medusa na hranici 192 MiB i s volnými zařízeními zram.
+src=$(cd "$(dirname "$0")" && pwd)
+budget=/etc/systemd/system/polarita-medusa-kompilace.service.d/50-zram.conf
+if ! cmp -s "$src/../medusa/zram.conf" "$budget"; then
+    install -D -m 0644 "$src/../medusa/zram.conf" "$budget"
+    systemctl daemon-reload
+fi
 if awk 'NR>1 && $1 !~ /^\/dev\/zram[0-9]+$/ {other=1} END {exit other}' /proc/swaps; then
     printf '%s\n' 'vm.swappiness = 120' > /etc/sysctl.d/62-polarita-zram.conf
     sysctl -q -p /etc/sysctl.d/62-polarita-zram.conf

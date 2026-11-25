@@ -63,7 +63,7 @@ portal() {
     "${guest[@]}" "$dest/nasazeni/test/hrana.sh"
     "${guest[@]}" curl -fsS --retry 4 --retry-connrefused -o /dev/null http://127.0.0.1:18184/
     sudo -n bash nasazeni/test/vstup.sh
-    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn"
+    over_vstup
 }
 
 sit() {
@@ -373,6 +373,7 @@ web() {
 }
 
 predani() {
+    python3 nasazeni/test/vydani.py "$commit"
     "${guest[@]}" systemctl start polarita-dohled-sber.service
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn" --dohled --paperclip --zulip --decisions --akademie
     "${inc[@]}" file push --project polarita "$tmp/dohled.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-06/dohled-$commit.txt"
@@ -394,7 +395,8 @@ predani() {
 
 kroky=(portal sit hesla postgres sluzby tym trezor databaze paperclip identita firemni_git rozhodnuti metadata obnova_databazi karantena zalohy dohled zulip obnova web predani)
 over_vstup() {
-    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn"
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn" || return $?
+    printf 'Ověřené přihlášení ve VPN: https://%s/ (účet spravce)\n' "$fqdn"
 }
 source nasazeni/test/prubeh.sh
 proved_kroky "${kroky[@]}"

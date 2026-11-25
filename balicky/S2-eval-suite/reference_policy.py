@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Deterministic reference policy for the Polarita Eval Suite (package S2, Version 3.23).
-Deterministická referenční politika pro Eval Suite Polarita (balíček S2, Verze 3.23).
+Deterministic reference policy for the Polarita Eval Suite (package S2, Version 3.24).
+Deterministická referenční politika pro Eval Suite Polarita (balíček S2, Verze 3.24).
 
 EN: Pure-Python, dependency-free implementation of the hard guards ("Hard-Stop", "FAIL_CLOSED",
     "Decisions") described in the Polarita blueprint. It is the mock tool layer used by the dry-run

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Synthetic stereo audio fixtures for the Polarita Eval Suite (package S2, Version 3.23).
-Syntetické stereo zvukové makety pro Eval Suite Polarita (balíček S2, Verze 3.23).
+Synthetic stereo audio fixtures for the Polarita Eval Suite (package S2, Version 3.24).
+Syntetické stereo zvukové makety pro Eval Suite Polarita (balíček S2, Verze 3.24).
 
 EN: Generates deterministic 16-bit PCM stereo WAV files (Channel L = external caller,
     Channel R = Polarita employee) from tone-burst profiles and measures a simple acoustic
