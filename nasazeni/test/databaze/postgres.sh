@@ -11,6 +11,7 @@ flock 8
 [[ $(zfs get -Hp -o value recordsize polarita_zfs/data/postgres) == 8192 ]]
 [[ $(zfs get -H -o value keystatus polarita_zfs/data/postgres) == available ]]
 install -d -m 0750 /srv/polarita/data/postgres/test
+install -d -m 0700 /srv/polarita/infra/metadata-test
 cd "$work/tofu"
 export TF_VAR_postgres_image=local:polarita-postgres-test-$(sha256sum "$src/postgres.lock.json" | cut -c1-16)
 install -m 0644 "$src/postgres.tf" "$src/../incus/providers.tf" "$src/../incus/.terraform.lock.hcl" .

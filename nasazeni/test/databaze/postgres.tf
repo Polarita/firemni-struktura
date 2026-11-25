@@ -33,4 +33,24 @@ resource "incus_instance" "postgres" {
       shift  = "true"
     }
   }
+  device {
+    name = "metadata-vystup"
+    type = "proxy"
+    properties = {
+      bind    = "host"
+      listen  = "unix:/srv/polarita/infra/metadata-test/api.sock"
+      connect = "unix:/run/polarita-metadata-test/api.sock"
+      mode    = "0600"
+    }
+  }
+  device {
+    name = "sanony-registr"
+    type = "proxy"
+    properties = {
+      bind    = "host"
+      listen  = "unix:/srv/polarita/infra/metadata-test/sanony.sock"
+      connect = "unix:/run/polarita-sanony-registr.sock"
+      mode    = "0600"
+    }
+  }
 }
