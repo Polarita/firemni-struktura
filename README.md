@@ -24,6 +24,8 @@ V přehledu **Spisy** můžeš založit testovací spis pro pobočku 101 nebo ho
 
 Po zprovoznění týmového chatu otevři Zulip ve firemní VPN na stejném jméně jako ředitelství s portem `8444`. Zvol **Ředitelství Polarity** a přihlas se testovacím účtem `spravce` přes Keycloak. Chat má osm soukromých kanálů útvarů. Přístup každého z dvaceti pracovních botů odpovídá jeho firemní kartě. Odkaz na chat se v přehledu objeví po úspěšném přihlášení správce. Instalace vloží do soukromého kanálu `17-it-secops` testovací zprávu s přílohou. Při zkoušce obnovy se kontroluje obsah přílohy i její vazba na původní zprávu.
 
+Po ověření Akademie otevři v přehledu **Otevřít firemní Akademii**. Odkaz vede na nástěnku Moodle ve stejné VPN na portu `8451`. Na přihlašovací stránce použij jméno **spravce** a stejné testovací heslo jako v ředitelství. Instalace odkaz přidá po zkoušce přihlášení, přístupu ke správě účtu a odhlášení.
+
 Po ověření analytiky v přehledu otevři **Otevřít návštěvnost webu v Umami**. Přihlas se jako **spravce** stejným testovacím heslem a vyber web **Ředitelství Polarity TEST**. V událostech najdeš pod názvem `prevzeti-sanonu` počet převzatých šanonů. Instalátor ověřuje, že tentýž denní součet může přečíst i reklamní nástroj `umami_conversions`.
 
 Po zkoušce retenčního e-mailingu najdeš v **Znalostní paměti** předávku s názvem `b09-ecomail`. V první kampani dostanou servisní nabídku dva vzoroví příjemci. Po odhlášení jednoho z nich má druhá kampaň jediného příjemce. Výsledek může útvar reklamy přečíst nástrojem `ecomail_list_campaigns`. Testovací zprávy zůstávají v místní schránce uvnitř `polarita-hq`.
