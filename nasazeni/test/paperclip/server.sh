@@ -46,14 +46,31 @@ SQL
 "${inside[@]}" systemctl daemon-reload
 "${inside[@]}" systemctl enable --now polarita-paperclip.timer
 "${inside[@]}" systemctl reset-failed polarita-paperclip.service
-"${inside[@]}" systemctl restart polarita-paperclip.service
+"${inside[@]}" bash -se -- "$fqdn" <<'READY'
+set -euo pipefail
+marker=/etc/polarita-paperclip/spustena-konfigurace
+signature=$({
+    readlink -f /opt/paperclip/current
+    /opt/node/bin/node --version
+    sha256sum /etc/polarita-paperclip/{start.sh,postgres.crt,server.env} /etc/systemd/system/polarita-paperclip.service \
+        /run/secrets/{pg-db_paperclip,paperclip-auth,paperclip-jwt,paperclip-master}
+} | sha256sum | cut -d' ' -f1)
+if [[ ! -f $marker || $(<"$marker") != "$signature" ]]; then
+    systemctl restart polarita-paperclip.service
+else
+    systemctl start polarita-paperclip.service
+fi
 for step in {1..180}; do
-    if "${inside[@]}" curl -fsS -m 4 -H "Host: $fqdn:8445" http://127.0.0.1:3100/api/health 2>/dev/null |
+    if curl -fsS -m 4 -H "Host: $1:8445" http://127.0.0.1:3100/api/health 2>/dev/null |
         python3 -c 'import json,sys;d=json.load(sys.stdin);sys.exit(d.get("status")!="ok" or d.get("deploymentMode")!="authenticated")' 2>/dev/null; then
+        umask 077
+        printf '%s\n' "$signature" >"$marker.next"
+        mv -T "$marker.next" "$marker"
         echo 'Paperclip dokončil migrace a jeho nativní API odpovědělo v režimu s ověřením identity.'
         exit 0
     fi
-    "${inside[@]}" systemctl is-failed --quiet polarita-paperclip.service && exit 1
+    if systemctl is-failed --quiet polarita-paperclip.service; then exit 1; fi
     sleep 3
 done
 exit 1
+READY
