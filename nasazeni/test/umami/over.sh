@@ -17,3 +17,5 @@ flock -u 9
 systemctl daemon-reload
 systemctl start polarita-umami-sber.service
 systemctl enable --now polarita-umami-sber.timer
+flock 9
+/opt/polarita-ads-mcp-test/current/sdk/bin/python -I "$src/over_mcp.py"

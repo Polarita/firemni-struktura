@@ -24,6 +24,8 @@ V přehledu **Spisy** můžeš založit testovací spis pro pobočku 101 nebo ho
 
 Po zprovoznění týmového chatu otevři Zulip ve firemní VPN na stejném jméně jako ředitelství s portem `8444`. Zvol **Ředitelství Polarity** a přihlas se testovacím účtem `spravce` přes Keycloak. Chat má osm soukromých kanálů útvarů. Přístup každého z dvaceti pracovních botů odpovídá jeho firemní kartě. Odkaz na chat se v přehledu objeví po úspěšném přihlášení správce. Instalace vloží do soukromého kanálu `17-it-secops` testovací zprávu s přílohou. Při zkoušce obnovy se kontroluje obsah přílohy i její vazba na původní zprávu.
 
+Po ověření analytiky v přehledu otevři **Otevřít návštěvnost webu v Umami**. Přihlas se jako **spravce** stejným testovacím heslem a vyber web **Ředitelství Polarity TEST**. V událostech najdeš pod názvem `prevzeti-sanonu` počet převzatých šanonů. Instalátor ověřuje, že tentýž denní součet může přečíst i reklamní nástroj `umami_conversions`.
+
 Po zprovoznění Checkmk ředitelství zpřístupní stránku **Stav firemních služeb**. U každé služby uvidíš poslední měření a čas v UTC. V bloku 7 se přidají sondy přihlášení Zulipu a dostupnosti Paperclipu. Výpadek i obnovu služby zapisuje Checkmk do soukromého kanálu **17-it-secops** v Zulipu. Instalační zkouška ověřuje obě zprávy také po obnově ze zálohy.
 
 Na firemním webu v TEST otevři **Kalkulačku rizik a úspor**. Zadej roční spotřebu, proměnnou cenu za kWh, odhad úspory a stav revize. Výsledek obsahuje podklad pro schůzi v PDF a odkaz na konfigurátor.
