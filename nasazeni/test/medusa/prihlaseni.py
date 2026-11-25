@@ -46,7 +46,16 @@ if len(sys.argv) == 2:
 if sys.argv[2:] == ["--objednavka"] and host == "127.0.0.1":
     from katalog import katalog
     from objednavka import objednej
-    objednej(call, token, katalog(call, token))
+    from pathlib import Path
+    fixtures = katalog(call, token)
+    objednej(call, token, fixtures)
+    public = {key: fixtures[key] for key in ("publishable", "region_id", "product_id", "shipping_option_id")}
+    if not public["publishable"].startswith("pk_"):
+        sys.exit("Katalog neobsahuje veřejný klíč Store API.")
+    destination = Path("/var/lib/polarita-medusa-test/katalog.json")
+    temporary = destination.with_suffix(".next")
+    temporary.write_text(json.dumps(public))
+    temporary.replace(destination)
     sys.exit(0)
 if sys.argv[2:] != ["--sklad"]:
     sys.exit("Neznámá volba zkoušky.")

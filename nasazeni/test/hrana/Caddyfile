@@ -31,6 +31,15 @@ http://:8080 {
 			route {
 				@registrace path /auth/user/*/register /auth/user/*/register/
 				respond @registrace 403
+				redir /obchod /obchod/ 308
+				handle_path /obchod/* {
+					root * /etc/caddy/obchod/current
+					header Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'"
+					header X-Content-Type-Options nosniff
+					header X-Robots-Tag "noindex, nofollow"
+					header Cache-Control "no-store"
+					file_server
+				}
 				redir / /app/ 302
 				reverse_proxy 10.239.31.1:18450 {
 					header_up Cookie "pol_medusa_sid={http.request.cookie.pol_medusa_sid}"
