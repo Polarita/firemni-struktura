@@ -55,6 +55,10 @@ local db_erp_lhutnik pol_metadata_api peer
 local db_erp_lhutnik pol_metadata_read peer
 local db_erp_lhutnik pol_prijem_sanonu peer
 local db_paperclip pol_decisions_bridge peer
+local db_paperclip pol_finops_read peer
+local db_paperclip pol_finops_call peer
+local db_paperclip pol_finops_propose peer
+local db_paperclip pol_finops_release peer
 local all all scram-sha-256
 host all postgres 0.0.0.0/0 reject
 host all postgres ::/0 reject
