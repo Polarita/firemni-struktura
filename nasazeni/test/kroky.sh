@@ -428,11 +428,13 @@ registr_dokladu() {
     cat "$tmp/isdoc.txt" >>"$tmp/registr-dokladu.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/finance/provize.sh" | tee "$tmp/provize.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/telefon/zkouska.sh" "$commit" | tee "$tmp/telefon.txt"
+    "${guest[@]}" bash "$dest/nasazeni/test/personalistika/zkouska.sh" | tee "$tmp/pracovnici.txt"
     "${guest[@]}" install -dm0750 /srv/polarita/workspace/dukazy/blok-11
     "${inc[@]}" file push --project polarita "$tmp/registr-dokladu.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-11/registr-dokladu-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/provize.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-11/provize-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/telefon.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-11/telefon-$commit.txt"
-    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 11 "$commit" registr-dokladu provize telefon
+    "${inc[@]}" file push --project polarita "$tmp/pracovnici.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-11/pracovnici-$commit.txt"
+    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 11 "$commit" registr-dokladu provize telefon pracovnici
 }
 
 predani() {

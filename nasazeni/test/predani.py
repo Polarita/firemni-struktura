@@ -23,6 +23,7 @@ DOKLADY = (
     ("10", "cad-vykresy", "txt", "Zpracování výkresů"),
     ("11", "registr-dokladu", "txt", "Registr dokladů"),
     ("11", "provize", "txt", "Výpisy ČS a Fio, párování UOL a partnerské provize"),
+    ("11", "pracovnici", "txt", "Způsobilost vzorových pracovníků a čtecí přístup v HR"),
     ("11", "telefon", "txt", "Interní hovor přes PJSIP a oba kanály záznamu"),
     ("12", "vstup-predani", "txt", "Závěrečné přihlášení správce a odkazy na služby"),
 )
