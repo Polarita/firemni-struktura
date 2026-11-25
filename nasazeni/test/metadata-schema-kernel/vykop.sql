@@ -29,7 +29,7 @@ SELECT jsonb_build_object('case_id',k.case_id,'trasa',t.trasa,'projekt',t.projek
         AND (a.otisk=t.doklady->>'mapa' OR EXISTS (SELECT FROM jsonb_each(t.doklady->'vyjadreni') v
             WHERE v.value->>'sha256'=a.otisk))), '{}'::jsonb))
 FROM polarita_test_spisy.vykop_trasa t JOIN polarita_test_spisy.karty k ON t.spis=k.pozadavek
-JOIN polarita_test_spisy.vykop_metodika m ON m.kod=t.metodika WHERE k.case_id=kod ORDER BY t.trasa
+JOIN polarita_test_spisy.vykop_metodika m ON m.kod=t.metodika WHERE k.case_id=$1 ORDER BY t.trasa
 $$;
 CREATE OR REPLACE FUNCTION polarita_test_spisy.uloz_vykop(kod text, oznaceni text, ocekavane jsonb)
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
@@ -38,9 +38,9 @@ BEGIN
     SELECT t.spis INTO spis_id FROM polarita_test_spisy.vykop_trasa t
         JOIN polarita_test_spisy.karty k ON k.pozadavek=t.spis
         JOIN polarita_test_spisy.vykop_metodika m ON m.kod=t.metodika
-        WHERE k.case_id=kod AND t.trasa=oznaceni FOR SHARE OF t,m;
+        WHERE k.case_id=$1 AND t.trasa=$2 FOR SHARE OF t,m;
     IF NOT FOUND THEN RETURN false; END IF;
-    SELECT v INTO STRICT stav FROM polarita_test_spisy.vykopy(kod) v WHERE v->>'trasa'=oznaceni;
+    SELECT v INTO STRICT stav FROM polarita_test_spisy.vykopy($1) v WHERE v->>'trasa'=$2;
     IF stav IS DISTINCT FROM ocekavane THEN RETURN false; END IF;
     INSERT INTO polarita_test_spisy.vykop_uvolneni(spis,trasa,podklady)
         VALUES(spis_id,oznaceni,encode(sha256(convert_to(stav::text,'UTF8')),'hex')) ON CONFLICT DO NOTHING;
