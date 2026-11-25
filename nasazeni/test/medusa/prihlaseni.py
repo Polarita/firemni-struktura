@@ -15,10 +15,14 @@ elif re.fullmatch(r"[a-z0-9-]+(?:[.][a-z0-9-]+)+[.]ts[.]net",host):
 else:
     sys.exit("Neočekávaný název přihlašovacího serveru.")
 
-def call(method, path, status, body=None, token=None):
+def call(method, path, status, body=None, token=None, publishable=None):
     headers = {"Content-Type":"application/json"} if body is not None else {}
     if token:
         headers["Authorization"] = "Bearer "+token
+    if publishable:
+        if token or not path.startswith("/store/"):
+            raise ValueError("Publikovatelný klíč je určen pro zákaznické rozhraní.")
+        headers["x-publishable-api-key"] = publishable
     conn = connect()
     try:
         conn.request(method,path,json.dumps(body).encode() if body is not None else None,headers)
@@ -38,6 +42,11 @@ if call("GET","/admin/users/me",200,token=token)["user"]["email"] != email:
 print("Správce se svým testovacím heslem otevřel vlastní účet Medusy. Anonymní profil byl odmítnut.")
 
 if len(sys.argv) == 2:
+    sys.exit(0)
+if sys.argv[2:] == ["--objednavka"] and host == "127.0.0.1":
+    from katalog import katalog
+    from objednavka import objednej
+    objednej(call, token, katalog(call, token))
     sys.exit(0)
 if sys.argv[2:] != ["--sklad"]:
     sys.exit("Neznámá volba zkoušky.")
