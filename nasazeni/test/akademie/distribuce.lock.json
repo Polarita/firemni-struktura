@@ -1,0 +1,18 @@
+{
+  "moodle-5.3.1.tgz": {
+    "url": "https://download.moodle.org/download.php/direct/stable503/moodle-5.3.1.tgz",
+    "sha256": "820ee2bcd89acc6b91df255b2010bbbab108f29952ab78895a79c4feabf541e7"
+  },
+  "mod_customcert-5.3.5.zip": {
+    "url": "https://marketplace.moodle.com/api/plugins/mod_customcert/versions/2026100505/download",
+    "sha256": "3083e7fdc27f4648e59c3d6725b6bdcfb9d893a282969040f141d26f2a0e01de"
+  },
+  "mod_offlinequiz-5.2.0.zip": {
+    "url": "https://marketplace.moodle.com/api/plugins/mod_offlinequiz/versions/2026073100/download",
+    "sha256": "3445fe67d969c8d18aaf5a7eee54459c745caf5f2d031178180fd4cb9efb2568"
+  },
+  "cs-5.3.zip": {
+    "url": "https://download.moodle.org/download.php/direct/langpack/5.3/cs.zip",
+    "sha256": "15a639b7a8f97d12c95a0412ad035cd7e63f7001639f12412dba2632fab45ce2"
+  }
+}

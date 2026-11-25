@@ -10,7 +10,7 @@
     ["Keycloak", "18.x je přímo testovaná verze", "https://www.keycloak.org/server/db"],
     ["Zulip", "Server 13.x podporuje 14 až 18", "https://zulip.readthedocs.io/en/stable/production/upgrade.html"],
     ["Vikunja", "18 v CI", "https://vikunja.io/docs/installing/"],
-    ["Moodle", "5.2 vyžaduje nejméně 16", "https://moodledev.io/general/releases/5.2"],
+    ["Moodle", "5.3 LTS vyžaduje nejméně 17", "https://moodledev.io/general/releases/5.3"],
     ["Gitea", "nejméně 12", "https://docs.gitea.com/installation/database-prep/"],
     ["Umami", "nejméně 12.14", "https://docs.umami.is/docs/install"],
     ["Paperless-ngx", "nejméně 14 a podpora podle Django", "https://docs.paperless-ngx.com/administration/"],

@@ -12,7 +12,7 @@ CLI = "/usr/local/bin/agent_vault"
 DOKLADY = {
     "08": {"vikunja", "sanony", "paperless-vzor", "paperless-prihlaseni", "paperless-cteni",
            "prenos-dokladu", "archiv-revize", "kniha-objektu", "kniha-prohlizec", "spisy-osa"},
-    "09": {"parovani", "seriova-cisla", "bubny", "reklamace", "umami", "ecomail", "reklamni-souhlas", "web", "web-pristup", "web-prohlizec"},
+    "09": {"akademie-podklady", "parovani", "seriova-cisla", "bubny", "reklamace", "umami", "ecomail", "reklamni-souhlas", "web", "web-pristup", "web-prohlizec"},
 }
 
 

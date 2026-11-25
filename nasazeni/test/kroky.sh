@@ -296,6 +296,8 @@ obnova() {
 }
 
 web() {
+    "${guest[@]}" python3 "$dest/nasazeni/test/akademie/podklady.py" | tee "$tmp/akademie-podklady.txt"
+    "${guest[@]}" bash "$dest/nasazeni/test/akademie/instance.sh"
     "${guest[@]}" bash "$dest/nasazeni/test/medusa/rma.sh" | tee "$tmp/reklamace.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/medusa/bubny.sh" | tee "$tmp/bubny.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/medusa/seriova-cisla.sh" | tee "$tmp/seriova-cisla.txt"
@@ -315,10 +317,11 @@ web() {
     "${inc[@]}" file push --project polarita "$tmp/reklamace.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/reklamace-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/bubny.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/bubny-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/seriova-cisla.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/seriova-cisla-$commit.txt"
+    "${inc[@]}" file push --project polarita "$tmp/akademie-podklady.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/akademie-podklady-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/parovani.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/parovani-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/ecomail.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/ecomail-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/umami.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/umami-$commit.txt"
-    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 09 "$commit" umami ecomail reklamace bubny seriova-cisla parovani web-pristup | tee "$tmp/web-predavka.jsonl"
+    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 09 "$commit" umami ecomail reklamace bubny seriova-cisla parovani akademie-podklady web-pristup | tee "$tmp/web-predavka.jsonl"
     "${guest[@]}" systemctl start polarita-silverbullet-export.service
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/silverbullet/zkouska_prihlaseni.py "$fqdn" --predavky "$tmp/web-predavka.jsonl"
