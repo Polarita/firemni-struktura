@@ -73,7 +73,7 @@ spust_sluzbu polarita-test-tunnel.service key.pub known_hosts relay-ssh.conf <<U
 Description=Privatni spojeni k testovacimu reditelstvi
 After=network-online.target
 [Service]
-ExecStart=/usr/bin/ssh -NT -F /dev/null -i $relay/key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$relay/known_hosts -o ExitOnForwardFailure=yes -o ServerAliveInterval=20 -o ServerAliveCountMax=3 -L 127.0.0.1:18183:127.0.0.1:18184 polarita-relay@$ip
+ExecStart=/usr/bin/ssh -NT -F /dev/null -i $relay/key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$relay/known_hosts -o ExitOnForwardFailure=yes -o ConnectTimeout=20 -o ServerAliveInterval=20 -o ServerAliveCountMax=3 -L 127.0.0.1:18183:127.0.0.1:18184 polarita-relay@$ip
 Restart=always
 RestartSec=4
 [Install]
