@@ -5,12 +5,12 @@ src=$(cd "$(dirname "$0")" && pwd)
 apps=/srv/polarita/apps/web-polarita-cz
 node=/srv/polarita/infra/paperclip-test/distribuce/node-v24.22.3-linux-x64
 [[ $("$node/bin/node" --version) == v24.22.3 ]]
-install -d -m 0755 "$apps/releases"
+install -d -m 0755 "$apps/releases" "$apps/podklady"
 exec 9>"$apps/.instalace"
 flock 9
 tmp=$(mktemp -d "$apps/.priprava-XXXXXXXX")
 trap 'rm -rf -- "$tmp"' EXIT
-install -m0644 "$src"/{package.json,package-lock.json,astro.config.mjs,tsconfig.json} "$tmp/"
+install -m0644 "$src"/{package.json,package-lock.json,astro.config.mjs,tsconfig.json,sestav.sh} "$tmp/"
 cp -r "$src/src" "$tmp/src"
 python3 -B - "$src/../../../balicky/S3-konfigurator-a-tarify" > "$tmp/src/cenik-verejny.json" <<'PY'
 import json,sys
@@ -29,24 +29,43 @@ if [[ ! -d $release ]]; then
     exec 8>/run/polarita-test-zatez.lock
     flock 8
     cache=/var/cache/polarita-web-build
-    build=(systemd-run --quiet --wait --pipe --collect -p DynamicUser=yes -p User=polarita-web-build
+    source_dir="$apps/podklady/$rev"
+    if [[ ! -d $source_dir ]]; then
+        cp -r "$tmp" "$tmp-podklad"
+        mv -T "$tmp-podklad" "$source_dir"
+    fi
+    build=(systemd-run --quiet --no-block -p Type=exec -p RemainAfterExit=yes -p DynamicUser=yes -p User=polarita-web-build
         -p CacheDirectory=polarita-web-build -p "WorkingDirectory=$cache" -p PrivateTmp=yes -p PrivateDevices=yes
         -p ProtectSystem=strict -p ProtectHome=yes -p NoNewPrivileges=yes -p Nice=12 -p CPUQuota=90%
-        -p MemoryMax=750M -p "BindReadOnlyPaths=$node:/opt/node $tmp:/opt/polarita-web-src"
+        -p MemoryMax=750M -p "BindReadOnlyPaths=$node:/opt/node $source_dir:/opt/polarita-web-src"
         -E PATH=/opt/node/bin:/usr/bin:/bin -E "HOME=$cache" -E ASTRO_TELEMETRY_DISABLED=1
         -E NODE_OPTIONS=--max-old-space-size=450)
-    "${build[@]}" /bin/bash -ec '
-        mkdir -p projekt
-        cp /opt/polarita-web-src/package*.json projekt/
-        cd projekt
-        npm ci --ignore-scripts --no-audit --no-fund --maxsockets=3 --registry=https://registry.npmjs.org'
-    "${build[@]}" -p PrivateNetwork=yes /bin/bash -ec '
-        cd projekt
-        rm -rf src dist .astro
-        cp -r /opt/polarita-web-src/src .
-        cp /opt/polarita-web-src/{astro.config.mjs,tsconfig.json} .
-        npm run build'
-    out="$cache/projekt/dist"
+    for phase in zavislosti sestaveni; do
+        unit="polarita-web-$phase-$rev.service"
+        stamp="$cache/$rev/.$phase.ok"
+        if [[ -f $stamp && $(cat "$stamp") == "$rev" ]]; then continue; fi
+        if systemctl is-failed --quiet "$unit"; then systemctl reset-failed "$unit"; fi
+        if [[ $(systemctl show -p LoadState --value "$unit") == not-found ]]; then
+            net=()
+            if [[ $phase == sestaveni ]]; then net=(-p PrivateNetwork=yes); fi
+            "${build[@]}" --unit="$unit" "${net[@]}" /bin/bash /opt/polarita-web-src/sestav.sh "$phase" "$rev" ||
+                systemctl cat "$unit" >/dev/null
+        fi
+        while true; do
+            if [[ -f $stamp && $(cat "$stamp") == "$rev" ]]; then break; fi
+            if sub=$(systemctl show -p SubState --value "$unit"); then
+                case "$sub" in
+                    failed|dead|exited)
+                        if [[ -f $stamp && $(cat "$stamp") == "$rev" ]]; then break; fi
+                        journalctl -u "$unit" -n 15 --no-pager
+                        exit 1 ;;
+                esac
+            fi
+            sleep 3
+        done
+        systemctl stop "$unit"
+    done
+    out="$cache/$rev/dist"
     python3 "$src/over.py" "$out" "$tmp/src/cenik-verejny.json"
     install -d "$tmp/dist/prevzeti-sanonu"
     install -m0644 "$out/index.html" "$out/llms.txt" "$tmp/dist/"
