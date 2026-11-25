@@ -61,7 +61,7 @@ def main():
     if socket.gethostname().split(".")[0] != "karantena-test" or set(os.listdir("/sys/class/net")) != {"lo"}:
         sys.exit("Kontrola musí běžet v bezsíťové pracovní VM")
     job = sys.argv[1]
-    if not re.fullmatch(r"[0-9a-f]{32}\.(?:pdf|txt|wav)", job):
+    if not re.fullmatch(r"[0-9a-f]{32}\.(?:pdf|txt|wav|dxf|ifc)", job):
         sys.exit("Chybné jméno úlohy")
     source = Path("/mnt/karantena-in") / job
     output = Path("/mnt/karantena-out") / job
@@ -107,8 +107,22 @@ def main():
             data = tostring(wrapper, encoding="utf-8", xml_declaration=True)
             typ = "xml"
         else:
+            pdf_source = source
+            if source.suffix in {".dxf", ".ifc"}:
+                converter = Path("/usr/local/bin/polarita-cad-pdf")
+                if not converter.is_file():
+                    result("ceka", "ceka-na-prevodnik-cad", signatury_hodin=age)
+                    return
+                pdf_source = work / "pudorys.pdf"
+                converted = run([converter, source, pdf_source], timeout=180)
+                if converted.returncode or not pdf_source.is_file():
+                    result("odmitnuto", "necitelny-vykres", signatury_hodin=age)
+                    return
+                if not 0 < pdf_source.stat().st_size <= 128*1024*1024:
+                    result("odmitnuto", "neplatna-velikost-vykresu", signatury_hodin=age)
+                    return
             sanitized = work / "rekonstrukce.pdf"
-            conversion = run(["dangerzone-cli", "--output-filename", sanitized, source], timeout=720)
+            conversion = run(["dangerzone-cli", "--output-filename", sanitized, pdf_source], timeout=720)
             if conversion.returncode or not sanitized.is_file():
                 result("ceka", "rekonstrukce-neprobehla", navrat=conversion.returncode)
                 return
@@ -134,5 +148,5 @@ if __name__ == "__main__":
         main()
     except subprocess.TimeoutExpired as exc:
         phase = {"clamscan": "antiviru", "dangerzone-cli": "rekonstrukce",
-                 "qpdf": "overeni-pdf", "pdfimages": "overeni-pdf"}.get(exc.cmd[0], "pripravy")
+                 "qpdf": "overeni-pdf", "pdfimages": "overeni-pdf"}.get(str(exc.cmd[0]), "pripravy")
         result("ceka", "casovy-limit-" + phase)

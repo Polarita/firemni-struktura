@@ -54,6 +54,14 @@ Jsi správce serveru (17003 spravce-site) ve spolupráci s hlavním vývojářem
    - Striktně v dokumentaci i konfiguraci odděl AEC sadu CadCraft (getcadcraft.com) od samostatného kreativního nástroje ArtCraft (getartcraft.com), který slouží výhradně pro grafiku a vizuály oddělení 12 a 13 a nikdy není označován za CAD/BIM software.
 ```
 
+### Ověření měřítka PDF v pracovní VM
+
+Do příjmu karantény vlož obsah souboru přes `prijem.py dxf` nebo `prijem.py ifc`. Potvrzené ID propojuje originál, protokol antivirové kontroly i výsledný půdorys. Bezsíťový pracovník předá vykreslené PDF do Dangerzone a ověří, že z rekonstrukce vyšla pasivní rastrová kopie. Každé další měření svázané s tímto výstupem vyžaduje jeho vlastní SHA-256.
+
+V bezsíťové pracovní VM poskytuje příkaz `polarita-cad-mereni vykres.pdf kalibrace.json` délku lomené trasy v milimetrech. Pro každou stranu připrav vlastní zadání. Uveď SHA-256 přesného souboru, číslo strany od jedničky, známé délky kót v milimetrech a souřadnice bodů v bodech PDF od levého horního rohu zobrazené strany. Při změně souboru proveď kalibraci znovu.
+
+Instalátor vytvoří ve složce důkazů bloku 10 vzor `kalibrace.json` a jeho výsledek `mereni.json`. Alespoň dvě známé kóty musí mít různé směry. V režimu TEST je přípustný rozdíl měřítek nejvýše 1 % vůči nejmenšímu z nich. Chybějící nebo nesouhlasná kalibrace ukončí příkaz chybou `FAIL_CLOSED` před zveřejněním délky.
+
 ### Prompt 2 — Vývoj deterministického inženýrského, výkopového (`DTM ČR`) a rozpočtového jádra `cad-urs-engine` (normy z normové báze `15002 normovac` — `F03`) (`pro 17001`, `14001`, `14002` a Judge `15002`)
 
 ```text

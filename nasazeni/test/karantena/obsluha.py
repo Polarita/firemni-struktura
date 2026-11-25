@@ -11,7 +11,7 @@ import time
 
 INPUT = Path("/mnt/karantena-in")
 OUTPUT = Path("/mnt/karantena-out")
-JOB = re.compile(r"[0-9a-f]{32}\.(pdf|txt|wav)")
+JOB = re.compile(r"[0-9a-f]{32}\.(pdf|txt|wav|dxf|ifc)")
 
 def publish(name, data):
     with tempfile.NamedTemporaryFile("w",dir=OUTPUT,delete=False) as f:
@@ -44,7 +44,7 @@ def main():
                         continue
                     try:
                         run=subprocess.run(["/usr/bin/python3","/opt/polarita/karantena.py",src.name],
-                                           stdin=subprocess.DEVNULL,capture_output=True,check=True,timeout=1320)
+                                           stdin=subprocess.DEVNULL,capture_output=True,check=True,timeout=1560 if src.suffix in {".dxf", ".ifc"} else 1320)
                         report=json.loads(run.stdout)
                         if isinstance(report,dict) and report.get("stav") == "ocisteno":
                             with (OUTPUT/src.name).open("rb") as f:

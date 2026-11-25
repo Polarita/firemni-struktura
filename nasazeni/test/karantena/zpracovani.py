@@ -18,7 +18,7 @@ BASE = Path("/srv/polarita/workspace/karantena")
 SPOOL = Path("/srv/polarita/data/airgap-spool/test")
 WORK = Path("/srv/polarita/infra/karantena-test")
 NAME = "karantena-test"
-JOB = re.compile(r"[0-9a-f]{32}\.(pdf|txt|wav)")
+JOB = re.compile(r"[0-9a-f]{32}\.(pdf|txt|wav|dxf|ifc)")
 
 
 def inc(*args, timeout=125):
@@ -154,7 +154,7 @@ def process(source, token):
     digest = atomic_copy(source, dest, 64 * 1024 * 1024, 0o444)
     try:
         put_token(command,token)
-        message = wait_receipt(receipt, 1380)
+        message = wait_receipt(receipt, 1620 if source.suffix in {".dxf", ".ifc"} else 1380)
         if (message.get("soubor"), message.get("start"), message.get("sha256")) != (job,token,digest):
             raise ValueError("Doklad neodpovídá souboru a spuštění pracovní VM")
         report = message.get("vysledek")
@@ -164,7 +164,7 @@ def process(source, token):
         if any(type(report[k]) is not int for k in ("signatury_hodin","navrat") if k in report):
             raise ValueError("Neplatná metrika kontroly")
         if state == "ocisteno":
-            expected = {"pdf": "pdf", "txt": "xml"}.get(source.suffix[1:])
+            expected = {"pdf": "pdf", "txt": "xml", "dxf": "pdf", "ifc": "pdf"}.get(source.suffix[1:])
             if expected is None or expected != report.get("typ"):
                 raise ValueError("Neodpovídá formát čisté přílohy")
             out = BASE / "vysledky" / (source.stem + "." + expected)

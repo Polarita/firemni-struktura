@@ -1,8 +1,10 @@
 #!/bin/bash
 # Knihovny se stáhnou v ředitelství, výkres se otevře až v bezsíťové pracovní VM.
 set -euo pipefail
-[[ $EUID == 0 && $(hostname -s) == polarita-hq ]]
 src=$(cd "$(dirname "$0")" && pwd)
+revision=$(cd "$src" && sha256sum offline.sh kola.lock prevod.py mereni.py zkouska.py vzor.ifc | sha256sum | cut -d' ' -f1)
+if [[ ${1:-} == --revize ]]; then echo "$revision"; exit 0; fi
+[[ $# == 0 && $EUID == 0 && $(hostname -s) == polarita-hq ]]
 vm=karantena-test
 run=(incus exec -T "$vm" --)
 key=$(sha256sum "$src/kola.lock" | cut -d' ' -f1)
@@ -55,10 +57,9 @@ chmod 0755 "$tmp"
 mv -T "$tmp" "$2/lib"
 INSTALL
 fi
-revision=$(cd "$src" && sha256sum kola.lock prevod.py zkouska.py vzor.ifc | sha256sum | cut -d' ' -f1)
 code=$base/$key/$revision
 "${run[@]}" install -dm0755 "$code"
-for file in prevod.py zkouska.py vzor.ifc; do
+for file in prevod.py mereni.py zkouska.py vzor.ifc; do
     incus file push --mode=0644 "$src/$file" "$vm$code/$file.next"
     "${run[@]}" mv -T "$code/$file.next" "$code/$file"
 done
@@ -69,23 +70,27 @@ job=$("${run[@]}" runuser -u nobody -- mktemp -d /var/tmp/polarita-vykres-XXXXXX
 proof=/srv/polarita/workspace/dukazy/blok-10
 install -dm0750 "$proof"
 tmp=$(mktemp -d "$proof/.cad-XXXXXXXX")
-for file in vzor.dxf vzor.ifc vzor-dxf.pdf vzor-ifc.pdf; do
+doklady=(vzor.dxf vzor.ifc vzor-dxf.pdf vzor-ifc.pdf kalibrace.json mereni.json)
+for file in "${doklady[@]}"; do
     incus file pull "$vm$job/$file" "$tmp/$file"
 done
 "${run[@]}" rm -rf -- "$job"
 job=
-(cd "$tmp" && sha256sum vzor.dxf vzor.ifc vzor-dxf.pdf vzor-ifc.pdf > SHA256SUMS)
+(cd "$tmp" && sha256sum "${doklady[@]}" > SHA256SUMS)
 # Jedna revize a její otisky se zveřejní společně.
 if [[ -d $proof/cad-$revision ]]; then
     (cd "$proof/cad-$revision" && sha256sum --strict --status -c SHA256SUMS)
 else
     mv -T "$tmp" "$proof/cad-$revision"
 fi
-"${run[@]}" bash -se -- "$base/$key/lib" "$code/prevod.py" <<'ENTRY'
+"${run[@]}" bash -se -- "$base/$key/lib" "$code" <<'ENTRY'
 set -euo pipefail
-tmp=$(mktemp /usr/local/bin/.polarita-cad-pdf-XXXXXXXX)
-printf '#!/bin/sh\nexport PYTHONPATH=%s PYTHONDONTWRITEBYTECODE=1 OPENBLAS_NUM_THREADS=1\nexec python3 %s "$@"\n' "$1" "$2" >"$tmp"
-chmod 0755 "$tmp"
-mv -T "$tmp" /usr/local/bin/polarita-cad-pdf
+for pair in polarita-cad-pdf:prevod polarita-cad-mereni:mereni; do
+    name=${pair%:*}
+    tmp=$(mktemp "/usr/local/bin/.$name-XXXXXXXX")
+    printf '#!/bin/sh\nexport PYTHONPATH=%s PYTHONDONTWRITEBYTECODE=1 OPENBLAS_NUM_THREADS=1\nexec python3 %s "$@"\n' "$1" "$2/${pair#*:}.py" >"$tmp"
+    chmod 0755 "$tmp"
+    mv -T "$tmp" "/usr/local/bin/$name"
+done
 ENTRY
 echo "Vektorová PDF a zdrojové výkresy jsou v $proof/cad-$revision."
