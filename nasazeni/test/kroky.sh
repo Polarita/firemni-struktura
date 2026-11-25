@@ -353,11 +353,12 @@ web() {
     "${inc[@]}" file push --project polarita "$tmp/akademie-prihlaseni.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/akademie-prihlaseni-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/akademie-spojeni.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/akademie-spojeni-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/akademie-cache.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/akademie-cache-$commit.txt"
+    "${inc[@]}" file push --project polarita "$tmp/akademie-kurz.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/akademie-kurz-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/akademie-podklady.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/akademie-podklady-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/parovani.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/parovani-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/ecomail.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/ecomail-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/umami.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/umami-$commit.txt"
-    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 09 "$commit" umami ecomail reklamace bubny seriova-cisla parovani akademie-podklady akademie-spojeni akademie-cache akademie-prihlaseni eshop-prihlaseni eshop-objednavka eshop-katalog web-pristup | tee "$tmp/web-predavka.jsonl"
+    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 09 "$commit" umami ecomail reklamace bubny seriova-cisla parovani akademie-kurz akademie-podklady akademie-spojeni akademie-cache akademie-prihlaseni eshop-prihlaseni eshop-objednavka eshop-katalog web-pristup | tee "$tmp/web-predavka.jsonl"
     "${guest[@]}" systemctl start polarita-silverbullet-export.service
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/silverbullet/zkouska_prihlaseni.py "$fqdn" --predavky "$tmp/web-predavka.jsonl"

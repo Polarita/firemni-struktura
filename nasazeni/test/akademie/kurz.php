@@ -163,3 +163,5 @@ if (!$quiz->docscreated) {
 }
 $transaction->allow_commit();
 echo "Kurz $code: dva zapsaní účastníci, dvě různé varianty a šest PDF (zadání, arch a klíč).\n";
+require __DIR__ . '/osvedceni.php';
+vzor_osvedceni($course, $quiz, $code);
