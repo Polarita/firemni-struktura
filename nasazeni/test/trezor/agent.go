@@ -21,6 +21,7 @@ const private = target + "/.polarita-agent"
 const tmpfs = 0x01021994
 
 type grant struct {
+	Umami      bool     `json:"umami"`
 	Paperless  bool     `json:"paperless"`
 	Vikunja    bool     `json:"vikunja"`
 	Paperclip  bool     `json:"paperclip"`
@@ -163,10 +164,13 @@ template {
 		config += fmt.Sprintf("template {\n destination = %q\n perms = \"0400\"\n error_on_missing_key = true\n contents = %q\n}\n", tmp+"/gitea-stroj", template)
 		outputs["gitea-stroj"] = "gitea-stroj"
 	}
-	if g.Paperclip || g.Vikunja || g.Paperless {
+	if g.Paperclip || g.Vikunja || g.Paperless || g.Umami {
 		app := "paperclip"
 		keys := []string{"secret", "oidc_secret"}
 		switch {
+		case g.Umami:
+			app = "umami"
+			keys = []string{"secret", "two_factor"}
 		case g.Paperless:
 			app = "paperless"
 		case g.Vikunja:
