@@ -58,9 +58,14 @@ if ($role && ($role->name !== $rolelabel || $role->archetype !== '')) {
     throw new RuntimeException('Jméno role čtenáře už používá jiná role.');
 }
 $roleid = $role ? $role->id : create_role($rolelabel, 'polbridgegrade', '', '');
-foreach (['webservice/rest:use', 'gradereport/user:view', 'moodle/grade:viewall', 'moodle/site:accessallgroups'] as $cap) {
+// Offline Quiz před zveřejněním skrývá položku v žákovské klasifikaci.
+// Komise čte i tyto výsledky prostřednictvím role přiřazené pouze ke cvičnému kurzu.
+foreach (['webservice/rest:use', 'gradereport/user:view', 'moodle/grade:viewall',
+        'moodle/grade:viewhidden', 'moodle/site:accessallgroups'] as $cap) {
     assign_capability($cap, CAP_ALLOW, $roleid, $ctx->id, true);
 }
+// Moodle zahrne známku do REST přehledu, jen pokud čtenář vidí i příslušnou aktivitu.
+assign_capability('mod/offlinequiz:view', CAP_ALLOW, $roleid, context_module::instance($cm->id)->id, true);
 $enrol = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'manual', 'status' => ENROL_INSTANCE_ENABLED], '*', MUST_EXIST);
 enrol_get_plugin('manual')->enrol_user($enrol, $user->id, $roleid);
 
