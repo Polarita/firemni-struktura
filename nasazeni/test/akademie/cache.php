@@ -31,7 +31,6 @@ if (($argv[1] ?? '') === '--nastav') {
 
 foreach ($areas as $area) {
     $definition = factory::instance()->create_definition('core', $area);
-    $definition->set_identifiers([]);
     $stores = helper::get_cache_stores($definition);
     if (count($stores) !== 1 || !$stores[0] instanceof cachestore_polaritavalkey || !$stores[0]->is_ready()) {
         throw new RuntimeException('Moodle nepřiřadil aktivní Valkey ke katalogu kurzů.');

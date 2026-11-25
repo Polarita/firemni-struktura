@@ -54,7 +54,8 @@ def katalog(call, token):
     location = entity("stock-locations", "stock_locations", "stock_location", {"name": "MAIN-101 TEST",
                       "address": {"address_1": "Testovací sklad", "city": "Ejpovice", "country_code": "cz"}})
     loc = "stock-locations/" + location["id"]
-    related = get(loc, fields="id,sales_channels.id,fulfillment_providers.id,fulfillment_sets.id,fulfillment_sets.name")["stock_location"]
+    delivery_fields = "fulfillment_sets.id,fulfillment_sets.name,fulfillment_sets.service_zones.id,fulfillment_sets.service_zones.name"
+    related = get(loc, fields="id,sales_channels.id,fulfillment_providers.id," + delivery_fields)["stock_location"]
     if not match(related["sales_channels"], "id", channel["id"]):
         post(loc + "/sales-channels", {"add": [channel["id"]]})
     if not match(related["fulfillment_providers"], "id", "manual_manual"):
@@ -63,13 +64,13 @@ def katalog(call, token):
     delivery = match(related["fulfillment_sets"], "name", set_name)
     if delivery is None:
         post(loc + "/fulfillment-sets", {"name": set_name, "type": "shipping"})
-        updated = get(loc, fields="id,fulfillment_sets.id,fulfillment_sets.name")["stock_location"]
+        updated = get(loc, fields="id," + delivery_fields)["stock_location"]
         delivery = match(updated["fulfillment_sets"], "name", set_name)
     if delivery is None:
         raise RuntimeError("Sklad neobsahuje vytvořenou expediční skupinu.")
     group = "fulfillment-sets/" + delivery["id"]
     zone_name = "Česká republika TEST"
-    zone = match(get(group)["fulfillment_set"]["service_zones"], "name", zone_name)
+    zone = match(delivery["service_zones"], "name", zone_name)
     if zone is None:
         result = post(group + "/service-zones", {"name": zone_name, "geo_zones": [{"type": "country","country_code": "cz"}]})
         zone = match(result["fulfillment_set"]["service_zones"], "name", zone_name)

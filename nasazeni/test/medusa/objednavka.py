@@ -53,9 +53,10 @@ def objednej(call, token, fixtures):
                 if not any(o["id"] == option for o in options):
                     raise RuntimeError("Zákazníkovi se nenabídl testovací osobní odběr.")
                 store("POST", endpoint + "/shipping-methods", {"option_id": option})
-            cart = store("GET", endpoint)["cart"]
-            collection = cart["payment_collection"] or store("POST", "payment-collections",
-                                                            {"cart_id": cart["id"]})["payment_collection"]
+            payment_fields = urlencode({"fields": "id,payment_collection.id,payment_collection.payment_sessions.provider_id"})
+            cart = store("GET", endpoint + "?" + payment_fields)["cart"]
+            collection = cart.get("payment_collection") or store("POST", "payment-collections",
+                                                                 {"cart_id": cart["id"]})["payment_collection"]
             provider = "pp_system_default"
             if not any(s["provider_id"] == provider for s in collection.get("payment_sessions", [])):
                 store("POST", "payment-collections/" + collection["id"] + "/payment-sessions", {"provider_id": provider})
