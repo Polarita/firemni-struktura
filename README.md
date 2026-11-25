@@ -100,7 +100,7 @@ V přehledu ředitelství lze stáhnout vzor předávacího protokolu s organiza
 
 Valkey používá čtyři aplikační účty s oddělenými klíči. Instalace přes TLS ověří zápis, čtení a odmítnutí přístupu k cizím klíčům. Garage má osm účelových košů se samostatnými přístupy. U provozních nahrávek a přepisů se výmaz ve zdrojovém úložišti řídí datem pořízení. Do neměnného archivu instalace uloží ověřený testovací list stavebního deníku. Při příznaku `LEGAL_HOLD` předá také stereo nahrávku a přepis spisového hovoru. Oba soubory i předávací záznam ověří ze zamčených snímků ZFS před uvolněním zdrojů v Garage.
 
-Instalace obnoví všech 15 databází do dočasné izolované instance a prověří identitu správce v obnoveném Keycloaku. V místním znalostním Gitu vznikne deset oblastí s metodikami. Heslo správce a obnovovací údaje mají vlastní šifrovaný dataset přístupný pouze správě instalace.
+Instalace obnoví všech 15 databází do dočasné izolované instance. Po řádném restartu PostgreSQL porovná seznam databází, schémata, tabulky, rozšíření, databázové účty a identitu správce v obnoveném Keycloaku. V místním znalostním Gitu vznikne deset oblastí s metodikami. Heslo správce a obnovovací údaje mají vlastní šifrovaný dataset přístupný pouze správě instalace.
 
 Karanténa zpracovává vzorové PDF a text v pracovní VM bez síťové karty uvnitř `polarita-hq`. Aktualizace antivirových signatur zajišťuje samostatná služba. Zkouška vyžaduje rekonstruované PDF, pasivně uložený text a odmítnutý kontrolní vzorek EICAR. Zvuk čeká na offline přepis v bloku 7.
 

@@ -91,16 +91,20 @@ def main():
         run("incus", "start", name)
         start_restore_cluster(name)
         with subprocess.Popen(["incus", "exec", "-T", name, "--", "runuser", "-u", "postgres", "--",
-                               "psql", "-Xq", "-v", "ON_ERROR_STOP=1", "-U", "obnova_test", "-d", "postgres"],
+                               "env", "PGOPTIONS=-c synchronous_commit=off", "psql", "-Xq",
+                               "-v", "ON_ERROR_STOP=1", "-U", "obnova_test", "-d", "postgres"],
                               stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) as restore:
             with restore.stdin, gzip.open(archive, "rb") as reader:
                 shutil.copyfileobj(reader, restore.stdin)
             if restore.wait():
                 raise RuntimeError("Import logické zálohy selhal")
+        # Řádné zastavení při restartu zapíše i poslední dávku do obnoveného clusteru.
+        inside(name, "runuser", "-u", "postgres", "--", PG + "pg_ctl", "-D", "/var/lib/postgresql/obnova",
+               "-l", "/var/lib/postgresql/obnova/restore.log", "-m", "fast", "-t", "180", "-w", "restart")
         if original != proof(name, "obnova_test"):
             raise RuntimeError("Obnovené databáze, účty nebo obsah realmu se liší")
         os.replace(archive, BASE / "posledni.sql.gz")
-    print("Izolovaná obnova 15 databází prošla. Shodují se schémata, tabulky, rozšíření, databázové přístupy a identita správce.")
+    print("Izolovaná obnova 15 databází a kontrola po restartu prošly. Shodují se schémata, tabulky, rozšíření, databázové přístupy a identita správce.")
 
 
 if __name__ == "__main__":
