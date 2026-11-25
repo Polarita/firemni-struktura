@@ -2,6 +2,8 @@
 set -euo pipefail
 [[ $(hostname -s) == polarita-hq && $EUID == 0 ]]
 src=$(cd "$(dirname "$0")" && pwd)
+exec 8>/run/polarita-akademie-web.lock
+flock 8
 vm=akademie-test
 inside=(incus exec -T "$vm" --)
 "${inside[@]}" test -s /etc/polarita-akademie/schema
@@ -24,7 +26,7 @@ cat >/etc/php/8.4/fpm/pool.d/zz-akademie.conf <<'POOL'
 [www]
 pm = ondemand
 pm.max_children = 2
-pm.process_idle_timeout = 20s
+pm.process_idle_timeout = 120s
 pm.max_requests = 100
 php_admin_value[max_input_vars] = 5000
 php_admin_value[upload_max_filesize] = 20M
@@ -33,17 +35,31 @@ php_admin_flag[display_errors] = off
 POOL
 nginx -t
 php-fpm8.4 -t
-systemctl unmask nginx php8.4-fpm
-systemctl enable --now php8.4-fpm nginx
-systemctl reload php8.4-fpm nginx
-systemctl is-active --quiet php8.4-fpm
-systemctl is-active --quiet nginx
+install -d -m 0755 /run/polarita-akademie-web
+activate() {
+    local unit=$1 stamp=/run/polarita-akademie-web/$1
+    shift
+    local fingerprint
+    fingerprint=$(sha256sum "$@")
+    if [[ $(systemctl is-enabled "$unit") == masked ]]; then systemctl unmask "$unit"; fi
+    if ! systemctl is-enabled --quiet "$unit"; then systemctl enable "$unit"; fi
+    if ! systemctl is-active --quiet "$unit"; then
+        systemctl start "$unit"
+    elif [[ ! -f $stamp || $(cat "$stamp") != "$fingerprint" ]]; then
+        systemctl reload "$unit"
+    fi
+    systemctl is-active --quiet "$unit"
+    printf '%s\n' "$fingerprint" >"$stamp.next"
+    mv -T "$stamp.next" "$stamp"
+}
+activate php8.4-fpm /etc/php/8.4/fpm/pool.d/zz-akademie.conf
+activate nginx sites-available/polarita-akademie polarita-akademie-fastcgi.conf
 WEB
 origin=$("${inside[@]}" cat /etc/polarita-akademie/url)
 [[ $origin =~ ^https://[a-z0-9.-]+\.ts\.net:8451$ ]]
 tmp=$(mktemp)
 trap 'unlink "$tmp"' EXIT
-status=$(curl --silent --show-error --fail --retry 2 --retry-connrefused --max-time 120 -H "Host: ${origin#https://}" \
+status=$(curl --silent --show-error --fail --max-time 310 -H "Host: ${origin#https://}" \
     http://10.239.32.24:8080/login/index.php -o "$tmp" -w '%{http_code}')
 [[ $status == 200 ]] || { echo "Přihlašovací formulář Moodle vrátil HTTP $status." >&2; exit 1; }
 grep -q 'name="logintoken"' "$tmp"

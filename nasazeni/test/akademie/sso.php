@@ -55,6 +55,7 @@ foreach ($paths as $name => $path) {
 }
 
 $data = (object) ['name' => 'Ředitelství Polarity', 'loginpagename' => 'Ředitelství Polarity',
+    'image' => $CFG->wwwroot . '/pix/moodlelogo.svg',
     'baseurl' => $base, 'servicetype' => 'custom', 'clientid' => 'moodle', 'clientsecret' => $key,
     'alloweddomains' => 'polarita.test', 'requireconfirmation' => true, 'enabled' => true,
     'showonloginpage' => issuer::LOGINONLY, 'loginscopes' => 'openid profile email'];
