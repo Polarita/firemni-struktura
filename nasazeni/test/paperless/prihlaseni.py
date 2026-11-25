@@ -1,6 +1,7 @@
 """Ověří anonymní přístup, přihlášení přes Keycloak a ukončení relace Paperless."""
 from html.parser import HTMLParser
 from http.cookiejar import CookieJar
+import hashlib
 import json
 import re
 import sys
@@ -78,7 +79,11 @@ with web.open(origin + "/api/profile/", timeout=30) as res:
 if account.get("email") != "spravce@polarita.test" or not any(a["provider"] == "keycloak" for a in account["social_accounts"]):
     raise RuntimeError("Archiv nepotvrdil účet správce z Keycloaku")
 if len(sys.argv) > 2:
-    case, doc_id, field_id = sys.argv[2:]
+    priloha = sys.argv[2] == "--priloha"
+    hodnoty = sys.argv[3:] if priloha else sys.argv[2:]
+    case, doc_id, field_id, *otisky = hodnoty
+    if len(otisky) > 1 or (priloha and not otisky) or any(not re.fullmatch(r"[a-f0-9]{64}", h) for h in otisky):
+        raise ValueError("Pro ověření přijaté přílohy chybí platný otisk očištěného PDF.")
     if not re.fullmatch(r"POL-[0-9]{4}-[0-9]{5}", case) or not doc_id.isdecimal() or not field_id.isdecimal():
         raise ValueError("Chybné označení dokumentu")
     for endpoint in ("/api/ui_settings/", "/api/saved_views/"):
@@ -88,10 +93,17 @@ if len(sys.argv) > 2:
             json.load(res)
     with web.open(origin + "/api/documents/" + doc_id + "/", timeout=45) as res:
         doc = json.load(res)
-    if (doc["id"] != int(doc_id) or doc["title"] != f"{case} – Předávací protokol TEST"
+    title = case + " – " + ("Převzatý sken" if priloha else "Předávací protokol TEST")
+    if (doc["id"] != int(doc_id) or doc["title"] != title
             or not any(f["field"] == int(field_id) and f["value"] == case for f in doc["custom_fields"])
-            or "protokol" not in doc["content"].lower()):
+            or not doc["content"].strip() or (not priloha and "protokol" not in doc["content"].lower())):
         raise RuntimeError("Přihlášený správce neobdržel očekávaný protokol se spisem")
+    if otisky:
+        url = origin + f"/api/documents/{doc_id}/download/?original=true"
+        with web.open(url, timeout=60) as res:
+            if res.url != url or res.headers.get_content_type() != "application/pdf" or hashlib.file_digest(res, "sha256").hexdigest() != otisky[0]:
+                raise RuntimeError("Stažený dokument neodpovídá výstupu karantény.")
+        print(f"Správce stáhl PDF dokumentu {doc_id}. SHA-256 je shodný s očištěnou přílohou.")
     print(f"Účet správce přečetl přes HTTPS dokument {doc_id} s výsledkem OCR a vazbou na spis {case}.")
 logout = origin + "/accounts/logout/"
 url, form = page(logout)

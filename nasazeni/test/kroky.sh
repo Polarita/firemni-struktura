@@ -224,16 +224,22 @@ karantena() {
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/paperless/prihlaseni.py "$fqdn" | tee "$tmp/paperless-prihlaseni.txt"
     "${inc[@]}" file push --project polarita "$tmp/paperless-prihlaseni.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-prihlaseni-$commit.txt"
-    local case checksum doc field
+    local case checksum doc field job sum
     read -r case checksum < <("${guest[@]}" python3 -c 'import json; d=json.load(open("/srv/polarita/infra/paperless-test/vzor-overen.json")); print(d["case_id"], d["sha256"])')
     read -r doc field < <("${guest[@]}" incus exec -T paperless-test -- /command/with-contenv /command/s6-setuidgid paperless python3 - "$case" "$checksum" <nasazeni/test/paperless/cteni.py)
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
-        python3 nasazeni/test/paperless/prihlaseni.py "$fqdn" "$case" "$doc" "$field" | tee "$tmp/paperless-cteni.txt"
+        python3 nasazeni/test/paperless/prihlaseni.py "$fqdn" "$case" "$doc" "$field" "$checksum" | tee "$tmp/paperless-cteni.txt"
     "${inc[@]}" file push --project polarita "$tmp/paperless-cteni.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/paperless-cteni-$commit.txt"
     printf 'https://%s:8448/\n' "$fqdn" | "${guest[@]}" incus exec -T reditelstvi-test -- sh -ec 'umask 022; cat >/usr/local/share/.polarita-paperless-url.next; mv -T /usr/local/share/.polarita-paperless-url.next /usr/local/share/polarita-paperless-url'
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
-        python3 nasazeni/test/sanony/zkouska_knihy.py "https://$fqdn" | tee "$tmp/kniha-objektu.txt"
+        python3 nasazeni/test/sanony/zkouska_knihy.py "https://$fqdn" --doklad "$tmp/doklad-knihy" | tee "$tmp/kniha-objektu.txt"
     "${inc[@]}" file push --project polarita "$tmp/kniha-objektu.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/kniha-objektu-$commit.txt"
+    read -r case doc job <"$tmp/doklad-knihy"
+    [[ $job =~ ^[0-9a-f]{32}\.pdf$ ]]
+    sum=$("${guest[@]}" sha256sum "/srv/polarita/workspace/karantena/vysledky/$job")
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
+        python3 nasazeni/test/paperless/prihlaseni.py "$fqdn" --priloha "$case" "$doc" "$field" "${sum%% *}" | tee "$tmp/archiv-revize.txt"
+    "${inc[@]}" file push --project polarita "$tmp/archiv-revize.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/archiv-revize-$commit.txt"
 }
 
 zalohy() {

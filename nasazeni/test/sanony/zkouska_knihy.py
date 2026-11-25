@@ -1,4 +1,5 @@
 """Ověří cestu syntetické zprávy z karantény přes archiv až do knihy objektu."""
+import argparse
 from datetime import datetime, date
 from hashlib import sha256
 import json
@@ -68,7 +69,15 @@ def over(origin, password):
         raise RuntimeError("Stav neodpovídá termínům testovací zprávy.")
     print(f"Dokument {receipt['dokument']} ze spisu {case} prošel karanténou a OCR. "
           f"Kniha po opakovaném zápisu vrací jeden záznam TEST-HALA / TEST-R1 se stavem {state}.")
+    job = uuid5(NAMESPACE_URL, "polarita.test/sanony/" + key).hex + ".pdf"
+    return case, receipt["dokument"], job
 
 
 if __name__ == "__main__":
-    over(sys.argv[1], sys.stdin.readline().rstrip("\r\n"))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("origin")
+    parser.add_argument("--doklad", type=Path)
+    args = parser.parse_args()
+    case, document, job = over(args.origin, sys.stdin.readline().rstrip("\r\n"))
+    if args.doklad:
+        args.doklad.write_text(f"{case} {document} {job}\n", encoding="ascii")
