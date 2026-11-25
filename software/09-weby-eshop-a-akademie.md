@@ -103,6 +103,8 @@ V TEST použij fiktivní zkoušené osoby a vzorový protokol označený jako te
 
 ---
 
+V testovací evidenci `db_gdpr_zkousky` čte role `polarita_ai_masked` pohledy `pouceni`, `elektrotechnik` a `vedouci` ve schématu `akademie_prehled_test`. Každý vrací anonymní identifikátor `person_no` a příznak `zpusobily` podle posledního archivovaného výsledku příslušného druhu a data jeho platnosti. Instalátor na dočasných záznamech ověřuje také zamítnutí přístupu k šifrovanému obsahu a ochranu uloženého otisku archivního dokumentu před přepsáním.
+
 ### Provozní zkouška retenčního seznamu
 
 Instalátor vytvoří pět syntetických kontaktů v místním protějšku Ecomailu. Do první kampaně zařadí kontakt s výslovným souhlasem a stávajícího zákazníka s nabídkou obdobné služby a možností ji odmítnout při získání kontaktu. Zprávy s podpisem DKIM uloží do testovací schránky na šifrovaném svazku. Ověří podpis a provede odhlášení z hlavičky zprávy přes HTTPS ve VPN. Pouhé zobrazení odkazu a kontrola náhledu druhého příjemce zachovají jeho odběr. Druhá kampaň po opakovaném importu ověří trvalé odhlášení i doručení zbývajícímu příjemci. Reklamní MCP zpřístupní počty podle kampaně a titulu. Připojení živého účtu Ecomail patří k přechodu po převzetí správcem.

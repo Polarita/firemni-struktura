@@ -24,7 +24,7 @@ V přehledu **Spisy** můžeš založit testovací spis pro pobočku 101 nebo ho
 
 Po zprovoznění týmového chatu otevři Zulip ve firemní VPN na stejném jméně jako ředitelství s portem `8444`. Zvol **Ředitelství Polarity** a přihlas se testovacím účtem `spravce` přes Keycloak. Chat má osm soukromých kanálů útvarů. Přístup každého z dvaceti pracovních botů odpovídá jeho firemní kartě. Odkaz na chat se v přehledu objeví po úspěšném přihlášení správce. Instalace vloží do soukromého kanálu `17-it-secops` testovací zprávu s přílohou. Při zkoušce obnovy se kontroluje obsah přílohy i její vazba na původní zprávu.
 
-Po ověření Akademie otevři v přehledu **Otevřít firemní Akademii**. Odkaz vede na nástěnku Moodle ve stejné VPN na portu `8451`. Na přihlašovací stránce použij jméno **spravce** a stejné testovací heslo jako v ředitelství. Instalace odkaz přidá po zkoušce přihlášení, přístupu ke správě účtu a odhlášení.
+Po ověření Akademie otevři v přehledu **Otevřít firemní Akademii**. Odkaz vede na nástěnku Moodle ve stejné VPN na portu `8451`. Na přihlašovací stránce použij jméno **spravce** a stejné testovací heslo jako v ředitelství. Instalace ověří také přihlášení tlačítkem **Ředitelství Polarity** přes Keycloak. V nabídce **Moje kurzy** otevři **Cvičná zkouška Akademie**. Najdeš tam návod k vyplnění odpovědního listu, dvě varianty papírové zkoušky a cvičné osvědčení.
 
 Po ověření analytiky v přehledu otevři **Otevřít návštěvnost webu v Umami**. Přihlas se jako **spravce** stejným testovacím heslem a vyber web **Ředitelství Polarity TEST**. V událostech najdeš pod názvem `prevzeti-sanonu` počet převzatých šanonů. Instalátor ověřuje, že tentýž denní součet může přečíst i reklamní nástroj `umami_conversions`.
 
