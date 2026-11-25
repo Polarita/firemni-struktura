@@ -117,7 +117,7 @@ Rozšiř inženýrské jádro cad-urs-engine o deterministický modul přípravy
 
 ### Test kladné a záporné revizní zprávy
 
-Instalátor založí dva samostatné spisy. V každém zpřístupní návrh PDF a odkaz na posouzení v Decisions. Importy CSV, XML a JSON se kontrolují proti stejnému měřicímu plánu, kalibračnímu listu konkrétního přístroje a otiskům předepsaných podkladů. Cvičná metodika SIM-RZ-01 má modelové jednotky a mezní hodnoty určené pro ověření softwaru. V prvním spisu jsou výsledky přesně na obou mezích. Ve druhém jedna hodnota překročí maximum a zpráva uvede bod, obvod, ustanovení a návrh lhůty odstranění. Pokud chybí podklad, kontrola skončí před sazbou PDF. Obě varianty zůstávají uzavřené pro předání do provozu a čekají na odborné posouzení. [Vstupy a nástroje zkoušky](../nasazeni/test/inzenyring/revize/)
+Instalátor založí dva samostatné spisy. Databáze přidělí modelovým rozváděčům samostatná výrobní čísla a zobrazí je v kartách spisů. Při opakování téhož požadavku zůstává číslo zachované. V každém spisu instalátor zpřístupní návrh PDF a odkaz na posouzení v Decisions. Importy CSV, XML a JSON se kontrolují proti stejnému měřicímu plánu, kalibračnímu listu konkrétního přístroje a otiskům předepsaných podkladů. Cvičná metodika SIM-RZ-01 má modelové jednotky a mezní hodnoty určené pro ověření softwaru. V prvním spisu jsou výsledky přesně na obou mezích. Ve druhém jedna hodnota překročí maximum a zpráva uvede bod, obvod, ustanovení a návrh lhůty odstranění. Pokud chybí podklad, kontrola skončí před sazbou PDF. Obě varianty zůstávají uzavřené pro předání do provozu a čekají na odborné posouzení. [Vstupy a nástroje zkoušky](../nasazeni/test/inzenyring/revize/)
 
 ## 4. Ověřitelné podmínky dokončení Bloku 10
 

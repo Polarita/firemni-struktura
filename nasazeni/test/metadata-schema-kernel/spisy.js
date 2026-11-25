@@ -36,6 +36,12 @@ async function otevri(url, options) {
     byId("zapis-revize").open = false;
     byId("stav-knihy").textContent = "";
     byId("terminy").replaceChildren();
+    byId("vyrobni-cisla").hidden = !data.rozvadece?.length;
+    byId("seznam-rozvadecu").replaceChildren(...(data.rozvadece || []).map(row => {
+        const item = document.createElement("li");
+        item.textContent = row.oznaceni + " · " + row.vyrobni_cislo;
+        return item;
+    }));
     byId("revizni-navrh").hidden = !data.revizni_navrh;
     if (data.revizni_navrh) {
         const revize = data.revizni_navrh;

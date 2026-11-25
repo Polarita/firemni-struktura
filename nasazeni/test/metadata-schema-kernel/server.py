@@ -114,6 +114,11 @@ class Handler(BaseHTTPRequestHandler):
                 karta = najdi(data, parts[0] if len(parts) == 1 else "")
                 if (slozka_spisu(karta, "rozpocty") / "SHA256SUMS").is_file():
                     karta["ma_rozpocet"] = True
+                rozvadece = query(data, """SELECT coalesce(json_agg(r ORDER BY vyrobni_cislo),'[]') FROM
+                    (SELECT oznaceni,vyrobni_cislo FROM polarita_test_spisy.vyrobni_cisla
+                     WHERE case_id=:'kod') r;""", kod=karta["case_id"])
+                if rozvadece:
+                    karta["rozvadece"] = rozvadece
                 prehled = slozka_spisu(karta, "revize") / "prehled.json"
                 if prehled.is_file():
                     karta["revizni_navrh"] = json.loads(prehled.read_bytes())
