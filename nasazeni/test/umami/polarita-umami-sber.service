@@ -1,0 +1,7 @@
+[Unit]
+Description=Denní počty převzatých šanonů ve vlastní analytice TEST
+After=incus.service
+RequiresMountsFor=/srv/polarita/data/bootstrap-test
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /srv/polarita/infra/umami-test/sber.py

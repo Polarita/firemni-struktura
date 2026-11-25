@@ -8,6 +8,7 @@ install -dm0755 "$work/conf" "$work/tofu"
 exec 9>"$work/.instalace"
 flock 9
 install -m0755 "$src/start.sh" "$work/conf/start.sh"
+install -m0644 "$src/over.mjs" "$work/conf/over.mjs"
 incus file pull postgres-test/var/lib/polarita-postgres/pki/server.crt "$work/conf/postgres.next"
 chmod 0644 "$work/conf/postgres.next"
 mv -T "$work/conf/postgres.next" "$work/conf/postgres.crt"

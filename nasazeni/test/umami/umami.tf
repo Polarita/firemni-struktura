@@ -34,6 +34,14 @@ resource "incus_instance" "umami" {
     }
   }
   device {
+    name = "vstup-dmz"
+    type = "proxy"
+    properties = {
+      listen  = "tcp:10.239.31.1:18449"
+      connect = "tcp:127.0.0.1:3000"
+    }
+  }
+  device {
     name = "runtime"
     type = "disk"
     properties = {

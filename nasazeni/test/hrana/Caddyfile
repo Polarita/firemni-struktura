@@ -26,6 +26,16 @@ http://:8080 {
 	bind 127.0.0.1
 	header +Via "1.1 polarita-caddy"
 	route {
+		@analytika header_regexp Host ^[a-z0-9.-]+[.]ts[.]net:8449$
+		handle @analytika {
+			@zber path /api/send
+			respond @zber 405
+			reverse_proxy 10.239.31.1:18449 {
+				header_up -Cookie
+				header_down -Set-Cookie
+				header_up X-Forwarded-Proto https
+			}
+		}
 		@archiv header_regexp Host ^[a-z0-9.-]+[.]ts[.]net:8448$
 		handle @archiv {
 			route {

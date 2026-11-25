@@ -3,7 +3,7 @@
 set -euo pipefail
 [[ $(hostname -s) == ejpovice && $EUID == 0 ]]
 port=${1:?Chybí port}
-[[ $port == 8444 || $port == 8445 || $port == 8446 || $port == 8447 || $port == 8448 ]]
+[[ $port == 8444 || $port == 8445 || $port == 8446 || $port == 8447 || $port == 8448 || $port == 8449 ]]
 fqdn=$(tailscale status --json | python3 -c 'import json,sys; print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))')
 [[ $fqdn =~ ^[a-z0-9.-]+\.ts\.net$ ]]
 tailscale serve status --json | python3 -c '

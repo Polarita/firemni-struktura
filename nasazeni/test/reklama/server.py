@@ -1,6 +1,7 @@
 """Soukromý stdio server místní Gitea pro syntetickou reklamu v ředitelství."""
 import asyncio
 from contextlib import closing
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -18,7 +19,7 @@ REPORTS = {
     "zbozi_list_offers": {"offers": [{"id": "TEST-Z1", "currency": "CZK"}]},
     "heureka_list_offers": {"offers": [{"id": "TEST-H1", "currency": "CZK"}]},
     "ecomail_list_campaigns": {"campaigns": []},
-    "umami_conversions": {"available": False, "planned_block": 9},
+    "umami_conversions": {},
     "poas_margin": {"available": False, "planned_block": 11},
 }
 EMPTY = {"type": "object", "properties": {}, "additionalProperties": False}
@@ -57,7 +58,14 @@ def campaign(provider, action, args):
 
 @server.call_tool()
 async def call_tool(name, arguments):
-    if name in REPORTS:
+    if name == "umami_conversions":
+        try:
+            result = json.loads(Path("/var/lib/polarita-umami-test/konverze.json").read_text())
+            age = datetime.now(timezone.utc) - datetime.fromisoformat(result["checked_at"])
+            result["available"] = 0 <= age.total_seconds() <= 900
+        except FileNotFoundError:
+            result = {"available": False, "event": "prevzeti-sanonu"}
+    elif name in REPORTS:
         result = REPORTS[name]
     else:
         provider, _, action = name.partition("_")
