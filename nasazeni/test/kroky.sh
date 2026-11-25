@@ -372,6 +372,11 @@ web() {
         python3 nasazeni/test/silverbullet/zkouska_prihlaseni.py "$fqdn" --predavky "$tmp/web-predavka.jsonl"
 }
 
+vykresy() {
+    "${guest[@]}" bash "$dest/nasazeni/test/cad/offline.sh" | tee "$tmp/cad-vykresy.txt"
+    "${inc[@]}" file push --project polarita "$tmp/cad-vykresy.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-10/cad-vykresy-$commit.txt"
+}
+
 predani() {
     python3 nasazeni/test/vydani.py "$commit"
     "${guest[@]}" systemctl start polarita-dohled-sber.service
@@ -393,7 +398,7 @@ predani() {
     "${guest[@]}" sh -ec 'ln -sfn "$1" /srv/polarita/infra/releases/.current-new; mv -Tf /srv/polarita/infra/releases/.current-new /srv/polarita/infra/releases/current' deploy "$dest"
 }
 
-kroky=(portal sit hesla postgres sluzby tym trezor databaze paperclip identita firemni_git rozhodnuti metadata obnova_databazi karantena zalohy dohled zulip obnova web predani)
+kroky=(portal sit hesla postgres sluzby tym trezor databaze paperclip identita firemni_git rozhodnuti metadata obnova_databazi karantena zalohy dohled zulip obnova web vykresy predani)
 over_vstup() {
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn" || return $?
     printf 'Ověřené přihlášení ve VPN: https://%s/ (účet spravce)\n' "$fqdn"
