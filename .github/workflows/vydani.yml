@@ -52,4 +52,4 @@ jobs:
       - name: Zveřejnit ověřené přílohy
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --generate-notes release-assets/*
+        run: python nastroje/publish_release.py release-assets

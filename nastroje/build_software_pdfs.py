@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Generátor tiskových PDF výstupů softwarové architektury Polarita s.r.o. (Verze 3.30):
+Generátor tiskových PDF výstupů softwarové architektury Polarita s.r.o. (Verze 3.30.1):
   1) 05-SOFTWAROVA-MAPA-A3-2026.pdf (1 strana A3 na šířku 420×297 mm, čitelná sazba bez zmenšení)
   2) 04-KOMPLETNI-SOFTWAROVA-ARCHITEKTURA-POLARITA-2026.pdf (souborná Modrá kniha A4, 0× file:// URI, 1:1 měřítko)
 Cesty jsou relativní k umístění skriptu (nastroje/ ve složce firemni-struktura/); HTML předlohy vznikají

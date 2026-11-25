@@ -1,5 +1,5 @@
 -- =====================================================================================
--- rls-pool-test.sql — Polarita Elektro Cloud · Blok 19 (S7) · Verze 3.30 (Polarita-3.30)
+-- rls-pool-test.sql — Polarita Elektro Cloud · Blok 19 (S7) · Verze 3.30.1 (Polarita-3.30.1)
 --
 -- EN: Tested on disposable PostgreSQL 18.7. Companion of rls-vzor.sql. That file runs in one
 --     transaction and switches roles with SET LOCAL ROLE; this script covers what it

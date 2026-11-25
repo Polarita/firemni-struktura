@@ -1,6 +1,6 @@
 # =============================================================================
 # metadata-schema-kernel · declarative schema DRAFT / deklarativní schéma NÁVRH
-# Module / Modul: dilensky-terminal · Blok 16 · balíček S4 · Verze 3.30
+# Module / Modul: dilensky-terminal · Blok 16 · balíček S4 · Verze 3.30.1
 # EN: Touch workshop kiosk for switchboard assembly, routine verification and
 #     CE / PHE label printing. Block 16 deploys the workshop module inside the
 #     polarita-hq VM on Ejpovice.
@@ -18,7 +18,7 @@ schema:
   module: dilensky-terminal
   package: S4
   block: 16
-  release: Polarita-3.30
+  release: Polarita-3.30.1
   schema_version: 0.1.0-draft
   status: DRAFT                 # EN: proposal only / CZ: pouze návrh
   owner_ai: 17001               # EN: 17001 programator / CZ: 17001 programator
