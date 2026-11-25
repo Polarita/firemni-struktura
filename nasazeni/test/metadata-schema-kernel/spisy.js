@@ -36,6 +36,14 @@ async function otevri(url, options) {
     byId("zapis-revize").open = false;
     byId("stav-knihy").textContent = "";
     byId("terminy").replaceChildren();
+    byId("revizni-navrh").hidden = !data.revizni_navrh;
+    if (data.revizni_navrh) {
+        const revize = data.revizni_navrh;
+        const vysledek = revize.stav === "navrh-zaporny" ? "Záporný návrh. Závady: " + revize.zavady.join(", ") : "Kladný návrh.";
+        byId("vysledek-revize").textContent = vysledek + " Čeká na odborné posouzení. Předání do provozu je zablokované.";
+        byId("revize-pdf").href = "api/revize/" + encodeURIComponent(data.case_id) + "/navrh.pdf";
+        byId("revize-rozhodnuti").href = revize.rozhodnuti;
+    }
     byId("rozpocet").hidden = !data.ma_rozpocet;
     for (const format of ["xc4", "xlsx"]) {
         byId(format).href = "api/rozpocty/" + encodeURIComponent(data.case_id) + "/nabidka." + format;

@@ -115,6 +115,10 @@ Rozšiř inženýrské jádro cad-urs-engine o deterministický modul přípravy
 
 ---
 
+### Test kladné a záporné revizní zprávy
+
+Instalátor založí dva samostatné spisy. V každém zpřístupní návrh PDF a odkaz na posouzení v Decisions. Importy CSV, XML a JSON se kontrolují proti stejnému měřicímu plánu, kalibračnímu listu konkrétního přístroje a otiskům předepsaných podkladů. Cvičná metodika SIM-RZ-01 má modelové jednotky a mezní hodnoty určené pro ověření softwaru. V prvním spisu jsou výsledky přesně na obou mezích. Ve druhém jedna hodnota překročí maximum a zpráva uvede bod, obvod, ustanovení a návrh lhůty odstranění. Pokud chybí podklad, kontrola skončí před sazbou PDF. Obě varianty zůstávají uzavřené pro předání do provozu a čekají na odborné posouzení. [Vstupy a nástroje zkoušky](../nasazeni/test/inzenyring/revize/)
+
 ## 4. Ověřitelné podmínky dokončení Bloku 10
 
 - [ ] Funguje produkční serverové generování `.qet` XML v `cad-urs-engine` i interaktivní desktopová editace elektro schémat rozváděčů v **`QElectroTech (latest)`** na stanicích `1001+` se značkami podle platné normy pro grafické značky ve schématech, doplněná o desktopový základ (`LibreCAD / FreeCAD / LibreOffice`) a samostatně zdokumentovaný volitelný pilot **`CadCraft`** (`getcadcraft.com`, `Apache`, striktně odlišený od kreativního `ArtCraft`).

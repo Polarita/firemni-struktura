@@ -1,0 +1,55 @@
+{
+  "rezim": "TEST",
+  "projekt": "RZ-TEST-01",
+  "den": "2026-11-20",
+  "novy_rozvadec": true,
+  "stavebni_denik": true,
+  "vykop": true,
+  "prilohy": {
+    "pas": "PAS-TEST-01",
+    "stitek": "STIT-TEST-01",
+    "uzavreny-denik": "DEN-TEST-01",
+    "vytyceni": "DTM-TEST-01"
+  },
+  "kalibrace": {
+    "MER-TEST-01": "KAL-TEST-01"
+  },
+  "otisky_dokladu": {
+    "PAS-TEST-01": "ab3ef86ea4314a990800a468a664a05fd77713d49e985a8aab336c49d93ec6e2",
+    "DEN-TEST-01": "ec84b6682905fede315cfe0d57045aee23d875f20b08b7b1395fbd304cf205c4",
+    "STIT-TEST-01": "b546df8d7a87f38e637be5ddcbb3f63e752a4307459e4529426632cd460156a7",
+    "KAL-TEST-01": "4c98a5ac9c383d8e1e9c3f792b9d74aa8812ebe54fc4f387f375f9f53153e8cb",
+    "DTM-TEST-01": "ed0f65bd8e3016360d6474e55693b83f3ce4795f63abfc04e8edcc21a9d26a92"
+  },
+  "body": {
+    "M1": {
+      "obvod": "Větev A modelu",
+      "velicina": "modelova-odchylka"
+    },
+    "M2": {
+      "obvod": "Větev B modelu",
+      "velicina": "modelova-rezerva"
+    }
+  },
+  "metodika": {
+    "id": "SIM-RZ-01",
+    "od": "2026-01-01",
+    "do": "2026-12-31",
+    "pravidla": {
+      "modelova-odchylka": {
+        "jednotka": "bod TEST",
+        "porovnani": "max",
+        "mez": "8",
+        "ustanoveni": "SIM-RZ-01 čl. 1",
+        "navrh_lhuty": "Před opakováním cvičné zkoušky"
+      },
+      "modelova-rezerva": {
+        "jednotka": "bod TEST",
+        "porovnani": "min",
+        "mez": "3.25",
+        "ustanoveni": "SIM-RZ-01 čl. 2",
+        "navrh_lhuty": "Před opakováním cvičné zkoušky"
+      }
+    }
+  }
+}

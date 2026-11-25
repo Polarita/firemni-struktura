@@ -16,8 +16,8 @@ from spisy import casova_osa, najdi, prevzate_sanony, zaloz
 from zaznamy import Problem, query, read, write
 
 
-def rozpocet(karta):
-    return Path("/opt/polarita-inzenyring-test/rozpocty") / str(UUID(karta["pozadavek"])) / "current"
+def slozka_spisu(karta, oddil):
+    return Path("/opt/polarita-inzenyring-test") / oddil / str(UUID(karta["pozadavek"])) / "current"
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -72,6 +72,15 @@ class Handler(BaseHTTPRequestHandler):
         if self.command == "POST" and path == "/api/spisy":
             self.reply(200, zaloz(data, self.request_body()))
             return
+        if self.command == "GET" and path.startswith("/api/revize/"):
+            parts = path.removeprefix("/api/revize/").split("/")
+            if len(parts) != 2 or parts[1] != "navrh.pdf":
+                raise Problem(404, "Neznámý revizní doklad.")
+            file = slozka_spisu(najdi(data, parts[0]), "revize") / "navrh.pdf"
+            if not file.is_file():
+                raise Problem(404, "Spis nemá návrh revizní zprávy.")
+            self.reply(200, file.read_bytes(), "application/pdf")
+            return
         if self.command == "GET" and path.startswith("/api/rozpocty/"):
             parts = path.removeprefix("/api/rozpocty/").split("/")
             formats = {"nabidka.xc4": "application/octet-stream",
@@ -79,7 +88,7 @@ class Handler(BaseHTTPRequestHandler):
             if len(parts) != 2 or parts[1] not in formats:
                 raise Problem(404, "Neznámý formát nabídky.")
             karta = najdi(data, parts[0])
-            file = rozpocet(karta) / parts[1]
+            file = slozka_spisu(karta, "rozpocty") / parts[1]
             if not file.is_file():
                 raise Problem(404, "Spis nemá tuto nabídku.")
             self.reply(200, file.read_bytes(), formats[parts[1]])
@@ -103,8 +112,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(200, casova_osa(data, parts[0], parts[2] if len(parts) == 3 else None))
             else:
                 karta = najdi(data, parts[0] if len(parts) == 1 else "")
-                if (rozpocet(karta) / "SHA256SUMS").is_file():
+                if (slozka_spisu(karta, "rozpocty") / "SHA256SUMS").is_file():
                     karta["ma_rozpocet"] = True
+                prehled = slozka_spisu(karta, "revize") / "prehled.json"
+                if prehled.is_file():
+                    karta["revizni_navrh"] = json.loads(prehled.read_bytes())
                 self.reply(200, karta)
             return
         if self.command == "POST" and path == route:

@@ -1,0 +1,9 @@
+{
+  "id": "DEN-TEST-01",
+  "rezim": "TEST",
+  "druh": "uzavreny-denik",
+  "projekt": "RZ-TEST-01",
+  "den": "2026-11-19",
+  "uzavren": true,
+  "ucel": "Cvičný záznam k přezkoušení dostupnosti podkladů."
+}
