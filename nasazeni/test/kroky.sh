@@ -291,13 +291,19 @@ obnova() {
 }
 
 web() {
+    "${guest[@]}" bash "$dest/nasazeni/test/umami/over.sh" | tee "$tmp/umami.txt"
+    sudo -n bash nasazeni/test/port-vpn.sh 8449 >/dev/null
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
+        python3 nasazeni/test/umami/over_vpn.py "$fqdn" | tee -a "$tmp/umami.txt"
+    printf 'https://%s:8449/\n' "$fqdn" | "${guest[@]}" incus exec -T reditelstvi-test -- sh -ec 'umask 022; cat >/usr/local/share/.umami-next; mv -T /usr/local/share/.umami-next /usr/local/share/polarita-umami-url'
     "${guest[@]}" bash "$dest/nasazeni/test/web/instalace.sh" | tee "$tmp/web.txt"
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/web/over_portal.py "https://$fqdn" | tee "$tmp/web-pristup.txt" | tee -a "$tmp/web.txt"
     "${guest[@]}" install -d -m0750 /srv/polarita/workspace/dukazy/blok-09
     "${inc[@]}" file push --project polarita "$tmp/web.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/web-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/web-pristup.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/web-pristup-$commit.txt"
-    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 09 "$commit" web-pristup | tee "$tmp/web-predavka.jsonl"
+    "${inc[@]}" file push --project polarita "$tmp/umami.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-09/umami-$commit.txt"
+    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 09 "$commit" umami web-pristup | tee "$tmp/web-predavka.jsonl"
     "${guest[@]}" systemctl start polarita-silverbullet-export.service
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/silverbullet/zkouska_prihlaseni.py "$fqdn" --predavky "$tmp/web-predavka.jsonl"

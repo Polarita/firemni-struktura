@@ -6,6 +6,8 @@ Tento dokument definuje zákaznickou, obchodní, skladovou, expediční, vzděl�
 
 Testovací náhled v ředitelství používá cestu `/web-test/`. Zdroj a statický výstup sestavuje instalátor ve `/srv/polarita/apps/web-polarita-cz/` uvnitř `polarita-hq`. Přihlášený správce ověří tři měsíční tarify, ceny jednorázových instalací, konfigurátor a cestu z návodu ke skutečnému formuláři pro PDF. Na cestě `/web-test/kalkulacka-svj/` porovná správce spotřebu, cenu a očekávanou úsporu. Podle typu správce a doložení revize dostane kroky pro schůzi. Služba Typst v interním portálu vysází PDF ze stejného výpočtu. Text návodu upravuje redakce v Markdownu. Ceník pochází z veřejné projekce balíčku S3.
 
+V testovacím ředitelství používá Umami 3.5.0 vlastní databázi PostgreSQL. Po přihlášení účtem `spravce` je na portu `8449` dostupný web **Ředitelství Polarity TEST**. Událost `prevzeti-sanonu` vyjadřuje jedno potvrzené převzetí PDF. Každých pět minut instalovaný sběrač porovná denní součty v UTC mezi registrem a analytikou. Do Umami posílá den a druh události. Počty jsou k dispozici i v nástroji `umami_conversions` místního reklamního MCP.
+
 ## 1. Seznam vybraného softwaru
 
 | Oblast | Vybraný software / Stavební kámen | Kanál / Licence | Role a použití v Polarita s.r.o. (Verze 3.22) | Odpovědný `ai` / garant |

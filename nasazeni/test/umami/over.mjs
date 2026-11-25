@@ -15,7 +15,7 @@ if (password.length < 8) throw new Error('Chybí testovací přístup ředitelst
 
 let token;
 async function api(path, body, accept = []) {
-  const headers = { 'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/128.0 Safari/537.36' };
+  const headers = { 'user-agent': 'Polarita-TEST/1.0 (interni prijem konverzi)' };
   if (body) headers['content-type'] = 'application/json';
   if (token && path !== '/send') headers.authorization = 'Bearer ' + token;
   const response = await fetch(base + path, {
