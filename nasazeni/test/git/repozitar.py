@@ -74,7 +74,7 @@ def configure():
         if close_sample:
             number = found["number"]
             if found["state"] == "open":
-                api("PATCH", path+f"/pulls/{number}", {"state":"closed"})
+                api("PATCH", path+f"/pulls/{number}", {"state":"closed"}, (200, 201))
             _, closed = api("GET", path+f"/pulls/{number}")
             if closed["state"] != "closed" or closed["merged"] or closed["head"]["sha"] != candidate["commit"]:
                 raise RuntimeError("Kontrolní revize nebyla uzavřena bez sloučení")
