@@ -14,7 +14,15 @@ fi
 [[ $(findmnt -n -o SOURCE --mountpoint /srv/polarita/data/postgres) == polarita_zfs/data/postgres ]]
 [[ $(zfs get -Hp -o value recordsize polarita_zfs/data/postgres) == 8192 ]]
 [[ $(zfs get -H -o value keystatus polarita_zfs/data/postgres) == available ]]
-install -d -m 0750 /srv/polarita/data/postgres/test
+# Stejný adresář je v instanci rodičem db, pool a pki. Služby jím musí
+# projít i během opakovaného tofu plan. Data samotná zůstávají v db s 0700.
+data=/srv/polarita/data/postgres/test
+[[ ! -L $data ]]
+if [[ -d $data ]]; then
+    chmod 0711 "$data"
+else
+    install -d -m 0711 "$data"
+fi
 install -d -m 0700 /srv/polarita/infra/metadata-test
 cd "$work/tofu"
 image=$(bash "$src/obraz.sh" --alias)
