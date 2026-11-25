@@ -1,4 +1,4 @@
-# Charta a provozní řád: Oddělení 18 — Lidé, Personalistika, BOZP a Terénní realizace · Verze 3.26
+# Charta a provozní řád: Oddělení 18 — Lidé, Personalistika, BOZP a Terénní realizace · Verze 3.27
 
 ## 1. Poslání oddělení
 Zajišťuje kompletní lidský pilíř společnosti **Polarita s.r.o.** — od náboru, smluvního zajištění, elektronické evidence v šifrované databázi **`db_hr_lide`**, hlídání lékařských prohlídek, BOZP, požární ochrany, odborných způsobilostí v elektrotechnice (**předpisy o odborné způsobilosti v elektrotechnice & TIČR**) a ochrany proti nelegálnímu švarcsystému až po plánování směn, výdej OOPP/nářadí, maticové uvolňování prověřených pracovníků pro terénní zakázky (Oddělení `14`) a sklad (Oddělení `13`) a měsíční přípravu mzdových podkladů a hlášení **JMHZ 2026** pro smluvní mzdovou a daňovou kancelář **UOL (`ORG-UOL`)**.
@@ -95,7 +95,7 @@ Každá fyzická živá osoba má strukturovanou kartu s **8 datovými bloky ulo
 
 ## 8. Rozvojové balíčky Etapy II a III (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.26 zapracovány jako samostatné `Bloky 13–19` (přehled a řídicí dokumenty: [`balicky/README.md`](../balicky/README.md)). Spouštějí se až po `12/12 PASS` Go-Live Gate, nemění složení oddělení ani rozpočty `ai` a oddělení se jich účastní takto:
+Balíčky `S1–S7` jsou ve Verzi 3.27 zapracovány jako samostatné `Bloky 13–19` (přehled a řídicí dokumenty: [`balicky/README.md`](../balicky/README.md)). Spouštějí se až po `12/12 PASS` Go-Live Gate, nemění složení oddělení ani rozpočty `ai` a oddělení se jich účastní takto:
 
 * **`Blok 13` (`S1`):** `18001 personalista` vybírá smluvní typ a pracovníka v `Clean Room` výhradně podle `person_no` — konkrétní dohodu o svěření služebního vozidla, dohodu o odpovědnosti za schodek na svěřených hodnotách, dohodu o odpovědnosti za ztrátu svěřených věcí i nástupní doložku o kontrole pracovní komunikace vyplňuje s osobními údaji až deterministický backend generátoru `S1` přímo z šifrované `db_hr_lide` mimo kontext LLM.
 * **`Blok 16` (`S4`):** kiosk ověřuje způsobilost přihlášené osoby přes `Hard-Stop` bránu `db_hr_lide` (`Clean Room`); bez platné způsobilosti nelze kusové ověření uzavřít.

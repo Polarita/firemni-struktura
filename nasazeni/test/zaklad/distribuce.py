@@ -38,6 +38,11 @@ def uloz(source, cache, expected):
     if source.is_symlink():
         if source.readlink() != target or target.is_symlink():
             raise ValueError(f"Cizí odkaz {source}")
+        if not target.exists():
+            # Systémový disk může mít po obnově prázdnou cache. Instalátor balík stáhne znovu.
+            source.unlink()
+            syncdir(source.parent)
+            return 0
         over(target, expected)
         return 0
     if not source.exists():

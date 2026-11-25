@@ -1,4 +1,4 @@
-# Záznam o ověření generátoru čistopisů (balíček S1 · Verze 3.26)
+# Záznam o ověření generátoru čistopisů (balíček S1 · Verze 3.27)
 
 - **Datum běhu:** 23. 11. 2026 (Linux, `Python 3.14.4`, `markdown 3.11.3`, `pypdf 7.1.1`, headless `Chrome for Testing`)
 - **Příkaz:** `python3 generate_pdfs.py` → návratový kód `0`, **`15` dokumentů v `8` sestavách, `69` stran** (`generate_pdfs.py --check` → `VERIFIED_PASS: 15/15`)

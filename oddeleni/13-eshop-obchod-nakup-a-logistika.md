@@ -1,4 +1,4 @@
-# Charta a provozní řád: Oddělení 13 — E-commerce, Obchod, Nákup a Logistika · Verze 3.26
+# Charta a provozní řád: Oddělení 13 — E-commerce, Obchod, Nákup a Logistika · Verze 3.27
 
 ## 1. Poslání oddělení
 Provozovat bezchybný a vysokoobrátkový e-shop **`polarita.eu`** i plnohodnotné **elektro skladové hospodářství (`Elektro WMS`)** včetně pojízdných skladů v montážních dodávkách (`VAN-*`), zajišťovat nejvýhodnější přímý nákup a B2B sourcing elektromateriálu v ČR/EU i mimo EU, aktivně vyhledávat veřejné i firemní zakázky a garantovat špičkovou expedici i vyřízení reklamací hluboko pod zákonnou lhůtou.
@@ -41,7 +41,7 @@ Provozovat bezchybný a vysokoobrátkový e-shop **`polarita.eu`** i plnohodnotn
 
 ## 6. Rozvojové balíčky Etapy II a III (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.26 zapracovány jako samostatné `Bloky 13–19` (přehled a řídicí dokumenty: [`balicky/README.md`](../balicky/README.md)). Spouštějí se až po `12/12 PASS` Go-Live Gate, nemění složení oddělení ani rozpočty `ai` a oddělení se jich účastní takto:
+Balíčky `S1–S7` jsou ve Verzi 3.27 zapracovány jako samostatné `Bloky 13–19` (přehled a řídicí dokumenty: [`balicky/README.md`](../balicky/README.md)). Spouštějí se až po `12/12 PASS` Go-Live Gate, nemění složení oddělení ani rozpočty `ai` a oddělení se jich účastní takto:
 
 * **`Blok 13` (`S1` generátor čistopisů):** `13001 eshop` dodává data `S/N` a `PHE` z `Elektro WMS` pro Výrobní pas rozváděče.
 * **`Blok 15` (`S3` ceník):** `13002 nakupci` dodává živé nákupní ceny jako podklad přirážky na materiál.
