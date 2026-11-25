@@ -13,36 +13,40 @@ incus exec -T gitea-test -- cat /etc/polarita-gitea/git-ca.crt >"$tmp"
 openssl x509 -noout -checkend 0 -in "$tmp" >/dev/null
 incus file push --mode=0644 "$tmp" akademie-test/usr/local/share/ca-certificates/polarita-oidc.crt
 "${inside[@]}" update-ca-certificates
-"${inside[@]}" python3 - "$host" <<'PY'
-from pathlib import Path
-import sys
-p = Path('/etc/hosts')
-tag = '# polarita-akademie-oidc'
-entries = [line for line in p.read_text().splitlines() if not line.endswith(tag)]
-entries.append(f'10.239.32.13 {sys.argv[1]} {tag}')
-p.write_text('\n'.join(entries) + '\n')
-PY
+"${inside[@]}" env POLARITA_AKADEMIE_HOST="$host" php8.4 <<'PHP'
+<?php
+$path = '/etc/hosts';
+$tag = '# polarita-akademie-oidc';
+$entries = array_filter(file($path, FILE_IGNORE_NEW_LINES), fn($line) => !str_ends_with($line, $tag));
+$entries[] = '10.239.32.13 ' . getenv('POLARITA_AKADEMIE_HOST') . ' ' . $tag;
+if (file_put_contents($path, implode("\n", $entries) . "\n", LOCK_EX) === false) {
+    throw new RuntimeException('Nelze zapsat adresu identity v Akademii.');
+}
+PHP
 bash "$src/../git/obnov-proxy.sh"
 python3 "$src/../identita/sluzba_oidc.py" "$host" moodle
-"${inside[@]}" python3 - "$host" <<'PY'
-import json
-import sys
-from urllib.error import HTTPError
-from urllib.request import urlopen
-origin = 'https://' + sys.argv[1]
-issuer = origin + '/identita/realms/polarita'
-with urlopen(issuer + '/.well-known/openid-configuration', timeout=20) as response:
-    doc = json.load(response)
-assert doc['issuer'] == issuer
-for field, path in [('authorization_endpoint', 'auth'), ('token_endpoint', 'token'), ('userinfo_endpoint', 'userinfo'), ('jwks_uri', 'certs')]:
-    if doc.get(field) != f'{issuer}/protocol/openid-connect/{path}':
-        raise RuntimeError('Metadata neposkytla očekávanou cestu realmu.')
-try:
-    urlopen(origin + '/git/', timeout=20)
-except HTTPError as error:
-    if error.code != 403:
-        raise
-else:
-    raise RuntimeError('Interní vstup Akademie zpřístupnil Git.')
-print('Kontejner Moodle ověřil TLS a koncové body Keycloaku. Soukromý Git přístup z Akademie odmítl.')
-PY
+"${inside[@]}" env POLARITA_AKADEMIE_HOST="$host" php8.4 <<'PHP'
+<?php
+$origin = 'https://' . getenv('POLARITA_AKADEMIE_HOST');
+$issuer = $origin . '/identita/realms/polarita';
+$request = curl_init($issuer . '/.well-known/openid-configuration');
+curl_setopt_array($request, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 20]);
+$body = curl_exec($request);
+if ($body === false || curl_getinfo($request, CURLINFO_RESPONSE_CODE) !== 200) {
+    throw new RuntimeException('Kontejner Akademie neověřil metadata přes HTTPS.');
+}
+$doc = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
+if (($doc['issuer'] ?? '') !== $issuer) {
+    throw new RuntimeException('Nesouhlasí identita vydavatele.');
+}
+foreach (['authorization_endpoint' => 'auth', 'token_endpoint' => 'token', 'userinfo_endpoint' => 'userinfo', 'jwks_uri' => 'certs'] as $field => $path) {
+    if (($doc[$field] ?? '') !== "$issuer/protocol/openid-connect/$path") {
+        throw new RuntimeException('Metadata neposkytla očekávanou cestu realmu.');
+    }
+}
+curl_setopt($request, CURLOPT_URL, $origin . '/git/');
+if (curl_exec($request) === false || curl_getinfo($request, CURLINFO_RESPONSE_CODE) !== 403) {
+    throw new RuntimeException('Interní vstup nepotvrdil odmítnutí Gitu pro Akademii.');
+}
+echo "Kontejner Moodle ověřil TLS a koncové body Keycloaku. Soukromý Git přístup z Akademie odmítl.\n";
+PHP
