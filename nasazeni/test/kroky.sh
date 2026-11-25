@@ -303,6 +303,7 @@ web() {
     "${guest[@]}" bash "$dest/nasazeni/test/akademie/aplikace.sh"
     "${guest[@]}" bash "$dest/nasazeni/test/akademie/databaze.sh" "$fqdn"
     "${guest[@]}" bash "$dest/nasazeni/test/akademie/web.sh"
+    "${guest[@]}" bash "$dest/nasazeni/test/akademie/cron.sh"
     "${guest[@]}" bash "$dest/nasazeni/test/medusa/rma.sh" | tee "$tmp/reklamace.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/medusa/bubny.sh" | tee "$tmp/bubny.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/medusa/seriova-cisla.sh" | tee "$tmp/seriova-cisla.txt"

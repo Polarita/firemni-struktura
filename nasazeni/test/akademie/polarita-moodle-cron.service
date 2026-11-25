@@ -1,0 +1,17 @@
+[Unit]
+Description=Zpracování naplánovaných úloh Moodle a Offline Quiz
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/polarita-akademie/schema
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+ExecStart=/usr/bin/php8.4 /opt/polarita-akademie/current/admin/cli/cron.php
+Nice=10
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/polarita-akademie
+ProtectHome=yes

@@ -1,0 +1,10 @@
+[Unit]
+Description=Pravidelné spuštění úloh Akademie
+
+[Timer]
+OnActiveSec=1min
+OnUnitInactiveSec=1min
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target
