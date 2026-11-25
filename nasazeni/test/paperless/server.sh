@@ -37,8 +37,7 @@ fi
 bash "$src/../git/obnov-proxy.sh"
 python3 "$src/../identita/sluzba_oidc.py" "$host" paperless
 # Převezme novou tabulku také při aktualizaci už běžící instance.
-"${inside[@]}" sh -ec 'cmp -s /etc/polarita-paperless/hosts /etc/hosts || mount --bind /etc/polarita-paperless/hosts /etc/hosts'
-"${inside[@]}" python3 -c 'import socket, sys; assert {r[4][0] for r in socket.getaddrinfo(sys.argv[1],443)} == {"10.239.32.13"}' "$host"
+bash "$src/hosts.sh" "$host" "$work/conf" --pripoj
 reload="$work/.web-reload"
 # Při první instalaci čeká PID 1 na web.sh. Publikuj ho až po všech konfiguracích.
 for file in postgres.crt oidc.crt url polarita_settings.py web.py web.sh; do

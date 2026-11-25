@@ -53,6 +53,7 @@ for item in json.load(sys.stdin).get("resource_changes",[]):
     if item["address"] not in {"incus_instance.archiv","incus_instance.fronta"} or actions not in (["create"],["update"]):
         sys.exit("Neočekávaná změna "+item["address"])'
 tofu apply -parallelism=1 -input=false "$plan"
+bash "$src/hosts.sh" "$host" "$work/conf" --pripoj
 incus exec -T paperless-fronta-test -- sh -ec '
     for n in $(seq 1 60); do [ -S /run/paperless-broker/valkey.sock ] && break; sleep 1; done
     test "$(valkey-cli -s /run/paperless-broker/valkey.sock PING)" = PONG
