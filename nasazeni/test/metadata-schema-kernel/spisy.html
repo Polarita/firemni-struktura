@@ -10,6 +10,11 @@
 <form id="sanony"><label for="sken">Sken ve formátu PDF (nejvýše 64 MiB)</label><input type="file" id="sken" accept="application/pdf,.pdf" required><button id="odeslat">Předat do karantény</button></form>
 <p id="prijem" role="status"></p><h4>Poslední potvrzení o převzetí</h4><ul id="prevzate"></ul>
 <section id="vyrobni-cisla" hidden><h3>Rozváděče ve spisu</h3><ul id="seznam-rozvadecu"></ul></section>
+<section id="lps" hidden><h3>Riziko škody způsobené bleskem (TEST)</h3><p id="lps-vysledek"></p>
+<table><thead><tr><th>Zdroj škody</th><th>Událostí za rok</th><th>Podíl ztráty před opatřením</th><th>Podíl po opatření</th></tr></thead><tbody id="lps-slozky"></tbody></table></section>
+<section id="vedeni" hidden><h3>Kontrola vedení (TEST)</h3><p id="vedeni-vysledek"></p>
+<table><thead><tr><th>Průřez</th><th>Zatížitelnost</th><th>Úbytek napětí</th><th>Smyčka L–PE</th><th>Min. proud L–PE</th><th>Min. proud L–N</th><th>Výsledek modelu</th></tr></thead>
+<tbody id="vedeni-varianty"></tbody></table></section>
 <section id="dlm" hidden><h3>Projektová bilance nabíjení (TEST)</h3><p id="dlm-souhrn"></p>
 <table><thead><tr><th>Fáze</th><th>Soudobý příkon objektu</th><th>Proud pro vozidla</th><th>Výkonová rezerva</th></tr></thead><tbody id="dlm-faze"></tbody></table>
 <p id="dlm-vozidla"></p></section>

@@ -1,0 +1,13 @@
+[
+  {
+    "kod":"SIM-LPS-01/1", "ucel":"simulace","model":"objekt-test-majetkova-ztrata",
+    "od":"2026-01-01","do":"2026-12-31","mez_rocni_ztraty":"0.0002",
+    "opatreni":"O-TEST-01", "popis_opatreni":"Cvičný soubor vnější ochrany a ochrany proti přepětí",
+    "slozky":{
+      "objekt":{"popis":"Přímý zásah objektu","P_pred":"0.5","P_po":"0.1"},
+      "okoli_objektu":{"popis":"Zásah v okolí objektu","P_pred":"0.2","P_po":"0.05"},
+      "pripojka":{"popis":"Přímý zásah přípojky","P_pred":"0.5","P_po":"0.2"},
+      "okoli_pripojky":{"popis":"Zásah v okolí přípojky","P_pred":"0.1","P_po":"0.02"}
+    }
+  }
+]

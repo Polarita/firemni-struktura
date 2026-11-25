@@ -18,7 +18,22 @@ def over(origin, heslo):
             ("kladny", "9200", [18, 9, 9], []), ("zaporny", "11960.01", [0, 0, 0], ["L2"])):
         telo = json.dumps({"pozadavek": str(id_spisu(varianta)), "branch_id": 101}).encode()
         kod = json.loads(call("POST", api, telo, "application/json"))["case_id"]
-        model = json.loads(call("GET", api + "/" + kod))["bilance_EV"]
+        karta = json.loads(call("GET", api + "/" + kod))
+        riziko = karta["lps"]
+        ocekavane = ("0.0004", "0.000104", True) if varianta == "kladny" else ("0.001", "0.00026", False)
+        if (len(riziko["slozky"]) != 4 or riziko["mez"] != "0.0002"
+                or (riziko["pred"], riziko["po"], riziko["po_v_mezi"]) != ocekavane):
+            raise ValueError("Spis má nesprávný rozklad nebo celkový výsledek rizika LPS.")
+        print(kod, riziko["metodika"], riziko["pred"], "→", riziko["po"], flush=True)
+        model = karta["bilance_EV"]
+        vedeni = karta["vedeni"]
+        kandidat = vedeni["varianty"][1]
+        vyber, ubytek, poruchy = ("2.5", "6", []) if varianta == "kladny" else (
+            None, "54", ["ubytek", "porucha_L_PE", "zkrat_L_N"])
+        if (vedeni["vybrany_mm2"] != vyber or kandidat["prurez_mm2"] != "2.5"
+                or kandidat["dU_V"] != ubytek or kandidat["chyby"] != poruchy):
+            raise ValueError("Spis má nesprávný výsledek kontroly vedení.")
+        print(kod, vedeni["metodika"], "·", vedeni["varianty"], flush=True)
         if (model["metodika"] != "SIM-DLM-01/1" or model["soudoby_prikon_W"] != prikon
                 or [model["faze"][f]["prideleno_EV_A"] for f in ("L1","L2","L3")] != proudy
                 or model["pretizene_faze"] != pretizeni):

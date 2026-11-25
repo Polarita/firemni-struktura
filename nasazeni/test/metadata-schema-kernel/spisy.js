@@ -69,6 +69,8 @@ async function otevri(url, options) {
     for (const format of ["xc4", "xlsx"]) {
         byId(format).href = "api/rozpocty/" + encodeURIComponent(data.case_id) + "/nabidka." + format;
     }
+    ukazVedeni(data.vedeni);
+    ukazRiziko(data.lps);
     ukazBilanci(data.bilance_EV);
     byId("ocpp").hidden = true;
     byId("vykopy").hidden = true;
@@ -118,6 +120,43 @@ async function otevriOdkaz() {
 window.addEventListener("hashchange", otevriOdkaz);
 window.addEventListener("popstate", otevriOdkaz);
 if (location.search || location.hash) otevriOdkaz();
+
+function ukazRiziko(model) {
+    byId("lps").hidden = !model;
+    if (!model) return;
+    const cislo = text => text.replace(".", ",");
+    const stav = model.po_v_mezi ? "Po opatření v mezi." : "Po opatření zůstává nad mezí.";
+    byId("lps-vysledek").textContent = model.metodika + " · " + model.opatreni + ". Roční podíl ztráty "
+        + cislo(model.pred) + " → " + cislo(model.po) + ", modelová mez " + cislo(model.mez) + ". " + stav;
+    byId("lps-slozky").replaceChildren(...model.slozky.map(v => {
+        const tr = document.createElement("tr");
+        for (const hodnota of [v.nazev, cislo(v.cetnost_rok), cislo(v.pred), cislo(v.po)]) {
+            tr.insertCell().textContent = hodnota;
+        }
+        return tr;
+    }));
+}
+
+function ukazVedeni(model) {
+    byId("vedeni").hidden = !model;
+    if (!model) return;
+    const cislo = value => Number(value).toLocaleString("cs-CZ", {maximumFractionDigits: 4});
+    const vyber = model.vybrany_mm2 ? "Vybraný průřez " + cislo(model.vybrany_mm2) + " mm²." : "Žádná varianta nevyhovuje.";
+    byId("vedeni-vysledek").textContent = [model.obvod, model.metodika, model.den, vyber,
+        "Nejvyšší proud u ochrany " + cislo(model.Ik_max_u_ochrany_A) + " A."].join(" · ");
+    const duvody = {zatizitelnost: "zatížitelnost nebo jištění", ubytek: "úbytek napětí",
+        porucha_L_PE: "nízký poruchový proud L–PE", zkrat_L_N: "nízký zkratový proud L–N",
+        vypinaci_schopnost: "vypínací schopnost"};
+    byId("vedeni-varianty").replaceChildren(...model.varianty.map(v => {
+        const tr = document.createElement("tr");
+        const stav = v.chyby.length ? v.chyby.map(k => duvody[k]).join(", ") : "Vyhovuje v modelu";
+        for (const udaj of [cislo(v.prurez_mm2) + " mm²", cislo(v.Iz_A) + " A", cislo(v.dU_V) + " V",
+                cislo(v.Zs_ohm) + " Ω", cislo(v.Id_LPE_min_A) + " A", cislo(v.Ik_LN_min_A) + " A", stav]) {
+            tr.insertCell().textContent = udaj;
+        }
+        return tr;
+    }));
+}
 
 function ukazBilanci(bilance) {
     byId("dlm").hidden = !bilance;

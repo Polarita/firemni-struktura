@@ -122,11 +122,22 @@ jobs:
           2753568d3f9e80a2a63e7e0b9faa8647b5fca14e0fca2d003dfe3dfb9f76329c  nasazeni/test/inzenyring/revize/posouzeni.py
           9f9713d6978c344c7c096a198cfb4ce2c09aade8ce94f58e925f9a6876e405db  nasazeni/test/metadata-schema-kernel/vykop.py
           7a5965a09aab83e8aeca142a0181a1490cf3e22190e6dede4eb8d4f6dfb7612d  nasazeni/test/inzenyring/vzor/metodika.json
-          d5980e98d71ecca8d338874b282a7dedb005a9218307f948dda52c74e6f8098a  nasazeni/test/metadata-schema-kernel/dlm.py
+          71f830b4904cce046c41ec1197d06c31b85747ab9ce0f42abfbfddcc64a2f68f  nasazeni/test/metadata-schema-kernel/dlm.py
           469465858b58f27bc8f4f4a6470f1125758cd6d13ca6bf553520ad85bccb88fc  nasazeni/test/metadata-schema-kernel/dlm-metodiky-test.json
           9c8b5f834f54142125c4210167f538f0bd60aab513824b583c4715641a84a5be  nasazeni/test/metadata-schema-kernel/dlm-projekty-test.json
-          ac089e7d2a0172fa273398523d8406414c065aeca6a79ac5c27c9500b02a27ca  nasazeni/test/inzenyring/test_dlm.py
+          1bfe934671a5742c7bfa15dc0ee6d8801b88c2521516d4db1ae1a152ca6e715b  nasazeni/test/inzenyring/test_dlm.py
+          6f8208f6811ec33c2296fb809dbee96f4310ee7832717bb1e2ddc52462820d30  nasazeni/test/metadata-schema-kernel/vedeni.py
+          944177f5be05ca51dfe39cc09f4f0aea1d986af63584fa6b0dd865a18328affd  nasazeni/test/metadata-schema-kernel/vedeni-metodiky-test.json
+          ed41aaa16c94f61e0c0c6ffdfa48759990792786c9f5ceae2e5c310b06af45d2  nasazeni/test/metadata-schema-kernel/vedeni-projekty-test.json
+          5c6e91f964afed7697cddb6435c44ae022631982cc040f525dfed4242c424f6c  nasazeni/test/inzenyring/test_vedeni.py
+          27af251e0afb3e31776faed7f7b8c02b9c1bf84e0d2b798a4159a927c5397e19  nasazeni/test/metadata-schema-kernel/metodiky.py
+          991fa19671464b0966f7e3ed1ba59fd81d76b2e35b71a88e61da4ebbcf45ea0e  nasazeni/test/metadata-schema-kernel/lps.py
+          e619dba514a3f384d8b167c5d3f278ddd8da07a5d8ac1282ac85d3e0ecedd6c3  nasazeni/test/metadata-schema-kernel/lps-metodiky-test.json
+          071d0c13eff6c79716918785fbcad67b042d69b57311db3de6a651914e2f9033  nasazeni/test/metadata-schema-kernel/lps-projekty-test.json
+          098d8a9dface7710941d7cc4821427be833caad24a76e584a1d844d88c98daec  nasazeni/test/inzenyring/test_lps.py
           OTISKY
+          python3 -m unittest discover -s nasazeni/test/inzenyring -p test_lps.py
+          python3 -m unittest discover -s nasazeni/test/inzenyring -p test_vedeni.py
           python3 -m unittest discover -s nasazeni/test/inzenyring -p test_dlm.py
           python3 - <<'PY'
           import sys

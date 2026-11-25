@@ -10,7 +10,8 @@ import unittest
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "metadata-schema-kernel"))
 sys.path.insert(0, str(HERE / "revize"))
-from dlm import FAZE, SOUBORY, bilance, pro_spis
+from dlm import FAZE, bilance, pro_spis
+from metodiky import SOUBORY
 from spisy_rz import id_spisu
 
 

@@ -1,0 +1,60 @@
+{
+  "a71690af-a55f-50f0-a65d-11e7a0058fd5": {
+    "den": "2026-11-25",
+    "model": "radialni-TN-S-1f-odporova-zatez",
+    "ucel": "simulace",
+    "obvod": "V-TEST-01",
+    "U0_V": "230",
+    "zatizeni_A": "15",
+    "ochrana": "J-TEST",
+    "ulozeni": "trasa-TEST",
+    "zdroj": {
+      "LN_min_ohm": {
+        "R": "0.15",
+        "X": "0.04"
+      },
+      "LN_max_ohm": {
+        "R": "0.22",
+        "X": "0.05"
+      },
+      "LPE_min_ohm": {
+        "R": "0.18",
+        "X": "0.04"
+      },
+      "LPE_max_ohm": {
+        "R": "0.3",
+        "X": "0.06"
+      }
+    },
+    "delka_m": "20"
+  },
+  "4990c818-a000-5770-b80a-eac3489c8ce7": {
+    "den": "2026-11-25",
+    "model": "radialni-TN-S-1f-odporova-zatez",
+    "ucel": "simulace",
+    "obvod": "V-TEST-01",
+    "U0_V": "230",
+    "zatizeni_A": "15",
+    "ochrana": "J-TEST",
+    "ulozeni": "trasa-TEST",
+    "zdroj": {
+      "LN_min_ohm": {
+        "R": "0.15",
+        "X": "0.04"
+      },
+      "LN_max_ohm": {
+        "R": "0.22",
+        "X": "0.05"
+      },
+      "LPE_min_ohm": {
+        "R": "0.18",
+        "X": "0.04"
+      },
+      "LPE_max_ohm": {
+        "R": "0.3",
+        "X": "0.06"
+      }
+    },
+    "delka_m": "180"
+  }
+}

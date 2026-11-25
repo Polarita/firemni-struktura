@@ -1,0 +1,14 @@
+[
+  {
+    "kod":"SIM-VED-01/1", "ucel":"simulace", "model":"radialni-TN-S-1f-odporova-zatez",
+    "od":"2026-01-01", "do":"2026-12-31", "max_ubytek_pct":"3",
+    "napeti_min_pomer":"0.95", "napeti_max_pomer":"1.05",
+    "ochrany":{"J-TEST":{"jmenovity_A":"16","vybaveni_v_modelovem_case_A":"100","vypinaci_schopnost_A":"2000"}},
+    "ulozeni":{"trasa-TEST":"0.8"},
+    "vodice":[
+      {"prurez_mm2":"1.5","zatizitelnost_A":"18","R_L_ohm_km":"16","R_N_ohm_km":"16","R_PE_ohm_km":"19","X_ohm_km":"0.1"},
+      {"prurez_mm2":"2.5","zatizitelnost_A":"25","R_L_ohm_km":"10","R_N_ohm_km":"10","R_PE_ohm_km":"12","X_ohm_km":"0.1"},
+      {"prurez_mm2":"4","zatizitelnost_A":"32","R_L_ohm_km":"6","R_N_ohm_km":"6","R_PE_ohm_km":"7","X_ohm_km":"0.1"}
+    ]
+  }
+]

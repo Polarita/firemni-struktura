@@ -1,19 +1,11 @@
 """Bilance činného příkonu a nabíjecích proudů ve fiktivním odporovém modelu TEST."""
-from datetime import date
 from decimal import Decimal
-import json
-from pathlib import Path
 import re
+
+from metodiky import hodnota, nacti, platna, text
 
 
 FAZE = ("L1", "L2", "L3")
-SOUBORY = Path(__file__).resolve().parent
-
-
-def hodnota(text):
-    if not isinstance(text, str) or not re.fullmatch(r"(?:0|[1-9][0-9]{0,6})(?:\.[0-9]{1,4})?", text):
-        raise ValueError("Očekávána konečná nezáporná desetinná hodnota.")
-    return Decimal(text)
 
 
 def proud(cislo):
@@ -28,18 +20,8 @@ def fazovy_vektor(vstup):
     return {f: hodnota(vstup[f]) for f in FAZE}
 
 
-def text(hodnota):
-    return format(hodnota.normalize(), "f")
-
-
 def bilance(projekt, metodiky):
-    den = date.fromisoformat(projekt["den"])
-    metody = [m for m in metodiky if m["ucel"] == projekt["ucel"] == "simulace"
-              and m["model"] == projekt["model"] == "odporovy-trojfazovy"
-              and date.fromisoformat(m["od"]) <= den <= date.fromisoformat(m["do"])]
-    if len(metody) != 1:
-        raise ValueError("Pro datum a model chybí jednoznačná metodika TEST.")
-    metoda = metody[0]
+    metoda = platna(projekt, metodiky, "odporovy-trojfazovy")
     napeti = hodnota(projekt["fazove_napeti_V"])
     limity = fazovy_vektor(projekt["limit_A"])
     minimum = proud(metoda["minimum_EV_A"])
@@ -85,7 +67,7 @@ def bilance(projekt, metodiky):
                     zvyseno = True
             if not zvyseno:
                 break
-    return {"metodika": metoda["kod"], "den": den.isoformat(), "pretizene_faze": pretizene,
+    return {"metodika": metoda["kod"], "den": projekt["den"], "pretizene_faze": pretizene,
             "soudoby_prikon_W": text(sum(prikon.values())), "vozidla_A": alokace,
             "faze": {f: {"soudoby_prikon_W": text(prikon[f]), "rezerva_po_EV_W": text(rezerva[f]),
                          "prideleno_EV_A": sum(alokace[v["id"]] for v in vozidla if f in v["faze"])}
@@ -93,7 +75,7 @@ def bilance(projekt, metodiky):
 
 
 def pro_spis(pozadavek):
-    projekty = json.loads((SOUBORY / "dlm-projekty-test.json").read_bytes())
+    projekty = nacti("dlm-projekty-test.json")
     if pozadavek in projekty:
-        return bilance(projekty[pozadavek], json.loads((SOUBORY / "dlm-metodiky-test.json").read_bytes()))
+        return bilance(projekty[pozadavek], nacti("dlm-metodiky-test.json"))
     return None

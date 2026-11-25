@@ -1,0 +1,52 @@
+{
+  "a71690af-a55f-50f0-a65d-11e7a0058fd5": {
+    "den": "2026-11-25",
+    "ucel": "simulace",
+    "model": "objekt-test-majetkova-ztrata",
+    "opatreni": "O-TEST-01",
+    "expozice": {
+      "objekt": {
+        "plocha_m2": "1000",
+        "podil_ztraty": "0.2"
+      },
+      "okoli_objektu": {
+        "plocha_m2": "2000",
+        "podil_ztraty": "0.1"
+      },
+      "pripojka": {
+        "plocha_m2": "500",
+        "podil_ztraty": "0.2"
+      },
+      "okoli_pripojky": {
+        "plocha_m2": "1000",
+        "podil_ztraty": "0.1"
+      }
+    },
+    "hustota_na_km2_rok": "2"
+  },
+  "4990c818-a000-5770-b80a-eac3489c8ce7": {
+    "den": "2026-11-25",
+    "ucel": "simulace",
+    "model": "objekt-test-majetkova-ztrata",
+    "opatreni": "O-TEST-01",
+    "expozice": {
+      "objekt": {
+        "plocha_m2": "1000",
+        "podil_ztraty": "0.2"
+      },
+      "okoli_objektu": {
+        "plocha_m2": "2000",
+        "podil_ztraty": "0.1"
+      },
+      "pripojka": {
+        "plocha_m2": "500",
+        "podil_ztraty": "0.2"
+      },
+      "okoli_pripojky": {
+        "plocha_m2": "1000",
+        "podil_ztraty": "0.1"
+      }
+    },
+    "hustota_na_km2_rok": "5"
+  }
+}

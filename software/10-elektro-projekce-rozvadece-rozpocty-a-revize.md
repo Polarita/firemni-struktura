@@ -115,6 +115,14 @@ Rozšiř inženýrské jádro cad-urs-engine o deterministický modul přípravy
 
 ---
 
+### Porovnání vedení v TESTu
+
+Karta porovnává katalogové průřezy jediného radiálního jednofázového obvodu TN-S s odporovou zátěží. Zkušební katalog obsahuje odpory L, N a PE při modelové provozní teplotě a podélnou reaktanci na kilometr. Projekt zadává délku v jednom směru a dolní i horní složky impedance obou smyček na začátku obvodu. Metodika podle účelu, modelu a data určuje korekci zatížitelnosti, přípustný úbytek napětí na vedení, pásmo napětí zdroje a charakteristiku ochrany. Porovnání zahrnuje minimální proud na konci obou smyček a maximální proud v místě ochrany. Čísla na obrazovce se zaokrouhlují až po rozhodnutí. Výsledné průřezy platí pouze pro tato cvičná data a modelové kontroly. Pro podklady k obecným vztahům viz příručku výrobce. [Úbytek napětí](https://www.electrical-installation.org/enwiki/Calculation_of_voltage_drop_in_steady_load_conditions) · [Poruchová smyčka TN](https://www.electrical-installation.org/enwiki/TN_system_-_Earth-fault_current_calculation)
+
+### Model majetkové ztráty při úderu blesku
+
+Projekt udává místní modelovou hustotu zásahů a efektivní sběrné plochy pro objekt, přípojku a jejich okolí. Výpočet pro každý ze čtyř zdrojů násobí roční četnost, pravděpodobnost škody a podíl ztráty. Karta porovná celkové roční ztráty před opatřením a po něm s mezí cvičné metodiky. Chybějící zdroj nebo neznámé opatření zablokuje výpočet. Jde o test jedné kategorie majetkové ztráty. Posouzení skutečné stavby vyžaduje údaje daného objektu a příslušnou platnou metodiku z normové báze. [Princip výpočtu složek rizika v příručce DEHN, oddíl 3.2.2](https://www.dehn-international.com/sites/default/files/media/files/lpg-2015-e-complete_0.pdf)
+
 ### Projektová bilance nabíjení v TESTu
 
 Testovací registr vybírá metodiku podle data návrhu, druhu modelu a účelu. V odporovém modelu počítá činný příkon zvlášť pro každou fázi z instalovaných výkonů a součinitelů soudobosti skupin. Pořadí vozidel určuje přednost při přidělování minimálního proudu. Další celé ampéry model rozděluje střídavě mezi přijatá vozidla a ověřuje dostupný výkon na všech připojených fázích. Přetížení kterékoliv fáze již při základní spotřebě znamená nulový příděl pro všechna vozidla. Karta spisu zobrazuje modelovou bilanci odděleně od telemetrie stanice. Výpočet slouží pro projektovou simulaci uvnitř TESTu.
