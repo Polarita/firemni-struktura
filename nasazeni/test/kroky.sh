@@ -384,6 +384,13 @@ vykresy() {
         python3 nasazeni/test/inzenyring/prijem.py "https://$fqdn"
     "${guest[@]}" bash "$dest/nasazeni/test/inzenyring/instalace.sh"
     "${guest[@]}" bash "$dest/nasazeni/test/inzenyring/rozpocet/publikuj.sh" | tee "$tmp/rozpocet.txt"
+    local rozpocet_spis
+    rozpocet_spis=$(cd nasazeni/test/inzenyring && python3 -c 'from prijem import CASE; print(CASE)')
+    {
+        "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo
+        printf '\n'
+        "${guest[@]}" incus exec -T postgres-test -- cat "/opt/polarita-inzenyring-test/rozpocty/$rozpocet_spis/current/SHA256SUMS"
+    } | python3 nasazeni/test/inzenyring/rozpocet/portal.py "https://$fqdn" | tee -a "$tmp/rozpocet.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/qet/schema.sh" | tee "$tmp/qet-schema.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/cad/offline.sh" | tee "$tmp/cad-vykresy.txt"
     local cad_verze
