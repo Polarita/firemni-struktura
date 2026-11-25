@@ -10,7 +10,7 @@ import re
 import socket
 import subprocess
 import sys
-from publikace import publikuj
+from publikace import WORK, publikuj, run
 
 from over_tisk import overit
 from priprav import priprav
@@ -18,13 +18,9 @@ from spisy_rz import id_spisu, VARIANTY
 
 HERE = Path(__file__).resolve().parent
 TEST = HERE.parents[1]
-WORK = Path("/srv/polarita/workspace/dukazy/blok-10")
+sys.path.insert(0, str(HERE.parent / "rozvadece"))
+from pas import nacti_vydani
 LOGIN = Path("/srv/polarita/data/bootstrap-test/test-login/heslo")
-
-
-def run(vm, *args, data=None, user=None):
-    options = ["--user", user, "--group", user] if user else []
-    return subprocess.check_output(["incus","exec","-T",vm,*options,"--",*args], input=data, timeout=360)
 
 
 def nasad(host):
@@ -35,19 +31,12 @@ def nasad(host):
     for src in (HERE/"rozhodnuti_rz.py", TEST/"paperclip/board.py", TEST/"akademie/rozhodnuti.py"):
         subprocess.run(["incus","file","push","--mode=0644",str(src),board+path+"/"+src.name+".next"],check=True)
         run(board, "mv","-T",path+"/"+src.name+".next",path+"/"+src.name)
-    run("reditelstvi-test", "install","-dm0755","/usr/local/share/polarita-revize-test")
-    code = "/opt/polarita-inzenyring-test/rozvadece"
-    run(db,"install","-dm0755",code)
-    serials = HERE.parent/"rozvadece/cisla.py"
-    subprocess.run(["incus","file","push","--mode=0644",str(serials),db+code+"/cisla.py.next"],check=True)
-    run(db,"mv","-T",code+"/cisla.py.next",code+"/cisla.py")
-    print(run(db,"python3",code+"/cisla.py",*(str(id_spisu(v)) for v in VARIANTY)).decode(),end="",flush=True)
     WORK.mkdir(parents=True,exist_ok=True)
     for variant in VARIANTY:
         uid = str(id_spisu(variant))
-        sql = f"SELECT case_id FROM polarita_test_spisy.karty WHERE pozadavek='{uid}'::uuid;"
-        case = run(db,"runuser","-u","pol_metadata_read","--","psql","-XAtqw","-v","ON_ERROR_STOP=1","-d","db_erp_lhutnik","-c",sql).decode().strip()
-        model = priprav(HERE/"vzor"/(variant+".json"), HERE/"vzor/plan.json", case, date.today())
+        pas = nacti_vydani(uid, host)
+        case = pas["case_id"]
+        model = priprav(HERE/"vzor"/(variant+".json"), HERE/"vzor/plan.json", case, date.today(), pas=pas)
         if model["stav"] != "navrh-"+variant:
             raise ValueError("Neočekávaný výsledek vzorové revize.")
         encoded = json.dumps(model,ensure_ascii=False,sort_keys=True)

@@ -25,6 +25,9 @@ def predloz(board, actor, packet):
     issue = str(UUID(case["id"]))
     file_id = attachment(board,cid,issue,"navrh-revize.pdf",packet["pdf"],digest)
     after = {"stav":model["stav"], "zavady":model["zavady"], "podpis":model["podpis"], "predani_do_provozu":False}
+    after["vyrobni_cislo"] = model["pas"]["vyrobni_cislo"]
+    after["pas_sha256"] = model["pas"]["pdf_sha256"]
+    after["vydani_pasu"] = model["pas"]["vydani"]
     data = {"test":True,"operace":"revize-navrh","sha256":digest,"spis":model["spis"],"priloha":file_id,
             "pred":{"stav":"mereni-prijato","predani_do_provozu":False},"po":after}
     payload = {"title":title,"summary":"Návrh vyhodnocení naměřených hodnot. Předání do provozu je zablokované.",

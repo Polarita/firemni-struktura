@@ -10,7 +10,7 @@ from import_mereni import LIMIT, nacti
 from posouzeni import posud, dukazy, vyhodnot
 
 ROOT = Path(__file__).with_name("vzor")
-DAY = date(2026, 11, 20)
+DAY = date(2026, 11, 25)
 
 
 class Revize(TestCase):
@@ -52,7 +52,7 @@ class Revize(TestCase):
 
     def test_podklady(self):
         for key, field, value in (("KAL-TEST-01","do","2026-11-19"),("PAS-TEST-01","projekt","RZ-JINY"),
-                                 ("DEN-TEST-01","uzavren", False),("DTM-TEST-01","den","2026-11-21"),
+                                 ("DEN-TEST-01","uzavren", False),("DTM-TEST-01","den","2026-11-26"),
                                  ("STIT-TEST-01","druh","pas"),("KAL-TEST-01","pristroj","MER-X")):
             docs = copy.deepcopy(self.docs)
             docs[key][field] = value

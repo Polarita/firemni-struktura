@@ -25,6 +25,9 @@ Zkušební metodika #m.metodika · Určeno k posouzení revizním technikem
     #parbreak()
   ]
 ]
+== Výrobní pas použitého rozváděče
+#m.pas.vyrobni_cislo · Den posouzení #m.pas.den · #link(m.pas.kniha)[Digitální kniha objektu] \
+SHA-256 pasu a štítku: #text(size: 8pt)[#m.pas.pdf_sha256]
 == Měřidla a kalibrační doklady
 #for r in m.vysledky [#r.bod · #r.pristroj · #r.kalibracni_list #linebreak()]
 Předání do provozu je zablokované. Dokument čeká na odborné posouzení.

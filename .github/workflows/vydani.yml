@@ -23,6 +23,7 @@ jobs:
           export COVERAGE_FILE="$RUNNER_TEMP/polarita.coverage"
           python -m pytest -q --cov=vykop --cov-branch --cov-fail-under=100 nasazeni/test/inzenyring/test_vykop.py
           python -m pytest -q --cov=import_mereni --cov=posouzeni --cov-branch --cov-fail-under=100 nasazeni/test/inzenyring/revize/test_revize.py
+          python -m pytest -q nasazeni/test/inzenyring/revize/test_podklad.py
           python -m pytest -q --cov=teplota --cov-branch --cov-fail-under=100 nasazeni/test/inzenyring/rozvadece/test_teplota.py
           pip install openpyxl==3.1.5 lxml==6.1.3 defusedxml==0.7.1 et-xmlfile==2.0.0
           export POLARITA_XC4_SCHEMA="$RUNNER_TEMP/NZ.xsd"

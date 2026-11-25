@@ -21,7 +21,7 @@ def overit(raw, model):
     positive = model["stav"] == "navrh-kladny"
     title = "SCHOPNO" if positive else "NESCHOPNO"
     required = [f"NÁVRH — {title} BEZPEČNÉHO PROVOZU", model["spis"], model["projekt"], model["metodika"],
-                "Předání do provozu je zablokované."]
+                "Předání do provozu je zablokované.", model["pas"]["vyrobni_cislo"], model["pas"]["pdf_sha256"]]
     for row in model["vysledky"]:
         required.extend((row["bod"], row["pristroj"], row["kalibracni_list"], row["hodnota"]+" "+row["jednotka"]))
         if not row["vyhovel"]:

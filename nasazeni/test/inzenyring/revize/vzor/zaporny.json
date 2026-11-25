@@ -3,7 +3,7 @@
     "projekt": "RZ-TEST-01",
     "bod": "M1",
     "pristroj": "MER-TEST-01",
-    "den": "2026-11-20",
+    "den": "2026-11-25",
     "jednotka": "bod TEST",
     "hodnota": "8.01"
   },
@@ -11,7 +11,7 @@
     "projekt": "RZ-TEST-01",
     "bod": "M2",
     "pristroj": "MER-TEST-01",
-    "den": "2026-11-20",
+    "den": "2026-11-25",
     "jednotka": "bod TEST",
     "hodnota": "3.25"
   }

@@ -5,6 +5,14 @@ import subprocess
 from tempfile import TemporaryDirectory
 
 
+WORK = Path("/srv/polarita/workspace/dukazy/blok-10")
+
+
+def run(vm, *args, data=None, user=None):
+    options = ["--user", user, "--group", user] if user else []
+    return subprocess.check_output(["incus","exec","-T",vm,*options,"--",*args], input=data, timeout=360)
+
+
 def publikuj(run, db, base, files, work):
     run(db, "install", "-dm0755", base)
     with TemporaryDirectory(dir=work) as tmp:

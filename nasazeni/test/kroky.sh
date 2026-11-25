@@ -393,10 +393,10 @@ vykresy() {
     } | python3 nasazeni/test/inzenyring/rozpocet/portal.py "https://$fqdn" | tee -a "$tmp/rozpocet.txt"
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/inzenyring/revize/spisy_rz.py "https://$fqdn"
+    "${guest[@]}" python3 "$dest/nasazeni/test/inzenyring/rozvadece/pas.py" "$fqdn" | tee "$tmp/vyrobni-pasy.txt"
     "${guest[@]}" python3 "$dest/nasazeni/test/inzenyring/revize/instaluj.py" "$fqdn"
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/inzenyring/revize/spisy_rz.py "https://$fqdn" --over | tee "$tmp/revizni-zpravy.txt"
-    "${guest[@]}" python3 "$dest/nasazeni/test/inzenyring/rozvadece/pas.py" "$fqdn" | tee "$tmp/vyrobni-pasy.txt"
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/inzenyring/rozvadece/over_portal.py "https://$fqdn" | tee -a "$tmp/vyrobni-pasy.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/qet/schema.sh" | tee "$tmp/qet-schema.txt"
