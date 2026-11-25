@@ -36,6 +36,12 @@ def nasad(host):
         subprocess.run(["incus","file","push","--mode=0644",str(src),board+path+"/"+src.name+".next"],check=True)
         run(board, "mv","-T",path+"/"+src.name+".next",path+"/"+src.name)
     run("reditelstvi-test", "install","-dm0755","/usr/local/share/polarita-revize-test")
+    code = "/opt/polarita-inzenyring-test/rozvadece"
+    run(db,"install","-dm0755",code)
+    serials = HERE.parent/"rozvadece/cisla.py"
+    subprocess.run(["incus","file","push","--mode=0644",str(serials),db+code+"/cisla.py.next"],check=True)
+    run(db,"mv","-T",code+"/cisla.py.next",code+"/cisla.py")
+    print(run(db,"python3",code+"/cisla.py",*(str(id_spisu(v)) for v in VARIANTY)).decode(),end="",flush=True)
     WORK.mkdir(parents=True,exist_ok=True)
     for variant in VARIANTY:
         uid = str(id_spisu(variant))

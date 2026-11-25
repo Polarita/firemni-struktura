@@ -58,6 +58,7 @@ GRANT SELECT ON polarita_test_metadata.meta_termin TO pol_metadata_read, pol_met
 GRANT INSERT (popis,dny,vyrizeno), UPDATE (popis,dny,vyrizeno,version) ON polarita_test_metadata.meta_termin TO pol_metadata_api;
 SQL
 "${db[@]}" <"$src/spisy.sql"
+"${db[@]}" <"$src/rozvadece.sql"
 "${db[@]}" <"$src/sanony.sql"
 "${db[@]}" <"$src/vykop.sql"
 "${db[@]}" <"$src/kniha.sql"
