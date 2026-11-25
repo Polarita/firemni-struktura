@@ -47,12 +47,23 @@ set -euo pipefail
 cd "$1"
 trap 'rm -r -- "$1"' EXIT
 echo "$2  qet.AppImage" | sha256sum -c --status
-runuser -u nobody -- ./qet.AppImage --appimage-extract >/dev/null
+runuser -u nobody -- sh -c 'umask 022; exec ./qet.AppImage --appimage-extract' >/dev/null
 test -x squashfs-root/AppRun
 chown -Rh root:root squashfs-root
 install -dm0755 /opt/polarita
 mv -T squashfs-root "$3"
 EXTRACT
 fi
+# Starší šablona mohla rozbalit veřejný obraz pod umask 077 a teprve potom změnit vlastníka.
+"${run[@]}" bash -ec '
+    set -eu
+    dir=$1
+    [[ -d $dir && ! -L $dir && $(stat -c %u "$dir") == 0 ]]
+    if ! runuser -u nobody -- test -x "$dir/AppRun"; then
+        find "$dir" -type d -exec chmod a+rx {} +
+        find "$dir" -type f -exec chmod a+rX {} +
+    fi
+    runuser -u nobody -- test -x "$dir/AppRun"
+' -- "$dir"
 "${run[@]}" ln -sfn "$dir" /opt/polarita/qet
 "${run[@]}" test -s /usr/share/qelectrotech/examples/741.qet
