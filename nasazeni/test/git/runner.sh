@@ -57,6 +57,7 @@ install -d -m 0755 /opt/polarita-runner
 git --version
 gitleaks version
 python3 --version'
+python3 "$src/runner-astro.py"
 bin=/srv/polarita/infra/gitea-test/bin/gitea-runner-6.0.1-linux-amd64
 echo "37be79b1e72e31e3e02004ee1d768a0bc23224b9520351f46bb7157de7433fbd  $bin" | sha256sum --check --status
 incus file push --mode=0755 "$bin" "$vm/opt/polarita-runner/runner"
