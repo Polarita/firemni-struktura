@@ -67,12 +67,13 @@ FIXTURES.update({"s3-" + name: ["objekty-klient-" + name] for name in BUCKETS})
 FIXTURES["gitea-test"] = ["gitea-agent"]
 FIXTURES["paperclip-test"] = ["paperclip-agent"]
 FIXTURES["paperless-test"] = ["paperless-agent"]
+FIXTURES["medusa-test"] = ["medusa-agent"]
 FIXTURES["umami-test"] = ["umami-agent"]
 FIXTURES["vikunja-test"] = ["vikunja-agent"]
 FIXTURES["zulip-test"] = ["zulip-agent"]
 FIXTURES["dohled-zulip"] = ["dohled-zulip-agent"]
 FIXTURES["zulip-fronta-test"] = ["zulip-fronta-agent"]
-DATABASE_ACCESS = {"umami-test": ("umami",), "paperless-test": ("paperless",), "vikunja-test": ("vikunja",), "paperclip-test": ("db_paperclip",), "zulip-test": ("zulip",), "postgres-test": DATABASES, "keycloak-test": ("keycloak",), "gitea-test": ("gitea",)}
+DATABASE_ACCESS = {"medusa-test": ("db_eshop",), "umami-test": ("umami",), "paperless-test": ("paperless",), "vikunja-test": ("vikunja",), "paperclip-test": ("db_paperclip",), "zulip-test": ("zulip",), "postgres-test": DATABASES, "keycloak-test": ("keycloak",), "gitea-test": ("gitea",)}
 # Skutečné údaje ISDS vydá až oprávněný proces s ověřeným časem a rozhodnutím.
 DENIED = ["isds-cteni", "isds-odesilani", "eet-vypnuto", "cizi-vzorek"]
 HTTP = None
@@ -147,7 +148,7 @@ def configure(root):
     policy += allow("test/metadata/pki/organizace-test", "read") + allow("test/data/pki/organizace-test", "create")
     for suffix in ("pki/valkey-test", *("valkey/" + name for name in CACHES), "valkey-overeni/server"):
         policy += allow("test/metadata/" + suffix, "read") + allow("test/data/" + suffix, "create")
-    for suffix in ("pki/gitea-test", "pki/garage-test", "umami/aplikace", "paperclip/aplikace", "vikunja/aplikace", "paperless/aplikace", "zulip/fronta", "zulip/aplikace", *("objekty/" + name for name in BUCKETS)):
+    for suffix in ("pki/gitea-test", "pki/garage-test", "medusa/aplikace", "umami/aplikace", "paperclip/aplikace", "vikunja/aplikace", "paperless/aplikace", "zulip/fronta", "zulip/aplikace", *("objekty/" + name for name in BUCKETS)):
         policy += allow("test/metadata/" + suffix, "read") + allow("test/data/" + suffix, "create")
     policy += allow("test/data/zulip/checkmk", "create")
     for name in DATABASES:
@@ -164,6 +165,8 @@ def configure(root):
                 acl += allow("test/data/valkey/" + name, "read")
         if role == "paperless-test":
             acl += allow("test/data/paperless/aplikace", "read")
+        if role == "medusa-test":
+            acl += allow("test/data/medusa/aplikace", "read")
         if role == "umami-test":
             acl += allow("test/data/umami/aplikace", "read")
         if role == "vikunja-test":
@@ -257,7 +260,7 @@ def initialize_cache(manager):
 
 def initialize_objects(manager):
     from tls_test import tls_bundle
-    for suffix in ("pki/gitea-test", "pki/garage-test", "umami/aplikace", "paperclip/aplikace", "vikunja/aplikace", "paperless/aplikace", "zulip/fronta", "zulip/aplikace", *("objekty/" + name for name in BUCKETS)):
+    for suffix in ("pki/gitea-test", "pki/garage-test", "medusa/aplikace", "umami/aplikace", "paperclip/aplikace", "vikunja/aplikace", "paperless/aplikace", "zulip/fronta", "zulip/aplikace", *("objekty/" + name for name in BUCKETS)):
         try:
             meta = request("GET", "test/metadata/" + suffix, token=manager)["data"]
             version = meta["versions"][str(meta["current_version"])]
@@ -268,6 +271,8 @@ def initialize_objects(manager):
                 raise
             if suffix == "pki/gitea-test":
                 fields = {"sada": json.dumps({k: secrets.token_urlsafe(48) for k in ("podpis","interni","oauth")})}
+            elif suffix == "medusa/aplikace":
+                fields = {name: secrets.token_urlsafe(48) for name in ("jwt","cookie")}
             elif suffix == "umami/aplikace":
                 fields = {"secret": secrets.token_urlsafe(48), "two_factor": secrets.token_hex(32)}
             elif suffix == "paperclip/aplikace":
