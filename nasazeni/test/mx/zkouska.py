@@ -17,7 +17,7 @@ def check():
     )
     context = ssl.create_default_context(cadata=cert)
     marker = "zkouska-" + uuid.uuid4().hex[:12]
-    recipients = [f"{marker}@polarita.cz", f"{marker}@example.invalid"]
+    recipients = {"místní": f"{marker}@polarita.cz", "externí": f"{marker}@example.invalid"}
     with smtplib.SMTP(local_hostname="zkouska.polarita.test", timeout=15) as client:
         assert client.connect(IP, 25)[0] == 220
         assert client.ehlo()[0] == 250 and client.has_extn("starttls")
@@ -27,11 +27,11 @@ def check():
         assert client.ehlo()[0] == 250 and not client.has_extn("auth")
         print("STARTTLS s ověřeným jménem:", client.sock.version(), flush=True)
         assert client.mail("")[0] == 250
-        for recipient in recipients:
-            code, reply = client.rcpt(recipient)
+        for kind, recipient in recipients.items():
+            code, _ = client.rcpt(recipient)
             if not 500 <= code < 600:
-                raise RuntimeError(f"RCPT {recipient}: {code} {reply!r}")
-            print(f"Příjemce {recipient} odmítnut ({code})", flush=True)
+                raise RuntimeError(f"Zkouška SMTP pro {kind} adresu vrátila kód {code}.")
+            print(f"Brána odmítla {kind} adresu ({code}).", flush=True)
 
     for attempt in range(10):
         recent = subprocess.check_output(
@@ -40,7 +40,7 @@ def check():
             text=True,
         )
         denials = [line for line in recent.splitlines() if "(smtp.relay-not-allowed)" in line]
-        if all(any(recipient in line for line in denials) for recipient in recipients):
+        if all(any(recipient in line for line in denials) for recipient in recipients.values()):
             break
         if attempt == 9:
             raise RuntimeError("Chybí odpovídající záznamy o odmítnutí SMTP")

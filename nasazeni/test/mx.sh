@@ -1,5 +1,7 @@
 #!/bin/bash
 set -euo pipefail
+# Na stdout patří přejímací protokol. Diagnostika nasazení zůstane v instalačním logu.
+exec 3>&1 1>&2
 [[ $(hostname -s) == polarita-hq && $(systemd-detect-virt) == kvm ]]
 src=$(cd "$(dirname "$0")" && pwd)
 work=/srv/polarita/infra/mx-test
@@ -52,6 +54,6 @@ elif "$existing" && { [[ ! -f .applied || $(cat .applied) != "$digest" ]] ||
     incus restart stalwart-mx-test
 fi
 incus exec stalwart-mx-test --user 0 --group 0 -- chown stalwart:stalwart /var/lib/stalwart
-python3 "$src/mx/zkouska.py"
+python3 "$src/mx/zkouska.py" >&3
 printf '%s\n' "$digest" >.applied
 tofu plan -input=false -detailed-exitcode
