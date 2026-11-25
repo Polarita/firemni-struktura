@@ -29,6 +29,8 @@ def pripojeni(origin):
         except error.HTTPError as exc:
             res = exc
         with res:
+            if method == "GET" and path.startswith("/lhutnik-test/api/") and res.geturl() == origin + "/":
+                raise NeocekavanyStav(method, path, 401, status)
             if res.status != status:
                 raise NeocekavanyStav(method, path, res.status, status)
             return res.read()

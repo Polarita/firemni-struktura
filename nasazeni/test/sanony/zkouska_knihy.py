@@ -13,8 +13,18 @@ from overeni import NeocekavanyStav, pripojeni, prihlasit
 
 
 def over(origin, password):
-    call = pripojeni(origin)
-    prihlasit(call, password)
+    spojeni = pripojeni(origin)
+    prihlasit(spojeni, password)
+
+    def call(*args):
+        try:
+            return spojeni(*args)
+        except NeocekavanyStav as exc:
+            if exc.status != 401:
+                raise
+        prihlasit(spojeni, password)
+        return spojeni(*args)
+
     api = "/lhutnik-test/api/"
     case = json.loads(call("POST", api+"spisy", json.dumps({
         "pozadavek":str(uuid5(NAMESPACE_URL, "polarita.test/spis-zkouska-revizni-knihy")), "branch_id":101
