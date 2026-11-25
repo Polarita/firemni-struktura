@@ -4,10 +4,9 @@ set -euo pipefail
 exec 9>/run/polarita-umami-overeni.lock
 flock 9
 inside=(incus exec -T umami-test --user 1001 --group 1001 --)
-for i in {1..90}; do
-    if "${inside[@]}" curl -fsS --max-time 3 --output /dev/null http://127.0.0.1:3000/api/heartbeat 2>/dev/null; then break; fi
-    sleep 4
-done
+# Jeden proces Incusu ponechá webu čas na načtení aplikace ze studeného úložiště.
+"${inside[@]}" curl --fail --silent --show-error --max-time 60 --retry 20 --retry-all-errors \
+    --retry-delay 4 --retry-max-time 600 --output /dev/null http://127.0.0.1:3000/api/heartbeat
 "${inside[@]}" node /etc/polarita-umami/over.mjs </srv/polarita/data/bootstrap-test/test-login/heslo
 src=$(cd "$(dirname "$0")" && pwd)
 install -m0644 "$src/sber.py" /srv/polarita/infra/umami-test/sber.py
