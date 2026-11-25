@@ -35,7 +35,8 @@ if ! "${guest[@]}" grep -qw no-kvmapf /proc/cmdline; then
     "${guest[@]}" systemctl is-active --quiet polarita-bootstrap.service
 fi
 python3 nasazeni/test/inventura.py >"$tmp/inventura.json"
-"${guest[@]}" install -d /srv/polarita/workspace/dukazy/blok-01
+"${guest[@]}" install -d /srv/polarita/workspace/dukazy/{blok-00,blok-01,blok-02}
+"${inc[@]}" file push --project polarita "$tmp/inventura.json" "polarita-hq/srv/polarita/workspace/dukazy/blok-00/vstupy-test-$commit.json"
 "${inc[@]}" file push --project polarita "$tmp/inventura.json" "polarita-hq/srv/polarita/workspace/dukazy/blok-01/inventura-$commit.json"
 fqdn=$(tailscale status --json | python3 -c 'import json,sys;print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))')
 
@@ -55,6 +56,8 @@ portal() {
     "${guest[@]}" "$dest/nasazeni/test/incus.sh"
     "${guest[@]}" "$dest/nasazeni/test/site.sh" "$fqdn"
     "${guest[@]}" "$dest/nasazeni/test/portal.sh" "$dest/portal"
+    "${guest[@]}" python3 "$dest/nasazeni/test/incus/protokol.py" | tee "$tmp/topologie.txt"
+    "${inc[@]}" file push --project polarita "$tmp/topologie.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-02/topologie-$commit.txt"
     "${guest[@]}" "$dest/nasazeni/test/hrana.sh"
     "${guest[@]}" curl -fsS --retry 4 --retry-connrefused -o /dev/null http://127.0.0.1:18184/
     sudo -n bash nasazeni/test/vstup.sh
