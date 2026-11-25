@@ -26,7 +26,13 @@ incus file push --mode=0644 "$src/polarita-medusa.service" medusa-test/etc/syste
 "${inside[@]}" install -dm0750 -o medusa -g medusa /var/lib/medusa
 "${inside[@]}" systemctl daemon-reload
 active=$("${inside[@]}" sh -c 'cat /etc/polarita-medusa/spustena-revize 2>/dev/null || true')
-if [[ $active != "$rev" || $previous != "$rev" ]]; then
+# Po vypršení kontroly může první start dál načítat moduly již zmigrované verze.
+running=$("${inside[@]}" sh -c 'p=$(systemctl show polarita-medusa -p MainPID --value); if [ "${p:-0}" != 0 ]; then readlink -e "/proc/$p/cwd" || true; fi')
+resumed=false
+if [[ $previous == "$rev" && $running == "/opt/medusa/$rev/.medusa/server" ]] && "${inside[@]}" test -f /etc/polarita-medusa/spravce-pripraven; then
+    resumed=true
+fi
+if [[ $previous != "$rev" || ( $active != "$rev" && $resumed != true ) ]]; then
     "${inside[@]}" systemd-run --quiet --pipe --wait --collect --service-type=exec -p User=medusa -p Group=medusa \
         -p "WorkingDirectory=/opt/medusa/$rev/.medusa/server" -p NoNewPrivileges=yes -p PrivateTmp=yes \
         -E PATH=/opt/node/bin:/usr/bin:/bin -E NODE_ENV=production -E MEDUSA_DISABLE_TELEMETRY=true \
@@ -46,11 +52,13 @@ if [[ $active != "$rev" || $previous != "$rev" ]]; then
     mv -Tf "$root/.current-next" "$root/current"
 fi
 activate() {
-    "${inside[@]}" bash -se -- "$rev" "$active" "$previous" <<'RUN'
+    "${inside[@]}" bash -se -- "$rev" "$resumed" <<'RUN'
 set -euo pipefail
-if [[ $1 != "$2" || $1 != "$3" ]]; then systemctl restart polarita-medusa; fi
+if [[ $2 != true ]]; then systemctl restart polarita-medusa; fi
 systemctl enable --now polarita-medusa
-for i in {1..100}; do
+deadline=$((SECONDS + 1800))
+while (( SECONDS < deadline )); do
+    if systemctl is-failed --quiet polarita-medusa; then exit 1; fi
     if curl -fsS --max-time 5 http://127.0.0.1:9000/health 2>/dev/null | grep -Fq OK; then
         [[ $(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:9000/admin/reklamace/00000000-0000-4000-8000-000000000000) == 401 ]]
         curl -fsSL --max-redirs 2 --max-time 15 http://127.0.0.1:9000/app/ -o /dev/null
@@ -61,7 +69,8 @@ for i in {1..100}; do
     fi
     sleep 4
 done
-exit 1
+echo "Medusa zatím neposkytla /health a správní web." >&2
+exit 75
 RUN
 }
 incus file push --mode=0644 "$src/prihlaseni.py" medusa-test/etc/polarita-medusa/prihlaseni.py
