@@ -27,6 +27,10 @@ db=root/"vaultwarden/db.sqlite3"
 with sqlite3.connect(db.as_uri()+"?mode=ro",uri=True) as con:
     if con.execute("pragma integrity_check").fetchone()!=("ok",) or con.execute("select count(*) from collections").fetchone()[0]!=8:
         raise RuntimeError("Obnovený trezor hesel nepotvrdil integritu a testovací kolekce")
+if (root/"inzenyring").is_dir():
+    from inzenyring import over
+    over(root/"inzenyring")
+    print("Byly ověřeny vydané doklady, odkazy na původní pasy a dostupná servisní hlášení.",flush=True)
 archive=root/"legal-archive"
 for receipt in archive.glob("*/*/*/zaznam.json"):
     record=json.loads(receipt.read_bytes())

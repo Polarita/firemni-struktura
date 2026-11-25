@@ -17,6 +17,7 @@ from urllib.request import Request
 
 from pristup import CA, REPO, credential
 import infrastruktura
+import inzenyring
 TEST = Path(__file__).resolve().parent.parent
 sys.path.insert(0,str(TEST/"objekty"))
 import provoz
@@ -53,6 +54,11 @@ def snapshot(dataset):
     if not dataset.startswith("polarita_zfs/"):
         raise ValueError("Chybný dataset sběru")
     base=Path(subprocess.check_output(["zfs","get","-Ho","value","mountpoint",dataset],text=True).strip())
+    if str(base) == "legacy":
+        targets=subprocess.check_output(["findmnt","-rn","-S",dataset,"-o","TARGET"],text=True).splitlines()
+        if len(targets) != 1 or not Path(targets[0]).is_absolute():
+            raise ValueError("Sběr vyžaduje jednoznačný připojený ZFS dataset.")
+        base=Path(targets[0])
     mark="restic-sber-"+secrets.token_hex(8)
     name=dataset+"@"+mark
     subprocess.run(["zfs","snapshot",name],check=True)
@@ -72,6 +78,8 @@ def hashfile(path):
 
 
 def collect(root):
+    with snapshot("polarita_zfs/data/incus/pool/containers/postgres-test") as src:
+        inzenyring.sber(src/"rootfs",root/"inzenyring")
     original = pg.proof(pg.DB,"postgres").hex()
     with subprocess.Popen(["incus","exec","-T",pg.DB,"--","runuser","-u","postgres","--",
                            pg.PG+"pg_dumpall","--no-tablespaces"],stdin=subprocess.DEVNULL,

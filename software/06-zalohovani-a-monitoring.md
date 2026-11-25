@@ -45,6 +45,8 @@ Při obnově VPN spustí ai v izolované síti uloženou verzi Headscale nad obn
 
 > V režimu TEST proveď průzkum, ulož plán a automaticky nasaď a ověř změny. Použij testovací data a místní protějšky externích služeb. Skutečné osobní klíče, certifikáty a živé účty zapoj až po uživatelském testu a převzetí správcem.
 
+Do běžné šifrované zálohy TEST patří také vydání nabídek, revizních zpráv a výrobních pasů ze spisů a přijatá telemetrie OCPP. Sběr čte jeden snímek ZFS, uchová historická vydání a u databáze hlášení použije konzistentní export SQLite. Kontrola obnovy ověří PDF podle manifestů, odkaz každé revize na původní pas a integritu telemetrie.
+
 ### Prompt 1 — Nasazení `Sanoid (latest)`, záloh všech `6 + 9` databází `PostgreSQL` a neměnného `Restic REST Server (--append-only)` mezi lokalitami (`pro 17003 spravce-site` + `17004 klicnik`)
 
 ```text
