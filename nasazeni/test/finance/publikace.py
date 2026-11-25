@@ -11,6 +11,8 @@ import tempfile
 from lxml import etree
 from isdoc import davka, sestav
 from tisk import stejnopis
+from peppol.ubl import faktura_ubl
+from peppol.kontrola import over as over_ubl
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent/"registry"))
@@ -30,7 +32,7 @@ def sql(statement, **values):
     return result.stdout.strip()
 
 
-def zverejni(schema, out):
+def zverejni(schema, out, pravidla_ubl):
     if socket.gethostname().split(".")[0] != "polarita-hq":
         raise ValueError("Účetní export patří do VM ředitelství.")
     pravidla = etree.XMLSchema(etree.parse(str(schema),etree.XMLParser(no_network=True,resolve_entities=False)))
@@ -79,15 +81,18 @@ SELECT EXISTS(SELECT FROM polarita_registr_test.isdoc WHERE faktura=:'fid{i}' AN
 DO $$ BEGIN RAISE EXCEPTION 'Nesouhlasí identita nebo dříve vydaný obsah faktury'; END $$;
 \\endif""")
         pdf = stejnopis(raw, spis)
-        # Větší bytea předáváme po standardním vstupu. Do SQL vstupuje pouze hex z bytes.
-        transakce.append(f"""INSERT INTO polarita_registr_test.tisk_faktury(faktura,soubor)
-VALUES(:'fid{i}',decode('{pdf.hex()}','hex')) ON CONFLICT(faktura) DO NOTHING;
-SELECT EXISTS(SELECT FROM polarita_registr_test.tisk_faktury WHERE faktura=:'fid{i}'
- AND sha256='{sha256(pdf).hexdigest()}') AS stejny_tisk
+        ubl = faktura_ubl(raw, spis)
+        over_ubl(ubl, pravidla_ubl)
+        # Do SQL vstupují pevné názvy tabulek, lokální pořadí a hex z bajtů vydaného souboru.
+        for tabulka, soubor in (("tisk_faktury", pdf), ("peppol", ubl)):
+            transakce.append(f"""INSERT INTO polarita_registr_test.{tabulka}(faktura,soubor)
+VALUES(:'fid{i}',decode('{soubor.hex()}','hex')) ON CONFLICT(faktura) DO NOTHING;
+SELECT EXISTS(SELECT FROM polarita_registr_test.{tabulka} WHERE faktura=:'fid{i}'
+ AND sha256='{sha256(soubor).hexdigest()}') AS shodny_soubor
 \\gset
-\\if :stejny_tisk
+\\if :shodny_soubor
 \\else
-DO $$ BEGIN RAISE EXCEPTION 'Tisk faktury již existuje s jiným obsahem'; END $$;
+DO $$ BEGIN RAISE EXCEPTION 'Dříve vydaný soubor faktury má odlišný obsah'; END $$;
 \\endif""")
     obsah = davka(faktury)
     digest = sha256(obsah).hexdigest()
@@ -118,4 +123,4 @@ DO $$ BEGIN RAISE EXCEPTION 'Tisk faktury již existuje s jiným obsahem'; END $
 
 
 if __name__ == "__main__":
-    zverejni(Path(sys.argv[1]),Path(sys.argv[2]))
+    zverejni(Path(sys.argv[1]),Path(sys.argv[2]),Path(sys.argv[3]))

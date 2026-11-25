@@ -8,6 +8,7 @@ import sys
 from xml.etree import ElementTree as ET
 
 from isdoc import NS
+from peppol.ubl import INV, CBC, CAC, PROFIL
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"sanony"))
 from overeni import pripojeni, prihlasit
 
@@ -29,7 +30,15 @@ def over(origin, heslo, protokol):
         fakturacni_radek = next(d for d in karta["doklady_registru"] if d["cislo"] == faktura)
         if not pdf.startswith(b"%PDF-") or sha256(pdf).hexdigest() != fakturacni_radek["pdf_sha256"]:
             raise ValueError("Stažený tisk nesouhlasí s vydanou fakturou.")
+        xml_ubl = call("GET", cesta+faktura+".ubl.xml")
+        ubl = ET.fromstring(xml_ubl)
         invoice = ET.fromstring(raw)
+        if (sha256(xml_ubl).hexdigest()!=fakturacni_radek["peppol_sha256"] or ubl.tag!=f"{{{INV}}}Invoice"
+                or ubl.findtext(f"{{{CBC}}}ID")!=faktura or ubl.findtext(f"{{{CBC}}}ProfileID")!=PROFIL
+                or ubl.findtext(f"{{{CBC}}}BuyerReference")!=spis
+                or ubl.findtext(f"{{{CAC}}}LegalMonetaryTotal/{{{CBC}}}PayableAmount")!=
+                   invoice.findtext(f"{{{NS}}}LegalMonetaryTotal/{{{NS}}}PayableAmount")):
+            raise ValueError("Peppol faktura ve spisu není shodným dokladem.")
         if (sha256(raw).hexdigest()!=digest or otisky[faktura]!=digest or sha256(batch).hexdigest()!=otisky[predavka]
                 or invoice.findtext(f"{{{NS}}}ID")!=faktura):
             raise ValueError("Nesouhlasí vazba exportu nebo kontrolní součet.")
@@ -38,7 +47,7 @@ def over(origin, heslo, protokol):
                 or b64decode(priloha.text,validate=True)!=raw):
             raise ValueError("Účetní předávka neobsahuje původní fakturu.")
         jiny = base+"finance/"+radky[1-i][0]+"/"
-        for soubor in (faktura+".isdoc",faktura+".pdf",predavka+".xml"):
+        for soubor in (faktura+".isdoc",faktura+".pdf",faktura+".ubl.xml",predavka+".xml"):
             call("GET",jiny+soubor,status=404)
         print(spis,faktura,invoice.findtext(f"{{{NS}}}LegalMonetaryTotal/{{{NS}}}PayableAmount"),"CZK",digest)
 

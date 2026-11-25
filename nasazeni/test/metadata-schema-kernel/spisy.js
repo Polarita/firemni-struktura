@@ -84,6 +84,7 @@ async function otevri(url, options) {
         };
         if (doklad.pdf_sha256) pridatOdkaz(".pdf", "Stáhnout fakturu PDF");
         if (doklad.export_sha256 && doklad.druh === "FAK") pridatOdkaz(".isdoc", "Stáhnout fakturu ISDOC");
+        if (doklad.peppol_sha256) pridatOdkaz(".ubl.xml", "Stáhnout fakturu Peppol UBL");
         if (doklad.export_sha256 && doklad.druh === "ORG-UOL") pridatOdkaz(".xml", "Stáhnout účetní předávku XML");
         return polozka;
     }));

@@ -116,13 +116,13 @@ class Handler(BaseHTTPRequestHandler):
             self.reply(200, raw, "application/pdf")
             return
         if self.command == "GET" and path.startswith("/api/finance/"):
-            match = re.fullmatch(r"/api/finance/(POL-[0-9]{4}-[0-9]{5})/((?:FAK|ORG-UOL)-[0-9]{4}-[0-9]{5})\.(isdoc|xml|pdf)", path)
+            match = re.fullmatch(r"/api/finance/(POL-[0-9]{4}-[0-9]{5})/((?:FAK|ORG-UOL)-[0-9]{4}-[0-9]{5})\.(isdoc|xml|pdf|ubl\.xml)", path)
             if not match:
                 raise Problem(404, "Neznámý účetní soubor.")
             kod, cislo, druh = match.groups()
-            if druh not in (("isdoc", "pdf") if cislo.startswith("FAK-") else ("xml",)):
+            if druh not in (("isdoc", "pdf", "ubl.xml") if cislo.startswith("FAK-") else ("xml",)):
                 raise Problem(404, "Neznámý formát dokladu.")
-            pohled = "tisk_spisu" if druh == "pdf" else "soubory_spisu"
+            pohled = {"pdf":"tisk_spisu", "ubl.xml":"peppol_spisu"}.get(druh, "soubory_spisu")
             soubor = query(data, f"""SELECT json_build_object('obsah',encode(obsah,'hex'),'sha256',sha256)
                         FROM polarita_registr_test.{pohled} WHERE case_id=:'kod' AND cislo=:'cislo';""",
                         kod=kod,cislo=cislo)
@@ -188,10 +188,10 @@ class Handler(BaseHTTPRequestHandler):
                 if prehled.is_file():
                     karta["revizni_navrh"] = json.loads(prehled.read_bytes())
                 doklady = query(data, """SELECT coalesce(json_agg(r ORDER BY cislo),'[]') FROM
-                    (SELECT d.cislo,d.druh,d.podklad_sha256,s.sha256 AS export_sha256,t.sha256 AS pdf_sha256
+                    (SELECT d.cislo,d.druh,d.podklad_sha256,s.sha256 AS export_sha256,t.sha256 AS pdf_sha256,p.sha256 AS peppol_sha256
                      FROM polarita_registr_test.prehled_dokladu d LEFT JOIN polarita_registr_test.soubory_spisu s
                      USING(case_id,cislo) LEFT JOIN polarita_registr_test.tisk_spisu t USING(case_id,cislo)
-                     WHERE d.case_id=:'kod') r;""", kod=karta["case_id"])
+                     LEFT JOIN polarita_registr_test.peppol_spisu p USING(case_id,cislo) WHERE d.case_id=:'kod') r;""", kod=karta["case_id"])
                 if doklady:
                     karta["doklady_registru"] = doklady
                 karta.update(cast_karty(karta["pozadavek"]))

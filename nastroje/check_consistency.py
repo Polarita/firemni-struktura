@@ -349,6 +349,10 @@ def check_forbidden(path: Path, text: str, canon: dict, is_core: bool, report: R
     where = rel(path)
     if where in SELF_FILES or where == CANON_FILE:
         return
+    # Peppol publishes these exact filenames and diagnostic code as protocol identifiers.
+    if where.startswith("nasazeni/test/finance/") and path.suffix in {".sh", ".py"}:
+        for token in ("PEPPOL-EN16931-UBL.sch", "CEN-EN16931-UBL.sch", "PEPPOL-EN16931-R003"):
+            text = text.replace(token, "")
     lines = normalize(text).split("\n")
     for rule in canon["forbidden"]:
         if rule.get("scope") == "core" and not is_core:
