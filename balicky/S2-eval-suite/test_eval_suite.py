@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Unit and integration tests of the Polarita Eval Suite runner (package S2, Version 3.29).
-Jednotkové a integrační testy runneru Eval Suite Polarita (balíček S2, Verze 3.29).
+Unit and integration tests of the Polarita Eval Suite runner (package S2, Version 3.30).
+Jednotkové a integrační testy runneru Eval Suite Polarita (balíček S2, Verze 3.30).
 
 Usage / Použití:  python -m unittest -v test_eval_suite
 """
