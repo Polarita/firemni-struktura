@@ -30,7 +30,8 @@ def priprav_text(cesta, data):
             raise
         lines = data.splitlines()
         if not (len(lines) == 5 and b"Chrome" in lines[1] and b"HTTPS" in lines[3]
-                and b"prihlaseni OK" in lines[3] and lines[4].lower() == b"odhlaseni ok"):
+                and re.search(rb"\bprihlaseni(?:, [a-z]+)* OK\b", lines[3])
+                and lines[4].lower() == b"odhlaseni ok"):
             raise
         return "Chrome ve Windows. Historická zkouška potvrzuje přihlášení přes HTTPS a odhlášení.\n".encode()
     text = BARVA.sub("", text)
