@@ -9,7 +9,7 @@ exec 9>/run/polarita-akademie-aplikace.lock
 flock 9
 exec 8>/run/polarita-test-zatez.lock
 flock 8
-rev=$(cd "$src" && sha256sum distribuce.lock.json knihovny.lock.json knihovny.py rozbal.py aplikace.sh | sha256sum | cut -d' ' -f1)
+rev=$(cd "$src" && sha256sum distribuce.lock.json knihovny.lock.json knihovny.py rozbal.py aplikace.sh polaritavalkey/*.php polaritavalkey/db/*.php polaritavalkey/classes/task/*.php polaritavalkey/lang/*/*.php | sha256sum | cut -d' ' -f1)
 install -dm0755 "$app/releases"
 release=$app/releases/$rev
 if [[ ! -d $release ]]; then
@@ -23,6 +23,8 @@ if [[ ! -d $release ]]; then
     python3 "$src/podklady.py"
     tar --no-same-owner --no-same-permissions -xzf "$distrib/moodle-5.3.1.tgz" --strip-components=1 -C "$tmp"
     python3 "$src/rozbal.py" "$tmp"
+    cp -R "$src/polaritavalkey" "$tmp/public/cache/stores/"
+    chmod -R a+rX "$tmp/public/cache/stores/polaritavalkey"
     stage=$("${inside[@]}" mktemp -d /var/tmp/polarita-composer-XXXXXXXX)
     [[ $stage == /var/tmp/polarita-composer-* ]]
     "${inside[@]}" chown nobody:nogroup "$stage"

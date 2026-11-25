@@ -136,6 +136,10 @@ template {
 				return fmt.Errorf("neplatné jméno klienta Valkey")
 			}
 			commands := "+ping +get +set +del +expire +ttl"
+			if name == "akademie" {
+				// Moodle stores each cache definition in a hash and tracks expiry in a sorted set.
+				commands += " +hget +hset +hmget +hmset +hdel +hexists +hscan +unlink +zadd +zrangebyscore +zrem"
+			}
 			if name == "zulip" {
 				// Zulip uses transactions for login tokens and a Lua script for rate limits.
 				commands += " +multi +exec +discard +evalsha +script|load +time +exists +pttl +hget +hset"

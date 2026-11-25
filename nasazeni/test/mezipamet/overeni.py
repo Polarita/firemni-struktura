@@ -71,10 +71,13 @@ def denied(client, reason, *args):
     raise RuntimeError("Valkey povolil cizí operaci")
 
 
-def load_zulip_acl(tls, password):
+def load_application_acl(tls, name, password):
+    patterns = {"akademie": r"\+zrem", "zulip": r"\+script\|load"}
     def active():
         with Client(tls) as client:
-            client.cmd("AUTH", "zulip", password)
+            client.cmd("AUTH", name, password)
+            if name == "akademie":
+                return client.cmd("HEXISTS", "akademie:test:acl", "pole") in (0, 1)
             script = client.cmd("SCRIPT", "LOAD", "return 1").decode()
             return client.cmd("EVALSHA", script, "0") == 1
 
@@ -86,9 +89,9 @@ def load_zulip_acl(tls, password):
             raise
     # Ověříme nový soubor před jediným restartem. Aplikačním účtům nepřísluší správa ACL.
     subprocess.run(["incus", "exec", "-T", "valkey-test", "--", "grep", "-qE",
-                    r"^user zulip .*\+script\|load( |$)", "/run/secrets/valkey-acl"], check=True)
+                    rf"^user {name} .*{patterns[name]}( |$)", "/run/secrets/valkey-acl"], check=True)
     subprocess.run(["incus", "restart", "valkey-test"], check=True)
-    subprocess.run(["systemctl", "start", "polarita-openbao-agenti.service"], check=True)
+    subprocess.run([sys.executable, str(p.WORK / "bin" / "agenti.py"), "--klient", "valkey-test"], check=True)
     for _ in range(60):
         try:
             if active():
@@ -96,7 +99,7 @@ def load_zulip_acl(tls, password):
         except (ConnectionRefusedError, TimeoutError):
             pass
         time.sleep(1)
-    raise RuntimeError("Valkey nepotvrdil povolený skript účtu Zulipu")
+    raise RuntimeError("Valkey nepotvrdil zavedení aplikačních oprávnění")
 
 
 def main():
@@ -130,8 +133,8 @@ def main():
                 p.expect_forbidden("GET", "test/data/valkey/" + other, token)
             finally:
                 p.request("POST", "auth/token/revoke-self", {}, token)
-            if name == "zulip":
-                load_zulip_acl(tls, password)
+            if name in ("zulip", "akademie"):
+                load_application_acl(tls, name, password)
             with Client(tls) as c:
                 if c.cmd("AUTH", name, password) != b"OK" or c.cmd("PING") != b"PONG":
                     raise RuntimeError("Ověření účtu selhalo")
@@ -140,6 +143,14 @@ def main():
                     raise RuntimeError("Aplikační účet neobsloužil vlastní klíč")
                 denied(c, "NOPERM", "GET", f"{other}:test:{tag}")
                 denied(c, "NOPERM", "CONFIG", "GET", "maxmemory")
+                if name == "akademie":
+                    denied(c, "NOPERM", "HGET", f"{other}:test:{tag}", "pole")
+                    hkey = key + ":hash"
+                    try:
+                        if c.cmd("HSET", hkey, "pole", tag) != 1 or c.cmd("HGET", hkey, "pole") != tag.encode():
+                            raise RuntimeError("Hash aplikační mezipaměti nevrátil vloženou hodnotu")
+                    finally:
+                        c.cmd("UNLINK", hkey)
                 if c.cmd("DEL", key) != 1:
                     raise RuntimeError("Nedokončený testovací úklid")
     finally:
