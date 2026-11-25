@@ -15,7 +15,7 @@ Správce může zkoušet portál už během instalace. Dokončení celého průc
 ### První přihlášení
 
 1. Na počítači s Windows nebo na telefonu s Androidem zapni Tailscale.
-2. V prohlížeči otevři **přímý odkaz HTTPS**, který ti ai předala soukromě. Řádek `Ověřené přihlášení ve VPN` ho ukáže už po první úspěšné zkoušce portálu na Ejpovicích. Stejný odkaz nabídne úvodní stránka interního DNS na `http://reditelstvi.polarita.cz/`. Pokud prohlížeč sám přepíná firemní doménu na HTTPS, otevři předaný přímý odkaz.
+2. Otevři [ředitelství ve firemní VPN](http://reditelstvi.polarita.cz/). Úvodní stránka tě automaticky přesměruje na zabezpečený přihlašovací formulář. Pokud prohlížeč vyžaduje HTTPS už pro úvodní adresu nebo zařízení nepoužívá firemní DNS, použij přímý odkaz HTTPS předaný instalační ai. Ta ho najde na Ejpovicích v řádku `Ověřené přihlášení ve VPN`.
 3. Na stránce **Ředitelství Polarity** zadej jméno **spravce** a zapamatovatelné heslo vygenerované pro tuto instalaci. ai ti heslo předá soukromě. Pro první přihlášení stačí jméno a heslo. Osobní certifikáty a hardwarové klíče se zapojí po otestování a převzetí správcem.
 
 Po přihlášení otevři konfigurátor paušálu Elektro Správa a vyzkoušej výpočet ceny. V odkazu **Otevřít správce hesel Vaultwarden** použij `spravce@polarita.test` a stejné testovací heslo. V organizaci **Polarita TEST** najdeš kolekce oddělení 11 až 18.
