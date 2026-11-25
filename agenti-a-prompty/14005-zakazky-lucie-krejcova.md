@@ -1,4 +1,4 @@
-# Karta ai zaměstnance č. 14005: Lucie Krejčová (ai) — Koordinátorka zakázek, komisí a Centrálního Lhůtníku (`zakazky`) · Verze 3.27
+# Karta ai zaměstnance č. 14005: Lucie Krejčová (ai) — Koordinátorka zakázek, komisí a Centrálního Lhůtníku (`zakazky`) · Verze 3.27.1
 
 ## 1. Osobní a organizační karta
 
@@ -163,7 +163,7 @@ Zahajujeme provoz koordinace zakázek, 3členných komisí a Centrálního Lhůt
 
 ## 6. Zapojení do rozvojových balíčků `S1–S7` (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.27 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
+Balíčky `S1–S7` jsou ve Verzi 3.27.1 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
 
 * `Blok 13` (`S1`): vyplňuje smlouvy a změnové listy ke spisu.
 * `Blok 15` (`S3`): kvalifikuje poptávky z konfigurátoru.

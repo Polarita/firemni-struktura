@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Tests of the pricing kernel of package S3 (Version 3.27).
-Testy cenového jádra balíčku S3 (Verze 3.27).
+Tests of the pricing kernel of package S3 (Version 3.27.1).
+Testy cenového jádra balíčku S3 (Verze 3.27.1).
 
 Usage / Použití:  python -m unittest -v test_pricing
 

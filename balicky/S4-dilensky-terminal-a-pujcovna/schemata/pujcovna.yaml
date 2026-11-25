@@ -1,6 +1,6 @@
 # =============================================================================
 # metadata-schema-kernel · declarative schema DRAFT / deklarativní schéma NÁVRH
-# Module / Modul: pujcovna-meridel · Blok 16 · balíček S4 · Verze 3.27
+# Module / Modul: pujcovna-meridel · Blok 16 · balíček S4 · Verze 3.27.1
 # EN: B2B rental of measuring instruments and temporary power sources as an
 #     extension of the collision-free resource calendar in
 #     centralni-lhutnik-a-objekty. Nothing here is deployed (greenfield design).
@@ -20,7 +20,7 @@ schema:
   module: pujcovna-meridel
   package: S4
   block: 16
-  release: Polarita-3.27
+  release: Polarita-3.27.1
   schema_version: 0.1.0-draft
   status: DRAFT                 # EN: proposal only / CZ: pouze návrh
   owner_ai: 17001               # EN: 17001 programator / CZ: 17001 programator
