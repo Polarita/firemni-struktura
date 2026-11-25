@@ -1,4 +1,4 @@
-# Charta a provozní řád: Oddělení 12 — Marketing, Reklama a ai Růst · Verze 3.24
+# Charta a provozní řád: Oddělení 12 — Marketing, Reklama a ai Růst · Verze 3.25
 
 ## 1. Poslání oddělení
 Přivádět měřitelně ziskové objednávky na e-shop `polarita.eu`, kvalifikované B2C/B2B/SVJ poptávky projekce, montáží EV/FVE, elektrorevizí, komunitního sdílení elektřiny (`EDC`), **interaktivní „Kalkulačky rizik, pokut SÚIP a úspor elektro pro SVJ a firmy“ (`polarita.cz/kalkulacka-svj`, `N6`)**, služby **„Digitální převzetí šanonů objektu do 48 hodin“ (`polarita.cz/prevzeti-sanonu`, `N7`)** a **měsíčních paušálů „Elektro Správa SVJ a Firem“ (MRR) s Digitální knihou objektu** na `polarita.cz` i platící účastníky celorepublikových školení a trenažéru revizního technika na `akademie.polarita.cz` — při přísném řízení návratnosti do **čisté marže (POAS)**, nikoli jen obratu (ROAS). Při rozšiřování živého týmu a regionálního pokrytí zajišťuje cílené náborové kampaně pro Oddělení `18` a akvizici partnerů **`Certified Partner SUB`** (s motivačním modelem **`100 % realizace + 10–15 % trvalá provize z MRR`**, `N8`).
@@ -37,7 +37,7 @@ Přivádět měřitelně ziskové objednávky na e-shop `polarita.eu`, kvalifiko
 
 ## 6. Rozvojové balíčky Etapy II a III (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.24 zapracovány jako samostatné `Bloky 13–19` (přehled a řídicí dokumenty: [`balicky/README.md`](../balicky/README.md)). Spouštějí se až po `12/12 PASS` Go-Live Gate, nemění složení oddělení ani rozpočty `ai` a oddělení se jich účastní takto:
+Balíčky `S1–S7` jsou ve Verzi 3.25 zapracovány jako samostatné `Bloky 13–19` (přehled a řídicí dokumenty: [`balicky/README.md`](../balicky/README.md)). Spouštějí se až po `12/12 PASS` Go-Live Gate, nemění složení oddělení ani rozpočty `ai` a oddělení se jich účastní takto:
 
 * **`Blok 15` (`S3` konfigurátor a tarify MRR):** `12001 marketing` nasazuje konfigurátor do kampaní a plánuje sezónní matici; `12002 obsah-geo` spravuje obchodní texty knihy tarifů. Ceny se nikdy neuvádějí mimo schválený `cenik.json`.
 * **`Blok 17` (`S5` hlasová recepční):** `12002 obsah-geo` připravuje znění hlášek a odpovědí recepční ke schválení `15001`.

@@ -1,7 +1,7 @@
 {
   "_comment": "Jediný zdroj kanonických hodnot návrhu Polarita s.r.o. Kontroluje je nastroje/check_consistency.py; verzi mění nastroje/bump_version.py.",
-  "version": "3.24",
-  "release_tag": "Polarita-3.24",
+  "version": "3.25",
+  "release_tag": "Polarita-3.25",
   "company": {
     "name": "Polarita s.r.o.",
     "ico": "14180324",

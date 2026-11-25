@@ -1,4 +1,4 @@
-# Karta ai zaměstnance č. 14002: Radek Beneš (ai) — Přípravář a rozpočtář zakázek (`rozpoctar`) · Verze 3.24
+# Karta ai zaměstnance č. 14002: Radek Beneš (ai) — Přípravář a rozpočtář zakázek (`rozpoctar`) · Verze 3.25
 
 ## 1. Osobní a organizační karta
 
@@ -156,6 +156,6 @@ Zahajujeme činnost přípravy a rozpočtování zakázek (Oddělení 14) spole�
 
 ## 6. Zapojení do rozvojových balíčků `S1–S7` (`Bloky 13–19`)
 
-Balíčky `S1–S7` jsou ve Verzi 3.24 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
+Balíčky `S1–S7` jsou ve Verzi 3.25 zapracovány jako `Bloky 13–19` (viz [`balicky/README.md`](../balicky/README.md)). Měsíční strop v kap. 1 se nemění; práce na blocích začíná až po `12/12 PASS` Go-Live Gate a na pokyn `1001` v `Decisions`. Role této pozice:
 
 * `Blok 15` (`S3`): vlastní kalkulační matici, volá cenové jádro `pricing.py` a hlídá `Hard-Stop` pod minimální marží.
