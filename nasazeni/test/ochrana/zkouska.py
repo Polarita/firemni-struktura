@@ -9,6 +9,8 @@ from urllib.request import urlopen
 
 WORK = "/srv/polarita/infra/crowdsec-test"
 SCENARIO = "polarita/opakovane-odmitnuti"
+# Lokální exportér při studeném startu sdílí procesor s karanténou.
+HTTP_TIMEOUT = 30
 
 
 def run(*args, data=None, timeout=90, check=True):
@@ -33,7 +35,7 @@ def smtp(name, commands):
 
 
 def parsed_http():
-    with urlopen("http://127.0.0.1:18281/metrics", timeout=5) as response:
+    with urlopen("http://127.0.0.1:18281/metrics", timeout=HTTP_TIMEOUT) as response:
         metrics = response.read().decode().splitlines()
     return sum(float(line.rsplit(" ", 1)[1]) for line in metrics
                if line.startswith("cs_node_hits_ok_total{")
@@ -42,7 +44,7 @@ def parsed_http():
 
 def main():
     before = parsed_http()
-    with urlopen("http://127.0.0.1:18184/", timeout=5) as response:
+    with urlopen("http://127.0.0.1:18184/", timeout=HTTP_TIMEOUT) as response:
         if response.status != 200 or "polarita-caddy" not in response.headers.get("Via", ""):
             raise RuntimeError("Zkouška HTTP neprošla přes firemní Caddy")
     for _ in range(10):
