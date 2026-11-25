@@ -41,6 +41,6 @@ if [[ ! -d $release ]]; then
     mv -T "$tmp" "$release"
     trap - EXIT
 fi
-ln -sfn "releases/$rev" "$app/.current-next"
-mv -Tf "$app/.current-next" "$app/current"
+ln -sfn "releases/$rev" "$app/.candidate-next"
+mv -Tf "$app/.candidate-next" "$app/candidate"
 printf 'Medusa 2.23.0, aplikační API a správní rozhraní jsou sestaveny.\n'
