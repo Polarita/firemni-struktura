@@ -301,7 +301,7 @@ web() {
     "${guest[@]}" bash "$dest/nasazeni/test/hrana/obnov-vstup.sh"
     sudo -n bash nasazeni/test/port-vpn.sh 8450 >/dev/null
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
-        python3 nasazeni/test/medusa/prihlaseni.py "$fqdn" | tee "$tmp/eshop-prihlaseni.txt"
+        python3 nasazeni/test/medusa/prihlaseni.py "$fqdn" --sklad | tee "$tmp/eshop-prihlaseni.txt"
     printf 'https://%s:8450/app/\n' "$fqdn" | "${guest[@]}" incus exec -T reditelstvi-test -- sh -ec 'umask 022; cat >/usr/local/share/.medusa-next; mv -T /usr/local/share/.medusa-next /usr/local/share/polarita-medusa-url'
     "${guest[@]}" bash "$dest/nasazeni/test/umami/over.sh" | tee "$tmp/umami.txt"
     sudo -n bash nasazeni/test/port-vpn.sh 8449 >/dev/null

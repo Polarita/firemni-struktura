@@ -1,4 +1,6 @@
 """Ověří stejnou identitu přes běžné HTTP rozhraní e-shopu v TEST."""
+from datetime import datetime
+from uuid import NAMESPACE_URL, uuid5
 import http.client
 import json
 import re
@@ -33,5 +35,53 @@ call("GET","/admin/users/me",401)
 token=call("POST","/auth/user/emailpass",200,{"email":email,"password":sys.stdin.readline().rstrip("\r\n")})["token"]
 if call("GET","/admin/users/me",200,token=token)["user"]["email"] != email:
     sys.exit("Nesouhlasí přihlášený účet.")
-call("GET","/admin/sklad/bubny?stitek=NEEXISTUJE-TEST-2fa26631",404,token=token)
 print("Správce se svým testovacím heslem otevřel vlastní účet Medusy. Anonymní profil byl odmítnut.")
+
+if len(sys.argv) == 2:
+    sys.exit(0)
+if sys.argv[2:] != ["--sklad"]:
+    sys.exit("Neznámá volba zkoušky.")
+
+# Pevná sada zkoušky dovolí pokračovat po přerušení bez zakládání dalšího zboží.
+def key(name):
+    return str(uuid5(NAMESPACE_URL, "urn:polarita:test:medusa:prejimka:v1:" + name))
+
+api = "/admin/sklad/bubny"
+label = "TEST-PREJIMKA-BUBEN-01"
+case = "POL-2026-99001"
+
+def movement(name, operation, length, status=200, **values):
+    return call("POST", api, status, {"id": key(name), "operace": operation, "mm": length, **values}, token)
+
+movement("buben", "prijem", 100000, stitek=label, varianta="test-kabel", sklad="MAIN-101")
+movement("rezervace", "rezervace", 70000, buben=key("buben"), spis=case)
+origin = {"rezervace": key("rezervace"), "stitek": label, "spis": case}
+movement("cizi-stavba", "vydej", 1000, 404, **{**origin, "spis": "POL-2026-99002"})
+movement("nadlimitni", "vydej", 70001, 409, **origin)
+for _ in range(2):
+    movement("vydej", "vydej", 45250, **origin)
+movement("vydej", "vydej", 45251, 409, **origin)
+movement("uvolneni", "uvolneni", 24750, **origin)
+drum = call("GET", api + "?stitek=" + label, 200, token=token)["buben"]
+if (drum["id"] != key("buben") or drum["rezervace"]
+        or tuple(int(drum[k]) for k in ("prijato_mm","skladem_mm","rezervovano_mm","volno_mm"))
+        != (100000, 54750, 0, 54750)):
+    sys.exit("Po dokončení výdeje nesouhlasí zůstatky testovacího bubnu.")
+print("Skladové API přijalo testovací buben, rezervovalo 70 m a vydalo 45,250 m. Po opakování výdeje zbývá 54,750 m.")
+
+endpoint = "/admin/reklamace"
+received = "2026-01-04T12:03:04.123456Z"
+asserted = "2026-01-03T08:09:10.654321Z"
+rma = {"id": key("reklamace"), "received_at": received, "complaint_asserted_at": asserted,
+       "druh": "k_posouzeni", "objednavka": "TEST-PREJIMKA-01"}
+call("POST", endpoint, 200, rma, token)
+endpoint += "/" + rma["id"]
+change = {"pozadavek": key("zarazeni"), "verze": 1, "druh": "b2c_reklamace"}
+for _ in range(2):
+    call("POST", endpoint, 200, change, token)
+result = call("GET", endpoint, 200, token=token)["reklamace"]
+if (result["id"] != rma["id"] or result["druh"] != "b2c_reklamace" or result["verze"] != 2
+        or datetime.fromisoformat(result["received_at"]) != datetime.fromisoformat(received)
+        or datetime.fromisoformat(result["complaint_asserted_at"]) != datetime.fromisoformat(asserted)):
+    sys.exit("Nesouhlasí časy nebo historie reklamace ve správním API.")
+print("Správce zařadil reklamaci. Dvojí odeslání zachovalo jedinou změnu a původní okamžiky uplatnění a příjmu.")
