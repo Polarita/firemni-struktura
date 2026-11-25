@@ -78,7 +78,7 @@ if args.predavky:
             if (response.url != url or len(text) > 65536 or not marker or not source.endswith(b"\n```\n")
                     or hashlib.sha256(source[:-5]).hexdigest() != digest):
                 raise RuntimeError("Webová paměť neposkytla přesný zdrojový protokol.")
-    print(f"Správce v přihlášené webové paměti přečetl a ověřil {len(predavky)} předávací protokoly.")
+    print(f"Správce přečetl předávací protokoly v přihlášené webové paměti. Počet ověřených protokolů: {len(predavky)}.")
 with web.open(start, timeout=20) as response:
     if b"silverbullet" not in response.read().lower():
         raise RuntimeError("Chybí HTML aplikace SilverBullet")
