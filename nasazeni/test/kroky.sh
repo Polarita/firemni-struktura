@@ -303,6 +303,7 @@ web() {
     "${guest[@]}" bash "$dest/nasazeni/test/akademie/identita.sh" "$fqdn"
     "${guest[@]}" bash "$dest/nasazeni/test/akademie/aplikace.sh"
     "${guest[@]}" bash "$dest/nasazeni/test/akademie/databaze.sh" "$fqdn"
+    "${guest[@]}" bash "$dest/nasazeni/test/akademie/sso.sh" "$fqdn"
     "${guest[@]}" bash "$dest/nasazeni/test/akademie/cache.sh" | tee "$tmp/akademie-cache.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/akademie/web.sh"
     "${guest[@]}" bash "$dest/nasazeni/test/akademie/cron.sh"
@@ -317,6 +318,8 @@ web() {
     sudo -n bash nasazeni/test/port-vpn.sh 8451 >/dev/null
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/akademie/over_vpn.py "$fqdn" | tee "$tmp/akademie-prihlaseni.txt"
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
+        python3 nasazeni/test/akademie/over_vpn.py "$fqdn" --sso | tee -a "$tmp/akademie-prihlaseni.txt"
     printf 'https://%s:8451/my/\n' "$fqdn" | "${guest[@]}" incus exec -T reditelstvi-test -- sh -ec 'umask 022; cat >/usr/local/share/.akademie-next; mv -T /usr/local/share/.akademie-next /usr/local/share/polarita-akademie-url'
     sudo -n bash nasazeni/test/port-vpn.sh 8450 >/dev/null
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
