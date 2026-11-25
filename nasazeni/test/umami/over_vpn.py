@@ -33,6 +33,13 @@ except HTTPError as e:
         raise
 else:
     raise RuntimeError("Profil v analytice byl dostupný anonymně.")
+try:
+    call("/api/send", data={"type": "event"})
+except HTTPError as e:
+    if e.code != 405:
+        raise
+else:
+    raise RuntimeError("Soukromý vstup umožnil zápis do interního sběru událostí.")
 with web.open(origin + "/login", timeout=60) as res:
     if res.headers.get_content_type() != "text/html" or b"umami" not in res.read().lower():
         raise RuntimeError("Chybí přihlašovací obrazovka Umami.")
