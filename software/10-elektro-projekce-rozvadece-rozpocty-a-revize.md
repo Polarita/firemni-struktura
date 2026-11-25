@@ -115,6 +115,10 @@ Rozšiř inženýrské jádro cad-urs-engine o deterministický modul přípravy
 
 ---
 
+### Původ parametrů projektových výpočtů
+
+Instalátor zařadí vlastní zkušební metodiky DLM, vedení a LPS do řízeného znalostního Gitu v oblasti `03-Normy-a-Metodiky`. Každý kód s vydáním má vlastní stránku. Účet role `15002` ji přečte běžným rozhraním. Do projektové služby se přenese znění načtené z konkrétních Git objektů. Při otevření spisu služba ověří kontrolní součet, obsah vydání a otisk každé stránky a z jejich parametrů provede výpočty. Při chybě zůstane spis přístupný a zobrazí informaci o pozastavení výpočtů. Správce může porovnat znění v kartě se stránkou v SilverBulletu. Obsah tvoří vlastní syntetické metodiky pro TEST.
+
 ### Porovnání vedení v TESTu
 
 Karta porovnává katalogové průřezy jediného radiálního jednofázového obvodu TN-S s odporovou zátěží. Zkušební katalog obsahuje odpory L, N a PE při modelové provozní teplotě a podélnou reaktanci na kilometr. Projekt zadává délku v jednom směru a dolní i horní složky impedance obou smyček na začátku obvodu. Metodika podle účelu, modelu a data určuje korekci zatížitelnosti, přípustný úbytek napětí na vedení, pásmo napětí zdroje a charakteristiku ochrany. Porovnání zahrnuje minimální proud na konci obou smyček a maximální proud v místě ochrany. Čísla na obrazovce se zaokrouhlují až po rozhodnutí. Výsledné průřezy platí pouze pro tato cvičná data a modelové kontroly. Pro podklady k obecným vztahům viz příručku výrobce. [Úbytek napětí](https://www.electrical-installation.org/enwiki/Calculation_of_voltage_drop_in_steady_load_conditions) · [Poruchová smyčka TN](https://www.electrical-installation.org/enwiki/TN_system_-_Earth-fault_current_calculation)

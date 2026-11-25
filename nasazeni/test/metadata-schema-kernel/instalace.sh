@@ -3,7 +3,7 @@
 set -euo pipefail
 [[ $(hostname -s) == polarita-hq && $EUID == 0 ]]
 src=$(cd "$(dirname "$0")" && pwd)
-files=(metodiky.py lps.py lps-metodiky-test.json lps-projekty-test.json vedeni.py vedeni-metodiky-test.json vedeni-projekty-test.json dlm.py dlm-metodiky-test.json dlm-projekty-test.json ocpp_cteni.py rozvadece.sql vykop.sql vykop.py vykop_api.py zkousky.sql osa.sql zkouska_knihy.sql kniha.py kniha.sql spisy.py spisy.sql sanony.sql spisy.html spisy.js model.py generator.py vzor.json formular.js zaznamy.py server.py mcp.py postgres.sh polarita-metadata.service zkouska.py)
+files=(registr_metodik.py projektove_vypocty.py metodiky.py lps.py lps-metodiky-test.json lps-projekty-test.json vedeni.py vedeni-metodiky-test.json vedeni-projekty-test.json dlm.py dlm-metodiky-test.json dlm-projekty-test.json ocpp_cteni.py rozvadece.sql vykop.sql vykop.py vykop_api.py zkousky.sql osa.sql zkouska_knihy.sql kniha.py kniha.sql spisy.py spisy.sql sanony.sql spisy.html spisy.js model.py generator.py vzor.json formular.js zaznamy.py server.py mcp.py postgres.sh polarita-metadata.service zkouska.py)
 rev=$(cd "$src" && sha256sum "${files[@]}" | sha256sum | cut -d' ' -f1)
 target=/opt/polarita-metadata-test/releases/$rev
 guest=(incus exec -T postgres-test --)

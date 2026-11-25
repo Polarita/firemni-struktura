@@ -69,6 +69,7 @@ async function otevri(url, options) {
     for (const format of ["xc4", "xlsx"]) {
         byId(format).href = "api/rozpocty/" + encodeURIComponent(data.case_id) + "/nabidka." + format;
     }
+    ukazMetodiky(data);
     ukazVedeni(data.vedeni);
     ukazRiziko(data.lps);
     ukazBilanci(data.bilance_EV);
@@ -120,6 +121,30 @@ async function otevriOdkaz() {
 window.addEventListener("hashchange", otevriOdkaz);
 window.addEventListener("popstate", otevriOdkaz);
 if (location.search || location.hash) otevriOdkaz();
+
+function ukazMetodiky(karta) {
+    byId("chyba-metodik").hidden = !karta.chyba_metodik;
+    byId("chyba-metodik").textContent = karta.chyba_metodik || "";
+    const modely = [karta.bilance_EV, karta.vedeni, karta.lps].filter(v => v?.zdroj_metodiky);
+    byId("zdroje-metodik").hidden = !modely.length;
+    byId("stranky-metodik").replaceChildren(...modely.map(v => {
+        const zdroj = v.zdroj_metodiky;
+        const detail = document.createElement("details");
+        const titulek = document.createElement("summary");
+        titulek.textContent = v.metodika;
+        const revize = document.createElement("p");
+        revize.textContent = "Revize znalostní báze " + zdroj.revize;
+        const obsah = document.createElement("pre");
+        obsah.textContent = zdroj.text;
+        const odkaz = document.createElement("a");
+        const url = new URL("/pamet/.fs/" + zdroj.cesta.split("/").map(encodeURIComponent).join("/"), location.origin);
+        url.port = "8446";
+        odkaz.href = url.href;
+        odkaz.textContent = "Otevřít stránku ve znalostním Vaultu";
+        detail.append(titulek, revize, odkaz, obsah);
+        return detail;
+    }));
+}
 
 function ukazRiziko(model) {
     byId("lps").hidden = !model;

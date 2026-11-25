@@ -58,6 +58,8 @@ Ve Vikunje má správce tři nástěnky **Zakázkové**, **Montážní** a **SLA
 
 V přehledu otevři **Spisy**, vyhledej číslo ve tvaru `POL-RRRR-NNNNN` nebo pobočkový alias a zkopíruj adresu otevřené karty. Přímý odkaz funguje i v novém prohlížeči. Po přihlášení tě ředitelství vrátí na vybraný spis. Nástroj MCP `spisy_najdi` načte stejnou kartu s oprávněním ke čtení.
 
+V oddílu **Použité metodiky** rozbal kód výpočtu. Najdeš tam přesné znění použité testovací metodiky, její revizi v Gitu a odkaz na stránku ve znalostním Vaultu.
+
 V kartě modelové revize najdi **Kontrola vedení (TEST)**. U každého katalogového průřezu uvidíš zatížitelnost, úbytek napětí, impedanci poruchové smyčky, vypočtené proudy a důvody vyřazení varianty. Krátká a dlouhá trasa používají stejný cvičný katalog. V oddílu **Riziko škody způsobené bleskem (TEST)** uvidíš čtyři příspěvky k roční majetkové ztrátě a výsledek před modelovým ochranným opatřením a po něm.
 
 V kartách modelových revizí ukazuje **Projektová bilance nabíjení (TEST)** soudobý příkon, příděl proudu vozidlům a rezervu každé fáze. V prvním projektu si dvě vozidla rozdělí zbývající kapacitu. Ve druhém již samotný objekt překročí limit jedné fáze a výpočet přidělí oběma vozidlům nulu.

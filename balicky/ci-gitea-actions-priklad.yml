@@ -135,7 +135,12 @@ jobs:
           e619dba514a3f384d8b167c5d3f278ddd8da07a5d8ac1282ac85d3e0ecedd6c3  nasazeni/test/metadata-schema-kernel/lps-metodiky-test.json
           071d0c13eff6c79716918785fbcad67b042d69b57311db3de6a651914e2f9033  nasazeni/test/metadata-schema-kernel/lps-projekty-test.json
           098d8a9dface7710941d7cc4821427be833caad24a76e584a1d844d88c98daec  nasazeni/test/inzenyring/test_lps.py
+          f5aa3d767823471064de7be2f51ceced427c90b7c6e78ffa7b6979d3871ce7ff  nasazeni/test/metadata-schema-kernel/registr_metodik.py
+          99004c25f58b810537ed167bc0a7dae12980652db382230b1bf9a2725314a1de  nasazeni/test/metadata-schema-kernel/projektove_vypocty.py
+          05fd297b4e3266a3ff578bce9eeeb6ae3992a26a22d00b9555e77bed3a7fb8c6  nasazeni/test/inzenyring/metodiky_vault.py
+          14739d8b37b07ba6a0fae022e554facfa9268d15cf158793f68a3daff22ee2b8  nasazeni/test/inzenyring/test_registr_metodik.py
           OTISKY
+          python3 -m unittest discover -s nasazeni/test/inzenyring -p test_registr_metodik.py
           python3 -m unittest discover -s nasazeni/test/inzenyring -p test_lps.py
           python3 -m unittest discover -s nasazeni/test/inzenyring -p test_vedeni.py
           python3 -m unittest discover -s nasazeni/test/inzenyring -p test_dlm.py

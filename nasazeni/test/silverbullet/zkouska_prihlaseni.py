@@ -14,6 +14,7 @@ from urllib.request import build_opener, HTTPCookieProcessor, HTTPRedirectHandle
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("host")
 parser.add_argument("--predavky", type=Path)
+parser.add_argument("--projektove-metodiky", action="store_true")
 args = parser.parse_args()
 host = args.host
 if not re.fullmatch(r"[a-z0-9.-]+\.ts\.net", host):
@@ -62,6 +63,15 @@ request = Request(action, data=urlencode({"username":"spravce", "password":passw
 with web.open(request, timeout=25) as response:
     if response.url != register or b"CZ-101" not in response.read():
         raise RuntimeError("Návrat z Keycloaku neposkytl stránku registru")
+if args.projektove_metodiky:
+    sys.path.insert(0,str(Path(__file__).resolve().parents[1] / "metadata-schema-kernel"))
+    from registr_metodik import vydani
+    for path, (_, vzor) in vydani()[1].items():
+        url = start + ".fs/" + path
+        with web.open(url, timeout=30) as response:
+            if response.url != url or response.read(65537) != vzor.encode():
+                raise ValueError("SilverBullet neposkytl přesnou stránku projektové metodiky.")
+        print("SilverBullet ověřil znění", path)
 if args.predavky:
     predavky = [json.loads(line) for line in args.predavky.read_text().splitlines()]
     if not predavky:

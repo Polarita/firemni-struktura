@@ -1,5 +1,7 @@
 """Ověření modelové bilance dvou skutečných karet přes přihlášené ředitelství."""
+from hashlib import sha256
 import json
+import re
 from pathlib import Path
 import sys
 
@@ -19,6 +21,15 @@ def over(origin, heslo):
         telo = json.dumps({"pozadavek": str(id_spisu(varianta)), "branch_id": 101}).encode()
         kod = json.loads(call("POST", api, telo, "application/json"))["case_id"]
         karta = json.loads(call("GET", api + "/" + kod))
+        for key in ("lps", "vedeni", "bilance_EV"):
+            metoda = karta[key]["metodika"]
+            zdroj = karta[key]["zdroj_metodiky"]
+            if (not re.fullmatch(r"[a-f0-9]{40}|[a-f0-9]{64}", zdroj["revize"])
+                    or sha256(zdroj["text"].encode()).hexdigest() != zdroj["sha256"]
+                    or not zdroj["text"].startswith("# " + metoda + "\n")
+                    or zdroj["cesta"] != "03-Normy-a-Metodiky/projekt-" + metoda.lower().replace("/", "-v") + ".md"):
+                raise ValueError("Spis neposkytl ověřitelnou stránku pro použitou metodiku.")
+            print(kod, metoda, zdroj["revize"], zdroj["sha256"])
         riziko = karta["lps"]
         ocekavane = ("0.0004", "0.000104", True) if varianta == "kladny" else ("0.001", "0.00026", False)
         if (len(riziko["slozky"]) != 4 or riziko["mez"] != "0.0002"

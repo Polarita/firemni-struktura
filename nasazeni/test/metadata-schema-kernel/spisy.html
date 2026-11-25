@@ -1,5 +1,5 @@
 <!doctype html><html lang="cs"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spisy | Ředitelství Polarity</title>
-<style>body{font:1.05rem/1.55 system-ui,sans-serif;color:#172125;max-width:42rem;margin:3rem auto;padding:0 1rem}input,button{font:inherit;padding:.5rem}button{cursor:pointer}label{display:block}section{margin:2rem 0}dt{font-weight:600}dd{margin:0 0 .8rem}output{display:block;margin:1rem 0}.lhuta{display:inline-block;padding:.05rem .55rem;border-radius:.3rem;font-weight:600}.ve-lhute{background:#ccebd8;color:#12492b}.blizi-se{background:#ffe8a4;color:#593800}.po-lhute{background:#f7cecd;color:#6f1917}#terminy li{margin:.6rem 0}select{font:inherit;max-width:100%}details form{display:grid;gap:.4rem}details summary{cursor:pointer}</style>
+<style>body{font:1.05rem/1.55 system-ui,sans-serif;color:#172125;max-width:42rem;margin:3rem auto;padding:0 1rem}input,button{font:inherit;padding:.5rem}button{cursor:pointer}label{display:block}section{margin:2rem 0}dt{font-weight:600}dd{margin:0 0 .8rem}output{display:block;margin:1rem 0}.lhuta{display:inline-block;padding:.05rem .55rem;border-radius:.3rem;font-weight:600}.ve-lhute{background:#ccebd8;color:#12492b}.blizi-se{background:#ffe8a4;color:#593800}.po-lhute{background:#f7cecd;color:#6f1917}#terminy li{margin:.6rem 0}select{font:inherit;max-width:100%}details form{display:grid;gap:.4rem}details summary{cursor:pointer}#stranky-metodik pre{white-space:pre-wrap;overflow-wrap:anywhere}#stranky-metodik p{overflow-wrap:anywhere}</style>
 <main><a href="/prehled">Ředitelství</a><h1>Spisy</h1>
 <section><h2>Nový testovací spis</h2><p>Pobočka 101 · Praha</p><button id="zaloz" type="button">Založit spis</button></section>
 <section><h2>Vyhledat spis</h2><form id="hledani"><label for="cislo">Číslo spisu nebo pobočkový alias</label><input id="cislo" required><button>Vyhledat</button></form></section>
@@ -10,6 +10,7 @@
 <form id="sanony"><label for="sken">Sken ve formátu PDF (nejvýše 64 MiB)</label><input type="file" id="sken" accept="application/pdf,.pdf" required><button id="odeslat">Předat do karantény</button></form>
 <p id="prijem" role="status"></p><h4>Poslední potvrzení o převzetí</h4><ul id="prevzate"></ul>
 <section id="vyrobni-cisla" hidden><h3>Rozváděče ve spisu</h3><ul id="seznam-rozvadecu"></ul></section>
+<p id="chyba-metodik" role="status" hidden></p><section id="zdroje-metodik" hidden><h3>Použité metodiky</h3><div id="stranky-metodik"></div></section>
 <section id="lps" hidden><h3>Riziko škody způsobené bleskem (TEST)</h3><p id="lps-vysledek"></p>
 <table><thead><tr><th>Zdroj škody</th><th>Událostí za rok</th><th>Podíl ztráty před opatřením</th><th>Podíl po opatření</th></tr></thead><tbody id="lps-slozky"></tbody></table></section>
 <section id="vedeni" hidden><h3>Kontrola vedení (TEST)</h3><p id="vedeni-vysledek"></p>

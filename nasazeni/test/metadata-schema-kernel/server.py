@@ -10,9 +10,7 @@ import sys
 from uuid import UUID
 from urllib.parse import urlsplit
 
-import dlm
-import vedeni
-import lps
+from projektove_vypocty import cast_karty
 import kniha
 import ocpp_cteni
 import sqlite3
@@ -171,15 +169,7 @@ class Handler(BaseHTTPRequestHandler):
                 prehled = slozka_spisu(karta, "revize") / "prehled.json"
                 if prehled.is_file():
                     karta["revizni_navrh"] = json.loads(prehled.read_bytes())
-                bilance = dlm.pro_spis(karta["pozadavek"])
-                if bilance is not None:
-                    karta["bilance_EV"] = bilance
-                posudek = vedeni.pro_spis(karta["pozadavek"])
-                if posudek is not None:
-                    karta["vedeni"] = posudek
-                riziko = lps.pro_spis(karta["pozadavek"])
-                if riziko is not None:
-                    karta["lps"] = riziko
+                karta.update(cast_karty(karta["pozadavek"]))
                 self.reply(200, karta)
             return
         if self.command == "POST" and path == route:
