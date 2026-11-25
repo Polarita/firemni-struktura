@@ -69,9 +69,8 @@ def main():
             detail = board.call("GET", instruction_path + "?path=AGENTS.md")
             if hashlib.sha256(detail["content"].encode()).hexdigest() != item["prompt_sha256"]:
                 # Aktualizace nové verze karty probíhá podporovaným API s ochranou souběžných revizí.
-                update = {"path": "AGENTS.md", "content": item["prompt"]}
-                if detail.get("revisionId"):
-                    update["baseRevisionId"] = detail["revisionId"]
+                update = {"path": "AGENTS.md", "content": item["prompt"],
+                          "baseRevisionId": detail["revision"]["id"]}
                 board.call("PUT", instruction_path, update, allowed=(200, 201))
                 detail = board.call("GET", instruction_path + "?path=AGENTS.md")
             if hashlib.sha256(detail["content"].encode()).hexdigest() != item["prompt_sha256"]:
