@@ -5,22 +5,18 @@ import json
 from pathlib import Path
 import sys
 
-from asn1crypto import keys, x509
-from pyhanko.pdf_utils import generic
-from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
-from pyhanko.pdf_utils.reader import PdfFileReader
-from pyhanko.pdf_utils.writer import PdfFileWriter, PageObject
-from pyhanko.sign import fields, signers, validation
-from pyhanko.sign.timestamps import DummyTimeStamper
-from pyhanko_certvalidator import ValidationContext
-from pyhanko_certvalidator.registry import SimpleCertificateStore
-
 ALLOWED = {"predavaci-protokol", "seznameni-monitoring", "archivni-kopie-deniku"}
 
 
 def seal(kind, data, bundle):
     if kind not in ALLOWED:
         raise ValueError("SEAL_NOT_A_PERSONAL_SIGNATURE")
+    from asn1crypto import keys, x509
+    from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
+    from pyhanko.sign import fields, signers
+    from pyhanko.sign.timestamps import DummyTimeStamper
+    from pyhanko_certvalidator.registry import SimpleCertificateStore
+
     anchors = SimpleCertificateStore()
     ca = x509.Certificate.load(base64.b64decode(bundle["ca"], validate=True))
     anchors.register(ca)
@@ -38,6 +34,11 @@ def seal(kind, data, bundle):
 
 
 def verify(data, root):
+    from asn1crypto import x509
+    from pyhanko.pdf_utils.reader import PdfFileReader
+    from pyhanko.sign import validation
+    from pyhanko_certvalidator import ValidationContext
+
     ca = x509.Certificate.load(base64.b64decode(root, validate=True))
     ctx = ValidationContext(trust_roots=[ca], allow_fetching=False, revocation_mode="soft-fail")
     reader = PdfFileReader(io.BytesIO(data))
@@ -53,6 +54,9 @@ def verify(data, root):
 
 
 def sample(kind):
+    from pyhanko.pdf_utils import generic
+    from pyhanko.pdf_utils.writer import PdfFileWriter, PageObject
+
     rows = {
         "predavaci-protokol": ("Predavaci protokol", "Vzorek TEST-001", "Predmet: kontrolni svitidlo ve zkusebne."),
         "seznameni-monitoring": ("Seznameni s provoznim monitoringem", "Vzorek TEST-002", "Obsah: dostupnost zkusebni sluzby."),
