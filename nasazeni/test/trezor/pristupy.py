@@ -1,4 +1,5 @@
 """Inicializace testovacího Raftu a ověření oddělených rolí. Tajné hodnoty zůstávají v RAM."""
+from contextlib import contextmanager
 import fcntl
 import hashlib
 import json
@@ -330,36 +331,45 @@ def expect_forbidden(method, path, token, body=None):
         request(method, path, body, token)
     except HTTPError as err:
         if err.code == 403:
+            err.close()
             return
         raise
     raise RuntimeError("Neoprávněný přístup prošel: " + path)
 
 
+@contextmanager
+def relace(creds):
+    token = login(creds)
+    try:
+        yield token
+    finally:
+        request("POST", "auth/token/revoke-self", {}, token)
+
+
 def verify_roles():
-    manager = login(recover("bao-sprava"))
-    initialize_database_passwords(manager)
-    initialize_seal(manager)
-    initialize_cache(manager)
-    initialize_objects(manager)
-    initialize_grade_token(manager)
-    initialize_protocol_key(manager)
+    sprava = recover("bao-sprava")
+    for initialize in (initialize_database_passwords, initialize_seal, initialize_cache,
+                       initialize_objects, initialize_grade_token, initialize_protocol_key):
+        with relace(sprava) as manager:
+            initialize(manager)
     values = {}
     for fixture in sorted({x for paths in FIXTURES.values() for x in paths} | set(DENIED)):
         # Zkouška má vlastní pole a cesty pouze v samostatném testovacím KV.
         values[fixture] = secrets.token_urlsafe(24)
-        request("POST", "test/data/" + fixture, {"data": {"vzorek": values[fixture]}}, manager)
+        with relace(sprava) as manager:
+            request("POST", "test/data/" + fixture, {"data": {"vzorek": values[fixture]}}, manager)
     for role, paths in FIXTURES.items():
-        token = login(credentials(role, manager))
-        for path in paths:
-            actual = request("GET", "test/data/" + path, token=token)["data"]["data"]["vzorek"]
-            if not secrets.compare_digest(actual, values[path]):
-                raise RuntimeError("Neočekávaná hodnota testovacího tajemství")
-        other = next(path for path in values if path not in paths and path not in DENIED)
-        for path in [other, *DENIED]:
-            expect_forbidden("GET", "test/data/" + path, token)
-        expect_forbidden("POST", "test/data/" + paths[0], token, {"data": {"vzorek": "zapis"}})
-        request("POST", "auth/token/revoke-self", {}, token)
-    request("POST", "auth/token/revoke-self", {}, manager)
+        with relace(sprava) as manager:
+            jednorazove = credentials(role, manager)
+        with relace(jednorazove) as token:
+            for path in paths:
+                actual = request("GET", "test/data/" + path, token=token)["data"]["data"]["vzorek"]
+                if not secrets.compare_digest(actual, values[path]):
+                    raise RuntimeError("Neočekávaná hodnota testovacího tajemství")
+            other = next(path for path in values if path not in paths and path not in DENIED)
+            for path in [other, *DENIED]:
+                expect_forbidden("GET", "test/data/" + path, token)
+            expect_forbidden("POST", "test/data/" + paths[0], token, {"data": {"vzorek": "zapis"}})
     print(f"{len(FIXTURES)} rolí: povolené čtení ověřeno, zápis a cizí tajemství odmítnuty.", flush=True)
 
 
