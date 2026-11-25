@@ -32,6 +32,9 @@ CREATE OR REPLACE VIEW wms.bubny_prehled AS
 SELECT id,stitek,varianta,sklad,prijato_mm,skladem_mm,rezervovano_mm,skladem_mm-rezervovano_mm AS volno_mm
 FROM wms.bubny;
 
+CREATE OR REPLACE VIEW wms.otevrene_rezervace AS
+SELECT id,buben,spis,zbyva_mm FROM wms.rezervace_kabelu WHERE zbyva_mm>0;
+
 CREATE OR REPLACE FUNCTION wms.prijmi_buben(p_id uuid,p_stitek text,p_varianta text,p_sklad text,p_mm bigint)
 RETURNS wms.bubny_prehled LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $f$
 DECLARE stav wms.bubny_prehled;
@@ -85,5 +88,5 @@ REVOKE ALL ON FUNCTION wms.prijmi_buben(uuid,text,text,text,bigint), wms.rezervu
     wms.pohyb_kabelu(uuid,uuid,text,text,text,bigint) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION wms.prijmi_buben(uuid,text,text,text,bigint), wms.rezervuj_kabel(uuid,uuid,text,bigint),
     wms.pohyb_kabelu(uuid,uuid,text,text,text,bigint) TO db_eshop;
-GRANT SELECT ON wms.bubny_prehled TO db_eshop;
+GRANT SELECT ON wms.bubny_prehled,wms.otevrene_rezervace TO db_eshop;
 COMMIT;
