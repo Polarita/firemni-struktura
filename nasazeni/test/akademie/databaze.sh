@@ -31,8 +31,12 @@ trap 'unlink "$tmp" 2>/dev/null || true' EXIT
 printf '%s\n' '<?php' "require '/etc/polarita-akademie/nastaveni.php';" "require_once __DIR__ . '/lib/setup.php';" >"$tmp"
 chmod 0644 "$tmp"
 if [[ -e $app/$rev/config.php ]]; then cmp "$tmp" "$app/$rev/config.php"; else mv -T "$tmp" "$app/$rev/config.php"; fi
+ready="$work/schema-pripraveno-${rev##*/}"
 if [[ -s $work/schema ]]; then
     read -r schema <"$work/schema"
+    [[ $schema =~ ^pol_mdl_[a-f0-9]{16}$ ]]
+elif [[ -s $ready ]]; then
+    read -r schema <"$ready"
     [[ $schema =~ ^pol_mdl_[a-f0-9]{16}$ ]]
 else
     # Každá nedokončená prvotní instalace má své schéma a soubory. Aplikaci
@@ -44,17 +48,10 @@ else
     incus exec -T "$vm" --user 33 --group 33 -- env POLARITA_AKADEMIE_SCHEMA="$schema" \
         php8.4 -d max_input_vars=5000 -d zend.exception_ignore_args=1 "$conf/instaluj.php" "$tree" \
         </srv/polarita/data/bootstrap-test/test-login/heslo
+    printf '%s\n' "$schema" >"$ready.next"
+    mv -T "$ready.next" "$ready"
 fi
 cli=(incus exec -T "$vm" --user 33 --group 33 -- env POLARITA_AKADEMIE_SCHEMA="$schema" php8.4 -d max_input_vars=5000)
 "${cli[@]}" "$tree/admin/cli/upgrade.php" --non-interactive
 "${cli[@]}" "$tree/admin/cli/cfg.php" --name=lang --set=cs
-[[ $("${pg[@]}" -c "SELECT count(*) FROM $schema.mdl_modules WHERE name IN ('customcert','offlinequiz')") == 2 ]]
-[[ $("${pg[@]}" -c "SELECT count(*) FROM $schema.mdl_user WHERE username='spravce' AND NOT deleted::bool") == 1 ]]
-[[ $("${pg[@]}" -c "SELECT value FROM $schema.mdl_config WHERE name='lang'") == cs ]]
-printf '%s\n' "$schema" >"$work/.schema-next"
-mv -T "$work/.schema-next" "$work/schema"
-incus file push --mode=0644 "$work/schema" "$vm$conf/.schema-next"
-"${inside[@]}" mv -T "$conf/.schema-next" "$conf/schema"
-ln -sfn "$rev" "$app/.current-next"
-mv -Tf "$app/.current-next" "$app/current"
-printf 'Moodle má databázi, účet spravce, češtinu a registrované moduly Offline Quiz a Custom Certificate.\n'
+bash "$src/publikuj-db.sh" "$rev" "$schema"

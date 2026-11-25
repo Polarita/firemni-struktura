@@ -2,6 +2,7 @@
 // Připojí místní účet správce k ověřené identitě v testovacím realmu.
 define('CLI_SCRIPT', true);
 require '/opt/polarita-akademie/current/config.php';
+require_once $CFG->libdir . '/filelib.php';
 
 use core\oauth2\api;
 use core\oauth2\issuer;
