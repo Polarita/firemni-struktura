@@ -267,6 +267,7 @@ async function ukazVykopy(kod, current) {
     for (const row of rows) {
         const item = document.createElement("li");
         item.textContent = row.trasa + " · " + (row.duvody.length ? row.duvody.join(" ") : "Podklady jsou úplné.");
+        if (row.stav === "uvolneno-test") item.textContent = row.trasa + " · Uvolněno v testu pro den " + row.den + ".";
         if (row.stav === "pripraveno-test") {
             const submit = document.createElement("button");
             submit.type = "button";

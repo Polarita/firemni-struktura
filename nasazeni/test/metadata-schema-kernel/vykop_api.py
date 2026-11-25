@@ -9,17 +9,22 @@ from zaznamy import Problem, query
 
 def kontrola(data, kod, body=None, *, uvolnit=False):
     case_id = najdi(data, kod)["case_id"]
-    states = query(data, "SELECT coalesce(json_agg(v),'[]') FROM polarita_test_spisy.vykopy(:'kod') v;", kod=case_id)
+    states = query(data, "SELECT coalesce(json_agg(v),'[]') FROM polarita_test_spisy.stav_vykopu(:'kod') v;", kod=case_id)
     if uvolnit and (not isinstance(body, dict) or body.keys() != {"trasa", "revize"}
                     or not isinstance(body["revize"], str) or not re.fullmatch(r"[a-f0-9]{64}", body["revize"])):
         raise Problem(400, "Zadejte trasu a revizi právě otevřeného projektu.")
     result = []
-    for state in states:
+    for record in states:
+        state = record["podklady"]
         if uvolnit and state["trasa"] != body["trasa"]:
             continue
         reasons = vyhodnot(state)
         row = {"trasa": state["trasa"], "revize": state["revize"], "den": state["den"], "duvody": reasons,
-               "stav": "FAIL_CLOSED" if reasons else "pripraveno-test"}
+               "stav": "pripraveno-test"}
+        if reasons:
+            row["stav"] = "FAIL_CLOSED"
+        elif record["uvolneno"]:
+            row["stav"] = "uvolneno-test"
         if uvolnit:
             if state["revize"] != body["revize"]:
                 raise Problem(409, "Revize se změnila. Znovu otevřete spis.")

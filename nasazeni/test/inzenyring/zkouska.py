@@ -41,10 +41,15 @@ def over(origin, password):
             [row] = request("GET",path)
             if row["trasa"] != data["trasa"] or row["revize"] != data["revize"]:
                 raise RuntimeError("Spis vrátil jinou revizi trasy.")
-            if row["stav"] == "pripraveno-test":
+            if row["stav"] in ("pripraveno-test", "uvolneno-test"):
                 break
             if not denied:
-                err = request("POST",path,payload,*post)["error"]
+                try:
+                    err = request("POST",path,payload,*post)["error"]
+                except NeocekavanyStav as exc:
+                    if exc.status == 200:  # archiv se mohl uzavřít mezi čtením a zápisem
+                        continue
+                    raise
                 if "FAIL_CLOSED" not in err:
                     raise RuntimeError("Před dokončením archivu musí být výkop blokován.")
                 print(f"{case} · systém odmítl uvolnění. {err}", flush=True)
@@ -63,6 +68,9 @@ def over(origin, password):
         saved = request("POST",path,payload,"application/json")
         if saved["stav"] != "uvolneno-test" or saved["duvody"] or saved["revize"] != row["revize"]:
             raise RuntimeError("Ředitelství nepotvrdilo aktuální technické uvolnění.")
+    [reopened] = request("GET",path)
+    if reopened != saved:
+        raise RuntimeError("Po znovuotevření spisu se změnil stav právě uvolněné trasy.")
     print(f"{case} · Trasa {row['trasa']} prošla zkouškou krytí, křížení a souběhu. "
           f"Oba dokumenty jsou ve spisu. Cizí spis a zastaralá revize byly odmítnuty.", flush=True)
 

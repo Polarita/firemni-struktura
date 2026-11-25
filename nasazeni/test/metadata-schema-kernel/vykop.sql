@@ -31,6 +31,16 @@ SELECT jsonb_build_object('case_id',k.case_id,'trasa',t.trasa,'projekt',t.projek
 FROM polarita_test_spisy.vykop_trasa t JOIN polarita_test_spisy.karty k ON t.spis=k.pozadavek
 JOIN polarita_test_spisy.vykop_metodika m ON m.kod=t.metodika WHERE k.case_id=$1 ORDER BY t.trasa
 $$;
+CREATE OR REPLACE FUNCTION polarita_test_spisy.stav_vykopu(kod text)
+RETURNS SETOF jsonb LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
+SELECT jsonb_build_object('podklady',v,'uvolneno',EXISTS (
+    SELECT FROM polarita_test_spisy.vykop_uvolneni u JOIN polarita_test_spisy.karty k ON k.pozadavek=u.spis
+    WHERE k.case_id=$1 AND u.trasa=v->>'trasa'
+      AND u.podklady=encode(sha256(convert_to(v::text,'UTF8')),'hex')))
+FROM polarita_test_spisy.vykopy($1) v
+$$;
+REVOKE ALL ON FUNCTION polarita_test_spisy.stav_vykopu(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION polarita_test_spisy.stav_vykopu(text) TO pol_metadata_api,pol_metadata_read;
 CREATE OR REPLACE FUNCTION polarita_test_spisy.uloz_vykop(kod text, oznaceni text, ocekavane jsonb)
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 DECLARE spis_id uuid; stav jsonb;
