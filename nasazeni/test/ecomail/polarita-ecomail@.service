@@ -16,4 +16,5 @@ PrivateTmp=yes
 ProtectHome=yes
 ProtectSystem=strict
 InaccessiblePaths=/etc/polarita-ecomail-test
-ReadWritePaths=/srv/polarita/workspace/ecomail-test
+BindPaths=/srv/polarita/workspace/ecomail-test:/var/lib/polarita-ecomail-data
+ReadWritePaths=/var/lib/polarita-ecomail-data

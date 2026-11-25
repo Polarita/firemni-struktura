@@ -16,7 +16,7 @@ import sys
 
 import dkim
 
-STATE = Path("/srv/polarita/workspace/ecomail-test")
+STATE = Path("/var/lib/polarita-ecomail-data")
 KEY = Path("/etc/polarita-ecomail-test")
 PREFIX = "/ecomail-test/odhlaseni/"
 ONE_CLICK = "List-Unsubscribe=One-Click"

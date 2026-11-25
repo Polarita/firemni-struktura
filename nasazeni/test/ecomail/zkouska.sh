@@ -4,7 +4,7 @@ set -euo pipefail
 src=$(cd "$(dirname "$0")" && pwd)
 g=(sudo -n incus exec -T --project polarita polarita-hq --)
 "${g[@]}" bash "$1/nasazeni/test/ecomail/instalace.sh"
-role=(runuser -u pol-ecomail-test -- /usr/bin/python3 -I /opt/polarita-ecomail-test/retence.py)
+role=(/usr/local/sbin/polarita-ecomail-test)
 list="servis-${3:0:12}"
 options=(--seznam "$list" --host "$2")
 "${g[@]}" "${role[@]}" prvni "${options[@]}"

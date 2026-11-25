@@ -24,7 +24,9 @@ fi
 openssl pkey -in "$key/test.key" -pubout -outform DER -out "$key/test.der"
 chmod 0644 "$key/test.der"
 install -Dm0644 "$src/retence.py" /opt/polarita-ecomail-test/retence.py
-runuser -u "$role" -- /usr/bin/python3 -I /opt/polarita-ecomail-test/retence.py init
+install -dm0755 /var/lib/polarita-ecomail-data
+install -Dm0755 "$src/prikaz.sh" /usr/local/sbin/polarita-ecomail-test
+/usr/local/sbin/polarita-ecomail-test init
 install -m0644 "$src"/polarita-ecomail{.socket,@.service} /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now polarita-ecomail.socket
