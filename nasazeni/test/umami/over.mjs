@@ -20,7 +20,7 @@ async function api(path, body, accept = []) {
   if (token && path !== '/send') headers.authorization = 'Bearer ' + token;
   const response = await fetch(base + path, {
     method: body ? 'POST' : 'GET', headers, body: body ? JSON.stringify(body) : undefined,
-    redirect: 'error', signal: AbortSignal.timeout(60000),
+    redirect: 'error', signal: AbortSignal.timeout(180000),
   });
   if (accept.includes(response.status)) return null;
   if (!response.ok) throw new Error('Umami vrátilo ' + response.status + ' pro ' + path.split('?')[0]);

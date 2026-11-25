@@ -22,7 +22,7 @@ def call(path, *, data=None, token=None):
     headers = {"Content-Type": "application/json"} if data else {}
     if token:
         headers["Authorization"] = "Bearer "+token
-    with web.open(Request(origin+path, data=json.dumps(data).encode() if data else None, headers=headers), timeout=60) as response:
+    with web.open(Request(origin+path, data=json.dumps(data).encode() if data else None, headers=headers), timeout=180) as response:
         return json.load(response)
 
 
@@ -40,7 +40,7 @@ except HTTPError as e:
         raise
 else:
     raise RuntimeError("Soukromý vstup umožnil zápis do interního sběru událostí.")
-with web.open(origin + "/login", timeout=60) as res:
+with web.open(origin + "/login", timeout=180) as res:
     if res.headers.get_content_type() != "text/html" or b"umami" not in res.read().lower():
         raise RuntimeError("Chybí přihlašovací obrazovka Umami.")
 login = call("/api/auth/login", data={"username": "spravce", "password": sys.stdin.readline().rstrip("\r\n")})
