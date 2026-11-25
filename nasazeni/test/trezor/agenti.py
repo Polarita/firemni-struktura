@@ -8,6 +8,8 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
+from urllib.error import URLError
 import pristupy as p
 
 CLIENTS = {
@@ -37,18 +39,12 @@ def run(*cmd, data=None):
                           timeout=120, check=True).stdout
 
 
-def install(name, agent):
+def install(name, files):
     config = json.loads(run("incus", "query", "/1.0/instances/" + name))
     if config["expanded_devices"]["eth0"]["ipv4.address"] != CLIENTS[name][0]:
         raise RuntimeError("Nesouhlasí adresa příjemce " + name)
-    for source, dest, mode in [(p.WORK / "bin/bao", "bao", "0755"),
-                                (agent, "agent", "0755"),
-                                (p.WORK / "ca.crt", "ca.crt", "0644")]:
-        # Hostitel vidí soubor přes namespace běžící instance pouze pro porovnání.
-        # Nemá důvěru v symlinky uvnitř instance, pro čtení i zápis používá API Incus.
+    for source, dest, mode, expected in files:
         remote = f"{name}{TARGET}/{dest}"
-        with source.open("rb") as local:
-            expected = hashlib.file_digest(local, "sha256").digest()
         pull = subprocess.Popen(["incus", "file", "pull", remote, "-"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         with pull.stdout as buf:
             actual = hashlib.file_digest(buf, "sha256").digest()
@@ -83,11 +79,22 @@ def deliver(name, manager):
 
 
 def deliver_with_token(name, credentials):
-    manager = p.login(credentials)
-    try:
-        deliver(name, manager)
-    finally:
-        p.request("POST", "auth/token/revoke-self", {}, manager)
+    for attempt in range(2):
+        try:
+            manager = p.login(credentials)
+            try:
+                deliver(name, manager)
+            finally:
+                p.request("POST", "auth/token/revoke-self", {}, manager)
+            return
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, TimeoutError, ConnectionError, URLError) as exc:
+            cause = exc.reason if isinstance(exc, URLError) else exc
+            timed_out = isinstance(cause, (TimeoutError, ConnectionError, subprocess.TimeoutExpired))
+            agent_timeout = isinstance(exc, subprocess.CalledProcessError) and exc.returncode == 75
+            if attempt or not (timed_out or agent_timeout):
+                raise
+        print(f"{name}: spojení nebo vykreslení překročilo limit, opakuji předání s novým přístupem.", flush=True)
+        time.sleep(3)
 
 
 if __name__ == "__main__":
@@ -105,8 +112,13 @@ if __name__ == "__main__":
     with (p.WORK / ".agenti-lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         if options.install:
+            files = []
+            for source, dest, mode in ((p.WORK / "bin/bao", "bao", "0755"),
+                                       (options.spoustec, "agent", "0755"), (p.WORK / "ca.crt", "ca.crt", "0644")):
+                with source.open("rb") as local:
+                    files.append((source, dest, mode, hashlib.file_digest(local, "sha256").digest()))
             for name in clients:
-                install(name, options.spoustec)
+                install(name, files)
         p.HTTP = p.build_opener(p.ProxyHandler({}), p.HTTPSHandler(context=p.ssl.create_default_context(cafile=str(p.WORK / "ca.crt"))))
         credentials = p.recover("bao-sprava")
         with ThreadPoolExecutor(max_workers=2) as pool:

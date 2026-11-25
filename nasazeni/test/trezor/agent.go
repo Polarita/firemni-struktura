@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -218,6 +219,9 @@ template {
 	cmd := exec.CommandContext(ctx, "/opt/polarita-openbao/bao", "agent", "-config="+tmp+"/agent.hcl", "-log-level=warn")
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return fmt.Errorf("OpenBao Agent překročil dobu pro vykreslení: %w", ctx.Err())
+		}
 		return fmt.Errorf("OpenBao Agent: %w", err)
 	}
 	for source, dest := range outputs {
@@ -253,6 +257,9 @@ func main() {
 	}
 	if err := deliver(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		if errors.Is(err, context.DeadlineExceeded) {
+			os.Exit(75)
+		}
 		os.Exit(1)
 	}
 }
