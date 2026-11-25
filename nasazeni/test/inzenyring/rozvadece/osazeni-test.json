@@ -1,0 +1,12 @@
+{
+  "rozsah": "výkonový rozváděč VS-800 TEST",
+  "den_posouzeni": "2026-11-25",
+  "okoli_C": "35",
+  "pristroje": [
+    {"oznaceni":"-QS1", "ztrata_W":"14", "mez_C":"70"},
+    {"oznaceni":"-FA1", "ztrata_W":"32", "mez_C":"60"},
+    {"oznaceni":"-FI1", "ztrata_W":"18", "mez_C":"65"},
+    {"oznaceni":"-FV1", "ztrata_W":"12", "mez_C":"65"},
+    {"oznaceni":"-PJ1", "ztrata_W":"20", "mez_C":"60"}
+  ]
+}

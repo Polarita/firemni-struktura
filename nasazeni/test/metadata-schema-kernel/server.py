@@ -1,5 +1,6 @@
 """HTTP pro vlastní entity přes privátní unixový socket."""
 from http.server import BaseHTTPRequestHandler
+from hashlib import sha256
 from html import escape
 import json
 from pathlib import Path
@@ -18,6 +19,18 @@ from zaznamy import Problem, query, read, write
 
 def slozka_spisu(karta, oddil):
     return Path("/opt/polarita-inzenyring-test") / oddil / str(UUID(karta["pozadavek"])) / "current"
+
+
+def pas_rozvadece(karta, serial):
+    base = slozka_spisu(karta, "pasy").parent / serial / "current"
+    # Získat jedno neměnné vydání i během souběžné aktualizace ukazatele current.
+    directory = base.resolve()
+    info = directory / "prehled.json"
+    if info.is_file():
+        data = json.loads(info.read_bytes())
+        if data["case_id"] == karta["case_id"] and data["vyrobni_cislo"] == serial:
+            return directory, data
+    return None
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -72,6 +85,22 @@ class Handler(BaseHTTPRequestHandler):
         if self.command == "POST" and path == "/api/spisy":
             self.reply(200, zaloz(data, self.request_body()))
             return
+        if self.command == "GET" and path.startswith("/api/pasy/"):
+            parts = path.removeprefix("/api/pasy/").split("/")
+            if len(parts) != 3 or not re.fullmatch(r"RZ-[0-9]{4}-[0-9]{5}", parts[1]) or parts[2] != "vyrobni-pas.pdf":
+                raise Problem(404, "Neznámý výrobní pas.")
+            karta = najdi(data, parts[0])
+            cisla = query(data, """SELECT to_json(count(*)) FROM polarita_test_spisy.vyrobni_cisla
+                          WHERE case_id=:'kod' AND vyrobni_cislo=:'serial';""", kod=karta["case_id"], serial=parts[1])
+            pas = pas_rozvadece(karta, parts[1]) if cisla == 1 else None
+            if not pas:
+                raise Problem(404, "Ve spisu chybí vydání pasu pro tento kus.")
+            directory, info = pas
+            raw = (directory / parts[2]).read_bytes()
+            if sha256(raw).hexdigest() != info["pdf_sha256"]:
+                raise Problem(409, "Obsah vydaného PDF se změnil.")
+            self.reply(200, raw, "application/pdf")
+            return
         if self.command == "GET" and path.startswith("/api/revize/"):
             parts = path.removeprefix("/api/revize/").split("/")
             if len(parts) != 2 or parts[1] != "navrh.pdf":
@@ -118,6 +147,10 @@ class Handler(BaseHTTPRequestHandler):
                     (SELECT oznaceni,vyrobni_cislo FROM polarita_test_spisy.vyrobni_cisla
                      WHERE case_id=:'kod') r;""", kod=karta["case_id"])
                 if rozvadece:
+                    for panel in rozvadece:
+                        pas = pas_rozvadece(karta, panel["vyrobni_cislo"])
+                        if pas:
+                            panel["pas"] = pas[1]
                     karta["rozvadece"] = rozvadece
                 prehled = slozka_spisu(karta, "revize") / "prehled.json"
                 if prehled.is_file():

@@ -24,7 +24,9 @@ async function otevri(url, options) {
     byId("alias").textContent = data.alias;
     byId("pobocka").textContent = String(data.branch_id);
     byId("cas").textContent = new Date(data.zalozeno).toLocaleString("cs-CZ");
-    history.replaceState(null, "", "?spis=" + encodeURIComponent(data.case_id));
+    const urlSpisu = new URL(location.href);
+    const otevritKnihu = urlSpisu.searchParams.get("spis") === data.case_id && (urlSpisu.searchParams.get("oddil") === "kniha" || urlSpisu.hash === "#kniha-objektu");
+    history.replaceState(null, "", "?spis=" + encodeURIComponent(data.case_id) + (otevritKnihu ? "&oddil=kniha#kniha-objektu" : ""));
     byId("cislo").value = data.case_id;
     byId("karta").hidden = false;
     stav.textContent = "Spis je otevřený.";
@@ -40,6 +42,13 @@ async function otevri(url, options) {
     byId("seznam-rozvadecu").replaceChildren(...(data.rozvadece || []).map(row => {
         const item = document.createElement("li");
         item.textContent = row.oznaceni + " · " + row.vyrobni_cislo;
+        if (row.pas) {
+            const odkaz = document.createElement("a");
+            odkaz.href = "api/pasy/" + encodeURIComponent(data.case_id) + "/" + encodeURIComponent(row.vyrobni_cislo) + "/vyrobni-pas.pdf";
+            odkaz.download = row.vyrobni_cislo + "-pas-test.pdf";
+            odkaz.textContent = "Stáhnout výrobní pas a štítek (TEST, PDF)";
+            item.append(" · ", odkaz);
+        }
         return item;
     }));
     byId("revizni-navrh").hidden = !data.revizni_navrh;
@@ -57,6 +66,7 @@ async function otevri(url, options) {
     byId("vykopy").hidden = true;
     byId("trasy").replaceChildren();
     await Promise.all([ukazVykopy(data.case_id, current), ukazPrijem(data.case_id, current), ukazKnihu(data.case_id, current)]);
+    if (otevritKnihu && current === request) byId("kniha-objektu").scrollIntoView();
 }
 
 button.addEventListener("click", async () => {

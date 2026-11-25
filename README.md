@@ -58,7 +58,7 @@ Ve Vikunje má správce tři nástěnky **Zakázkové**, **Montážní** a **SLA
 
 V přehledu otevři **Spisy**, vyhledej číslo ve tvaru `POL-RRRR-NNNNN` nebo pobočkový alias a zkopíruj adresu otevřené karty. Přímý odkaz funguje i v novém prohlížeči. Po přihlášení tě ředitelství vrátí na vybraný spis. Nástroj MCP `spisy_najdi` načte stejnou kartu s oprávněním ke čtení.
 
-V obou cvičných revizních spisech najdeš v kartě **Rozváděče ve spisu** přidělené výrobní číslo. V části **Návrh revizní zprávy** otevřeš PDF nebo související posouzení v Decisions. Instalátor vypíše skutečná čísla spisů. Jeden vzor splní obě modelové meze a druhý uvede závadu v bodě M1. Oba můžeš zkontrolovat stejným přihlášením jako ředitelství.
+V obou cvičných revizních spisech najdeš v kartě **Rozváděče ve spisu** přidělené výrobní číslo a odkaz **Stáhnout výrobní pas a štítek (TEST, PDF)**. Pět stran obsahuje předlohu štítku s QR do digitální knihy, pas s modelovým výpočtem oteplení, protokol návrhu, kusový protokol a nepodepsaný návrh EU prohlášení. V části **Návrh revizní zprávy** otevřeš PDF nebo související posouzení v Decisions. Instalátor vypíše skutečná čísla spisů. Jeden vzor splní obě modelové meze a druhý uvede závadu v bodě M1. Oba můžeš zkontrolovat stejným přihlášením jako ředitelství.
 
 Po ověření přihlášení do Paperless a načtení rastrového protokolu z karantény přidá instalátor do přehledu odkaz **Otevřít dokumentový archiv Paperless**. Archiv používá ve VPN port `8448` a testovací účet v Keycloaku. V přejímací zkoušce ai porovná zkušební přílohu s dokladem karantény, ověří české OCR a dohledá uložený protokol podle čísla spisu.
 

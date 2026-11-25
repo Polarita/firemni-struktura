@@ -74,3 +74,27 @@ func TestLoginRotationAndLimit(t *testing.T) {
 		t.Fatal("Expected rate limit")
 	}
 }
+
+func TestBookSurvivesLogin(t *testing.T) {
+	const query = "spis=POL-2026-00008&oddil=kniha"
+	p := &portal{digest: sha256.Sum256([]byte("synthetic")), sessions: make(map[string]time.Time)}
+	visit := func(method, path, body string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(method, path, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		res := httptest.NewRecorder()
+		p.ServeHTTP(res, req)
+		return res
+	}
+	first := visit("GET", metadataPath+"spisy?"+query, "")
+	if first.Code != 303 || first.Header().Get("Location") != "/?"+query {
+		t.Fatal("Missing book in login redirect")
+	}
+	form := visit("GET", first.Header().Get("Location"), "")
+	if form.Code != 200 || !strings.Contains(form.Body.String(), `name="oddil" value="kniha"`) {
+		t.Fatal("Missing book in login form")
+	}
+	auth := visit("POST", "/prihlasit", query+"&username=spravce&password=synthetic")
+	if auth.Code != 303 || auth.Header().Get("Location") != metadataPath+"spisy?"+query {
+		t.Fatal("Login did not return to original book")
+	}
+}

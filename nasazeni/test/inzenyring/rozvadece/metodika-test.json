@@ -1,0 +1,9 @@
+{
+  "edice": "TEST-VS800-1",
+  "rozsah": "výkonový rozváděč VS-800 TEST",
+  "od": "2026-01-01",
+  "do": "2027-12-31",
+  "pravidla": ["TEST-ZAKLAD-1", "TEST-VYKON-1", "TEST-OTEP-1"],
+  "krivka_W_K_stred_K_vrch": [["0","0","0"], ["80","15","20"], ["112","21","28"]],
+  "jednotky": ["W", "K", "K"]
+}
