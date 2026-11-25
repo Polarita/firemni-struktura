@@ -1,7 +1,8 @@
-"""Vytvoř vektorový PDF půdorys modelu DXF nebo hran geometrie IFC."""
+"""Vytvoř vektorový PDF půdorys modelu DXF, DWG nebo hran geometrie IFC."""
 import argparse
 import os
 from pathlib import Path
+import subprocess
 import tempfile
 
 import ezdxf
@@ -38,8 +39,14 @@ def convert(source, destination):
         drawing = pudorys_ifc(source)
     elif suffix == ".dxf":
         drawing = ezdxf.readfile(source)
+    elif suffix == ".dwg":
+        with tempfile.TemporaryDirectory() as work:
+            intermediate = Path(work) / "vykres.dxf"
+            subprocess.run(["dwg2dxf", "-o", intermediate, source.resolve()], cwd=work,
+                           stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, check=True, timeout=150)
+            drawing = ezdxf.readfile(intermediate)
     else:
-        raise ValueError("Vstup musí být DXF nebo IFC.")
+        raise ValueError("Vstup musí být DXF, DWG nebo IFC.")
     if destination.suffix.lower() != ".pdf":
         raise ValueError("Výstup musí mít příponu PDF.")
     backend = pymupdf.PyMuPdfBackend()

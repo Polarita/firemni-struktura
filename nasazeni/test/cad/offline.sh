@@ -2,13 +2,15 @@
 # Knihovny se stáhnou v ředitelství, výkres se otevře až v bezsíťové pracovní VM.
 set -euo pipefail
 src=$(cd "$(dirname "$0")" && pwd)
-revision=$(cd "$src" && sha256sum offline.sh kola.lock prevod.py mereni.py zkouska.py vzor.ifc | sha256sum | cut -d' ' -f1)
+revision=$(cd "$src" && sha256sum offline.sh libredwg.sh kola.lock prevod.py mereni.py zkouska.py vzor.ifc | sha256sum | cut -d' ' -f1)
 if [[ ${1:-} == --revize ]]; then echo "$revision"; exit 0; fi
 [[ $# == 0 && $EUID == 0 && $(hostname -s) == polarita-hq ]]
 vm=karantena-test
 run=(incus exec -T "$vm" --)
 key=$(sha256sum "$src/kola.lock" | cut -d' ' -f1)
 cache=/var/cache/polarita-cad-test/$key
+bash "$src/libredwg.sh"
+dwg=$(bash "$src/libredwg.sh" --cesta)
 exec 9>/srv/polarita/infra/karantena-test/.instalace
 flock 9
 python3 "$src/kola.py" "$cache"
@@ -59,18 +61,24 @@ INSTALL
 fi
 code=$base/$key/$revision
 "${run[@]}" install -dm0755 "$code"
+if ! "${run[@]}" test -d "$code/libredwg"; then
+    target=$("${run[@]}" mktemp -d "$code/.libredwg-XXXXXXXX")
+    tar -C "$dwg" -cf - dwg2dxf dxf2dwg COPYING SHA256SUMS | "${run[@]}" tar -xf - -C "$target"
+    "${run[@]}" sh -ec 'cd "$1"; sha256sum --strict --status -c SHA256SUMS; chmod 0755 .; mv -T "$1" "$2"' sh "$target" "$code/libredwg"
+fi
+"${run[@]}" sh -ec 'cd "$1"; sha256sum --strict --status -c SHA256SUMS' sh "$code/libredwg"
 for file in prevod.py mereni.py zkouska.py vzor.ifc; do
     incus file push --mode=0644 "$src/$file" "$vm$code/$file.next"
     "${run[@]}" mv -T "$code/$file.next" "$code/$file"
 done
 job=$("${run[@]}" runuser -u nobody -- mktemp -d /var/tmp/polarita-vykres-XXXXXXXX)
 [[ $job =~ ^/var/tmp/polarita-vykres-[A-Za-z0-9]{8}$ ]]
-"${run[@]}" runuser -u nobody -- env HOME="$job" PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$base/$key/lib" \
+"${run[@]}" runuser -u nobody -- env HOME="$job" PATH="$code/libredwg:/usr/bin:/bin" PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$base/$key/lib" \
     OPENBLAS_NUM_THREADS=1 python3 "$code/zkouska.py" "$job"
 proof=/srv/polarita/workspace/dukazy/blok-10
 install -dm0750 "$proof"
 tmp=$(mktemp -d "$proof/.cad-XXXXXXXX")
-doklady=(vzor.dxf vzor.ifc vzor-dxf.pdf vzor-ifc.pdf kalibrace.json mereni.json)
+doklady=(vzor.dxf vzor.ifc vzor.dwg vzor-dxf.pdf vzor-ifc.pdf vzor-dwg.pdf kalibrace.json mereni.json)
 for file in "${doklady[@]}"; do
     incus file pull "$vm$job/$file" "$tmp/$file"
 done
@@ -88,7 +96,7 @@ set -euo pipefail
 for pair in polarita-cad-pdf:prevod polarita-cad-mereni:mereni; do
     name=${pair%:*}
     tmp=$(mktemp "/usr/local/bin/.$name-XXXXXXXX")
-    printf '#!/bin/sh\nexport PYTHONPATH=%s PYTHONDONTWRITEBYTECODE=1 OPENBLAS_NUM_THREADS=1\nexec python3 %s "$@"\n' "$1" "$2/${pair#*:}.py" >"$tmp"
+    printf '#!/bin/sh\nexport PYTHONPATH=%s PATH=%s/libredwg:/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 OPENBLAS_NUM_THREADS=1\nexec python3 %s "$@"\n' "$1" "$2" "$2/${pair#*:}.py" >"$tmp"
     chmod 0755 "$tmp"
     mv -T "$tmp" "/usr/local/bin/$name"
 done

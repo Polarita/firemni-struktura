@@ -56,7 +56,7 @@ Jsi správce serveru (17003 spravce-site) ve spolupráci s hlavním vývojářem
 
 ### Ověření měřítka PDF v pracovní VM
 
-Do příjmu karantény vlož obsah souboru přes `prijem.py dxf` nebo `prijem.py ifc`. Potvrzené ID propojuje originál, protokol antivirové kontroly i výsledný půdorys. Bezsíťový pracovník předá vykreslené PDF do Dangerzone a ověří, že z rekonstrukce vyšla pasivní rastrová kopie. Každé další měření svázané s tímto výstupem vyžaduje jeho vlastní SHA-256.
+Do příjmu karantény vlož obsah souboru přes `prijem.py dxf`, `prijem.py dwg` nebo `prijem.py ifc`. Instalátor sestaví nástroje GNU LibreDWG 0.14 z archivu ověřeného podle SHA-256. Pro zkoušku DWG vytvoří binární vzor R2000 a po převodu změří poměr stran vykresleného obdélníku. Potvrzené ID propojuje originál, protokol antivirové kontroly i výsledný půdorys. Bezsíťový pracovník předá vykreslené PDF do Dangerzone a ověří, že z rekonstrukce vyšla pasivní rastrová kopie. Každé další měření svázané s tímto výstupem vyžaduje jeho vlastní SHA-256.
 
 V bezsíťové pracovní VM poskytuje příkaz `polarita-cad-mereni vykres.pdf kalibrace.json` délku lomené trasy v milimetrech. Pro každou stranu připrav vlastní zadání. Uveď SHA-256 přesného souboru, číslo strany od jedničky, známé délky kót v milimetrech a souřadnice bodů v bodech PDF od levého horního rohu zobrazené strany. Při změně souboru proveď kalibraci znovu.
 

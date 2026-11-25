@@ -12,7 +12,7 @@ LIMIT = 64 * 1024 * 1024
 
 
 def enqueue(source, kind):
-    if socket.gethostname().split(".")[0] != "polarita-hq" or kind not in {"pdf", "txt", "wav", "dxf", "ifc"}:
+    if socket.gethostname().split(".")[0] != "polarita-hq" or kind not in {"pdf", "txt", "wav", "dxf", "ifc", "dwg"}:
         raise ValueError("Neplatný vstup karantény")
     incoming = BASE / "vstup"
     incoming.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -38,6 +38,6 @@ def enqueue(source, kind):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("typ", choices=("pdf", "txt", "wav", "dxf", "ifc"))
+    parser.add_argument("typ", choices=("pdf", "txt", "wav", "dxf", "ifc", "dwg"))
     args = parser.parse_args()
     print(enqueue(sys.stdin.buffer, args.typ))

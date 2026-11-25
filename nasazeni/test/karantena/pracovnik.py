@@ -61,7 +61,7 @@ def main():
     if socket.gethostname().split(".")[0] != "karantena-test" or set(os.listdir("/sys/class/net")) != {"lo"}:
         sys.exit("Kontrola musí běžet v bezsíťové pracovní VM")
     job = sys.argv[1]
-    if not re.fullmatch(r"[0-9a-f]{32}\.(?:pdf|txt|wav|dxf|ifc)", job):
+    if not re.fullmatch(r"[0-9a-f]{32}\.(?:pdf|txt|wav|dxf|ifc|dwg)", job):
         sys.exit("Chybné jméno úlohy")
     source = Path("/mnt/karantena-in") / job
     output = Path("/mnt/karantena-out") / job
@@ -108,7 +108,7 @@ def main():
             typ = "xml"
         else:
             pdf_source = source
-            if source.suffix in {".dxf", ".ifc"}:
+            if source.suffix in {".dxf", ".ifc", ".dwg"}:
                 converter = Path("/usr/local/bin/polarita-cad-pdf")
                 if not converter.is_file():
                     result("ceka", "ceka-na-prevodnik-cad", signatury_hodin=age)

@@ -75,7 +75,12 @@ def main(directory):
     doc.modelspace().add_lwpolyline([(0, 0), (30, 0), (30, 10), (0, 10)], close=True)
     doc.saveas(source)
     shutil.copyfile(Path(__file__).with_name("vzor.ifc"), directory / "vzor.ifc")
-    for extension, ratio in (("dxf", 3), ("ifc", 6)):
+    # R2000 má přímé kódování v LibreDWG a stejnou známou geometrii jako původní DXF.
+    dwg = directory / "vzor.dwg"
+    subprocess.run(["dxf2dwg", "-a", "r2000", "-o", dwg, source], stdin=subprocess.DEVNULL, check=True)
+    with dwg.open("rb") as header:
+        assert header.read(6) == b"AC1015", "Vzorek nemá binární hlavičku DWG R2000."
+    for extension, ratio in (("dxf", 3), ("ifc", 6), ("dwg", 3)):
         target = directory / f"vzor-{extension}.pdf"
         convert(directory / f"vzor.{extension}", target)
         box = check(target, ratio)

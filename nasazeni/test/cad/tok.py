@@ -1,4 +1,4 @@
-"""Ověří obě CAD přílohy přes nainstalovaný příjem, antivir, převod a běžnou výstupní frontu."""
+"""Ověří CAD přílohy přes nainstalovaný příjem, antivir, převod a běžnou výstupní frontu."""
 import hashlib
 import json
 from pathlib import Path
@@ -20,7 +20,7 @@ def sha(path):
 
 def check(sample, job):
     receipt = BASE / "protokoly" / (job + ".json")
-    deadline = time.monotonic() + 720 + 2 * 1620
+    deadline = time.monotonic() + 720 + 3 * 1620
     while time.monotonic() < deadline:
         if receipt.exists():
             report = json.loads(receipt.read_text())
@@ -49,7 +49,7 @@ def main(revision):
     directory = PROOF / ("cad-" + revision)
     subprocess.run(["sha256sum", "--strict", "--status", "-c", "SHA256SUMS"], cwd=directory, check=True)
     jobs = []
-    for kind in ("dxf", "ifc"):
+    for kind in ("dxf", "ifc", "dwg"):
         sample = directory / ("vzor." + kind)
         with sample.open("rb") as stream:
             job = subprocess.check_output([sys.executable, ACCEPT, kind], stdin=stream, text=True).strip()
