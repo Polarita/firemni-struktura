@@ -6,6 +6,8 @@ commit=$1
 sudo -n bash nasazeni/test/zaklad.sh
 inc=(sudo -n incus)
 guest=("${inc[@]}" exec -T --project polarita polarita-hq --)
+# Obnova ve druhé instanci a restart trezoru sdílejí kapacitu VM se sestavením aplikací.
+zkouska_bez_sestaveni=("${guest[@]}" flock --close /run/polarita-test-zatez.lock)
 [[ $("${guest[@]}" hostname -s) == polarita-hq ]]
 dest=/srv/polarita/infra/releases/$commit
 "${guest[@]}" install -d "$dest"
@@ -86,7 +88,7 @@ hesla() {
     CGO_ENABLED=0 go build -trimpath -o "$tmp/agent" nasazeni/test/trezor/agent.go
     "${inc[@]}" file push --mode 0755 --project polarita "$tmp/agent" "polarita-hq$dest/agent"
     "${guest[@]}" bash "$dest/nasazeni/test/hesla/instalace.sh" "https://$fqdn/hesla" | tee "$tmp/hesla.txt"
-    "${guest[@]}" python3 "$dest/nasazeni/test/hesla/obnova.py" | tee "$tmp/obnova-hesel.txt"
+    "${zkouska_bez_sestaveni[@]}" python3 "$dest/nasazeni/test/hesla/obnova.py" | tee "$tmp/obnova-hesel.txt"
 }
 
 postgres() {
@@ -138,7 +140,7 @@ paperclip() {
 }
 
 identita() {
-    "${guest[@]}" bash "$dest/nasazeni/test/trezor/zkouska-startu.sh" | tee "$tmp/restart.txt"
+    "${zkouska_bez_sestaveni[@]}" bash "$dest/nasazeni/test/trezor/zkouska-startu.sh" | tee "$tmp/restart.txt"
     sudo -n python3 nasazeni/test/trezor/zkouska-obnovy.py "$dest/nasazeni/test/trezor" | tee "$tmp/obnova.txt"
     "${guest[@]}" python3 "$dest/nasazeni/test/pecet/zkouska.py" | tee "$tmp/pecet.txt"
     sum=$("${guest[@]}" sha256sum /srv/polarita/workspace/dukazy/blok-04/pecet/predavaci-protokol.pdf)
@@ -184,7 +186,7 @@ metadata() {
 
 obnova_databazi() {
     "${guest[@]}" bash "$dest/nasazeni/test/objekty/zkouska.sh" | tee "$tmp/garage.txt"
-    "${guest[@]}" python3 "$dest/nasazeni/test/databaze/obnova.py" | tee "$tmp/obnova-databazi.txt"
+    "${zkouska_bez_sestaveni[@]}" python3 "$dest/nasazeni/test/databaze/obnova.py" | tee "$tmp/obnova-databazi.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/pamet/instalace.sh" | tee "$tmp/znalosti.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/agent-vault/instalace.sh" | tee -a "$tmp/znalosti.txt"
     "${guest[@]}" bash "$dest/nasazeni/test/den-1/instalace.sh" | tee -a "$tmp/znalosti.txt"
