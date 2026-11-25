@@ -352,13 +352,20 @@ func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Disposition", `attachment; filename="predavaci-protokol-test.pdf"`)
 		http.ServeFile(w, r, vzor)
 		return
+	case (r.URL.Path == "/web-test/kalkulacka-svj/" || r.URL.Path == "/web-test/kalkulacka-svj/podklad.pdf") && r.Method == http.MethodPost:
+		if !signed {
+			http.Error(w, "Přihlaste se do ředitelství.", http.StatusUnauthorized)
+			return
+		}
+		kalkulackaSVJ(w, r)
+		return
 	case strings.HasPrefix(r.URL.Path, "/web-test/") && (r.Method == "GET" || r.Method == "HEAD"):
 		if !signed {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
 		// Veřejný výstup sestavení tvoří jen zákaznické stránky a llms.txt.
-		files := map[string]string{"/web-test/": "index.html", "/web-test/prevzeti-sanonu/": "prevzeti-sanonu/index.html", "/web-test/llms.txt": "llms.txt"}
+		files := map[string]string{"/web-test/": "index.html", "/web-test/kalkulacka-svj/": "kalkulacka-svj/index.html", "/web-test/prevzeti-sanonu/": "prevzeti-sanonu/index.html", "/web-test/llms.txt": "llms.txt"}
 		name, ok := files[r.URL.Path]
 		if !ok {
 			http.NotFound(w, r)

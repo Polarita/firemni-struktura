@@ -1,0 +1,17 @@
+---
+import Web from "../layouts/Web.astro";
+---
+<Web title="Kalkulačka rizik a úspor" description="Podklad pro schůzi výboru SVJ nebo pro správu firemního objektu.">
+<div class="intro"><h1>Kalkulačka rizik a úspor</h1><p>Vezměte si poslední revizní zprávu a vyúčtování elektřiny za společné prostory. Výsledek můžete stáhnout jako PDF na schůzi výboru.</p></div>
+<form method="post" action="/web-test/kalkulacka-svj/">
+<fieldset><legend>Objekt a revize</legend>
+<label>Kdo objekt spravuje?<select required name="subjekt"><option value="">Vyberte správce</option><option value="svj">SVJ bez zaměstnanců</option><option value="svj-pracoviste">SVJ se zaměstnanci</option><option value="firma">Firma nebo podnikatel</option></select></label>
+<label>Co dokládá revizní zpráva?<select required name="revize"><option value="">Vyberte stav</option><option value="aktualni">Zprávu máme a termín další revize dosud nenastal</option><option value="po-lhute">Termín další revize uplynul</option><option value="nezjisteno">Zpráva chybí nebo termín neznáme</option></select></label></fieldset>
+<fieldset><legend>Model roční úspory</legend>
+<label>Roční spotřeba společných prostor (kWh)<input name="kwh" type="number" inputmode="numeric" required min="0" max="10000000" step="1" placeholder="12 000"/></label>
+<label>Cena za odebranou kWh (Kč)<input name="cena" type="number" inputmode="decimal" required min="0.01" max="100" step="0.01" placeholder="5,50"/></label>
+<label>Odhad snížení spotřeby (%)<input name="procent" type="number" inputmode="numeric" required min="0" max="100" step="1" placeholder="10"/></label>
+<p>Použijte proměnnou cenu z vyúčtování. Odhad snížení spotřeby vychází z vašeho měření nebo návrhu úprav.</p></fieldset>
+<button type="submit">Vypočítat úsporu a zobrazit rizika</button></form>
+</Web>
+<style>form{max-width:42rem}fieldset{border:1px solid #c4d2cb;border-radius:.5rem;margin:1.5rem 0;padding:1rem 1.4rem}legend{font-weight:700;padding:0 .35rem}label{display:grid;gap:.25rem;margin:.75rem 0}input,select,button{font:inherit;padding:.55rem;max-width:100%;min-width:0}button{background:#164c3f;color:white;border:0;border-radius:.3rem;cursor:pointer;padding:.7rem 1rem}button:focus-visible{outline:3px solid #d18b18}</style>

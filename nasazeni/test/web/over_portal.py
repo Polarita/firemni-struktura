@@ -31,6 +31,16 @@ def over(origin, password):
     }
     assert "/konfigurator" in home.links and "/web-test/prevzeti-sanonu/" in home.links
     assert send("/konfigurator")[0] == origin+"/konfigurator"
+    calculator = "/web-test/kalkulacka-svj/"
+    assert calculator in home.links and calculator in send("/konfigurator")[2]
+    assert 'name="kwh"' in send(calculator)[2]
+    model = {"subjekt":"svj", "revize":"nezjisteno", "kwh":"12000", "cena":"5,50", "procent":"10"}
+    data = parse.urlencode(model).encode()
+    result = send(calculator, data)[2]
+    assert "6600 Kč" in result and "1200 kWh" in result and "Revize nedoložena" in result
+    with client.open(request.Request(origin+calculator+"podklad.pdf", data=data, headers={"Origin":origin}), timeout=60) as res:
+        pdf = res.read()
+        assert res.headers.get_content_type() == "application/pdf" and pdf.startswith(b"%PDF-") and pdf.rstrip().endswith(b"%%EOF")
     intake.feed(send("/web-test/prevzeti-sanonu/")[2])
     assert "/lhutnik-test/spisy" in intake.links and 'id="sanony"' in send("/lhutnik-test/spisy")[2]
     assert "/web-test/prevzeti-sanonu/" in send("/web-test/llms.txt")[2]
@@ -42,7 +52,7 @@ def over(origin, password):
         raise RuntimeError("Server zpřístupnil interní soubor sestavení.")
     send("/odhlasit", b"")
     assert send("/web-test/llms.txt")[0] == origin+"/"
-    print("Nová relace správce otevřela ceník, konfigurátor a formulář příjmu PDF. Po odhlášení vstup opět vyžádal přihlášení.")
+    print("Nová relace správce otevřela ceník, konfigurátor, kalkulačku s ověřenou úsporou a PDF ze sazby Typst i formulář příjmu skenu. Po odhlášení vstup opět vyžádal přihlášení.")
 
 
 if __name__ == "__main__":

@@ -34,14 +34,17 @@ class Stranka(HTMLParser):
 
 
 def over(root, ceny):
-    files = {"index.html", "prevzeti-sanonu/index.html", "llms.txt"}
+    files = {"index.html", "prevzeti-sanonu/index.html", "kalkulacka-svj/index.html", "llms.txt"}
     found = {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
     if found != files or any(p.is_symlink() for p in root.rglob("*")):
         raise ValueError("Sada veřejných souborů se liší od očekávaného výstupu Astro.")
     home, transfer = Stranka(), Stranka()
     home.feed((root/"index.html").read_text())
     transfer.feed((root/"prevzeti-sanonu/index.html").read_text())
-    for link in ("/konfigurator", "/web-test/prevzeti-sanonu/"):
+    calculator = Stranka()
+    calculator.feed((root/"kalkulacka-svj/index.html").read_text())
+    assert "Model roční úspory" in calculator.text
+    for link in ("/web-test/kalkulacka-svj/", "/konfigurator", "/web-test/prevzeti-sanonu/"):
         assert link in home.links, link
     assert "/lhutnik-test/spisy" in transfer.links
     assert "/web-test/prevzeti-sanonu/" in (root/"llms.txt").read_text()

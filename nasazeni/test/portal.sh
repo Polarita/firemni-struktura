@@ -51,7 +51,8 @@ if ! printf '%s\n' "$digest" | incus exec -T "$name" -- cmp -s - /etc/polarita-t
     incus exec -T "$name" -- mv -f /etc/.polarita-test.sha256.next /etc/polarita-test.sha256
 fi
 incus exec "$name" -- mkdir -p /usr/local/share
-incus file push --mode=0644 "$src/../../balicky/S3-konfigurator-a-tarify/konfigurator.html" "$name/usr/local/share/.konfigurator.html.next"
+sed 's@href="https://polarita.cz/kalkulacka-svj"@href="/web-test/kalkulacka-svj/"@g' "$src/../../balicky/S3-konfigurator-a-tarify/konfigurator.html" |
+    incus exec -T "$name" -- sh -ec 'umask 022; cat >/usr/local/share/.konfigurator.html.next'
 incus exec -T "$name" -- mv -f /usr/local/share/.konfigurator.html.next /usr/local/share/konfigurator.html
 for path in /usr/local/bin/polarita-portal /etc/init.d/polarita-portal; do
     case $path in

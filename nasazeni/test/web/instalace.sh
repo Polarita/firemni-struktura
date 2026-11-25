@@ -70,7 +70,8 @@ if [[ ! -d $release ]]; then
     done
     out="$cache/$rev/dist"
     python3 "$src/over.py" "$out" "$tmp/src/cenik-verejny.json"
-    install -d "$tmp/dist/prevzeti-sanonu"
+    install -d "$tmp/dist/prevzeti-sanonu" "$tmp/dist/kalkulacka-svj"
+    install -m0644 "$out/kalkulacka-svj/index.html" "$tmp/dist/kalkulacka-svj/"
     install -m0644 "$out/index.html" "$out/llms.txt" "$tmp/dist/"
     install -m0644 "$out/prevzeti-sanonu/index.html" "$tmp/dist/prevzeti-sanonu/"
     mv -T "$tmp" "$release"
@@ -79,17 +80,18 @@ fi
 python3 "$src/over.py" "$release/dist" "$release/src/cenik-verejny.json"
 vm=reditelstvi-test
 [[ $(incus config get "$vm" user.polarita.role) == "$vm" ]]
+bash "$src/typst.sh"
 web=/usr/local/share/polarita-web
 inside=(incus exec -T "$vm" --)
 "${inside[@]}" mkdir -p "$web"
 if ! "${inside[@]}" test -d "$web/$rev"; then
     "${inside[@]}" mkdir -p "$web/.$rev-next"
     tar -cf - -C "$release/dist" . | "${inside[@]}" tar xf - -C "$web/.$rev-next"
-    (cd "$release/dist" && sha256sum index.html llms.txt prevzeti-sanonu/index.html) |
+    (cd "$release/dist" && sha256sum index.html llms.txt prevzeti-sanonu/index.html kalkulacka-svj/index.html) |
         "${inside[@]}" sh -ec 'cd "$1"; sha256sum -c -' web "$web/.$rev-next"
     "${inside[@]}" mv -T "$web/.$rev-next" "$web/$rev"
 fi
-(cd "$release/dist" && sha256sum index.html llms.txt prevzeti-sanonu/index.html) |
+(cd "$release/dist" && sha256sum index.html llms.txt prevzeti-sanonu/index.html kalkulacka-svj/index.html) |
     "${inside[@]}" sh -ec 'cd "$1"; sha256sum -c -' web "$web/$rev"
 "${inside[@]}" sh -ec 'cd "$1"; ln -sfn "$2" .current-next; mv -Tf .current-next current' web "$web" "$rev"
 ln -sfn "releases/$rev" "$apps/.current-next"

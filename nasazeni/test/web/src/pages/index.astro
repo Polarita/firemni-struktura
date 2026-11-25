@@ -8,6 +8,7 @@ const schema = ceny.mrr_tariffs.map(t => ({"@type":"Service","name":t.label,"ser
 <Web title="Elektro správa objektů" description="Porovnejte měsíční tarify elektro správy pro SVJ a firmy a připravte předání revizních zpráv." schema={schema}>
 <div class="intro"><h1>Elektro správa objektů</h1><p>Vyberte si rozsah péče o společné elektroinstalace domu nebo firemního areálu. Měsíční paušál spojuje správu revizí, evidenci dokumentace a servisní odezvu.</p>
 <a class="cta" href="/konfigurator">Spočítat paušál pro můj objekt</a></div>
+<section><h2>Kolik může dům ušetřit?</h2><p>Porovnejte roční spotřebu a stav revizní dokumentace. Výsledek si můžete vzít na schůzi výboru.</p><a href={base+"kalkulacka-svj/"}>Otevřít kalkulačku rizik a úspor</a></section>
 <section id="cenik"><h2>Měsíční tarify</h2><p>Ceny za jeden objekt {ceny.meta.prices_exclude_vat ? "bez DPH" : "včetně DPH"}. Platné od {new Intl.DateTimeFormat("cs-CZ",{timeZone:"UTC"}).format(new Date(ceny.meta.valid_from+"T00:00:00Z"))}.</p>
 <div class="tarify">{ceny.mrr_tariffs.map(t => <article><h3>{t.label}</h3><p>{t.audience}</p><strong class="cena">{kc(t.base_monthly_per_object_hellers)} / měsíc</strong><p>Další vchod {kc(t.extra_entrance_monthly_hellers)} měsíčně.</p><p>Servisní odezva {t.sla_response}.</p></article>)}</div></section>
 <section><h2>Jednorázové instalace</h2>{ceny.turnkey_packages.map(p => <details><summary>{p.label}</summary><p>{kc(p.price_from_hellers)} až {kc(p.price_to_hellers)} / {p.unit}. {p.includes}.</p></details>)}</section>

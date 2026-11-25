@@ -49,8 +49,8 @@ cil="$commit/$uuid/$guid/$fqdn/$aktivni"
 prubeh=nasazeni/test/prubeh.py
 
 portal() {
-    go test -count=1 nasazeni/test/portal{,_test}.go
-    CGO_ENABLED=0 go build -trimpath -o "$tmp/portal" nasazeni/test/portal.go
+    go test -count=1 nasazeni/test/{portal,svj,portal_test,svj_test}.go
+    CGO_ENABLED=0 go build -trimpath -o "$tmp/portal" nasazeni/test/{portal,svj}.go
     "${inc[@]}" file push --mode 0755 --project polarita "$tmp/portal" "polarita-hq$dest/portal"
     "${guest[@]}" "$dest/nasazeni/test/incus.sh"
     "${guest[@]}" "$dest/nasazeni/test/site.sh" "$fqdn"
@@ -79,7 +79,7 @@ sit() {
 }
 
 hesla() {
-    go test -count=1 nasazeni/test/portal{,_test}.go
+    go test -count=1 nasazeni/test/{portal,svj,portal_test,svj_test}.go
     CGO_ENABLED=0 go build -trimpath -o "$tmp/agent" nasazeni/test/trezor/agent.go
     "${inc[@]}" file push --mode 0755 --project polarita "$tmp/agent" "polarita-hq$dest/agent"
     "${guest[@]}" bash "$dest/nasazeni/test/hesla/instalace.sh" "https://$fqdn/hesla" | tee "$tmp/hesla.txt"

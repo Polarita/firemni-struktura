@@ -1,0 +1,8 @@
+<!doctype html><html lang="cs"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Roční úspora a revize | Polarita</title>
+<style>body{font:1.05rem/1.6 system-ui,sans-serif;color:#173b32;max-width:44rem;margin:2rem auto;padding:0 1rem}h1,h2{line-height:1.2}b{font-size:1.4rem}button{font:inherit;background:#164c3f;color:white;padding:.6rem 1rem;border:0;border-radius:.3rem;cursor:pointer}a{color:#164c3f}form{margin:1.5rem 0}</style>
+<main><a href="/web-test/">Firemní web</a><h1>Podklad pro správu objektu</h1><p>{{.Spravce}} · {{.Stav}}</p>
+<h2>Modelovaná roční úspora</h2><p><b>{{.Uspora}} Kč</b> při snížení odběru o {{.Energie}} kWh za rok.</p>
+<p>Roční odběr {{.Kwh}} kWh × cena {{.Cena}} Kč/kWh × úspora {{.Procent}} %. Částka zahrnuje proměnnou složku ceny elektřiny a zaokrouhluje se na celé koruny.</p>
+<h2>Co projednat</h2><p>{{.RevizniKrok}}</p><p>{{.Riziko}} <a href="{{.Zdroj}}">Výklad inspekce práce</a></p>
+<form method="post" action="/web-test/kalkulacka-svj/podklad.pdf"><input type="hidden" name="subjekt" value="{{.Subjekt}}"><input type="hidden" name="revize" value="{{.Revize}}"><input type="hidden" name="kwh" value="{{.Kwh}}"><input type="hidden" name="cena" value="{{.Cena}}"><input type="hidden" name="procent" value="{{.Procent}}"><button>Stáhnout podklad pro schůzi (PDF)</button></form>
+<p><a href="/konfigurator">Porovnat nabídku elektro správy</a></p><p><a href="/web-test/kalkulacka-svj/">Nový výpočet</a></p></main></html>
