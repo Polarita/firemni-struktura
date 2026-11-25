@@ -23,7 +23,7 @@ def decrypt(name):
 
 payload = {"seal": base64.b64encode(decrypt("pecet.cms")).decode(),
            "shares": json.loads(decrypt("obnova-podily.cms"))["shares"]}
-subprocess.run(guest + ["python3", sys.argv[1] + "/obnova.py"],
+subprocess.run(guest + ["flock", "--close", "/run/polarita-test-zatez.lock", "python3", sys.argv[1] + "/obnova.py"],
                input=json.dumps(payload).encode(), check=True)
 
 # Jedna atomická kopie ověřeného archivu i materiálu obnovy přežije ztrátu vnitřní VM.
