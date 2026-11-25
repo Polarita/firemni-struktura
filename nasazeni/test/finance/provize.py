@@ -1,6 +1,11 @@
 """Položky provizního ledgeru z potvrzených realizací a plateb spárovaných UOL."""
 from datetime import date
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "balicky/S3-konfigurator-a-tarify"))
+import pricing
 
 HALER = Decimal("0.01")
 
@@ -14,18 +19,18 @@ def cislo(hodnota):
     return vysledek
 
 
-def polozka(druh, zdroj, udalost, doklad, partner, obdobi, zaklad, sazba):
+def polozka(druh, zdroj, udalost, doklad, partner, obdobi, zaklad, sazba, castka):
     if not all(isinstance(x, str) and x.strip() for x in (zdroj, udalost, doklad, partner)):
         raise ValueError("Chybí identita zdroje, dokladu nebo partnera.")
     mesic = date.fromisoformat(obdobi)
     if mesic.day != 1:
         raise ValueError("Účetní období musí začínat prvního dne měsíce.")
-    castka = (zaklad * sazba / 100).quantize(HALER, rounding=ROUND_HALF_UP)
     return dict(druh=druh, zdroj=zdroj, udalost=udalost, doklad=doklad, partner=partner,
                 obdobi=mesic.isoformat(), zaklad=str(zaklad), sazba=str(sazba), provize=str(castka))
 
 
 def sestav(podminky, uol, parovani):
+    cenik = pricing.load_price_list()
     vysledek = []
     for zaznam in podminky["realizace"]:
         if not all(zaznam[k] is True for k in ("certifikovan", "predano", "sla_splneno")):
@@ -34,7 +39,7 @@ def sestav(podminky, uol, parovani):
         if cena <= 0:
             raise ValueError("Sjednaná cena realizace musí být kladná.")
         vysledek.append(polozka("realizace", "predani", zaznam["predavka"], zaznam["smlouva"],
-                                zaznam["partner"], zaznam["obdobi"], cena, Decimal(100)))
+                                zaznam["partner"], zaznam["obdobi"], cena, Decimal(100), cena))
     for platba in uol:
         doklad = platba["doklad"]
         if parovani.get((platba["banka"], platba["pohyb"])) != doklad:
@@ -42,13 +47,15 @@ def sestav(podminky, uol, parovani):
         smlouva = podminky["pausaly"].get(doklad)
         if smlouva is None or smlouva["certifikovan"] is not True:
             continue
-        sazba = cislo(smlouva["sazba_pct"])
+        pocet = smlouva["aktivni_objekty"]
+        sazba = pricing.partner_commission_pct(cenik, pocet)
+        if sazba == 0:
+            continue
         uhrazeno = cislo(platba["castka"])
         zaklad = cislo(platba["uhrazeny_pausal_bez_dph"])
-        if not Decimal(10) <= sazba <= Decimal(15):
-            raise ValueError("Měsíční provize je mimo sjednaný rozsah 10 až 15 procent.")
         if platba["mena"] != "CZK" or abs(zaklad) > abs(uhrazeno) or zaklad * uhrazeno <= 0:
             raise ValueError("Základ provize neodpovídá uhrazené částce v CZK.")
+        castka = pricing.partner_commission(cenik, abs(zaklad), pocet).copy_sign(zaklad)
         vysledek.append(polozka("mrr", platba["banka"], platba["pohyb"], doklad, smlouva["partner"],
-                                platba["obdobi"], zaklad, sazba))
+                                platba["obdobi"], zaklad, sazba, castka))
     return vysledek

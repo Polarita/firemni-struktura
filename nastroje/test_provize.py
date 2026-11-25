@@ -35,7 +35,7 @@ class Provize(unittest.TestCase):
         self.uhrady = self.uhrady[1:]
         self.assertEqual(self.sestav(), [])
 
-    def test_chybna_sazba_mena_nebo_zaklad_zastavi_import(self):
+    def test_chybna_mena_zaklad_nebo_pocet_objektu_zastavi_import(self):
         puvodni = deepcopy(self.uhrady[0])
         for zmena in ({"mena": "EUR"}, {"uhrazeny_pausal_bez_dph": "1840.11"},
                       {"uhrazeny_pausal_bez_dph": "-1.00"}, {"uhrazeny_pausal_bez_dph": "1.001"}):
@@ -43,10 +43,19 @@ class Provize(unittest.TestCase):
                 self.uhrady[0] = puvodni | zmena
                 self.sestav()
         self.uhrady[0] = puvodni
-        for sazba in ("9.99", "15.01"):
-            with self.subTest(sazba=sazba), self.assertRaises(ValueError):
-                self.podminky["pausaly"]["TEST-PAUSAL-A"]["sazba_pct"] = sazba
+        for pocet in (-1, True, 1.5):
+            with self.subTest(pocet=pocet), self.assertRaises(ValueError):
+                self.podminky["pausaly"]["TEST-PAUSAL-A"]["aktivni_objekty"] = pocet
                 self.sestav()
+
+    def test_stupne_stejne_jako_ve_firemnim_ceniku(self):
+        self.uhrady = self.uhrady[:1]
+        for pocet, castka in ((0, None), (1, "152.07"), (4, "152.07"), (5, "190.09"),
+                              (9, "190.09"), (10, "228.11"), (25, "228.11")):
+            with self.subTest(pocet=pocet):
+                self.podminky["pausaly"]["TEST-PAUSAL-A"]["aktivni_objekty"] = pocet
+                mrr = [r["provize"] for r in self.sestav() if r["druh"] == "mrr"]
+                self.assertEqual(mrr, [] if castka is None else [castka])
 
     def test_neprirazena_platba_uol_neprojde(self):
         with self.assertRaisesRegex(ValueError, "výpisu"):

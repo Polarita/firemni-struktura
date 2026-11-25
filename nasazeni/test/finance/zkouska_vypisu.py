@@ -83,6 +83,10 @@ def over(ledger=None):
                 "TEST-REALIZACE-A": "12500.00", "TEST-PAUSAL-A": "152.07", "TEST-PAUSAL-B": "278.93"}:
             raise ValueError("Provize neodpovídají kontrolní předloze.")
         ledger.write_text(json.dumps(polozky))
+        for radek in polozky:
+            if radek["druh"] == "mrr":
+                pocet = podminky["pausaly"][radek["doklad"]]["aktivni_objekty"]
+                print(f'Ceník S3 · {radek["doklad"]} · počet aktivních objektů {pocet} · sazba {radek["sazba"]} %')
     print("Místní ČS, Fio a UOL TEST. Tři pohyby, dvě párování podle UOL a jeden nepřiřazený pohyb.")
     print("Čtečka provedla pouze tři GET. Simulátory zamítly přímý POST. Neshody částky, měny a pohybu zachyceny.")
 

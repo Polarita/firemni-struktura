@@ -4,7 +4,7 @@
     {"predavka": "TEST-PREDANI-B", "smlouva": "TEST-REALIZACE-B", "partner": "SUB-TEST-B", "certifikovan": true, "predano": true, "sla_splneno": false, "sjednana_cena_czk": "8000.00", "obdobi": "2026-11-01"}
   ],
   "pausaly": {
-    "TEST-PAUSAL-A": {"partner": "SUB-TEST-A", "certifikovan": true, "sazba_pct": "10.00"},
-    "TEST-PAUSAL-B": {"partner": "SUB-TEST-B", "certifikovan": true, "sazba_pct": "15.00"}
+    "TEST-PAUSAL-A": {"partner": "SUB-TEST-A", "certifikovan": true, "aktivni_objekty": 1},
+    "TEST-PAUSAL-B": {"partner": "SUB-TEST-B", "certifikovan": true, "aktivni_objekty": 10}
   }
 }
