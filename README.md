@@ -438,6 +438,8 @@ V kartě testovacího spisu lze po archivaci podkladů prověřit výkopovou tra
 
 V TEST spusť integrační zkoušky nad vzorovými daty, ověř přihlášení v prohlížeči a sestav předávací zprávu. Následující produkční postup začíná až po uživatelských testech a převzetí správcem.
 
+Instalátor uloží zprávu k přesné revizi v `polarita-hq` do `/srv/polarita/workspace/dukazy/blok-12/predani-spravci-<revize>.txt`. Správce ji najde také ve webové znalostní paměti v oddílu **08-Deniky-a-Predavky** pod názvem obsahujícím `b12-predani-spravci`. Zpráva uvádí ověřené vzorové postupy a kontrolní součty jejich protokolů. Během instalace lze ve VM příkazem `python3 nasazeni/test/predani.py <revize> <DNS-jméno-portálu-ve-VPN> --prehled` ze zdrojového adresáře zjistit, na které protokoly se ještě čeká.
+
 * **Vstupní předpoklad:** Splněny všechny bloky `Blok 0` až `Blok 11`.
 * **Řídicí dokumenty:** [00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.md](./00-KOMPLETNI-NAVRH-FIRMY-POLARITA-2026.md) *(kap. 9.1 Harmonogram, kap. 9.2 Go-Live Gate a kap. 9.3 Denní provoz)*, [02-METODIKA-ROZSIROVANI-FIRMY-POBOCKY-ODDELENI-AI-LIDE.md](./02-METODIKA-ROZSIROVANI-FIRMY-POBOCKY-ODDELENI-AI-LIDE.md), [03-NAVRHY-BALICKU-NA-POZDEJI.md](./03-NAVRHY-BALICKU-NA-POZDEJI.md).
 * **Postup krok za krokem (ostré spuštění společnosti):**

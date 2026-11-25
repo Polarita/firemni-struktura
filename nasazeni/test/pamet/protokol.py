@@ -10,6 +10,7 @@ import subprocess
 ROOT = Path("/srv/polarita/workspace/dukazy")
 CLI = "/usr/local/bin/agent_vault"
 DOKLADY = {
+    "12": {"predani-spravci"},
     "11": {"registr-dokladu"},
     "10": {"cad-vykresy"},
     "08": {"vikunja", "sanony", "paperless-vzor", "paperless-prihlaseni", "paperless-cteni",

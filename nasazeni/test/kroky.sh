@@ -434,7 +434,9 @@ registr_dokladu() {
 predani() {
     python3 nasazeni/test/vydani.py "$commit"
     "${guest[@]}" systemctl start polarita-dohled-sber.service
-    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn" --dohled --paperclip --zulip --decisions --akademie --protokol-komise --termin-akademie
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn" --dohled --paperclip --zulip --decisions --akademie --protokol-komise --termin-akademie | tee "$tmp/vstup-predani.txt"
+    "${guest[@]}" install -d -m 0750 /srv/polarita/workspace/dukazy/blok-12
+    "${inc[@]}" file push --project polarita "$tmp/vstup-predani.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-12/vstup-predani-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/dohled.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-06/dohled-$commit.txt"
     "${inc[@]}" file push --project polarita "$tmp/restic.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-06/restic-$commit.txt"
     "${guest[@]}" python3 "$dest/nasazeni/test/pamet/podklady.py" --predat | tee "$tmp/prenos-dokladu.json"
@@ -442,6 +444,8 @@ predani() {
     "${guest[@]}" python3 "$dest/nasazeni/test/pamet/predavka_dokladu.py" <"$tmp/prenos-dokladu.json" | tee "$tmp/prenos-dokladu.txt"
     "${inc[@]}" file push --project polarita "$tmp/prenos-dokladu.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-08/prenos-dokladu-$commit.txt"
     "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 08 "$commit" prenos-dokladu >"$tmp/prenos-do-pameti.jsonl"
+    "${guest[@]}" python3 "$dest/nasazeni/test/predani.py" "$commit" "$fqdn"
+    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 12 "$commit" predani-spravci >>"$tmp/prenos-do-pameti.jsonl"
     "${guest[@]}" systemctl start polarita-silverbullet-export.service
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/silverbullet/zkouska_prihlaseni.py "$fqdn" --predavky "$tmp/prenos-do-pameti.jsonl"
