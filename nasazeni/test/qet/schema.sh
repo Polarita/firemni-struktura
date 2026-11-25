@@ -22,7 +22,7 @@ run=(incus exec -T "$name" --)
 job=$("${run[@]}" runuser -u nobody -- mktemp -d /var/tmp/polarita-schema-XXXXXXXX)
 [[ $job =~ ^/var/tmp/polarita-schema-[a-zA-Z0-9]{8}$ ]]
 incus file push --mode=0644 "$src/zkouska.py" "$name$job/zkouska.py"
-"${run[@]}" runuser -u nobody -- sh -ec 'cd "$1"; export HOME="$1" XDG_RUNTIME_DIR="$1/runtime" LANG=C.UTF-8; mkdir -m0700 "$XDG_RUNTIME_DIR"; xvfb-run -a -s "-screen 0 1280x960x24 -nolisten tcp" python3 ./zkouska.py || { tail -25 editor.log >&2; exit 1; }' qet "$job"
+"${run[@]}" runuser -u nobody -- sh -ec 'cd "$1"; export HOME="$1" XDG_RUNTIME_DIR="$1/runtime" TMPDIR="$1/tmp" LANG=C.UTF-8; mkdir -m0700 "$XDG_RUNTIME_DIR" "$TMPDIR"; umask 077; touch "$1/Xauthority"; xvfb-run -f "$1/Xauthority" -a -s "-screen 0 1280x960x24 -nolisten tcp" python3 ./zkouska.py || { tail -25 editor.log >&2; exit 1; }' qet "$job"
 proof=/srv/polarita/workspace/dukazy/blok-10
 install -dm0750 "$proof"
 out=$(mktemp -d "$proof/.qet-XXXXXXXX")
