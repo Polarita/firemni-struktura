@@ -22,6 +22,7 @@ DOKLADY = (
     ("09", "eshop-objednavka", "txt", "Objednávka ve vzorovém e-shopu"),
     ("10", "cad-vykresy", "txt", "Zpracování výkresů"),
     ("11", "registr-dokladu", "txt", "Registr dokladů"),
+    ("11", "provize", "txt", "Výpisy ČS a Fio, párování UOL a partnerské provize"),
     ("12", "vstup-predani", "txt", "Závěrečné přihlášení správce a odkazy na služby"),
 )
 

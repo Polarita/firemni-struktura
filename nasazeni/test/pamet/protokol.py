@@ -11,7 +11,7 @@ ROOT = Path("/srv/polarita/workspace/dukazy")
 CLI = "/usr/local/bin/agent_vault"
 DOKLADY = {
     "12": {"predani-spravci"},
-    "11": {"registr-dokladu"},
+    "11": {"registr-dokladu", "provize"},
     "10": {"cad-vykresy"},
     "08": {"vikunja", "sanony", "paperless-vzor", "paperless-prihlaseni", "paperless-cteni",
            "prenos-dokladu", "archiv-revize", "kniha-objektu", "kniha-prohlizec", "spisy-osa"},

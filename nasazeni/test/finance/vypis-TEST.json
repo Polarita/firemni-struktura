@@ -5,7 +5,7 @@
   ],
   "fio": [{"pohyb": "TEST-001", "castka": "2250.00", "mena": "CZK"}],
   "uol": [
-    {"banka": "cs", "pohyb": "TEST-001", "castka": "1840.10", "mena": "CZK", "doklad": "TEST-PAUSAL-A"},
-    {"banka": "fio", "pohyb": "TEST-001", "castka": "2250.00", "mena": "CZK", "doklad": "TEST-PAUSAL-B"}
+    {"banka": "cs", "pohyb": "TEST-001", "castka": "1840.10", "mena": "CZK", "doklad": "TEST-PAUSAL-A", "uhrazeny_pausal_bez_dph": "1520.74", "obdobi": "2026-11-01"},
+    {"banka": "fio", "pohyb": "TEST-001", "castka": "2250.00", "mena": "CZK", "doklad": "TEST-PAUSAL-B", "uhrazeny_pausal_bez_dph": "1859.50", "obdobi": "2026-11-01"}
   ]
 }

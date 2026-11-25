@@ -1,14 +1,16 @@
 """Integrační zkouška místního HTTP výpisu ČS, Fio a přehledu spárovanosti UOL."""
+import argparse
 from http.client import HTTPConnection
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from pathlib import Path
 from threading import Thread
 
+from provize import sestav
 from vypis import CESTY, CteckaTest, porovnej
 
 
-def over():
+def over(ledger=None):
     vzor = json.loads(Path(__file__).with_name("vypis-TEST.json").read_bytes())
     odpovedi = {cesta: json.dumps(vzor[zdroj]).encode() for zdroj, cesta in CESTY.items()}
     dotazy = []
@@ -44,7 +46,8 @@ def over():
             uol = ctecka.nacti("uol")
             ocekavane = {("cs", "TEST-001"): "TEST-PAUSAL-A", ("cs", "TEST-002"): None,
                          ("fio", "TEST-001"): "TEST-PAUSAL-B"}
-            if porovnej(vypisy, uol) != ocekavane:
+            shody = porovnej(vypisy, uol)
+            if shody != ocekavane:
                 raise ValueError("Výsledek neodpovídá předloze.")
             for zdroj in CESTY:
                 for metoda in ("POST", "PUT", "PATCH", "DELETE"):
@@ -73,9 +76,18 @@ def over():
         finally:
             server.shutdown()
             vlakno.join()
+    if ledger is not None:
+        podminky = json.loads(Path(__file__).with_name("provize-TEST.json").read_bytes())
+        polozky = sestav(podminky, uol, shody)
+        if {r["doklad"]: r["provize"] for r in polozky} != {
+                "TEST-REALIZACE-A": "12500.00", "TEST-PAUSAL-A": "152.07", "TEST-PAUSAL-B": "278.93"}:
+            raise ValueError("Provize neodpovídají kontrolní předloze.")
+        ledger.write_text(json.dumps(polozky))
     print("Místní ČS, Fio a UOL TEST. Tři pohyby, dvě párování podle UOL a jeden nepřiřazený pohyb.")
     print("Čtečka provedla pouze tři GET. Simulátory zamítly přímý POST. Neshody částky, měny a pohybu zachyceny.")
 
 
 if __name__ == "__main__":
-    over()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--ledger", type=Path)
+    over(parser.parse_args().ledger)
