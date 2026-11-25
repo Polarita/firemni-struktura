@@ -295,6 +295,8 @@ obnova() {
 
 web() {
     "${guest[@]}" bash "$dest/nasazeni/test/medusa/rma.sh" | tee "$tmp/reklamace.txt"
+    "${guest[@]}" bash "$dest/nasazeni/test/medusa/sestav.sh"
+    "${guest[@]}" bash "$dest/nasazeni/test/medusa/start.sh"
     "${guest[@]}" bash "$dest/nasazeni/test/umami/over.sh" | tee "$tmp/umami.txt"
     sudo -n bash nasazeni/test/port-vpn.sh 8449 >/dev/null
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
