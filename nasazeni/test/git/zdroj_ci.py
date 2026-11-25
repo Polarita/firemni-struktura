@@ -144,6 +144,8 @@ def main():
             mount.mkdir(mode=0o700,exist_ok=True)
             unit = subprocess.check_output(["systemd-escape","--path","--suffix=mount",str(mount)],text=True).strip()
             content = (f"[Unit]\nDescription=Samostatný klon {name} pro TEST\nRequiresMountsFor={target}\n"
+                       "Requires=polarita-zfs.service\nAfter=polarita-zfs.service\n"
+                       f"ConditionPathIsMountPoint={workspace}\n"
                        f"[Mount]\nWhat={target}\nWhere={mount}\nType=none\nOptions=bind,nodev,nosuid\n"
                        "[Install]\nWantedBy=multi-user.target\n")
             unit_path = Path("/etc/systemd/system") / unit
@@ -152,6 +154,13 @@ def main():
                 unit_path.chmod(0o644)
                 subprocess.run(["systemctl","daemon-reload"],check=True)
             subprocess.run(["systemctl","enable","--now",unit],check=True)
+            if not os.path.samefile(mount,target):
+                # Starší jednotka mohla před odemčením ZFS připojit prázdný adresář systémového disku.
+                source = subprocess.check_output(["findmnt","-n","-o","SOURCE","--mountpoint",str(workspace)],text=True).strip()
+                bind_root = subprocess.check_output(["findmnt","-n","-o","FSROOT","--mountpoint",str(mount)],text=True).strip()
+                if (source == "polarita_zfs/workspace" and bind_root == str(target)
+                        and mount.stat().st_dev == Path("/").stat().st_dev and not any(mount.iterdir())):
+                    subprocess.run(["systemctl","restart",unit],check=True)
             if not os.path.samefile(mount,target):
                 raise RuntimeError("Nesouhlasí soukromý pohled na klon")
             check = subprocess.check_output(["runuser","-u",account,"--","git","-C",str(mount),
