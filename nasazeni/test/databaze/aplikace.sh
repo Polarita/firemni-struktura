@@ -7,6 +7,7 @@ flock 8
 mapfile -t dbs < <(PYTHONPATH="$src/../trezor" python3 -c 'import pristupy; print(*pristupy.DATABASES, sep="\n")')
 [[ ${#dbs[@]} == 15 ]]
 incus exec -T postgres-test -- python3 - "${dbs[@]}" <"$src/vytvoreni.py"
+incus exec -T postgres-test -- runuser -u postgres -- psql -Xqw -d db_erp_lhutnik <"$src/../registry/rady.sql"
 mapfile -t routes < <(python3 -c '
 import json, sys
 routes=json.load(open(sys.argv[1]))

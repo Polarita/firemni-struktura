@@ -69,6 +69,13 @@ async function otevri(url, options) {
     for (const format of ["xc4", "xlsx"]) {
         byId(format).href = "api/rozpocty/" + encodeURIComponent(data.case_id) + "/nabidka." + format;
     }
+    byId("doklady-registru").hidden = !data.doklady_registru?.length;
+    const typy = {FAK: "Faktura", "ORG-UOL": "Předání účetní kanceláři", VYD: "Výdejka"};
+    byId("cisla-dokladu").replaceChildren(...(data.doklady_registru || []).map(doklad => {
+        const polozka = document.createElement("li");
+        polozka.textContent = typy[doklad.druh] + " · " + doklad.cislo;
+        return polozka;
+    }));
     ukazMetodiky(data);
     ukazVedeni(data.vedeni);
     ukazRiziko(data.lps);

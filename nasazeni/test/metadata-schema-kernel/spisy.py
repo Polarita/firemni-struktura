@@ -8,7 +8,7 @@ def zaloz(data, body):
         raise Problem(400, "Zadejte identifikátor požadavku a číslo pobočky.")
     if not 101 <= body["branch_id"] <= 999:
         raise Problem(400, "Číslo pobočky je mimo rozsah.")
-    karta = query(data, "SELECT polarita_test_spisy.zaloz(:'id'::uuid, :'branch'::integer);",
+    karta = query(data, "SELECT polarita_registr_test.zaloz_spis(:'id'::uuid, :'branch'::integer);",
                   id=identifier(body["pozadavek"]), branch=str(body["branch_id"]))
     if "chyba" in karta:
         if karta["chyba"] == "pobocka":

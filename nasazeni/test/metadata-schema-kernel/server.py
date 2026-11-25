@@ -169,6 +169,11 @@ class Handler(BaseHTTPRequestHandler):
                 prehled = slozka_spisu(karta, "revize") / "prehled.json"
                 if prehled.is_file():
                     karta["revizni_navrh"] = json.loads(prehled.read_bytes())
+                doklady = query(data, """SELECT coalesce(json_agg(r ORDER BY cislo),'[]') FROM
+                    (SELECT cislo,druh,podklad_sha256 FROM polarita_registr_test.prehled_dokladu
+                     WHERE case_id=:'kod') r;""", kod=karta["case_id"])
+                if doklady:
+                    karta["doklady_registru"] = doklady
                 karta.update(cast_karty(karta["pozadavek"]))
                 self.reply(200, karta)
             return

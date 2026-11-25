@@ -15,7 +15,7 @@ def sql(command, **fields):
 
 def pridel(inputs):
     key, case, name = inputs
-    return sql("SET ROLE pol_metadata_ddl; SELECT polarita_test_spisy.pridel_vyrobni_cislo(:'key',:'case',:'name');",
+    return sql("SET ROLE pol_metadata_ddl; SELECT polarita_registr_test.pridel_rozvadec(:'key',:'case',:'name');",
                key=key,case=case,name=name)
 
 

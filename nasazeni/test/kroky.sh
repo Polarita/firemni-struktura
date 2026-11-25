@@ -417,6 +417,16 @@ vykresy() {
     "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 10 "$commit" cad-vykresy
 }
 
+registr_dokladu() {
+    "${guest[@]}" bash "$dest/nasazeni/test/registry/zkouska.sh" | tee "$tmp/registr-dokladu.txt"
+    "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
+        python3 nasazeni/test/registry/over_portal.py "https://$fqdn" "$tmp/registr-dokladu.txt" >"$tmp/registr-karty.txt"
+    cat "$tmp/registr-karty.txt" >>"$tmp/registr-dokladu.txt"
+    "${guest[@]}" install -dm0750 /srv/polarita/workspace/dukazy/blok-11
+    "${inc[@]}" file push --project polarita "$tmp/registr-dokladu.txt" "polarita-hq/srv/polarita/workspace/dukazy/blok-11/registr-dokladu-$commit.txt"
+    "${guest[@]}" python3 "$dest/nasazeni/test/pamet/protokol.py" 11 "$commit" registr-dokladu
+}
+
 predani() {
     python3 nasazeni/test/vydani.py "$commit"
     "${guest[@]}" systemctl start polarita-dohled-sber.service
@@ -438,7 +448,7 @@ predani() {
     "${guest[@]}" sh -ec 'ln -sfn "$1" /srv/polarita/infra/releases/.current-new; mv -Tf /srv/polarita/infra/releases/.current-new /srv/polarita/infra/releases/current' deploy "$dest"
 }
 
-kroky=(portal sit hesla postgres sluzby tym trezor databaze paperclip identita firemni_git rozhodnuti metadata obnova_databazi karantena zalohy dohled zulip obnova web vykresy predani)
+kroky=(portal sit hesla postgres sluzby tym trezor databaze paperclip identita firemni_git rozhodnuti metadata obnova_databazi karantena zalohy dohled zulip obnova web vykresy registr_dokladu predani)
 over_vstup() {
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo | python3 nasazeni/test/smoke.py "https://$fqdn" || return $?
     printf 'Ověřené přihlášení ve VPN: https://%s/ (účet spravce)\n' "$fqdn"

@@ -99,6 +99,10 @@ Nasaď v zóně app_internal (s napojením na příchozí MX relay běžící v 
 
 ---
 
+### Číselné řady dokladů v TESTu
+
+V bloku 5 vzniknou v databázi `db_erp_lhutnik` trvalé roční řady FAK, ORG-UOL a VYD. Přidělení čísla a zápis otisku podkladu proběhnou ve stejné transakci. Opakování téhož požadavku vrátí vydané číslo. Změna spisu, podkladu nebo řady pod stejným klíčem operaci zastaví. Běžné vstupy pro založení spisu a pro výrobu rozváděče volají společné databázové rozhraní registru, které používá původní čítače a zachovává starší čísla. V bloku 11 instalátor přidělí vzorové doklady dvěma spisům a zkontroluje spojitost všech pěti řad. Karta spisu umožňuje jejich čtení. Tato zkouška pokrývá evidenci čísla a otisku. Ověření účetních exportů a komunikace s místními protějšky bank má vlastní podmínky níže.
+
 ## 4. Ověřitelné podmínky dokončení Bloku 11
 
 - [ ] Sdílená mikroslužba **`cz-sk-registry-kernel`** ověřuje **`ARES / VIES / ADIS / ISIR / CEE / SK RPO`** a přiděluje číselné řady přes databázový mutex **`SELECT ... FOR UPDATE`** nad tabulkou z `Bloku 5` (vč. samostatné řady `ORG-UOL`; moduly z `Bloků 8` a `10` přepojeny bez duplicit a mezer); test prokázal `Hard-Stop` blokaci platby nespolehlivému plátci i platby na nezveřejněný účet dle `ADIS`.
