@@ -1,5 +1,6 @@
 """HTTP pro vlastní entity přes privátní unixový socket."""
 from http.server import BaseHTTPRequestHandler
+from html import escape
 import json
 from pathlib import Path
 import re
@@ -10,7 +11,7 @@ from urllib.parse import urlsplit
 import kniha
 from model import load, unique
 from spisy import casova_osa, najdi, prevzate_sanony, zaloz
-from zaznamy import Problem, read, write
+from zaznamy import Problem, query, read, write
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -50,6 +51,17 @@ class Handler(BaseHTTPRequestHandler):
         if self.command == "GET" and path in static:
             filename, mime = static[path]
             self.reply(200, (self.server.directory / filename).read_bytes(), mime)
+            return
+        if self.command == "GET" and path == "/zkousky":
+            dates = query(data, """SELECT coalesce(json_agg(r ORDER BY platnost_do,spis),'[]') FROM
+                (SELECT spis,platnost_do FROM polarita_test_lhutnik.zkousky) r;""")
+            lines = "".join(f'<li>{escape(row["spis"])} · <time datetime="{row["platnost_do"]}">'
+                            f'{row["platnost_do"][8:]}.{row["platnost_do"][5:7]}.{row["platnost_do"][:4]}</time></li>' for row in dates)
+            listing = "<ul>" + lines + "</ul>" if dates else "<p>Dosud nebyla potvrzena žádná zkouška.</p>"
+            page = ('<!doctype html><html lang="cs"><meta charset="utf-8"><meta name="viewport" '
+                    'content="width=device-width,initial-scale=1"><title>Termíny zkoušek Akademie</title>'
+                    '<main><a href="./">Lhůtník</a><h1>Termíny zkoušek Akademie</h1>' + listing + '</main></html>')
+            self.reply(200, page.encode(), "text/html; charset=utf-8")
             return
         if self.command == "POST" and path == "/api/spisy":
             self.reply(200, zaloz(data, self.request_body()))

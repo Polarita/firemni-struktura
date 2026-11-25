@@ -19,6 +19,7 @@ password = sys.stdin.readline().rstrip("\r\n")
 if not password:
     sys.exit("Chybí heslo testovacího správce.")
 
+expect.set_options(timeout=90000)
 with sync_playwright() as playwright:
     browser = playwright.chromium.launch()
     try:

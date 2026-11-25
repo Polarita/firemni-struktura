@@ -23,7 +23,7 @@ def form(data):
 <html lang="cs"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{title}</title><style>body{{font:1rem system-ui;max-width:36rem;margin:2rem auto;padding:0 1rem}}
 label, output{{display:block;margin:1rem 0}} input:not([type=checkbox]){{width:100%;padding:.4rem;box-sizing:border-box}}</style>
-<p><a href="./spisy">Spisy</a></p><h1>{title}</h1><form data-entity="{data["entity"]}">{''.join(fields)}<button>Uložit</button></form>
+<p><a href="./spisy">Spisy</a> · <a href="./zkousky">Termíny zkoušek Akademie</a></p><h1>{title}</h1><form data-entity="{data["entity"]}">{''.join(fields)}<button>Uložit</button></form>
 <output aria-live="polite"></output><script src="./formular.js" defer></script></html>
 """
 

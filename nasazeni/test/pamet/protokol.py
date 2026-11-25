@@ -13,7 +13,7 @@ DOKLADY = {
     "10": {"cad-vykresy"},
     "08": {"vikunja", "sanony", "paperless-vzor", "paperless-prihlaseni", "paperless-cteni",
            "prenos-dokladu", "archiv-revize", "kniha-objektu", "kniha-prohlizec", "spisy-osa"},
-    "09": {"akademie-rozhodnuti", "akademie-komise", "akademie-rest", "akademie-vydani", "akademie-prehled", "akademie-sken", "akademie-kurz", "akademie-cache", "akademie-prihlaseni", "akademie-podklady", "akademie-spojeni", "parovani", "seriova-cisla", "eshop-katalog", "eshop-objednavka", "eshop-prihlaseni", "bubny", "reklamace", "umami", "ecomail", "reklamni-souhlas", "web", "web-pristup", "web-prohlizec"},
+    "09": {"akademie-evidence", "akademie-rozhodnuti", "akademie-komise", "akademie-rest", "akademie-vydani", "akademie-prehled", "akademie-sken", "akademie-kurz", "akademie-cache", "akademie-prihlaseni", "akademie-podklady", "akademie-spojeni", "parovani", "seriova-cisla", "eshop-katalog", "eshop-objednavka", "eshop-prihlaseni", "bubny", "reklamace", "umami", "ecomail", "reklamni-souhlas", "web", "web-pristup", "web-prohlizec"},
 }
 
 

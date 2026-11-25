@@ -120,7 +120,9 @@ def main():
 
                 ready = povolene_cteni("test/metadata/akademie/aplikace", manager)
                 ready = ready and povolene_cteni("test/metadata/akademie/rest", manager)
+                ready = ready and povolene_cteni("test/metadata/akademie/protokol", manager)
                 for name, path in (("compliance-bridge-test", "test/data/akademie/rest"),
+                                   ("compliance-bridge-test", "test/data/akademie/protokol"),
                                    ("keycloak-test", "test/data/databaze/keycloak"),
                                    ("akademie-test", "test/data/akademie/aplikace")):
                     token = p.login(p.credentials(name, manager))

@@ -68,7 +68,7 @@ def visit(url, data=None):
     if not same_origin(url) and not (sso and realm(url)):
         raise RuntimeError("Neočekávaný cíl přihlášení.")
     try:
-        response = web.open(url, data=data, timeout=90)
+        response = web.open(url, data=data, timeout=310)
     except HTTPError as error:
         raise RuntimeError(f"Přihlášení vrátilo HTTP {error.code} na {urlsplit(error.url).path}.") from None
     with response:

@@ -154,7 +154,8 @@ def configure(root):
     for suffix in ("pki/gitea-test", "pki/garage-test", "akademie/aplikace", "medusa/aplikace", "umami/aplikace", "paperclip/aplikace", "vikunja/aplikace", "paperless/aplikace", "zulip/fronta", "zulip/aplikace", *("objekty/" + name for name in BUCKETS)):
         policy += allow("test/metadata/" + suffix, "read") + allow("test/data/" + suffix, "create")
     policy += allow("test/data/zulip/checkmk", "create")
-    policy += allow("test/metadata/akademie/rest", "read") + allow("test/data/akademie/rest", "create")
+    for name in ("rest", "protokol"):
+        policy += allow("test/metadata/akademie/" + name, "read") + allow("test/data/akademie/" + name, "create")
     for name in DATABASES:
         policy += allow("test/metadata/databaze/" + name, "read")
         policy += allow("test/data/databaze/" + name, "create")
@@ -173,6 +174,7 @@ def configure(root):
             acl += allow("test/data/valkey/akademie", "read") + allow("test/data/akademie/aplikace", "read")
         if role == "compliance-bridge-test":
             acl += allow("test/data/akademie/rest", "read")
+            acl += allow("test/data/akademie/protokol", "read")
         if role == "medusa-test":
             acl += allow("test/data/medusa/aplikace", "read")
         if role == "umami-test":
@@ -301,18 +303,26 @@ def initialize_objects(manager):
             request("POST", "test/data/" + suffix, {"options": {"cas": 0}, "data": fields}, manager)
 
 
-def initialize_grade_token(manager):
+def initialize_academy_secret(manager, path, field, size):
     try:
-        metadata = request("GET", "test/metadata/akademie/rest", token=manager)["data"]
+        metadata = request("GET", "test/metadata/akademie/" + path, token=manager)["data"]
     except HTTPError as err:
         if err.code != 404:
             raise
-        request("POST", "test/data/akademie/rest", {"options": {"cas": 0},
-                "data": {"token": secrets.token_hex(16)}}, manager)
+        request("POST", "test/data/akademie/" + path, {"options": {"cas": 0},
+                "data": {field: secrets.token_hex(size)}}, manager)
         return
     version = metadata["versions"][str(metadata["current_version"])]
     if version.get("deletion_time") or version.get("destroyed"):
-        raise RuntimeError("V trezoru chybí aktivní verze přístupu ke známkám.")
+        raise RuntimeError("V trezoru chybí aktivní verze tajemství Akademie " + path)
+
+
+def initialize_grade_token(manager):
+    initialize_academy_secret(manager, "rest", "token", 16)
+
+
+def initialize_protocol_key(manager):
+    initialize_academy_secret(manager, "protokol", "klic", 32)
 
 
 def expect_forbidden(method, path, token, body=None):
@@ -332,6 +342,7 @@ def verify_roles():
     initialize_cache(manager)
     initialize_objects(manager)
     initialize_grade_token(manager)
+    initialize_protocol_key(manager)
     values = {}
     for fixture in sorted({x for paths in FIXTURES.values() for x in paths} | set(DENIED)):
         # Zkouška má vlastní pole a cesty pouze v samostatném testovacím KV.

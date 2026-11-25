@@ -71,6 +71,11 @@ if "--protokol-komise" in sys.argv:
                 or hashlib.file_digest(response, "sha256").hexdigest() != document[2]):
             raise SystemExit("Stažený komisní protokol má jiný obsah.")
     print("Správce stáhl přímo z přehledu zapečetěný komisní protokol s odpovídajícím SHA-256.")
+if "--termin-akademie" in sys.argv:
+    check("/lhutnik-test/", None, 200, "/lhutnik-test/", 'href="./zkousky"')
+    deadlines = check("/lhutnik-test/zkousky", None, 200, "/lhutnik-test/zkousky", "Termíny zkoušek Akademie")
+    if not re.search(r'<li>POL-[0-9]+ · <time datetime="20[0-9]{2}-[0-9]{2}-[0-9]{2}">', deadlines):
+        raise SystemExit("Termín potvrzené zkoušky se v Lhůtníku nezobrazil.")
 if "--decisions" in sys.argv:
     match = re.search(re.escape('href="' + origin + ':8445/') + r'[A-Z][A-Z0-9]{0,15}/approvals/' +
                       r'([0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12})">Vyzkoušet rozhodnutí ve vzorovém spisu</a>', overview)
@@ -84,3 +89,6 @@ check("/odhlasit", {}, 200, "/", "Přihlášení do testovacího prostředí")
 check("/prehled", None, 200, "/", "Přihlášení do testovacího prostředí")
 if "--protokol-komise" in sys.argv:
     check(document[1], None, 200, "/", "Přihlášení do testovacího prostředí")
+
+if "--termin-akademie" in sys.argv:
+    check("/lhutnik-test/zkousky", None, 200, "/", "Přihlášení do testovacího prostředí")
