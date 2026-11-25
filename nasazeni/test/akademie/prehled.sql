@@ -21,6 +21,16 @@ CREATE TABLE IF NOT EXISTS akademie_test.protokol (
             AND array_position(komise, NULL) IS NULL AND komise[1] <> komise[2] AND komise[2] <> komise[3]
             AND komise[1] <> komise[3]))
 );
+CREATE OR REPLACE FUNCTION akademie_test.over_archivni_otisk() RETURNS trigger
+LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+    IF OLD.archiv_sha256 IS NOT NULL AND NEW.archiv_sha256 IS DISTINCT FROM OLD.archiv_sha256 THEN
+        RAISE EXCEPTION 'Protokol již odkazuje na archivovaný dokument' USING ERRCODE='23514';
+    END IF;
+    RETURN NEW;
+END $$;
+CREATE OR REPLACE TRIGGER zachovej_archiv_pred_zmenou BEFORE UPDATE OF archiv_sha256 ON akademie_test.protokol
+FOR EACH ROW EXECUTE FUNCTION akademie_test.over_archivni_otisk();
 -- Přístupová vrstva rozlišuje jednotlivé stupně. Starší úspěch nepřepíše novější neúspěšný výsledek.
 CREATE OR REPLACE VIEW akademie_test.posledni WITH (security_barrier=true) AS
     SELECT DISTINCT ON (person_no, druh) person_no, druh,

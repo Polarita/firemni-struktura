@@ -22,6 +22,12 @@ BEGIN
         (gen_random_uuid(), current_setting('polarita.bez_archivu')::uuid,'vedouci',now(),current_date+10,true,komise,sifra,NULL);
     IF (SELECT pgp_sym_decrypt(sifrovany_obsah,klic) FROM akademie_test.protokol WHERE person_no=osoba AND druh='pouceni')
        IS DISTINCT FROM 'Fiktivní účastník TEST' THEN RAISE EXCEPTION 'Chyba šifrování vzoru'; END IF;
+    UPDATE akademie_test.protokol SET archiv_sha256=otisk WHERE person_no=osoba AND druh='pouceni';
+    BEGIN
+        UPDATE akademie_test.protokol SET archiv_sha256=digest('Jiný dokument','sha256') WHERE person_no=osoba AND druh='pouceni';
+        RAISE EXCEPTION 'Odkaz na archivovaný obsah byl přepsán';
+    EXCEPTION WHEN check_violation THEN NULL;
+    END;
     BEGIN
         INSERT INTO akademie_test.protokol VALUES (gen_random_uuid(),osoba,'vedouci',now(),current_date+10,true,
             ARRAY[komise[1],komise[1],komise[2]],sifra,otisk);
