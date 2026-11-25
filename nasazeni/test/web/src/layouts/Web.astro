@@ -11,7 +11,14 @@ const structured = JSON.stringify({"@context":"https://schema.org","@graph":[
 ---
 <!doctype html><html lang="cs"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>{title} | Polarita</title><meta name="description" content={description}/><meta name="robots" content="noindex,nofollow"/>
-<script type="application/ld+json" set:html={structured}></script></head>
+<script type="application/ld+json" set:html={structured}></script><script is:inline defer src={base+"souhlas.js"}></script></head>
 <body><a class="skip" href="#obsah">Přeskočit na obsah</a>
 <header><a href={base} class="brand">Polarita</a><nav aria-label="Hlavní nabídka"><a href={base+"#cenik"}>Ceník</a><a href={base+"prevzeti-sanonu/"}>Převzetí šanonů</a></nav></header>
-<main id="obsah"><slot/></main><footer><span>Polarita s.r.o. · Praha</span><a href="/prehled">Zpět na testovací ředitelství</a></footer></body></html>
+<main id="obsah"><slot/></main><footer><span>Polarita s.r.o. · Praha</span><a href="/prehled">Zpět na testovací ředitelství</a>
+<details id="reklamni-souhlas" hidden>
+  <summary>Nastavení reklamního měření</summary>
+  <p>V testu si můžeš vyzkoušet místní reklamní značku. Svou volbu můžeš kdykoli změnit.</p>
+  <p><output aria-live="polite">Reklamní měření je vypnuté.</output></p>
+  <button type="button" data-volba="granted">Povolit měření</button>
+  <button type="button" data-volba="denied">Odmítnout měření</button>
+</details></footer></body></html>

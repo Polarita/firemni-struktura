@@ -372,13 +372,14 @@ func (p *portal) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
-		// Veřejný výstup sestavení tvoří jen zákaznické stránky a llms.txt.
-		files := map[string]string{"/web-test/": "index.html", "/web-test/kalkulacka-svj/": "kalkulacka-svj/index.html", "/web-test/prevzeti-sanonu/": "prevzeti-sanonu/index.html", "/web-test/llms.txt": "llms.txt"}
+		// Zpřístupni jen veřejné soubory ověřeného sestavení Astro.
+		files := map[string]string{"/web-test/": "index.html", "/web-test/kalkulacka-svj/": "kalkulacka-svj/index.html", "/web-test/prevzeti-sanonu/": "prevzeti-sanonu/index.html", "/web-test/llms.txt": "llms.txt", "/web-test/souhlas.js": "souhlas.js", "/web-test/reklama-test.js": "reklama-test.js"}
 		name, ok := files[r.URL.Path]
 		if !ok {
 			http.NotFound(w, r)
 			return
 		}
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
 		w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		http.ServeFile(w, r, webRoot+"/"+name)

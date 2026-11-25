@@ -8,6 +8,8 @@ Testovací náhled v ředitelství používá cestu `/web-test/`. Zdroj a static
 
 V testovacím ředitelství používá Umami 3.5.0 vlastní databázi PostgreSQL. Po přihlášení účtem `spravce` je na portu `8449` dostupný web **Ředitelství Polarity TEST**. Událost `prevzeti-sanonu` vyjadřuje jedno potvrzené převzetí PDF. Každých pět minut instalovaný sběrač porovná denní součty v UTC mezi registrem a analytikou. Do Umami posílá den a druh události. Počty jsou k dispozici i v nástroji `umami_conversions` místního reklamního MCP.
 
+Na stránkách Astro v TEST obsluhuje souhlas místní skript `souhlas.js`. Při první návštěvě nastaví parametry Consent Mode v2 na `denied`. Povolení aktualizuje tři reklamní parametry a načte místní testovací značku. Parametr `analytics_storage` zůstává vypnutý. Souhlas lze odvolat v zápatí každé stránky. Přejímací zkouška `nasazeni/test/web/prohlizec_souhlas.py` sleduje skutečné požadavky Chromia při odmítnutí, povolení, přechodu na další stránku a odvolání. Produkční reklamní účty správce připojí po převzetí. [Dokumentace Consent Mode](https://developers.google.com/tag-platform/security/guides/consent)
+
 ## 1. Seznam vybraného softwaru
 
 | Oblast | Vybraný software / Stavební kámen | Kanál / Licence | Role a použití v Polarita s.r.o. (Verze 3.22) | Odpovědný `ai` / garant |

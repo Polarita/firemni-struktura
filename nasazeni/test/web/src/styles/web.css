@@ -30,3 +30,8 @@ li { margin: .45rem 0; }
 details { border-top: 1px solid #abb4a9; padding-block: .7rem; }
 summary { cursor:pointer; font-weight: 600; }
 .skip { position:absolute; left:-100vw; } .skip:focus { left:1rem; top:1rem; background:white; padding:.6rem; }
+
+#reklamni-souhlas { flex-basis: 100%; }
+#reklamni-souhlas summary { cursor: pointer; }
+#reklamni-souhlas button { color: #163e36; background: white; border: 1px solid #47695c; padding: .45rem .8rem; margin: .3rem .5rem .3rem 0; }
+#reklamni-souhlas button:focus-visible { outline: 3px solid #ae511d; outline-offset: 3px; }

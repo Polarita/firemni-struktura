@@ -9,6 +9,7 @@ class Stranka(HTMLParser):
     def __init__(self):
         super().__init__()
         self.links = set()
+        self.cmp = 0
         self.text = []
         self.in_schema = False
         self.schema = []
@@ -18,7 +19,10 @@ class Stranka(HTMLParser):
         if tag == "a":
             self.links.add(attr.get("href"))
         if tag == "script":
-            if attr.get("type") != "application/ld+json":
+            if attr.get("src") == "/web-test/souhlas.js" and "defer" in attr and set(attr) == {"src", "defer"}:
+                self.cmp += 1
+                return
+            if "src" in attr or attr.get("type") != "application/ld+json":
                 raise ValueError("Neočekávaný spustitelný skript ve statické stránce.")
             self.in_schema = True
 
@@ -34,7 +38,7 @@ class Stranka(HTMLParser):
 
 
 def over(root, ceny):
-    files = {"index.html", "prevzeti-sanonu/index.html", "kalkulacka-svj/index.html", "llms.txt"}
+    files = {"index.html", "prevzeti-sanonu/index.html", "kalkulacka-svj/index.html", "llms.txt", "souhlas.js", "reklama-test.js"}
     found = {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
     if found != files or any(p.is_symlink() for p in root.rglob("*")):
         raise ValueError("Sada veřejných souborů se liší od očekávaného výstupu Astro.")
@@ -43,6 +47,7 @@ def over(root, ceny):
     transfer.feed((root/"prevzeti-sanonu/index.html").read_text())
     calculator = Stranka()
     calculator.feed((root/"kalkulacka-svj/index.html").read_text())
+    assert home.cmp == transfer.cmp == calculator.cmp == 1
     assert "Model roční úspory" in calculator.text
     for link in ("/web-test/kalkulacka-svj/", "/konfigurator", "/web-test/prevzeti-sanonu/"):
         assert link in home.links, link

@@ -13,8 +13,8 @@ case "$phase" in
         ;;
     sestaveni)
         test -f .zavislosti.ok
-        rm -rf src dist .astro
-        cp -r /opt/polarita-web-src/src .
+        rm -rf src public dist .astro
+        cp -r /opt/polarita-web-src/{src,public} .
         cp /opt/polarita-web-src/{astro.config.mjs,tsconfig.json} .
         npm run build
         ;;

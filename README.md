@@ -26,6 +26,8 @@ Po zprovoznění týmového chatu otevři Zulip ve firemní VPN na stejném jmé
 
 Po ověření analytiky v přehledu otevři **Otevřít návštěvnost webu v Umami**. Přihlas se jako **spravce** stejným testovacím heslem a vyber web **Ředitelství Polarity TEST**. V událostech najdeš pod názvem `prevzeti-sanonu` počet převzatých šanonů. Instalátor ověřuje, že tentýž denní součet může přečíst i reklamní nástroj `umami_conversions`.
 
+Na testovacím firemním webu otevři v zápatí **Nastavení reklamního měření**. Měření je při první návštěvě vypnuté. Tlačítkem **Povolit měření** vyzkoušíš místní reklamní značku, tlačítkem **Odmítnout měření** souhlas odvoláš. Prohlížeč si pamatuje tvoji volbu i po přechodu na jinou stránku webu.
+
 Po zprovoznění Checkmk ředitelství zpřístupní stránku **Stav firemních služeb**. U každé služby uvidíš poslední měření a čas v UTC. V bloku 7 se přidají sondy přihlášení Zulipu a dostupnosti Paperclipu. Výpadek i obnovu služby zapisuje Checkmk do soukromého kanálu **17-it-secops** v Zulipu. Instalační zkouška ověřuje obě zprávy také po obnově ze zálohy.
 
 Na firemním webu v TEST otevři **Kalkulačku rizik a úspor**. Zadej roční spotřebu, proměnnou cenu za kWh, odhad úspory a stav revize. Výsledek obsahuje podklad pro schůzi v PDF a odkaz na konfigurátor.

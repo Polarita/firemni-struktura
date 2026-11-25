@@ -23,6 +23,13 @@ def over(origin, password):
     url, headers, html = send("/web-test/")
     assert url == origin+"/web-test/" and "noindex" in headers["X-Robots-Tag"]
     home.feed(html)
+    assert home.cmp == 1
+    assert "script-src 'self'" in headers["Content-Security-Policy"]
+    for script in ("souhlas.js", "reklama-test.js"):
+        route = "/web-test/" + script
+        _, script_headers, source = send(route)
+        assert "javascript" in script_headers.get_content_type()
+        assert source == (Path(__file__).parent/"public"/script).read_text()
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]/"balicky"/"S3-konfigurator-a-tarify"))
     from pricing import load_price_list, public_price_list
     ceny = public_price_list(load_price_list())
