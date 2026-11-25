@@ -1,4 +1,5 @@
 """Ověří přihlášení správce do Moodle a ukončení relace přes privátní HTTPS."""
+import argparse
 import re
 import sys
 from html.parser import HTMLParser
@@ -7,15 +8,18 @@ from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlencode, urljoin, urlsplit
 from urllib.request import HTTPCookieProcessor, HTTPRedirectHandler, build_opener
 
-host = sys.argv[1]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("host")
+parser.add_argument("--sso", action="store_true")
+parser.add_argument("--kurz", action="store_true")
+options = parser.parse_args()
+host = options.host
 if not re.fullmatch(r"[a-z0-9.-]+\.ts\.net", host):
     sys.exit("Neplatný název VPN.")
 origin = f"https://{host}:8451"
 login = origin + "/login/index.php"
 dashboard = origin + "/my/"
-sso = sys.argv[2:] == ["--sso"]
-if sys.argv[2:] and not sso:
-    sys.exit("Neznámá zkouška přihlášení Akademie.")
+sso = options.sso
 
 
 def same_origin(url):
@@ -40,7 +44,11 @@ class Page(HTMLParser):
         super().__init__()
         self.inputs = {}
         self.links = []
+        self.text = []
         self.keycloak_form = None
+
+    def handle_data(self, data):
+        self.text.append(data)
 
     def handle_starttag(self, tag, attrs):
         fields = dict(attrs)
@@ -99,6 +107,23 @@ if path != "/my/" or not any(c.name == "MoodleSessionPolAkademie" and c.secure f
 profile_path, profile = visit(origin + "/user/editadvanced.php")
 if profile_path != "/user/editadvanced.php" or profile.inputs.get("username") != "spravce":
     raise RuntimeError("Správa účtu nepotvrdila přihlášeného správce Akademie.")
+if options.kurz:
+    course_url = origin + "/course/view.php?idnumber=POL-TEST-AKADEMIE"
+    course_path, course = visit(course_url)
+    if course_path != "/course/view.php" or "Cvičná zkouška Akademie" not in " ".join(course.text):
+        raise RuntimeError("Správce neotevřel cvičný kurz.")
+    links = {urljoin(course_url, href) for href in course.links if same_origin(urljoin(course_url, href))}
+    for module in ("page", "offlinequiz", "customcert"):
+        if not any(urlsplit(url).path == f"/mod/{module}/view.php" for url in links):
+            raise RuntimeError(f"V kurzu správce chybí odkaz na aktivitu {module}.")
+    for url in sorted(links):
+        if urlsplit(url).path == "/mod/page/view.php":
+            path, content = visit(url)
+            if path == "/mod/page/view.php" and "Zkontrolujte písmeno varianty" in " ".join(content.text):
+                break
+    else:
+        raise RuntimeError("Z kurzu se nepodařilo otevřít návod k odpovědnímu listu.")
+    print("Přihlášený správce otevřel kurz a návod k archu. V kurzu našel Offline Quiz i cvičné osvědčení.")
 for href in page.links:
     logout = urljoin(dashboard, href)
     parts = urlsplit(logout)

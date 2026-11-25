@@ -319,7 +319,7 @@ web() {
     "${guest[@]}" bash "$dest/nasazeni/test/hrana/obnov-vstup.sh"
     sudo -n bash nasazeni/test/port-vpn.sh 8451 >/dev/null
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
-        python3 nasazeni/test/akademie/over_vpn.py "$fqdn" | tee "$tmp/akademie-prihlaseni.txt"
+        python3 nasazeni/test/akademie/over_vpn.py "$fqdn" --kurz | tee "$tmp/akademie-prihlaseni.txt"
     "${guest[@]}" cat /srv/polarita/data/bootstrap-test/test-login/heslo |
         python3 nasazeni/test/akademie/over_vpn.py "$fqdn" --sso | tee -a "$tmp/akademie-prihlaseni.txt"
     printf 'https://%s:8451/my/\n' "$fqdn" | "${guest[@]}" incus exec -T reditelstvi-test -- sh -ec 'umask 022; cat >/usr/local/share/.akademie-next; mv -T /usr/local/share/.akademie-next /usr/local/share/polarita-akademie-url'
