@@ -1,0 +1,11 @@
+{
+  "cs": [
+    {"pohyb": "TEST-001", "castka": "1840.10", "mena": "CZK"},
+    {"pohyb": "TEST-002", "castka": "1840.10", "mena": "CZK"}
+  ],
+  "fio": [{"pohyb": "TEST-001", "castka": "2250.00", "mena": "CZK"}],
+  "uol": [
+    {"banka": "cs", "pohyb": "TEST-001", "castka": "1840.10", "mena": "CZK", "doklad": "TEST-PAUSAL-A"},
+    {"banka": "fio", "pohyb": "TEST-001", "castka": "2250.00", "mena": "CZK", "doklad": "TEST-PAUSAL-B"}
+  ]
+}
